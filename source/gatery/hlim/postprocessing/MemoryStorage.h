@@ -108,6 +108,7 @@ class MemoryStorageDense : public MemoryStorage
 		virtual std::uint64_t size() const { return m_memory.size(); }
 
 		virtual void setAllUndefined();
+		void setAllDefinedRandom(uint32_t seed = 20231201);
 	protected:
 		sim::DefaultBitVectorState m_memory;
 };

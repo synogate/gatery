@@ -129,7 +129,7 @@ class StaticMemoryMapEntryHandle {
 		constexpr operator MemoryMapEntryHandle() const { return entry(); }
 
         template<TemplateString name>
-        consteval auto get() const { return StaticMemoryMapEntryHandle<decltype(*this), name>{}; }
+        constexpr auto get() const { return StaticMemoryMapEntryHandle<decltype(*this), name>{}; }
     protected:
 		constexpr MemoryMapEntryHandle entry() const { 
             return ((MemoryMapEntryHandle)Parent{})[Name.value];
@@ -144,7 +144,7 @@ class DynamicMemoryMap {
         constexpr operator MemoryMapEntryHandle() const { return memoryMap; }
 
         template<TemplateString name>
-        consteval auto get() const { return StaticMemoryMapEntryHandle<decltype(*this), name>{}; }
+        constexpr auto get() const { return StaticMemoryMapEntryHandle<decltype(*this), name>{}; }
 };
 
 template<typename T>
@@ -209,7 +209,7 @@ constexpr MemoryMapEntryHandle::MemoryMapEntryHandle(std::span<const MemoryMapEn
 
 
 constexpr MemoryMapEntryHandle MemoryMapEntryHandle::operator[](const std::string_view &name) const { 
-    static_assert(std::is_constant_evaluated());
+    //static_assert(std::is_constant_evaluated());
 
     size_t start = m_allEntries[m_idx].childrenStart;
     size_t end = start+m_allEntries[m_idx].childrenCount;

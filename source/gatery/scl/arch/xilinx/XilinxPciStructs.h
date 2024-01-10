@@ -44,6 +44,21 @@ namespace gtry::scl::pci::xilinx {
 		Bit reservedDw3;
 	};
 
+	struct RequesterRequestDescriptor {
+		BVec at = 2_b;
+		UInt wordAddress = 62_b;
+		UInt dwordCount = 11_b;
+		BVec reqType = 4_b;
+		Bit poisonedReq;
+		BVec requesterID = 16_b;
+		BVec tag = 8_b;
+		BVec completerID = 16_b;
+		Bit requesterIDEnable;
+		BVec tc = 3_b;
+		BVec attr = 3_b;
+		Bit forceECRC;
+	};
+
 	struct CompleterCompletionDescriptor {
 		UInt lowerByteAddress = 7_b;
 		Bit reservedDw0_0;
@@ -63,6 +78,26 @@ namespace gtry::scl::pci::xilinx {
 		BVec tc = 3_b;
 		BVec attr = 3_b;
 		Bit forceECRC;
+	};
+
+	struct RequesterCompletionDescriptor {
+		UInt lowerByteAddress = 12_b;
+		BVec errorCode = 4_b;
+		UInt byteCount = 13_b;
+		Bit lockedReadCompletion;
+		Bit requestCompleted;
+		Bit reservedDw0;
+		UInt dwordCount = 11_b;
+		BVec completionStatus = 3_b;
+		Bit poisonedCompletion;
+		Bit reservedDw1;
+		BVec requesterId = 16_b;
+		BVec tag = 8_b;
+		BVec completerId = 16_b;
+		Bit reservedDw3_88;
+		BVec tc = 3_b;
+		BVec attr = 3_b;
+		Bit reservedDw3_95;
 	};
 
 	struct CQUser {

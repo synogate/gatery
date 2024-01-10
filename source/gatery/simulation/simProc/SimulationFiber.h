@@ -72,7 +72,7 @@ namespace gtry::sim {
 		auto *fiberToResume = m_thisFiber;
 		ReturnValue result;
 
-		auto callbackWrapper = [fiberToResume, &result, &coroutine]()mutable->SimulationFunction<ReturnValue> {
+		auto callbackWrapper = [fiberToResume, &result, &coroutine]()mutable->SimulationFunction<void>{
 			result = co_await coroutine;
 			fiberToResume->resume();
 		};

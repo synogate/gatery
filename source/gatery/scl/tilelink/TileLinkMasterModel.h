@@ -53,6 +53,8 @@ namespace gtry::scl
 	public:
 
 		void init(std::string_view prefix, BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth = 0_b, BitWidth sourceWidth = 0_b);
+		void init(std::string_view prefix, const TileLinkUB& tlub);
+		void initAndDrive(std::string_view prefix, TileLinkUL&& slave);
 
 		void probability(float valid, float ready, uint32_t seed = 1337);
 

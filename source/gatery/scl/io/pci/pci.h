@@ -73,6 +73,7 @@ namespace gtry::scl::pci
 	};
 
 	enum class CompletionStatus {
+		defaultOption				= 0b000, 
 		successfulCompletion		= 0b000, //SC
 		unsupportedRequest			= 0b001, //UR
 		configRequestRetryStatus	= 0b010, //CRS
@@ -80,13 +81,15 @@ namespace gtry::scl::pci
 	};
 
 	enum class AddressType {
-		untranslated_default	= 0b00,
+		defaultOption			= 0b00,
+		untranslated			= 0b00,
 		translationRequest		= 0b01,
 		translatedRequest		= 0b10,
 		reserved				= 0b11,
 	};
 
 	enum class ProcessingHint {
+		defaultOption				= 0b00,
 		bidirectionalDataStructure	= 0b00,
 		requester					= 0b01,
 		target						= 0b10,
@@ -94,7 +97,9 @@ namespace gtry::scl::pci
 	};
 
 	enum class TrafficClass {
-		bestEffort_default_tc0	= 0b000,
+		defaultOption	= 0,
+		bestEffort	= 0,
+		tc0	= 0,
 		tc1	= 1,
 		tc2	= 2,
 		tc3	= 3,
@@ -133,15 +138,15 @@ namespace gtry::scl::pci
 		
 		void opcode(TlpOpcode op) { fmt = (size_t)op >> 5; type = (size_t) op & 0x1F; }
 	
-		Bit is3dw()		{ return fmt == 0b000 | fmt == 0b010; }
-		Bit is4dw()		{ return !is3dw(); }
-		Bit hasData()	{ return fmt == 0b010 | fmt == 0b011; }
-
-		Bit isCompletion()	{ return type == 0b01010; }
-		Bit isMemRW()		{ return type == 0b00000 | type == 0b00001; }
-		Bit isMemWrite()	{ return fmt.upper(2_b) == 0b01; }
-		Bit isMemRead()		{ return fmt.upper(2_b) == 0b00; }
-		UInt hdrSizeInDw()	{ UInt ret = 4; IF(is3dw()) ret = 3; return ret; }
+		Bit is3dw()			const { return fmt == 0b000 | fmt == 0b010; }
+		Bit is4dw()			const { return !is3dw(); }
+		Bit hasData()		const { return fmt == 0b010 | fmt == 0b011; }
+							
+		Bit isCompletion()	const { return type == 0b01010; }
+		Bit isMemRW()		const { return type == 0b00000 | type == 0b00001; }
+		Bit isMemWrite()	const { return fmt.upper(2_b) == 0b01; }
+		Bit isMemRead()		const { return fmt.upper(2_b) == 0b00; }
+		UInt hdrSizeInDw()	const { UInt ret = 4; IF(is3dw()) ret = 3; return ret; }
 
 	};
 
@@ -185,9 +190,14 @@ namespace gtry::scl::pci
 		TlpPacketStream<EmptyBits, BarInfo> request;
 		TlpPacketStream<EmptyBits> completion;
 	};
-	
+
+	struct RequesterInterface {
+		TlpPacketStream<EmptyBits> request;
+		TlpPacketStream<EmptyBits> completion;
+	};
 }
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::CompleterInterface, request, completion);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::RequesterInterface, request, completion);
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::HeaderCommon, poisoned, digest, processingHintPresence, attributes, addressType, trafficClass, fmt, type, length);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::RequestHeader, common, requesterId, tag, lastDWByteEnable, firstDWByteEnable, wordAddress, processingHint);

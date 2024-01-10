@@ -24,9 +24,9 @@
 #include <iostream>
 #include <iomanip>
 
-#include <gatery/scl/io/pci.h>
+#include <gatery/scl/io/pci/pci.h>
 #include <gatery/scl/sim/SimPci.h> 
-#include <gatery/scl/io/PciToTileLink.h> 
+#include <gatery/scl/io/pci/PciToTileLink.h> 
 
 using namespace boost::unit_test;
 using namespace gtry;
@@ -113,7 +113,7 @@ BOOST_FIXTURE_TEST_CASE(tlp_RequestHeader_test, BoostUnitTestSimulationFixture) 
 
 	std::mt19937 rng{ std::random_device{}() };
 
-	TlpInstruction read = TlpInstruction::randomize(TlpOpcode::memoryReadRequest64bit, std::random_device{}() );
+	TlpInstruction read = TlpInstruction::randomizeNaive(TlpOpcode::memoryReadRequest64bit, std::random_device{}() );
 
 	BVec rawHeader = 128_b;
 	pinIn(rawHeader, "in_raw", {.simulationOnlyPin = true});
@@ -190,7 +190,7 @@ BOOST_FIXTURE_TEST_CASE(tlp_CompletionHeader_test, BoostUnitTestSimulationFixtur
 	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScope(clk);
 
-	TlpInstruction comp = TlpInstruction::randomize(TlpOpcode::completionWithData,  std::random_device{}());
+	TlpInstruction comp = TlpInstruction::randomizeNaive(TlpOpcode::completionWithData,  std::random_device{}());
 
 	BVec rawHeader = 96_b;
 	pinIn(rawHeader, "in_raw");
@@ -230,7 +230,7 @@ BOOST_FIXTURE_TEST_CASE(tlp_CompletionHeader_test, BoostUnitTestSimulationFixtur
 			BOOST_TEST(simu(compHdr.byteCount) == *comp.byteCount);
 			BOOST_TEST(simu(compHdr.byteCountModifier) == comp.byteCountModifier);
 			BOOST_TEST(simu(compHdr.lowerByteAddress) == *comp.lowerByteAddress);
-			BOOST_TEST(simu(compHdr.completionStatus) == comp.completionStatus);
+			BOOST_TEST(simu(compHdr.completionStatus) == (size_t) comp.completionStatus);
 
 			BOOST_TEST(simu(compHdrRecon.common.type) == simu(compHdr.common.type));
 			BOOST_TEST(simu(compHdrRecon.common.fmt)  == simu(compHdr.common.fmt));
@@ -257,6 +257,7 @@ BOOST_FIXTURE_TEST_CASE(tlp_CompletionHeader_test, BoostUnitTestSimulationFixtur
 		}
 	);
 
+	if (true) { recordVCD("dut.vcd"); }
 	design.postprocess();
 
 	BOOST_TEST(!runHitsTimeout({1,1'000'000}));
@@ -337,6 +338,39 @@ BOOST_FIXTURE_TEST_CASE(tlp_to_tilelink_rw64_1dw, BoostUnitTestSimulationFixture
 
 
 	if (true) { recordVCD("dut.vcd"); }
+	design.postprocess();
+
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(pci_deadbeef_test, BoostUnitTestSimulationFixture) {
+	using namespace scl::pci;
+	using namespace scl::sim;
+	Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+
+	const uint64_t deadbeef = 0xABCD'DEAD'BEEF'ABCDull;
+
+	UInt addr = ConstUInt(deadbeef, 64_b);
+
+	RequestHeader hdr;
+	//hdr.wordAddress = addr >> 2; this line silently resizes the vector 
+	hdr.wordAddress = zext(addr.upper(-2_b));
+
+	BOOST_TEST(hdr.wordAddress.width() == 62_b);
+
+	BVec raw = (BVec)hdr;
+
+	RequestHeader reconstructed = hdr.fromRaw(raw);
+	addSimulationProcess([&, this]()->SimProcess {
+		co_await OnClk(clk);
+			BOOST_TEST(simu(reconstructed.wordAddress) == simu(hdr.wordAddress));
+			stopTest();
+		}
+	);
+
 	design.postprocess();
 
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));

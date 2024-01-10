@@ -25,6 +25,7 @@
 #include "MemoryMap.h"
 
 #include <boost/format.hpp>
+#include <bit>
 
 #include <concepts>
 #include <bit>

@@ -16,27 +16,9 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
-
 #include <gatery/frontend.h>
 
-/**
- * @brief Thermometric encoding, for the purpose of these helper functions, is defined with the following table
- * UInt	|	Thermometric (Unary variant)
- *	0	|	  0000000
- *	1	|	  0000001
- *	2	|	  0000011
- *	3	|	  0000111
- *	4	|	  0001111
- *	5	|	  0011111
- *	6	|	  0111111
- *	7	|	  1111111
-*/
-namespace gtry::scl {
-
-	BVec uintToThermometric(UInt in);
-	BVec uintToThermometric(UInt in, BitWidth outW);
-	BVec uintToThermometric(UInt in, const size_t inMaxValue);
-
-	UInt thermometricToUInt(BVec in);
-
+namespace gtry::scl::math {
+	UInt min(const UInt& a, const UInt& b);
+	UInt max(const UInt& a, const UInt& b);
 }

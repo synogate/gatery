@@ -73,6 +73,55 @@ namespace gtry::scl::pci::xilinx {
 		return desc;
 	}
 
+	RequesterRequestDescriptor createDescriptor(const RequestHeader& hdr)
+	{
+		RequesterRequestDescriptor ret;
+		ret.at = hdr.common.addressType;
+		ret.wordAddress = hdr.wordAddress;
+		ret.dwordCount = hdr.common.dataLength();
+		ret.reqType = 1; //memory write request
+		IF(hdr.common.isMemRead())
+			ret.reqType = 0;
+		ret.poisonedReq = hdr.common.poisoned;
+		ret.requesterID = hdr.requesterId;
+		ret.tag = hdr.tag;
+		ret.completerID = ConstBVec(ret.completerID.width());
+		ret.requesterIDEnable = '0';
+		ret.tc = hdr.common.trafficClass;
+		ret.attr = (BVec) pack(hdr.common.attributes);
+		ret.forceECRC = '0';
+		return ret;
+	}
+
+	CompletionHeader createHeader(const RequesterCompletionDescriptor& desc)
+	{
+		CompletionHeader ret;
+
+		ret.common.opcode(TlpOpcode::completionWithData);
+		IF(desc.lockedReadCompletion) ret.common.opcode(TlpOpcode::completionforLockedMemoryReadWithData);
+		ret.common.trafficClass = desc.tc;
+		
+		ret.common.attributes.idBasedOrdering = desc.attr[2];
+		ret.common.processingHintPresence = '0';
+
+		ret.common.digest = '0';
+		ret.common.poisoned = desc.poisonedCompletion;
+		ret.common.attributes.relaxedOrdering = desc.attr[1];
+		ret.common.attributes.noSnoop = desc.attr[0];
+		ret.common.addressType = (size_t) AddressType::defaultOption;
+		ret.common.length = desc.dwordCount;
+
+		ret.requesterId = desc.requesterId;
+		ret.tag = desc.tag;
+		ret.completerId = desc.completerId;
+		ret.byteCount = desc.byteCount;
+		ret.byteCountModifier = '0';
+		ret.lowerByteAddress = desc.lowerByteAddress.lower(7_b);
+		ret.completionStatus = desc.completionStatus;
+		desc.requestCompleted; // maybe do something with this?
+		return ret;
+	}
+
 	TlpPacketStream<scl::EmptyBits, pci::BarInfo> completerRequestVendorUnlocking(Axi4PacketStream<CQUser>&& in)
 	{
 		Area area{ "completer_request_vendor_unlocking", true };
@@ -100,8 +149,8 @@ namespace gtry::scl::pci::xilinx {
 		valid(ret) = valid(in);
 		eop(ret) = eop(in);
 
-		//keep to empty conversion:
-		UInt emptyWords = thermometricToUInt(~keep(in)).lower(-1_b); HCL_NAMED(emptyWords);
+		//dwordEnable to empty conversion:
+		UInt emptyWords = thermometricToUInt(~dwordEnable(in)).lower(-1_b); HCL_NAMED(emptyWords);
 		emptyBits(ret) = cat(emptyWords, "5b0");
 
 		setName(ret, "tlp_out");
@@ -136,9 +185,98 @@ namespace gtry::scl::pci::xilinx {
 		sim_assert(emptyBits(in).lower(5_b) == 0); // the granularity of this empty signal cannot be less than 32 bits (expect the lsb's to be completely synthesized away)
 		UInt emptyWords = emptyBits(in).upper(-5_b);
 		BVec throwAway = (BVec) cat('0', uintToThermometric(emptyWords));
-		keep(ret) = swapEndian(~throwAway, 1_b); 
+		dwordEnable(ret) = swapEndian(~throwAway, 1_b); 
 
 		setName(ret, "axi_out");
+		return ret;
+	}
+
+	Axi4PacketStream<RQUser> requesterRequestVendorUnlocking(TlpPacketStream<scl::EmptyBits>&& in)
+	{
+		Area area{ "requester_request_vendor_unlocking", true };
+		setName(in, "tlp_in");
+		HCL_DESIGNCHECK_HINT(in->width() >= 128_b, "stream must be at least as big as 4dw for this implementation");
+
+		RequestHeader hdr = RequestHeader::fromRaw(in->lower(128_b));
+
+		RequesterRequestDescriptor desc = createDescriptor(hdr);
+
+		Axi4PacketStream<RQUser> ret(in->width());
+		dwordEnable(ret) = ret->width() / 32;
+		ret.set(RQUser{ ret->width() == 512_b ? 137_b : 62_b}); //no logic here, just documentation
+
+		*ret = *in;
+		IF(sop(in))
+			ret->lower(128_b) = (BVec) pack(desc);
+
+		ready(in) = ready(ret);
+		valid(ret) = valid(in);
+		eop(ret) = eop(in);
+
+		//dwordEnable to empty conversion:
+		sim_assert(emptyBits(in).lower(5_b) == 0); // the granularity of this empty signal cannot be less than 32 bits (expect the lsb's to be completely synthesized away)
+		UInt emptyWords = emptyBits(in).upper(-5_b);
+		BVec throwAway = (BVec) cat('0', uintToThermometric(emptyWords));
+		dwordEnable(ret) = swapEndian(~throwAway, 1_b); 
+
+		setName(ret, "tlp_out");
+		return ret;
+	}
+
+	TlpPacketStream<scl::EmptyBits> requesterCompletionVendorUnlocking(Axi4PacketStream<RCUser>&& in, bool straddle)
+	{
+		Area area{ "requester_completion_vendor_unlocking", true };
+		setName(in, "tlp_in");
+		HCL_DESIGNCHECK_HINT(!straddle, "not yet implemented");
+		HCL_DESIGNCHECK_HINT(in->width() == 512_b, "targeting 512_b at 250MHz");
+
+		RequesterCompletionDescriptor desc;
+		unpack(in->lower(96_b), desc);
+
+		CompletionHeader hdr = createHeader(desc);
+
+		TlpPacketStream<scl::EmptyBits> ret(in->width());
+
+		//data assignments
+		*ret = *in;
+		IF(sop(in))
+			ret->lower(96_b) = (BVec) hdr;
+
+		//Handshake assignments
+		ready(in) = ready(ret);
+		valid(ret) = valid(in);
+		eop(ret) = eop(in);
+
+		//dwordEnable to empty conversion:
+		UInt emptyWords = thermometricToUInt(~dwordEnable(in)).lower(-1_b); HCL_NAMED(emptyWords);
+		emptyBits(ret) = cat(emptyWords, "5b0");
+
+		setName(ret, "tlp_out");
+		return ret;
+	}
+
+	RequesterInterface requesterVendorUnlocking(Axi4PacketStream<RCUser>&& completion, Axi4PacketStream<RQUser>& request)
+	{
+		Area area{ "requesterInterfaceVendorUnlocking", true };
+		setName(completion, "axi_st_requester_completion");
+		tap(completion);
+
+		RequesterInterface ret;
+		*ret.request = completion->width();
+		emptyBits(ret.request) = BitWidth::count(ret.request->width().bits());
+
+		*ret.completion = completion->width();
+		emptyBits(ret.completion) = BitWidth::count(ret.completion->width().bits());
+
+		TlpPacketStream<EmptyBits> temp = constructFrom(ret.request);
+		temp <<= ret.request;
+		request = requesterRequestVendorUnlocking(move(temp));
+
+		setName(request, "axi_st_requester_completion");
+		tap(request);
+
+		ret.completion = requesterCompletionVendorUnlocking(move(completion));
+
 		return ret;
 	}
 
