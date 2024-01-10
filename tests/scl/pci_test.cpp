@@ -520,3 +520,119 @@ BOOST_FIXTURE_TEST_CASE(pci_requester_512bit_tilelink_to_hostModel_test, BoostUn
 
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
+
+BOOST_FIXTURE_TEST_CASE(pci_requester_512bit_cheapBurst_test_rng_backpressure, BoostUnitTestSimulationFixture)
+{
+	Area area{ "top_area", true };
+	using namespace scl::pci;
+	const Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+
+	const size_t memSizeInBytes = 1 << 10; // 1kB space
+
+	scl::sim::PcieHostModel host(memSizeInBytes);
+	host.defaultHandlers();
+	addSimulationProcess([&, this]()->SimProcess { return host.completeRequests(clk, 0, 50); });
+
+	scl::TileLinkUB master = makePciMasterCheapBurst(host.requesterInterface(512_b), 4_b);
+
+	pinIn(master, "link");
+
+	addSimulationProcess([&, this]()->SimProcess { return scl::strm::readyDriverRNG(*master.d, clk, 50); });
+
+	addSimulationProcess(
+		[&, this]()->SimProcess {
+			simu(valid(master.a)) = '0';
+			co_await OnClk(clk);
+
+			for (size_t i = 6; i < 10; i++) // from 64B to 1kB
+			{
+				//make request
+				simu(master.a->address) = 0;
+				simu(master.a->opcode) = (size_t) scl::TileLinkA::OpCode::Get;
+				simu(master.a->param) = 0;
+				simu(master.a->size) = i;
+				simu(valid(master.a)) = '1';
+
+				co_await scl::strm::performTransferWait(master.a, clk);
+				simu(valid(master.a)) = '0';
+
+				size_t expectedBeats = 8 * (1 << i) / 512;
+				//get response and check
+				for (size_t j = 0; j < expectedBeats; j++)
+				{
+					co_await scl::strm::performTransferWait(*master.d, clk);
+					BOOST_TEST(host.memory().read(j * 512, 512) == (sim::DefaultBitVectorState) simu((*master.d)->data));
+				}
+			}
+			co_await OnClk(clk);
+			stopTest();
+		}
+	);
+
+	recordVCD("dut.vcd");
+	design.postprocess();
+	//design.visualize("dut");
+
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+
+BOOST_FIXTURE_TEST_CASE(pci_requester_512bit_cheapBurst_chopped_test, BoostUnitTestSimulationFixture)
+{
+	Area area{ "top_area", true };
+	using namespace scl::pci;
+	const Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+
+	const size_t memSizeInBytes = 1 << 10; // 1kB space
+
+	scl::sim::PcieHostModel host(memSizeInBytes);
+	host.defaultHandlers();
+	host.updateHandler(TlpOpcode::memoryReadRequest64bit, std::make_unique<scl::sim::CompleterInChunks>(64, 5));
+	addSimulationProcess([&, this]()->SimProcess { return host.completeRequests(clk, 0, 50); });
+
+	scl::TileLinkUB master = makePciMasterCheapBurst(host.requesterInterface(512_b), 4_b);
+
+	pinIn(master, "link");
+
+	addSimulationProcess([&, this]()->SimProcess { return scl::strm::readyDriverRNG(*master.d, clk, 50); });
+
+	addSimulationProcess(
+		[&, this]()->SimProcess {
+			simu(valid(master.a)) = '0';
+			co_await OnClk(clk);
+
+			for (size_t i = 6; i < 10; i++) // from 64B to 1kB
+			{
+				//make request
+				simu(master.a->address) = 0;
+				simu(master.a->opcode) = (size_t) scl::TileLinkA::OpCode::Get;
+				simu(master.a->param) = 0;
+				simu(master.a->size) = i;
+				simu(valid(master.a)) = '1';
+
+				co_await scl::strm::performTransferWait(master.a, clk);
+				simu(valid(master.a)) = '0';
+
+				//get response and check
+				size_t expectedBeats = 8 * (1 << i) / 512;
+				for (size_t j = 0; j < expectedBeats; j++)
+				{
+					co_await scl::strm::performTransferWait(*master.d, clk);
+					BOOST_TEST(host.memory().read(j * 512, 512) == (sim::DefaultBitVectorState) simu((*master.d)->data));
+
+				}
+			}
+			co_await OnClk(clk);
+			stopTest();
+		}
+	);
+
+	recordVCD("dut.vcd");
+	design.postprocess();
+	//design.visualize("dut");
+
+	BOOST_TEST(!runHitsTimeout({ 5, 1'000'000 }));
+}
+
