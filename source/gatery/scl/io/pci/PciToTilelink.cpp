@@ -218,6 +218,56 @@ namespace gtry::scl::pci {
 		return rr;
 	}
 
+	TlpPacketStream<EmptyBits> tileLinkAToRequesterRequestCheapBurst(TileLinkChannelA&& a)
+	{
+		Area area{ "TL_A_to_requester_request_tlp", true };
+
+		HCL_DESIGNCHECK_HINT(a->source.width() == 0_b, "For this cheap implementation, only one request can be issued at a time. Thus there can be no source.")
+
+		TlpPacketStream<EmptyBits> rr(a->data.width());
+		emptyBits(rr) = BitWidth::count(rr->width().bits());
+
+		RequestHeader hdr;
+		hdr.common.poisoned= '0';
+		hdr.common.digest= '0';
+		hdr.common.processingHintPresence = '0';
+		hdr.common.attributes = {'0','0','0'};
+		hdr.common.addressType = (size_t) AddressType::defaultOption;
+		hdr.common.trafficClass = (size_t) TrafficClass::defaultOption;
+		hdr.common.opcode(TlpOpcode::memoryReadRequest64bit);
+
+		IF(valid(a) & a->isPut()) {
+			sim_assert('0') << "untested, consider it non-working";
+			hdr.common.opcode(TlpOpcode::memoryWriteRequest64bit);
+		}
+
+		UInt bytes = logBytesToBytes(a->size);
+		setName(bytes, "rr_bytes");
+
+		hdr.common.dataLength(length(bytes, a->address));
+
+		hdr.requesterId = 0;
+		hdr.tag = 0xFC;
+
+		hdr.lastDWByteEnable = lastDwByteEnable(bytes, a->address);
+		hdr.firstDWByteEnable = firstDwByteEnable(a->address);
+		hdr.wordAddress = zext(a->address.upper(-2_b));
+		hdr.processingHint = (size_t) ProcessingHint::defaultOption;
+		setName(hdr, "rr_hdr");
+
+		*rr = 0;
+		IF(sop(a)) {
+			rr->lower(128_b) = (BVec)hdr;
+		}
+
+		valid(rr) = valid(a);
+		eop(rr) = eop(a);
+		ready(a) = ready(rr);
+		emptyBits(rr) = rr->width().bits() - 4 * 32;
+
+		return rr;
+	}
+
 	static UInt logByteSize(const UInt& lengthInBytes) {
 		
 		return encoder((OneHot) lengthInBytes);
@@ -293,6 +343,54 @@ namespace gtry::scl::pci {
 
 		return d;
 	}
+	//
+
+	TileLinkChannelD requesterCompletionToTileLinkDCheapBurst(TlpPacketStream<EmptyBits>&& rc, std::optional<BitWidth> sizeW)
+	{
+		Area area{ "requester_completion_tlp_to_TL_D", true };
+		HCL_DESIGNCHECK_HINT(rc->width() >= 96_b, "the first beat must contain the entire header in this implementation");
+
+		CompletionHeader hdr = CompletionHeader::fromRaw(rc->lower(96_b));
+		setName(hdr, "rc_header");
+		setName(sop(rc), "rc_sop");
+
+		UInt lastByteCount = constructFrom(hdr.byteCount);
+
+		Bit shouldCapture = valid(rc) & sop(rc) & hdr.byteCount >= lastByteCount;
+
+		lastByteCount = hdr.byteCount;
+		ENIF(valid(rc) & sop(rc)) {
+			lastByteCount = reg(lastByteCount, 0);
+		}
+
+		ENIF(valid(rc) & sop(rc) & shouldCapture) {
+			hdr = reg(hdr); // captures and holds the header before it gets squished by the shift right.
+		}
+		setName(hdr.byteCount, "byteCount");
+		auto rcPayloadStream = scl::strm::streamShiftRight(move(rc), 96);
+
+		IF(valid(rcPayloadStream) & sop(rcPayloadStream))
+			sim_assert(bitcount(hdr.byteCount) == 1) << "TileLink cannot represent non powers of 2 amount of bytes";
+
+		TileLinkChannelD d = move(*(tileLinkInit<TileLinkUL>(64_b, rcPayloadStream->width(), 0_b, sizeW).d));
+
+		d->data = *rcPayloadStream; //cannot support smaller than full width requests.
+		d->opcode = (size_t) TileLinkD::OpCode::AccessAckData;
+		d->sink = 0;
+		d->param = 0;
+		d->error = hdr.common.poisoned | (hdr.completionStatus != (size_t) CompletionStatus::successfulCompletion);
+
+		UInt size = logByteSize(hdr.byteCount);
+		setName(size, "held_size");
+		IF(valid(rcPayloadStream) & sop(rcPayloadStream))
+			sim_assert(size <= d->size.width().last()) << "breaking this assertion invalidates the next line's truncation";
+		d->size = size.lower(d->size.width());
+
+		valid(d) = valid(rcPayloadStream);
+		ready(rcPayloadStream) = ready(d);
+
+		return d;
+	}
 
 	TileLinkUL makePciMaster(RequesterInterface&& reqInt, BitWidth byteAddressW, BitWidth dataW, BitWidth tagW)
 	{
@@ -317,6 +415,18 @@ namespace gtry::scl::pci {
 
 		reqInt.request <<= tileLinkAToRequesterRequest(move(a), reqInt.request->width());
 		*ret.d = requesterCompletionToTileLinkDFullW(move(reqInt.completion));
+
+		return ret;
+	}
+
+	TileLinkUB makePciMasterCheapBurst(RequesterInterface&& reqInt, std::optional<BitWidth> sizeW) {
+		TileLinkUB ret = tileLinkInit<TileLinkUB>(64_b, reqInt.request->width(), 0_b, sizeW);
+
+		TileLinkChannelA a = constructFrom(ret.a);
+		a <<= ret.a;
+
+		reqInt.request <<= tileLinkAToRequesterRequestCheapBurst(move(a));
+		*ret.d = requesterCompletionToTileLinkDCheapBurst(move(reqInt.completion), sizeW);
 
 		return ret;
 	}

@@ -37,9 +37,11 @@ namespace gtry::scl::pci {
 	CompleterInterface makeTileLinkMaster(scl::TileLinkUL&& tl, BitWidth tlpW);
 
 	TlpPacketStream<EmptyBits> tileLinkAToRequesterRequest(TileLinkChannelA&& a, BitWidth tlpW);
+	TlpPacketStream<EmptyBits> tileLinkAToRequesterRequestCheapBurst(TileLinkChannelA&& a);
 	TileLinkChannelD requesterCompletionToTileLinkD(TlpPacketStream<EmptyBits>&& rc, BitWidth byteAddressW, BitWidth dataW);
 	TileLinkChannelD requesterCompletionToTileLinkDFullW(TlpPacketStream<EmptyBits>&& rc);
-	TileLinkChannelD requesterCompletionToTileLinkDBurst(TlpPacketStream<EmptyBits>&& rc);
+	TileLinkChannelD requesterCompletionToTileLinkDCheapBurst(TlpPacketStream<EmptyBits>&& rc, std::optional<BitWidth> sizeW = {});
 	TileLinkUL makePciMaster(RequesterInterface&& reqInt, BitWidth byteAddressW, BitWidth dataW, BitWidth tagW);
 	TileLinkUL makePciMasterFullW(RequesterInterface&& reqInt);
+	TileLinkUB makePciMasterCheapBurst(RequesterInterface&& reqInt, std::optional<BitWidth> sizeW = {});
 }
