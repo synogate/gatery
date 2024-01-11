@@ -134,6 +134,9 @@ namespace gtry::scl::pci::xilinx {
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::xilinx::CompleterRequestDescriptor, at, wordAddress, dwordCount, reqType, reservedDw2, requesterID, tag, targetFunction, barId, barAperture, tc, attr, reservedDw3);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::xilinx::CompleterCompletionDescriptor, lowerByteAddress, reservedDw0_0, at, reservedDw0_1, byteCount, lockedReadCompletion, reservedDw0_3, dwordCount, completionStatus, poisonedCompletion, reservedDw1, requesterID, tag, completerID, completerIdEnable, tc, attr, forceECRC);
 
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::xilinx::RequesterRequestDescriptor, at, wordAddress, dwordCount, reqType, poisonedReq, requesterID, tag, completerID, requesterIDEnable, tc, attr, forceECRC);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::xilinx::RequesterCompletionDescriptor, lowerByteAddress, errorCode, byteCount, lockedReadCompletion, requestCompleted, reservedDw0, dwordCount, completionStatus, poisonedCompletion, reservedDw1, requesterId, tag, completerId, reservedDw3_88, tc, attr, reservedDw3_95);
+
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::xilinx::CQUser, raw);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::xilinx::CCUser, raw);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::xilinx::RQUser, raw);
