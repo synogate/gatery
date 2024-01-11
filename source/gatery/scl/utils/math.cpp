@@ -33,4 +33,14 @@ namespace gtry::scl::math {
 		IF(a < b) ret = b;
 		return ret;
 	}
+
+	UInt biggestPowerOfTwo(UInt input) {
+		UInt result = ConstUInt(0, input.width());
+		for (size_t i = 0; i < input.width().bits(); i++){
+			UInt candidate = 1 << i;
+			IF(input.at(i) == '1')
+				result = zext(candidate);
+		}
+		return result;
+	}
 }

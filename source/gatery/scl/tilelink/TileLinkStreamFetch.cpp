@@ -17,6 +17,7 @@
 */
 #include "gatery/pch.h"
 #include "TileLinkStreamFetch.h"
+#include <gatery/scl/utils/BitCount.h>
 
 namespace gtry::scl
 {
@@ -24,9 +25,37 @@ namespace gtry::scl
 	{
 		m_area.leave();
 	}
-	static RvStream<UInt> decompositionIntoPowersOfTwo(RvStream<UInt>&& input) {
-		
-	}
+	static UInt beats
+
+	//static RvPacketStream<UInt> decompositionIntoPowersOfTwo(RvStream<UInt>&& input) {
+	//
+	//	UInt numberOfRequests = capture(bitcount(*input), valid(input));
+	//	Counter requestCounter(numberOfRequests);
+	//
+	//	RvPacketStream<UInt> output = constructFrom(input).add(Eop);
+	//
+	//	IF(transfer(output)) {
+	//		requestCounter.inc();
+	//	}
+	//	IF(transfer(input)) {
+	//		requestCounter.reset();
+	//	}
+	//
+	//	UInt leftOver = constructFrom(*input);
+	//	leftOver = reg(leftOver, 0);
+	//
+	//	*output = biggestPowerOfTwo(leftOver);
+	//
+	//	IF(valid(input) & leftOver == 0)
+	//		leftOver = *input;
+	//	ELSE
+	//		leftOver -= *output;
+	//
+	//	eop(output) = requestCounter.isLast();
+	//	valid(output) = valid(in);
+	//	ready(input) = ready(output) & requestCounter.isLast();
+	//}
+
 
 	TileLinkUL TileLinkStreamFetch::generate(RvStream<Command>& cmdIn, RvStream<BVec>& dataOut, BitWidth sourceW)
 	{
@@ -40,10 +69,6 @@ namespace gtry::scl
 		//link.a->source = 0;
 		link.a->mask = link.a->mask.width().mask(); //only full bus reads
 		link.a->data = ConstBVec(link.a->data.width());
-
-		//here we calculate the size of the next request. Should be as simple as :
-		// 1) beats to bytes
-		// 2) bytes to stream of powers of two
 
 		//here we calculate the address for the next request.
 		UInt addressOffset = cmdIn->beats.width();

@@ -59,4 +59,24 @@ namespace gtry::scl
 			value = in;
 		return value;
 	}
+
+	//the following function might be too obstructing for any practical use.
+	//template<Signal T>
+	//T captureElseUpdate(const T& in, Bit condition, std::function<T(T)> func, std::optional<Bit> updateCondition = {})
+	//{
+	//	T value = constructFrom(in);
+	//	value = reg(value);
+	//	IF(condition) {
+	//		value = in;
+	//	}
+	//	ELSE{
+	//		if (updateCondition) {
+	//			IF(*updateCondition) value = func(value);
+	//		}
+	//		else {
+	//			value = func(value);
+	//		}
+	//	}
+	//	return value;
+	//}
 }
