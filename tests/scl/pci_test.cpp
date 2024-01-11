@@ -621,7 +621,9 @@ BOOST_FIXTURE_TEST_CASE(pci_requester_512bit_cheapBurst_chopped_test, BoostUnitT
 				{
 					co_await scl::strm::performTransferWait(*master.d, clk);
 					BOOST_TEST(host.memory().read(j * 512, 512) == (sim::DefaultBitVectorState) simu((*master.d)->data));
-
+					BOOST_TEST(simu((*master.d)->size) == i);
+					BOOST_TEST(simu((*master.d)->opcode) == (size_t) scl::TileLinkD::AccessAckData);
+					BOOST_TEST(simu((*master.d)->error) == '0');
 				}
 			}
 			co_await OnClk(clk);
