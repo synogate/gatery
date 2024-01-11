@@ -125,13 +125,11 @@ void MemoryStorageDense::setAllUndefined()
 
 void MemoryStorageDense::setAllDefinedRandom(uint32_t seed)
 {
-	std::mt19937 mt(seed);
-	for (size_t i = 0; i < m_memory.size(); i++)
-	{
-		m_memory.setRange(sim::DefaultConfig::DEFINED, 0, m_memory.size());
-		if (mt() & 1) m_memory.set(sim::DefaultConfig::VALUE, i);
-		else  m_memory.clear(sim::DefaultConfig::VALUE, i);
-	}
+	m_memory.setRange(sim::DefaultConfig::DEFINED, 0, m_memory.size());
+
+	std::mt19937_64 mt(seed);
+	for (size_t i = 0; i*64 < m_memory.size(); i++)
+		m_memory.data(sim::DefaultConfig::VALUE)[i] = mt();
 }
 
 
