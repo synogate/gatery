@@ -15,24 +15,10 @@ You should have received a copy of the GNU Lesser General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#pragma once
 
-#include <gatery/scl/io/pci.h>
+#include <gatery/pch.h>
+#include "RequestGenerator.h"
 
 namespace gtry::scl::pci {
 
-	struct TlpAnswerInfo {
-		HeaderCommon common;
-		BVec requesterID = 16_b;
-		BVec tag = 8_b;
-		UInt lowerByteAddress = 7_b;
-		Bit error = '0';
-		static TlpAnswerInfo fromRequest(RequestHeader reqHdr);
-		void setErrorFromLimitations(RequestHeader reqHdr);
-	};
-
-	TlpPacketStream<EmptyBits, BarInfo> completerRequestToTileLinkA(TileLinkChannelA& a, BitWidth tlpStreamW);
-	TlpPacketStream<EmptyBits> tileLinkDToCompleterCompletion(TileLinkChannelD&& d, BitWidth tlpStreamW);
-
-	CompleterInterface makeTileLinkMaster(scl::TileLinkUL&& tl, BitWidth tlpW);
 }
