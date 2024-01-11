@@ -24,6 +24,9 @@ namespace gtry::scl
 	{
 		m_area.leave();
 	}
+	static RvStream<UInt> decompositionIntoPowersOfTwo(RvStream<UInt>&& input) {
+		
+	}
 
 	TileLinkUL TileLinkStreamFetch::generate(RvStream<Command>& cmdIn, RvStream<BVec>& dataOut, BitWidth sourceW)
 	{
@@ -35,9 +38,14 @@ namespace gtry::scl
 		link.a->param = 0;
 		link.a->size = utils::Log2C(link.a->mask.width().bits());
 		//link.a->source = 0;
-		link.a->mask = link.a->mask.width().mask();
+		link.a->mask = link.a->mask.width().mask(); //only full bus reads
 		link.a->data = ConstBVec(link.a->data.width());
 
+		//here we calculate the size of the next request. Should be as simple as :
+		// 1) beats to bytes
+		// 2) bytes to stream of powers of two
+
+		//here we calculate the address for the next request.
 		UInt addressOffset = cmdIn->beats.width();
 		HCL_NAMED(addressOffset);
 		addressOffset = reg(addressOffset, 0);
