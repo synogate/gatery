@@ -30,7 +30,7 @@ namespace gtry::scl::sim {
 	class PcieHostModel
 	{
 	public:
-		PcieHostModel(uint64_t memorySizeInBytes = 64, bool memInitRandomDefined = true, uint32_t seed = 1259);
+		PcieHostModel(uint64_t memorySizeInBytes = 1ull << 48); // 48 bit, byte-addressable memory
 		PcieHostModel(std::unique_ptr<hlim::MemoryStorage> mem) : m_mem(move(mem)) {}
 
 		PcieHostModel& defaultHandlers();
