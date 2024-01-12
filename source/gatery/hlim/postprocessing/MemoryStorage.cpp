@@ -23,6 +23,24 @@
 
 namespace gtry::hlim {
 
+
+MemoryStorage::Initialization MemoryStorage::Initialization::setAllDefinedRandom(size_t size, std::uint64_t offset, uint32_t seed)
+{
+	std::mt19937 mt(seed);
+	MemoryStorage::Initialization res;
+	res.initialOverlay.emplace_back();
+	res.initialOverlay.back().first = offset;
+	auto &data = res.initialOverlay.back().second;
+	data.resize(size);
+	for (size_t i = 0; i < data.size(); i++) {
+		data.setRange(sim::DefaultConfig::DEFINED, 0, size);
+		if (mt() & 1) data.set(sim::DefaultConfig::VALUE, i);
+		else  data.clear(sim::DefaultConfig::VALUE, i);
+	}
+	return res;
+}
+
+
 struct Intersection {
 	/// Intersection start relative to offset1
 	std::uint64_t start1;
@@ -123,18 +141,6 @@ void MemoryStorageDense::setAllUndefined()
 	m_memory.clearRange(sim::DefaultConfig::DEFINED, 0, m_memory.size());
 }
 
-void MemoryStorageDense::setAllDefinedRandom(uint32_t seed)
-{
-	std::mt19937 mt(seed);
-	for (size_t i = 0; i < m_memory.size(); i++)
-	{
-		m_memory.setRange(sim::DefaultConfig::DEFINED, 0, m_memory.size());
-		if (mt() & 1) m_memory.set(sim::DefaultConfig::VALUE, i);
-		else  m_memory.clear(sim::DefaultConfig::VALUE, i);
-	}
-}
-
-
 MemoryStorageSparse::MemoryStorageSparse(std::uint64_t size, const Initialization &initialization) : m_size(size)
 {
 	if (initialization.background) {
@@ -155,6 +161,8 @@ void MemoryStorageSparse::read(sim::DefaultBitVectorState &dst, std::uint64_t of
 {
 	dst.resize(size);
 	dst.clearRange(sim::DefaultConfig::DEFINED, 0, size);
+
+	if (size == 0) return;
 
 	populateFromBackground(offset, dst);
 	
