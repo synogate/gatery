@@ -20,14 +20,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 namespace gtry::scl::math {
 	UInt min(const UInt& a, const UInt& b){
-		BitWidth retW = BitWidth(std::min(a.width().bits(), b.width().bits()));
+		BitWidth retW = std::min(a.width(), b.width());
 		UInt ret = retW;
 		ret = a;
 		IF(a > b) ret = b;
 		return ret;
 	}
 	UInt max(const UInt& a, const UInt& b) {
-		BitWidth retW = BitWidth(std::max(a.width().bits(), b.width().bits()));
+		BitWidth retW = std::max(a.width(), b.width());
 		UInt ret = retW;
 		ret = a;
 		IF(a < b) ret = b;
