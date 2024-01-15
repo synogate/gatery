@@ -36,6 +36,14 @@ namespace gtry::scl
 	void axiFromStream(RvStream<AxiToStreamCmd>&& cmd, RvStream<BVec>&& data, Axi4& axi);
 
 	void axiDMA(RvStream<AxiToStreamCmd>&& fetchCmd, RvStream<AxiToStreamCmd>&& storeCmd, Axi4& axi, size_t dataFifoDepth);
+
+	struct AxiTransferReport {
+		UInt burstCount;
+		UInt failCount;
+		UInt bytesPerBurst;
+	};
+
+	AxiTransferReport axiTransferAuditor(const Axi4& streamToSniff, size_t bytesPerBurst);
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::AxiToStreamCmd,
@@ -43,4 +51,10 @@ BOOST_HANA_ADAPT_STRUCT(gtry::scl::AxiToStreamCmd,
 	endAddress,
 	bytesPerBurst,
 	id
+);
+
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::AxiTransferReport,
+	burstCount,
+	failCount,
+	bytesPerBurst
 );
