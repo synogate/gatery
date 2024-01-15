@@ -52,6 +52,8 @@ class MemoryStorage {
 			std::optional<std::variant<std::span<uint8_t>, std::filesystem::path>> background;
 			/// Whether to initially overwrite that background with chunks of partially defined data at specific bit-addresses.
 			std::vector<std::pair<std::uint64_t, sim::DefaultBitVectorState>> initialOverlay;
+
+			static Initialization setAllDefinedRandom(size_t size, std::uint64_t offset = 0, uint32_t seed = 20231201);
 		};
 
 		virtual ~MemoryStorage() = default;
@@ -105,9 +107,9 @@ class MemoryStorageDense : public MemoryStorage
 		virtual void read(sim::DefaultBitVectorState &dst, std::uint64_t offset, std::uint64_t size) const override;
 		virtual void write(std::uint64_t offset, const sim::DefaultBitVectorState &value, bool undefinedWriteEnable, const sim::DefaultBitVectorState &mask) override;
 
-		virtual std::uint64_t size() const { return m_memory.size(); }
+		virtual std::uint64_t size() const override { return m_memory.size(); }
 
-		virtual void setAllUndefined();
+		virtual void setAllUndefined() override;
 	protected:
 		sim::DefaultBitVectorState m_memory;
 };
@@ -124,10 +126,10 @@ class MemoryStorageSparse : public MemoryStorage
 
 		using MemoryStorage::read;
 		virtual void read(sim::DefaultBitVectorState &dst, std::uint64_t offset, std::uint64_t size) const override;
-		virtual void write(std::uint64_t offset, const sim::DefaultBitVectorState &value, bool undefinedWriteEnable, const sim::DefaultBitVectorState &mask);
+		virtual void write(std::uint64_t offset, const sim::DefaultBitVectorState &value, bool undefinedWriteEnable, const sim::DefaultBitVectorState &mask) override;
 
-		virtual std::uint64_t size() const { return m_size; }
-		virtual void setAllUndefined();
+		virtual std::uint64_t size() const override { return m_size; }
+		virtual void setAllUndefined() override;
 	protected:
 		std::uint64_t m_size;
 		std::span<const uint8_t> m_background;

@@ -18,6 +18,7 @@
 #include "frontend/pch.h"
 
 #include <gatery/simulation/Simulator.h>
+#include <gatery/simulation/simProc/SimulationFiber.h>
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/data/dataset.hpp>
@@ -1012,3 +1013,50 @@ BOOST_FIXTURE_TEST_CASE(simu_read_large_vector, BoostUnitTestSimulationFixture)
 
 	runTicks(clock.getClk(), 100000);
 }
+
+
+
+BOOST_FIXTURE_TEST_CASE(SimFiber_PingPong, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	{
+		auto A_in = pinIn(8_b);
+		auto A_out = pinOut(A_in);
+
+		auto B_in = pinIn(8_b);
+		auto B_out = pinOut(B_in);
+
+		addSimulationFiber([=](){
+			unsigned i = 0;
+			while (true) {
+				auto b = sim::SimulationFiber::awaitCoroutine<size_t>([=]()->SimFunction<size_t> {
+					simu(A_in) = i;
+					co_await WaitFor(Seconds(1)/clock.absoluteFrequency());
+					co_return (size_t) simu(B_out);
+				});
+				BOOST_TEST(b == i);
+				i++;
+			}
+		});
+
+		addSimulationProcess([=]()->SimProcess{
+
+			co_await WaitFor(Seconds(1,2)/clock.absoluteFrequency());
+
+			while (true) {
+				simu(B_in) = simu(A_out);
+
+				co_await WaitFor(Seconds(1)/clock.absoluteFrequency());
+			}
+		});
+	}
+
+
+	design.postprocess();
+	runTicks(clock.getClk(), 10);
+}
+

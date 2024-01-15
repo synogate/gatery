@@ -41,6 +41,7 @@ namespace gtry::sim {
 		~UnitTestSimulationFixture();
 
 		void addSimulationProcess(std::function<SimulationFunction<>()> simProc);
+		void addSimulationFiber(std::function<void()> simFiber);
 
 		void eval(hlim::Circuit& circuit);
 		void runTicks(hlim::Circuit& circuit, const hlim::Clock* clock, unsigned numTicks);

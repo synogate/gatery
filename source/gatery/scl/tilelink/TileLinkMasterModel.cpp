@@ -28,9 +28,9 @@ namespace gtry::scl
 		tileLinkInit(m_link, addrWidth, dataWidth, sizeWidth, sourceWidth);
 		pinIn(m_link, std::string{ prefix });
 
-		m_sourceInUse.resize(sourceWidth.count(), false);
-
 		Clock clk = ClockScope::getClk();
+
+		m_numSourceIDsTotal = sourceWidth.count();
 
 		// ready chaos monkey
 		DesignScope::get()->getCircuit().addSimulationProcess([this, clk]() -> SimProcess {
@@ -43,6 +43,21 @@ namespace gtry::scl
 				simu(ready(*m_link.d)) = m_dis(m_rng) <= m_readyProbability;
 			}
 		});
+	}
+	void TileLinkMasterModel::init(std::string_view prefix, const TileLinkUB& tlub) {
+		init(prefix,
+			tlub.a->address.width(),
+			tlub.a->data.width(),
+			tlub.a->size.width(),
+			tlub.a->source.width()
+		);
+	}
+
+	void TileLinkMasterModel::initAndDrive(std::string_view prefix, TileLinkUL&& slave) {
+		this->init(prefix, slave.a->address.width(), slave.a->data.width(), slave.a->source.width());
+		auto& master = (TileLinkUL&) this->getLink();
+
+		master <<= slave;
 	}
 
 	void TileLinkMasterModel::probability(float valid, float ready, uint32_t seed)
@@ -69,7 +84,7 @@ namespace gtry::scl
 		if (tx.source)
 		{
 			sourceId = *tx.source;
-			m_sourceInUse[sourceId] = true;
+			m_sourceInUse.insert(sourceId);
 		}
 		else
 			sourceId = co_await allocSourceId(clk);
@@ -131,7 +146,7 @@ namespace gtry::scl
 
 	void TileLinkMasterModel::freeSourceId(const size_t& sourceId)
 	{
-		m_sourceInUse[sourceId] = false;
+		m_sourceInUse.erase(sourceId);
 	}
 
 	SimFunction<std::tuple<uint64_t,uint64_t,bool>> TileLinkMasterModel::get(uint64_t address, uint64_t logByteSize, const Clock &clk) 
@@ -150,14 +165,14 @@ namespace gtry::scl
 
 	SimFunction<size_t> TileLinkMasterModel::allocSourceId(const Clock &clk)
 	{
-		auto it = std::find(m_sourceInUse.begin(), m_sourceInUse.end(), false);
-		while (it == m_sourceInUse.end()) {
+		while (true) {
+			for (std::uint64_t i = 0; i < m_numSourceIDsTotal; i++)
+				if (!m_sourceInUse.contains(i)) {
+					m_sourceInUse.insert(i);
+					co_return i;
+				}
 			co_await OnClk(clk);
-			it = std::find(m_sourceInUse.begin(), m_sourceInUse.end(), false);
 		}
-
-		*it = true;
-		co_return size_t(it - m_sourceInUse.begin());
 	}
 
 	std::tuple<size_t, size_t> TileLinkMasterModel::prepareTransaction(TransactionOut& tx) const

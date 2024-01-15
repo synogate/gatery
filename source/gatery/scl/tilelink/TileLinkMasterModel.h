@@ -53,6 +53,8 @@ namespace gtry::scl
 	public:
 
 		void init(std::string_view prefix, BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth = 0_b, BitWidth sourceWidth = 0_b);
+		void init(std::string_view prefix, const TileLinkUB& tlub);
+		void initAndDrive(std::string_view prefix, TileLinkUL&& slave);
 
 		void probability(float valid, float ready, uint32_t seed = 1337);
 
@@ -83,7 +85,8 @@ namespace gtry::scl
 		TileLinkUB m_link;
 		float m_validProbability = 1;
 		float m_readyProbability = 1;
-		std::vector<bool> m_sourceInUse;
+		std::set<size_t> m_sourceInUse;
+		std::uint64_t m_numSourceIDsTotal;
 		std::mt19937 m_rng = std::mt19937{ 1337 };
 		std::uniform_real_distribution<float> m_dis;
 	};

@@ -21,26 +21,20 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <gatery/scl/io/pci/pci.h>
 
 namespace gtry::scl::sim {
+	using namespace scl::pci;
+
+	uint64_t readState(gtry::sim::DefaultBitVectorState raw, size_t offset, size_t size);
+	inline uint64_t readState(gtry::sim::DefaultBitVectorState raw) { return readState(raw, 0, raw.size()); }
 
 	struct DefaultBitVectorWriter {
 		gtry::sim::DefaultBitVectorState &destination;
 		size_t offset = 0;
-		DefaultBitVectorWriter(gtry::sim::DefaultBitVectorState &destination) : destination(destination) {}
+		DefaultBitVectorWriter(gtry::sim::DefaultBitVectorState &destination, size_t initialOffset = 0) : destination(destination), offset(initialOffset) {}
 
 		template<typename T>
-		DefaultBitVectorWriter& write(const T& value, BitWidth size) {
-			HCL_DESIGNCHECK_HINT(offset + size.value <= destination.size(), "not enough space in destination to write value");
-			destination.insert(gtry::sim::DefaultConfig::VALUE, offset, size.value, (gtry::sim::DefaultConfig::BaseType) value);
-			destination.setRange(gtry::sim::DefaultConfig::DEFINED, offset, size.value);
-			offset += size.value;
-			return *this;
-		}
+		DefaultBitVectorWriter& write(const T& value, BitWidth size);
 
-		DefaultBitVectorWriter& skip(BitWidth size) {
-			HCL_DESIGNCHECK_HINT(offset + size.value <= destination.size(), "offset would overflow after this operation. This is not allowed");
-			offset += size.value;
-			return *this;
-		}
+		DefaultBitVectorWriter& skip(BitWidth size);
 	};
 
 
@@ -64,7 +58,7 @@ namespace gtry::scl::sim {
 		std::optional<uint64_t> wordAddress;
 		std::optional<uint8_t> lowerByteAddress;
 		std::optional<size_t> completerID;
-		size_t completionStatus = 0b000;
+		CompletionStatus completionStatus = CompletionStatus::successfulCompletion;
 		bool byteCountModifier = 0;
 		std::optional<size_t> byteCount;
 		std::optional<std::vector<uint32_t>> payload;
@@ -72,8 +66,9 @@ namespace gtry::scl::sim {
 		TlpInstruction& safeLength(size_t length) { this->length = length; HCL_DESIGNCHECK_HINT(!(*this->length == 1 && this->lastDWByteEnable != 0), "lastBE must be zero if length = 1"); return *this; }
 
 		operator gtry::sim::DefaultBitVectorState();
+		gtry::sim::DefaultBitVectorState asDefaultBitVectorState(bool headerOnly = false);
 		static TlpInstruction createFrom(const gtry::sim::DefaultBitVectorState& raw);
-		static TlpInstruction randomize(pci::TlpOpcode op, size_t seed = 'p'+'i'+'z'+'z'+'a');
+		static TlpInstruction randomizeNaive(pci::TlpOpcode op, size_t seed = 'p'+'i'+'z'+'z'+'a');
 		auto operator <=> (const TlpInstruction& other) const = default;
 	};
 

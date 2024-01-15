@@ -41,6 +41,10 @@ void UnitTestSimulationFixture::addSimulationProcess(std::function<SimulationFun
 	m_simulator->addSimulationProcess(std::move(simProc));
 }
 
+void UnitTestSimulationFixture::addSimulationFiber(std::function<void()> simFiber)
+{
+	m_simulator->addSimulationFiber(std::move(simFiber));
+}
 
 void UnitTestSimulationFixture::eval(hlim::Circuit &circuit)
 {

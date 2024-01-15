@@ -55,6 +55,14 @@ Address allocation will in the future be propagated as meta data through the til
 	std::cout << memoryMap.getTree().physicalDescription << std::endl;
 ```
 
+They can also be exported as a filter file for GTKWave to translate numerical addresses on the tile link bus to symbolic register names:
+```cpp
+	auto memoryMapEntries = gtry::scl::exportAddressSpaceDescription(memoryMap.getTree().physicalDescription);
+
+	std::ofstream file("myCircuitsMemoryMap.gtkwave.filter", std::fstream::binary);
+	gtry::scl::writeGTKWaveFilterFile(file, memoryMapEntries);
+```
+
 ## Compounds
 
 Compound signals can be mapped as well as long as they have been annotated (same as for `gtry::setName` or `gtry::pinIn`/`gtry::pinOut`).

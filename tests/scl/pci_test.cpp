@@ -113,7 +113,7 @@ BOOST_FIXTURE_TEST_CASE(tlp_RequestHeader_test, BoostUnitTestSimulationFixture) 
 
 	std::mt19937 rng{ std::random_device{}() };
 
-	TlpInstruction read = TlpInstruction::randomize(TlpOpcode::memoryReadRequest64bit, std::random_device{}() );
+	TlpInstruction read = TlpInstruction::randomizeNaive(TlpOpcode::memoryReadRequest64bit, std::random_device{}() );
 
 	BVec rawHeader = 128_b;
 	pinIn(rawHeader, "in_raw", {.simulationOnlyPin = true});
@@ -190,8 +190,6 @@ BOOST_FIXTURE_TEST_CASE(tlp_CompletionHeader_test, BoostUnitTestSimulationFixtur
 	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScope(clk);
 
-	TlpInstruction comp = TlpInstruction::randomize(TlpOpcode::completionWithData,  std::random_device{}());
-
 	BVec rawHeader = 96_b;
 	pinIn(rawHeader, "in_raw");
 
@@ -208,58 +206,65 @@ BOOST_FIXTURE_TEST_CASE(tlp_CompletionHeader_test, BoostUnitTestSimulationFixtur
 
 	addSimulationProcess(
 		[&, this]()->SimProcess {
-			co_await OnClk(clk);
-			simu(rawHeader) = (sim::DefaultBitVectorState) comp;
-			co_await WaitFor(Seconds{ 0, 1});
-			BOOST_TEST(simu(compHdr.common.type) == ((size_t) comp.opcode & 0x1Fu));
-			BOOST_TEST(simu(compHdr.common.fmt) == ((size_t) comp.opcode >> 5));
-			BOOST_TEST(simu(compHdr.common.addressType) == comp.at);
-			BOOST_TEST(simu(compHdr.common.processingHintPresence) == comp.th);
-			BOOST_TEST(simu(compHdr.common.attributes.idBasedOrdering) == comp.idBasedOrderingAttr2);
-			BOOST_TEST(simu(compHdr.common.attributes.noSnoop) == comp.noSnoopAttr0);
-			BOOST_TEST(simu(compHdr.common.attributes.relaxedOrdering) == comp.relaxedOrderingAttr1);
-			BOOST_TEST(simu(compHdr.common.digest) == comp.td);
-			BOOST_TEST(simu(compHdr.common.poisoned) == comp.ep);
-			BOOST_TEST(simu(compHdr.common.length) == *comp.length);
-			BOOST_TEST(simu(compHdr.common.trafficClass) == comp.tc);
+			for (size_t i = 0; i < 100; i++)
+			{
+				TlpInstruction comp = TlpInstruction::randomizeNaive(TlpOpcode::completionWithData, i);
+				co_await OnClk(clk);
+				simu(rawHeader) = (sim::DefaultBitVectorState)comp;
+				co_await WaitFor(Seconds{ 0, 1 });
+				BOOST_TEST(simu(compHdr.common.type) == ((size_t)comp.opcode & 0x1Fu));
+				BOOST_TEST(simu(compHdr.common.fmt) == ((size_t)comp.opcode >> 5));
+				BOOST_TEST(simu(compHdr.common.addressType) == comp.at);
+				BOOST_TEST(simu(compHdr.common.processingHintPresence) == comp.th);
+				BOOST_TEST(simu(compHdr.common.attributes.idBasedOrdering) == comp.idBasedOrderingAttr2);
+				BOOST_TEST(simu(compHdr.common.attributes.noSnoop) == comp.noSnoopAttr0);
+				BOOST_TEST(simu(compHdr.common.attributes.relaxedOrdering) == comp.relaxedOrderingAttr1);
+				BOOST_TEST(simu(compHdr.common.digest) == comp.td);
+				BOOST_TEST(simu(compHdr.common.poisoned) == comp.ep);
+				BOOST_TEST(simu(compHdr.common.length) == *comp.length);
+				BOOST_TEST(simu(compHdr.common.trafficClass) == comp.tc);
 
 
-			BOOST_TEST(simu(compHdr.requesterId) == comp.requesterID);
-			BOOST_TEST(simu(compHdr.completerId) == *comp.completerID);
-			BOOST_TEST(simu(compHdr.tag) == comp.tag);
-			BOOST_TEST(simu(compHdr.byteCount) == *comp.byteCount);
-			BOOST_TEST(simu(compHdr.byteCountModifier) == comp.byteCountModifier);
-			BOOST_TEST(simu(compHdr.lowerByteAddress) == *comp.lowerByteAddress);
-			BOOST_TEST(simu(compHdr.completionStatus) == comp.completionStatus);
+				BOOST_TEST(simu(compHdr.requesterId) == comp.requesterID);
+				BOOST_TEST(simu(compHdr.completerId) == *comp.completerID);
+				BOOST_TEST(simu(compHdr.tag) == comp.tag);
+				BOOST_TEST(simu(compHdr.completionStatus) == (size_t)comp.completionStatus);
+				if (comp.completionStatus == CompletionStatus::successfulCompletion) {
+					BOOST_TEST(simu(compHdr.byteCount) == *comp.byteCount);
+					BOOST_TEST(simu(compHdr.byteCountModifier) == comp.byteCountModifier);
+					BOOST_TEST(simu(compHdr.lowerByteAddress) == *comp.lowerByteAddress);
+				}
 
-			BOOST_TEST(simu(compHdrRecon.common.type) == simu(compHdr.common.type));
-			BOOST_TEST(simu(compHdrRecon.common.fmt)  == simu(compHdr.common.fmt));
-			BOOST_TEST(simu(compHdrRecon.common.addressType)  == simu(compHdr.common.addressType));
-			BOOST_TEST(simu(compHdrRecon.common.processingHintPresence)  == simu(compHdr.common.processingHintPresence));
-			BOOST_TEST(simu(compHdrRecon.common.attributes.idBasedOrdering)  == simu(compHdr.common.attributes.idBasedOrdering));
-			BOOST_TEST(simu(compHdrRecon.common.attributes.noSnoop)  == simu(compHdr.common.attributes.noSnoop));
-			BOOST_TEST(simu(compHdrRecon.common.attributes.relaxedOrdering)  == simu(compHdr.common.attributes.relaxedOrdering));
-			BOOST_TEST(simu(compHdrRecon.common.digest)  == simu(compHdr.common.digest));
-			BOOST_TEST(simu(compHdrRecon.common.poisoned)  == simu(compHdr.common.poisoned));
-			BOOST_TEST(simu(compHdrRecon.common.length)  == simu(compHdr.common.length));
-			BOOST_TEST(simu(compHdrRecon.common.trafficClass)  == simu(compHdr.common.trafficClass));
-			
-			BOOST_TEST(simu(compHdrRecon.requesterId) == simu(compHdr.requesterId));
-			BOOST_TEST(simu(compHdrRecon.tag) == simu(compHdr.tag));
-			BOOST_TEST(simu(compHdrRecon.completerId) == simu(compHdr.completerId));
-			BOOST_TEST(simu(compHdrRecon.byteCount) == simu(compHdr.byteCount));
-			BOOST_TEST(simu(compHdrRecon.byteCountModifier) == simu(compHdr.byteCountModifier));
-			BOOST_TEST(simu(compHdrRecon.lowerByteAddress) == simu(compHdr.lowerByteAddress));
-			BOOST_TEST(simu(compHdrRecon.completionStatus) == simu(compHdr.completionStatus));
+				BOOST_TEST(simu(compHdrRecon.common.type) == simu(compHdr.common.type));
+				BOOST_TEST(simu(compHdrRecon.common.fmt) == simu(compHdr.common.fmt));
+				BOOST_TEST(simu(compHdrRecon.common.addressType) == simu(compHdr.common.addressType));
+				BOOST_TEST(simu(compHdrRecon.common.processingHintPresence) == simu(compHdr.common.processingHintPresence));
+				BOOST_TEST(simu(compHdrRecon.common.attributes.idBasedOrdering) == simu(compHdr.common.attributes.idBasedOrdering));
+				BOOST_TEST(simu(compHdrRecon.common.attributes.noSnoop) == simu(compHdr.common.attributes.noSnoop));
+				BOOST_TEST(simu(compHdrRecon.common.attributes.relaxedOrdering) == simu(compHdr.common.attributes.relaxedOrdering));
+				BOOST_TEST(simu(compHdrRecon.common.digest) == simu(compHdr.common.digest));
+				BOOST_TEST(simu(compHdrRecon.common.poisoned) == simu(compHdr.common.poisoned));
+				BOOST_TEST(simu(compHdrRecon.common.length) == simu(compHdr.common.length));
+				BOOST_TEST(simu(compHdrRecon.common.trafficClass) == simu(compHdr.common.trafficClass));
 
-			co_await OnClk(clk);
+				BOOST_TEST(simu(compHdrRecon.requesterId) == simu(compHdr.requesterId));
+				BOOST_TEST(simu(compHdrRecon.tag) == simu(compHdr.tag));
+				BOOST_TEST(simu(compHdrRecon.completerId) == simu(compHdr.completerId));
+				BOOST_TEST(simu(compHdrRecon.byteCount) == simu(compHdr.byteCount));
+				BOOST_TEST(simu(compHdrRecon.byteCountModifier) == simu(compHdr.byteCountModifier));
+				BOOST_TEST(simu(compHdrRecon.lowerByteAddress) == simu(compHdr.lowerByteAddress));
+				BOOST_TEST(simu(compHdrRecon.completionStatus) == simu(compHdr.completionStatus));
+
+				co_await OnClk(clk);
+			}
 			stopTest();
 		}
 	);
 
+	if (false) { recordVCD("dut.vcd"); }
 	design.postprocess();
 
-	BOOST_TEST(!runHitsTimeout({1,1'000'000}));
+	BOOST_TEST(!runHitsTimeout({ 3, 1'000'000 }));
 }
 
 
@@ -336,7 +341,40 @@ BOOST_FIXTURE_TEST_CASE(tlp_to_tilelink_rw64_1dw, BoostUnitTestSimulationFixture
 		});
 
 
-	if (true) { recordVCD("dut.vcd"); }
+	if (false) { recordVCD("dut.vcd"); }
+	design.postprocess();
+
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(pci_deadbeef_test, BoostUnitTestSimulationFixture) {
+	using namespace scl::pci;
+	using namespace scl::sim;
+	Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+
+	const uint64_t deadbeef = 0xABCD'DEAD'BEEF'ABCDull;
+
+	UInt addr = ConstUInt(deadbeef, 64_b);
+
+	RequestHeader hdr;
+	//hdr.wordAddress = addr >> 2; this line silently resizes the vector 
+	hdr.wordAddress = zext(addr.upper(-2_b));
+
+	BOOST_TEST(hdr.wordAddress.width() == 62_b);
+
+	BVec raw = (BVec)hdr;
+
+	RequestHeader reconstructed = hdr.fromRaw(raw);
+	addSimulationProcess([&, this]()->SimProcess {
+		co_await OnClk(clk);
+			BOOST_TEST(simu(reconstructed.wordAddress) == simu(hdr.wordAddress));
+			stopTest();
+		}
+	);
+
 	design.postprocess();
 
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));

@@ -61,6 +61,7 @@ class WaitStable;
 class Simulator
 {
 	public:
+		Simulator();
 		virtual ~Simulator() = default;
 
 		/// Adds a simulator callback hook to inform waveform recorders and test bench exporters about simulation events.
@@ -108,6 +109,12 @@ class Simulator
 		 * @param seconds Amount of time (in seconds) by which the simulation gets advanced.
 		 */
 		virtual void advance(hlim::ClockRational seconds) = 0;
+
+		template<typename ReturnValue>
+		ReturnValue executeCoroutine(SimulationFunction<ReturnValue> coroutine);
+
+		template<typename ReturnValue>
+		ReturnValue executeCoroutine(std::function<SimulationFunction<ReturnValue>()> coroutine) { return executeCoroutine(coroutine()); }
 
 		/**
 		 * @brief Aborts a running simulation mid step
@@ -158,6 +165,7 @@ class Simulator
 
 		/// Adds a simulation process to this simulator that gets started on power on.
 		virtual void addSimulationProcess(std::function<SimulationFunction<void>()> simProc) = 0;
+		virtual void addSimulationFiber(std::function<void()> simFiber) = 0;
 		virtual void addSimulationVisualization(sim::SimulationVisualization simVis) = 0;
 
 		/// Spawns a simulation process immediately (to be called during simulation to "fork").
@@ -207,6 +215,31 @@ class Simulator
 		size_t m_microTick = 0;
 		WaitClock::TimingPhase m_timingPhase;
 		CallbackDispatcher m_callbackDispatcher;
+
+		std::mutex m_mutex;
+
+		virtual void startCoroutine(SimulationFunction<void> coroutine) = 0;
 };
+
+
+template<typename ReturnValue>
+ReturnValue Simulator::executeCoroutine(SimulationFunction<ReturnValue> coroutine)
+{
+	std::unique_lock lock(m_mutex);
+
+	ReturnValue result;
+	bool done = false;
+
+	auto callbackWrapper = [&result, &done, &coroutine, this]()mutable->SimulationFunction<void> {
+		result = co_await coroutine;
+		done = true;
+	};
+
+	startCoroutine(callbackWrapper());
+	while (!done) advanceEvent();
+
+	return result;
+}
+
 
 }

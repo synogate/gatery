@@ -171,6 +171,13 @@ namespace gtry::scl
 	void connect(Memory<BVec>& mem, TileLinkUL& link);
 
 	template<TileLinkSignal TLink> TLink regDecouple(TLink&& link);
+	/**
+	 * @brief	Places stream decoupling registers in both the A channel direction and the D channel direction. Quick and sometimes dirty way to add
+	 *			pipelining registers to a design which already features tileLinks. This function consumes a slave-side tileLink and returns a master-side tileLink.
+	 * @param slave the slave-side tileLink
+	 * @return the slave-side tileLink handle, where decoupling registers have been inserted in both directions.
+	*/
+	template <TileLinkSignal TLink> TLink tileLinkRegDecouple(TLink&& slave);
 }
 
 // impl
@@ -311,6 +318,16 @@ namespace gtry::scl
 		};
 		*link.d <<= regDecouple(*out.d);
 		return out;
+	}
+
+
+	template <TileLinkSignal TLink>
+	TLink tileLinkRegDecouple(TLink&& slave) {
+		TLink master = constructFrom(slave);
+		TLink masterTemp = constructFrom(master);
+		masterTemp <<= master;
+		slave <<= regDecouple(move(masterTemp));
+		return master;
 	}
 
 	extern template struct strm::Stream<TileLinkA, Ready, Valid>;

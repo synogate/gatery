@@ -36,7 +36,7 @@ namespace gtry::scl::arch::xilinx
 		};
 	
 		struct Status {
-			Bit user_lnk_up;
+			Bit user_lnk_up; 
 			Bit phy_rdy_out;
 		};
 	
@@ -50,7 +50,7 @@ namespace gtry::scl::arch::xilinx
 
 		Settings settings() const { return m_cfg; }
 	
-		const Clock& userClock() { return m_usrClk; }
+		const Clock& userClock() const { return m_usrClk; } 
 	private:
 		Settings m_cfg;
 		Clock m_usrClk;

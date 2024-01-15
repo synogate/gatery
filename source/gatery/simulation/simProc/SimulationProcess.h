@@ -321,7 +321,7 @@ class SimulationFunction {
 		};
 
   		/// Produces an awaiter if this SimulationFunction is co_awaited as a called sub-process of another SimulationFunction.
-  		Join operator co_await() && noexcept { 
+  		Join operator co_await() { // && noexcept { 
 			m_handle.resume();
 			return Join(m_handle);
 		}

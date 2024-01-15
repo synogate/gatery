@@ -18,6 +18,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include <gatery/pch.h>
 #include "PciToTileLink.h"
+#include <gatery/scl/utils/math.h>
+#include <gatery/scl/utils/Thermometric.h>
+#include <gatery/scl/utils/BitCount.h>
+#include <gatery/scl/utils/OneHot.h>
 
 namespace gtry::scl::pci {
 
@@ -40,7 +44,7 @@ namespace gtry::scl::pci {
 	}
 	TlpPacketStream<EmptyBits, BarInfo> completerRequestToTileLinkA(TileLinkChannelA& a, BitWidth tlpStreamW)
 	{
-		Area area{ "tlpToTileLinkA", true };
+		Area area{ "scl_CRToTileLinkA", true };
 		TlpPacketStream<EmptyBits, BarInfo> complReq(tlpStreamW);
 		HCL_DESIGNCHECK_HINT(complReq->width() >= 128_b, "this design is limited to completion widths that can accommodate an entire 3dw header into one beat");
 		complReq.set(EmptyBits{ BitWidth::count(tlpStreamW.bits()) });
@@ -76,7 +80,7 @@ namespace gtry::scl::pci {
 
 	TlpPacketStream<EmptyBits> tileLinkDToCompleterCompletion(TileLinkChannelD&& d, BitWidth tlpStreamW)
 	{
-		Area area{ "tileLinkDToTlp", true };
+		Area area{ "scl_tileLinkDToCC", true };
 		TlpAnswerInfo ans;
 		unpack(d->source, ans);
 		ans.error |= d->error; 
@@ -116,7 +120,7 @@ namespace gtry::scl::pci {
 
 	CompleterInterface makeTileLinkMaster(scl::TileLinkUL&& tl, BitWidth tlpW)
 	{
-		Area area{ "makeTileLinkMaster", true };
+		Area area{ "scl_makeTileLinkMaster", true };
 		HCL_NAMED(tl);
 
 		HCL_DESIGNCHECK_HINT(tl.a->source.width() == width(TlpAnswerInfo{}), "the source width is not adequate");
@@ -128,5 +132,129 @@ namespace gtry::scl::pci {
 		HCL_NAMED(complCompl);
 		
 		return CompleterInterface{ move(complReq), move(complCompl) };
+	}
+
+	static UInt length(const UInt& bytes, const UInt& byteAddress) {
+		UInt ret = "11d1";
+
+		ret = zext(bytes.upper(-2_b));
+		IF(byteAddress.lower(2_b) != 0) {
+			ret += 1;
+		}
+
+		return ret;
+	}
+
+	static BVec firstDwByteEnable(const UInt& byteAddress) {
+		return (BVec) cat('1', ~uintToThermometric(byteAddress.lower(2_b)));
+	}
+
+	static BVec lastDwByteEnable(const UInt& bytes, const UInt& byteAddress) {
+
+		UInt endByteAddress = byteAddress + bytes;
+		BVec ret = (BVec) zext(uintToThermometric(endByteAddress.lower(2_b)), 4_b);
+
+		//we do not want this case to be 0000, but 1111 (full byte enable mask)
+		IF(endByteAddress.lower(2_b) == 0)
+			ret = (BVec) "4b1111";
+		
+		//by pci spec, if the packet is only 1 dw, last byte enable must be 0
+		IF(zext(bytes) <= 4)
+			ret = 0;
+
+		return ret;
+	}
+
+	TlpPacketStream<EmptyBits> tileLinkAToRequesterRequest(TileLinkChannelA&& a, BitWidth tlpW)
+	{
+		Area area{ "scl_TL_A_to_requester_request_tlp", true };
+
+		TlpPacketStream<EmptyBits> rr(tlpW);
+		emptyBits(rr) = BitWidth::count(rr->width().bits());
+
+		RequestHeader hdr;
+		hdr.common.poisoned= '0';
+		hdr.common.digest= '0';
+		hdr.common.processingHintPresence = '0';
+		hdr.common.attributes = {'0','0','0'};
+		hdr.common.addressType = (size_t) AddressType::defaultOption;
+		hdr.common.trafficClass = (size_t) TrafficClass::defaultOption;
+		hdr.common.opcode(TlpOpcode::memoryReadRequest64bit);
+
+		IF(valid(a) & a->isPut()) {
+			sim_assert('0') << "untested, consider it non-working";
+			hdr.common.opcode(TlpOpcode::memoryWriteRequest64bit);
+		}
+
+		UInt bytes = (UInt) decoder(a->size);
+		setName(bytes, "rr_bytes");
+
+		hdr.common.dataLength(length(bytes, a->address));
+
+		hdr.requesterId = 0;
+		HCL_DESIGNCHECK_HINT(a->source.width() <= 8_b, "source is too large for the fixed (non-extended) tag field");
+		hdr.tag = (BVec) zext(a->source);
+
+		hdr.lastDWByteEnable = lastDwByteEnable(bytes, a->address);
+		hdr.firstDWByteEnable = firstDwByteEnable(a->address);
+		hdr.wordAddress = zext(a->address.upper(-2_b));
+		hdr.processingHint = (size_t) ProcessingHint::defaultOption;
+		setName(hdr, "rr_hdr");
+
+		*rr = 0;
+		IF(sop(a)) {
+			rr->lower(128_b) = (BVec)hdr;
+		}
+
+		valid(rr) = valid(a);
+		eop(rr) = eop(a);
+		ready(a) = ready(rr);
+		emptyBits(rr) = rr->width().bits() - 4 * 32;
+
+		return rr;
+	}
+
+	TileLinkChannelD requesterCompletionToTileLinkD(TlpPacketStream<EmptyBits>&& rc, BitWidth byteAddressW, BitWidth dataW)
+	{
+		Area area{ "scl_requester_completion_tlp_to_TL_D", true };
+		const CompletionHeader hdr = CompletionHeader::fromRaw(rc->lower(96_b));
+
+		TileLinkChannelD d = constructFrom(*(tileLinkInit<TileLinkUL>(byteAddressW, dataW, 8_b).d));
+
+		d->opcode = (size_t) TileLinkD::OpCode::AccessAckData;
+		d->source = (UInt) hdr.tag;
+		d->sink = 0;
+		d->param = 0;
+		d->error = hdr.common.poisoned | (hdr.completionStatus != (size_t) CompletionStatus::successfulCompletion);
+
+
+		IF(valid(rc) & sop(rc))
+			sim_assert(bitcount(hdr.byteCount) == 1) << "TileLink cannot represent non powers of 2 amount of bytes";
+		UInt logByteSize = encoder((OneHot) hdr.byteCount);
+		IF(valid(rc) & sop(rc))
+			sim_assert(logByteSize < d->size.width().count()) << "breaking this assertion invalidates the next line's truncation";
+		d->size = logByteSize.lower(d->size.width());
+
+		BVec headerlessData = *rc >> 96;
+		d->data = (headerlessData << cat(hdr.lowerByteAddress(2, 3_b),"5b00000")).lower(d->data.width());
+
+		valid(d) = valid(rc);
+		ready(rc) = ready(d);
+
+		return d;
+	}
+
+	TileLinkUL makePciMaster(RequesterInterface&& reqInt, BitWidth byteAddressW, BitWidth dataW, BitWidth tagW)
+	{
+		HCL_DESIGNCHECK_HINT(tagW <= 8_b, "pcie cannot accommodate more than 8 bit tags");
+		TileLinkUL ret = tileLinkInit<TileLinkUL>(byteAddressW, dataW, tagW);
+
+		TileLinkChannelA a = constructFrom(ret.a);
+		a <<= ret.a;
+		
+		reqInt.request <<= tileLinkAToRequesterRequest(move(a), reqInt.request->width());
+		*ret.d = requesterCompletionToTileLinkD(move(reqInt.completion), byteAddressW, dataW);
+	
+		return ret;
 	}
 }
