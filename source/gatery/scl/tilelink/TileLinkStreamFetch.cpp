@@ -133,10 +133,10 @@ namespace gtry::scl
 				readySource[(*link.d)->source] = '1';
 		}
 		IF(transfer(link.a)) {
-			if ((*link.d)->source.width() == 0_b)
+			if (link.a->source.width() == 0_b)
 				readySource[0] = '0';
 			else 
-				readySource[(*link.d)->source] = '0';
+				readySource[link.a->source] = '0';
 		}
 
 
