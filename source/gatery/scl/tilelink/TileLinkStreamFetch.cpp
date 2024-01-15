@@ -17,6 +17,7 @@
 */
 #include "gatery/pch.h"
 #include "TileLinkStreamFetch.h"
+#include <gatery/scl/utils/OneHot.h>
 #include <gatery/scl/utils/BitCount.h>
 
 namespace gtry::scl
@@ -25,7 +26,6 @@ namespace gtry::scl
 	{
 		m_area.leave();
 	}
-	static UInt beats
 
 	//static RvPacketStream<UInt> decompositionIntoPowersOfTwo(RvStream<UInt>&& input) {
 	//
@@ -57,15 +57,49 @@ namespace gtry::scl
 	//}
 
 
-	TileLinkUL TileLinkStreamFetch::generate(RvStream<Command>& cmdIn, RvStream<BVec>& dataOut, BitWidth sourceW)
+	TileLinkUB TileLinkStreamFetch::generate(RvStream<Command>& cmdIn, RvStream<BVec>& dataOut, BitWidth sourceW)
 	{
 		auto ent = m_area.enter();
 		HCL_NAMED(cmdIn);
 
-		auto link = tileLinkInit<TileLinkUL>(cmdIn->address.width(), dataOut->width(), sourceW);
+		std::optional<BitWidth> size = std::nullopt;
+		UInt logByteSize;
+		if (m_maxBurstSizeInBits) {
+			//calculate logByteSize from beats, assuming it fits well
+
+			const size_t bitsPerBeat = dataOut->width().bits();
+
+			UInt numBits = zext(cmdIn->beats, BitWidth::last(*m_maxBurstSizeInBits)) * bitsPerBeat;
+			HCL_NAMED(numBits);
+			IF(valid(cmdIn))	
+				sim_assert(numBits % 8 == 0) << "not a full amount of bytes?";
+
+			UInt numBytes = numBits.upper(-3_b);
+			HCL_NAMED(numBytes);
+
+			IF(valid(cmdIn))
+				sim_assert(bitcount(numBytes) == 1) << "not a possible tileLink burst";
+			logByteSize = encoder((OneHot) numBytes);
+			HCL_NAMED(logByteSize);
+			size = logByteSize.width();
+
+		}
+
+
+		auto link = tileLinkInit<TileLinkUB>(cmdIn->address.width(), dataOut->width(), sourceW, size);
 		link.a->opcode = (size_t)TileLinkA::Get;
 		link.a->param = 0;
-		link.a->size = utils::Log2C(link.a->mask.width().bits());
+		Bit isBurst = '0';
+		if (m_maxBurstSizeInBits) {
+			link.a->size = logByteSize;
+			IF(logByteSize > utils::Log2C(link.a->mask.width().bits()))
+				isBurst = '1';
+		}
+		else {
+			link.a->size = utils::Log2C(link.a->mask.width().bits());
+		}
+		HCL_NAMED(isBurst);
+
 		//link.a->source = 0;
 		link.a->mask = link.a->mask.width().mask(); //only full bus reads
 		link.a->data = ConstBVec(link.a->data.width());
@@ -92,17 +126,27 @@ namespace gtry::scl
 			setName(*m_pauseFetch, "pauseFetch");
 		}
 
-		IF(transfer(*link.d))
-			readySource[(*link.d)->source] = '1';
-		IF(transfer(link.a))
-			readySource[link.a->source] = '0';
+		IF(transfer(*link.d) & eop(*link.d)) {
+			if ((*link.d)->source.width() == 0_b)
+				readySource[0] = '1';
+			else 
+				readySource[(*link.d)->source] = '1';
+		}
+		IF(transfer(link.a)) {
+			if ((*link.d)->source.width() == 0_b)
+				readySource[0] = '0';
+			else 
+				readySource[(*link.d)->source] = '0';
+		}
+
+
 		readySource = reg(readySource, BVec{ readySource.width().mask() });
 
 		ready(cmdIn) = '0';
 		IF(transfer(link.a))
 		{
 			addressOffset += 1;
-			IF(addressOffset == cmdIn->beats)
+			IF(addressOffset == cmdIn->beats | isBurst) // this condition signals that the input command has been fulfilled. 
 			{
 				ready(cmdIn) = '1';
 				addressOffset = 0;

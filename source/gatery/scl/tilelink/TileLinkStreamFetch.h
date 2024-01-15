@@ -34,7 +34,7 @@ namespace gtry::scl
 		TileLinkStreamFetch();
 
 		TileLinkStreamFetch& pause(Bit condition) { m_pauseFetch = condition; return *this; }
-		TileLinkStreamFetch& enableBursts(BitWidth maxBurstSizeInBits) { m_maxBurstSizeInBits = maxBurstSizeInBits; return *this; }
+		TileLinkStreamFetch& enableBursts(size_t maxBurstSizeInBits) { m_maxBurstSizeInBits = maxBurstSizeInBits; return *this; }
 
 		//TODO: it supports multiple requests in parallel, but the responses are not guaranteed to be in order if the slave is not in order
 		virtual TileLinkUB generate(RvStream<Command>& cmdIn, RvStream<BVec>& dataOut, BitWidth sourceW = 0_b);
@@ -42,7 +42,7 @@ namespace gtry::scl
 	private:
 		Area m_area = {"scl_TileLinkStreamFetch", true};
 		std::optional<Bit> m_pauseFetch;
-		std::optional<BitWidth> m_maxBurstSizeInBits;
+		std::optional<size_t> m_maxBurstSizeInBits;
 	};
 
 
