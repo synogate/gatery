@@ -766,8 +766,8 @@ BOOST_FIXTURE_TEST_CASE(tilelink_stream_fetch_test, BoostUnitTestSimulationFixtu
 
 	RvStream<BVec> data{ 16_b };
 	pinOut(data, "data");
-
-	mem <<= (TileLinkUL&) TileLinkStreamFetch{}.generate(cmd, data, 1_b);
+	TileLinkUB memUB = TileLinkStreamFetch{}.generate(cmd, data, 1_b);
+	mem <<=  reinterpret_cast<TileLinkUL&>(memUB);
 
 	std::array<std::array<size_t, 2>, 3> testCases = {
 		std::array<size_t, 2>{ 16, 4 },
