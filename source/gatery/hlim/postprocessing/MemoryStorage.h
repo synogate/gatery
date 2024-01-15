@@ -122,7 +122,7 @@ class MemoryStorageDense : public MemoryStorage
 class MemoryStorageSparse : public MemoryStorage
 {
 	public:
-		MemoryStorageSparse(std::uint64_t size, const Initialization &initialization);
+		MemoryStorageSparse(std::uint64_t size, const Initialization& initialization = {});
 
 		using MemoryStorage::read;
 		virtual void read(sim::DefaultBitVectorState &dst, std::uint64_t offset, std::uint64_t size) const override;
