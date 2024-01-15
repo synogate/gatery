@@ -29,12 +29,17 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 namespace gtry::scl::sim {
 	using namespace gtry;
 
-
-	PcieHostModel::PcieHostModel(uint64_t memorySizeInBytes, bool memInitRandomDefined, uint32_t seed)
+	PcieHostModel::PcieHostModel(std::optional<RandomBlockDefinition> randomBlockDefinition, uint64_t memorySizeInBytes)
 	{
-		hlim::MemoryStorageDense mem(8 * memorySizeInBytes);
-		mem.setAllDefinedRandom(seed);
-		m_mem = std::make_unique<hlim::MemoryStorageDense>(mem);
+		hlim::MemoryStorage::Initialization memInit;
+		if (randomBlockDefinition)
+			memInit = hlim::MemoryStorage::Initialization::setAllDefinedRandom(
+				randomBlockDefinition->size,
+				randomBlockDefinition->offset,
+				randomBlockDefinition->seed);
+
+		hlim::MemoryStorageSparse mem(8 * memorySizeInBytes, memInit);
+		m_mem = std::make_unique<hlim::MemoryStorageSparse>(mem);
 	}
 
 	PcieHostModel& PcieHostModel::defaultHandlers()
