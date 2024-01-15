@@ -27,36 +27,6 @@ namespace gtry::scl
 		m_area.leave();
 	}
 
-	//static RvPacketStream<UInt> decompositionIntoPowersOfTwo(RvStream<UInt>&& input) {
-	//
-	//	UInt numberOfRequests = capture(bitcount(*input), valid(input));
-	//	Counter requestCounter(numberOfRequests);
-	//
-	//	RvPacketStream<UInt> output = constructFrom(input).add(Eop);
-	//
-	//	IF(transfer(output)) {
-	//		requestCounter.inc();
-	//	}
-	//	IF(transfer(input)) {
-	//		requestCounter.reset();
-	//	}
-	//
-	//	UInt leftOver = constructFrom(*input);
-	//	leftOver = reg(leftOver, 0);
-	//
-	//	*output = biggestPowerOfTwo(leftOver);
-	//
-	//	IF(valid(input) & leftOver == 0)
-	//		leftOver = *input;
-	//	ELSE
-	//		leftOver -= *output;
-	//
-	//	eop(output) = requestCounter.isLast();
-	//	valid(output) = valid(in);
-	//	ready(input) = ready(output) & requestCounter.isLast();
-	//}
-
-
 	TileLinkUB TileLinkStreamFetch::generate(RvStream<Command>& cmdIn, RvStream<BVec>& dataOut, BitWidth sourceW)
 	{
 		auto ent = m_area.enter();
@@ -80,7 +50,7 @@ namespace gtry::scl
 			IF(valid(cmdIn))
 				sim_assert(bitcount(numBytes) == 1) << "not a possible tileLink burst";
 			logByteSize = encoder((OneHot) numBytes);
-			HCL_NAMED(logByteSize);
+			HCL_NAMED(logByteSize); 
 			size = logByteSize.width();
 
 		}

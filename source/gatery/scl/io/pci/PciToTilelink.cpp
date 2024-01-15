@@ -23,8 +23,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <gatery/scl/utils/BitCount.h>
 #include <gatery/scl/utils/OneHot.h>
 
-#include <gatery/scl/Fifo.h>
-
 namespace gtry::scl::pci {
 
 	void TlpAnswerInfo::setErrorFromLimitations(RequestHeader reqHdr) 

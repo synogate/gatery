@@ -1481,7 +1481,7 @@ BOOST_FIXTURE_TEST_CASE(stream_shiftRight_test_poc, BoostUnitTestSimulationFixtu
 		}
 	);
 
-	if(true) recordVCD("stream_shiftRight.vcd");
+	if (false) recordVCD("stream_shiftRight.vcd");
 	design.postprocess();
 	//design.visualize("stream_shiftRight");
 	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
@@ -1531,7 +1531,7 @@ BOOST_FIXTURE_TEST_CASE(stream_shiftRight_test_anticipated_end, BoostUnitTestSim
 		}
 	);
 
-	if(true) recordVCD("stream_shiftRight.vcd");
+	if(false) recordVCD("stream_shiftRight.vcd");
 	design.postprocess();
 	//design.visualize("stream_shiftRight");
 	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
@@ -1583,7 +1583,7 @@ BOOST_FIXTURE_TEST_CASE(stream_shiftRight_test_anticipated_end_chaos_light, Boos
 		}
 	);
 
-	if(true) recordVCD("stream_shiftRight.vcd");
+	if(false) recordVCD("stream_shiftRight.vcd");
 	design.postprocess();
 	//design.visualize("stream_shiftRight");
 	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));

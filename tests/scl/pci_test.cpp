@@ -449,7 +449,7 @@ BOOST_FIXTURE_TEST_CASE(pci_requesterCompletion_tileLink_fullW_test, BoostUnitTe
 		}
 	);
 
-	recordVCD("dut.vcd");
+	if (false) recordVCD("dut.vcd");
 	design.postprocess();
 
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
@@ -518,7 +518,7 @@ BOOST_FIXTURE_TEST_CASE(pci_requester_512bit_tilelink_to_hostModel_test, BoostUn
 		}
 	);
 
-	recordVCD("dut.vcd");
+	if (false) recordVCD("dut.vcd");
 	design.postprocess();
 	//design.visualize("dut");
 
@@ -574,7 +574,7 @@ BOOST_FIXTURE_TEST_CASE(pci_requester_512bit_cheapBurst_test_rng_backpressure, B
 		}
 	);
 
-	recordVCD("dut.vcd");
+	if (false) recordVCD("dut.vcd");
 	design.postprocess();
 	//design.visualize("dut");
 
@@ -635,7 +635,7 @@ BOOST_FIXTURE_TEST_CASE(pci_requester_512bit_cheapBurst_chopped_test, BoostUnitT
 		}
 	);
 
-	recordVCD("dut.vcd");
+	if (false) recordVCD("dut.vcd");
 	design.postprocess();
 	//design.visualize("dut");
 
