@@ -37,9 +37,9 @@ namespace gtry::scl
 		slave.a->setupPut(cmdAddr->addr, *data, cmd->id, utils::Log2C(cmd->bytesPerBurst));
 	}
 
-	void tileLinkToAxiDMA(RvStream<TileLinkStreamFetch::Command>&& fetchCmd, RvStream<AxiToStreamCmd>&& depositCmd, TileLinkUB&& dataSource, Axi4& dataDest, BitWidth busW)
+	void tileLinkToAxiDMA(RvStream<TileLinkStreamFetch::Command>&& fetchCmd, RvStream<AxiToStreamCmd>&& depositCmd, TileLinkUB&& dataSource, Axi4& dataDest)
 	{
-		RvStream<BVec> dataStream(busW);
+		RvStream<BVec> dataStream(dataSource.a->data.width());
 
 		auto dataSourceMaster = TileLinkStreamFetch{}.enableBursts(depositCmd->bytesPerBurst * 8).generate(fetchCmd, dataStream, 0_b);
 
