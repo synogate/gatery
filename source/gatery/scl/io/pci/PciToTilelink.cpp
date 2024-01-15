@@ -153,7 +153,7 @@ namespace gtry::scl::pci {
 
 	static BVec lastDwByteEnable(const UInt& bytes, const UInt& byteAddress) {
 
-		UInt endByteAddress = byteAddress + bytes;
+		UInt endByteAddress = byteAddress + zext(bytes);
 		BVec ret = (BVec) zext(uintToThermometric(endByteAddress.lower(2_b)), 4_b);
 
 		//we do not want this case to be 0000, but 1111 (full byte enable mask)
@@ -239,7 +239,7 @@ namespace gtry::scl::pci {
 			hdr.common.opcode(TlpOpcode::memoryWriteRequest64bit);
 		}
 
-		UInt bytes = logBytesToBytes(a->size);
+		UInt bytes = (UInt) decoder(a->size);
 		setName(bytes, "rr_bytes");
 
 		hdr.common.dataLength(length(bytes, a->address));
@@ -416,8 +416,8 @@ namespace gtry::scl::pci {
 		return ret;
 	}
 
-	TileLinkUB makePciMasterCheapBurst(RequesterInterface&& reqInt, std::optional<BitWidth> sizeW) {
-		TileLinkUB ret = tileLinkInit<TileLinkUB>(64_b, reqInt.request->width(), 0_b, sizeW);
+	TileLinkUB makePciMasterCheapBurst(RequesterInterface&& reqInt, std::optional<BitWidth> sizeW, BitWidth addressW) {
+		TileLinkUB ret = tileLinkInit<TileLinkUB>(addressW, reqInt.request->width(), 0_b, sizeW);
 
 		TileLinkChannelA a = constructFrom(ret.a);
 		a <<= ret.a;

@@ -43,5 +43,5 @@ namespace gtry::scl::pci {
 	TileLinkChannelD requesterCompletionToTileLinkDCheapBurst(TlpPacketStream<EmptyBits>&& rc, std::optional<BitWidth> sizeW = {});
 	TileLinkUL makePciMaster(RequesterInterface&& reqInt, BitWidth byteAddressW, BitWidth dataW, BitWidth tagW);
 	TileLinkUL makePciMasterFullW(RequesterInterface&& reqInt);
-	TileLinkUB makePciMasterCheapBurst(RequesterInterface&& reqInt, std::optional<BitWidth> sizeW = {});
+	TileLinkUB makePciMasterCheapBurst(RequesterInterface&& reqInt, std::optional<BitWidth> sizeW = {}, BitWidth addressW = 64_b);
 }

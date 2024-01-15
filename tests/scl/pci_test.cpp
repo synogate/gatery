@@ -464,9 +464,9 @@ BOOST_FIXTURE_TEST_CASE(pci_requester_512bit_tilelink_to_hostModel_test, BoostUn
 
 	const size_t memSizeInBytes = 64;
 
-	scl::sim::PcieHostModel host(memSizeInBytes);
+	scl::sim::PcieHostModel host(scl::sim::RandomBlockDefinition{ 0, memSizeInBytes * 8, 1039834 });
 	host.defaultHandlers();
-	addSimulationProcess([&, this]()->SimProcess { return host.completeRequests(clk,0,50); });
+	addSimulationProcess([&, this]()->SimProcess { return host.completeRequests(clk, 0, 50); });
 
 	scl::TileLinkUL master = makePciMasterFullW(host.requesterInterface(512_b));
 
@@ -534,7 +534,7 @@ BOOST_FIXTURE_TEST_CASE(pci_requester_512bit_cheapBurst_test_rng_backpressure, B
 
 	const size_t memSizeInBytes = 1 << 10; // 1kB space
 
-	scl::sim::PcieHostModel host(memSizeInBytes);
+	scl::sim::PcieHostModel host(scl::sim::RandomBlockDefinition{ 0, memSizeInBytes * 8, 1039834});
 	host.defaultHandlers();
 	addSimulationProcess([&, this]()->SimProcess { return host.completeRequests(clk, 0, 50); });
 
@@ -591,7 +591,7 @@ BOOST_FIXTURE_TEST_CASE(pci_requester_512bit_cheapBurst_chopped_test, BoostUnitT
 
 	const size_t memSizeInBytes = 1 << 10; // 1kB space
 
-	scl::sim::PcieHostModel host(memSizeInBytes);
+	scl::sim::PcieHostModel host(scl::sim::RandomBlockDefinition{ 0, memSizeInBytes * 8, 1039834});
 	host.defaultHandlers();
 	host.updateHandler(TlpOpcode::memoryReadRequest64bit, std::make_unique<scl::sim::CompleterInChunks>(64, 5));
 	addSimulationProcess([&, this]()->SimProcess { return host.completeRequests(clk, 0, 50); });
