@@ -67,13 +67,13 @@ namespace gtry::scl::sim {
 			completion.completerID = m_completerId;
 			size_t payloadSizeInBytes = *request.length * 4; //can be adapted to include first_be and last_be
 			size_t bytesLeft = payloadSizeInBytes;
-			completion.byteCount = std::min(bytesLeft, m_chunkSizeInBytes);
+			completion.byteCount = bytesLeft;
 			completion.completionStatus = CompletionStatus::successfulCompletion;
 
 			strm::SimPacket completionPacket(completion.asDefaultBitVectorState(true));
 
 			size_t baseBitAddress = *request.wordAddress * 32;
-			size_t numPackets = payloadSizeInBytes / m_chunkSizeInBytes + 1;
+			size_t numPackets = (payloadSizeInBytes + m_chunkSizeInBytes - 1) / m_chunkSizeInBytes;
 			for (size_t i = 0; i < numPackets; i++)
 			{
 				size_t sentBytes = 0;
@@ -84,10 +84,12 @@ namespace gtry::scl::sim {
 					sentBytes++;
 				}
 				bytesLeft -= sentBytes;
+
+				for (size_t j = 0; j < m_gapInCyclesBetweenChunksOfSameRequest; j++) co_await OnClk(clk);
 				
 				co_await strm::sendPacket(responseStream, completionPacket, clk, sendingSeq);
 
-				completion.byteCount = std::min(bytesLeft, m_chunkSizeInBytes);
+				completion.byteCount = bytesLeft;
 				*completion.lowerByteAddress = (uint8_t) (baseBitAddress >> 3);
 				completionPacket = completion.asDefaultBitVectorState(true);
 			}

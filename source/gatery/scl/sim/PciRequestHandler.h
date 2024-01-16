@@ -46,11 +46,14 @@ namespace gtry::scl::sim {
 
 	class CompleterInChunks : public PciRequestHandler {
 	public:
-		CompleterInChunks() = default;
-		CompleterInChunks(size_t chunkSizeInBytes) : m_chunkSizeInBytes(chunkSizeInBytes){}
+		//CompleterInChunks() = default;
+		CompleterInChunks(size_t chunkSizeInBytes = 64, size_t gapInCyclesBetweenChunksOfSameRequest = 0) : 
+			m_chunkSizeInBytes(chunkSizeInBytes), 
+			m_gapInCyclesBetweenChunksOfSameRequest(gapInCyclesBetweenChunksOfSameRequest){}
 		virtual	SimProcess respond(const TlpInstruction& request, const hlim::MemoryStorage& mem, const TlpPacketStream<EmptyBits>& responseStream, const Clock& clk, SimulationSequencer& sendingSeq) override;
 	private:
 		size_t m_chunkSizeInBytes = 64;
+		size_t m_gapInCyclesBetweenChunksOfSameRequest = 0;
 	};
 
 	class Unsupported : public PciRequestHandler {

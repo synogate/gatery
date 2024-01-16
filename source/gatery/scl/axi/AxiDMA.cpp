@@ -136,4 +136,17 @@ namespace gtry::scl
 
 		scl::axiFromStream(move(storeCmd), mid.template remove<scl::Eop>(), axi);
 	}
+	AxiTransferReport axiTransferAuditor(const Axi4& streamToSniff, BitWidth bitsPerBurst, BitWidth counterW)
+	{
+		Counter burstCounter(counterW.last());
+		IF(transfer(streamToSniff.b))
+			burstCounter.inc();
+
+		Counter failCounter(counterW.last());
+		IF(transfer(streamToSniff.b))
+			IF(streamToSniff.b->resp == (size_t) AxiResponseCode::SLVERR | streamToSniff.b->resp == (size_t) AxiResponseCode::DECERR)
+				failCounter.inc();
+
+		return AxiTransferReport{.burstCount = burstCounter.value(), .failCount = failCounter.value(), .bitsPerBurst = bitsPerBurst.bits()};
+	}
 }

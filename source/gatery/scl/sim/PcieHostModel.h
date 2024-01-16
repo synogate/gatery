@@ -56,7 +56,7 @@ namespace gtry::scl::sim {
 		SimProcess assertInvalidTlp(const Clock& clk);
 		SimProcess assertPayloadSizeDoesntMatchHeader(const Clock& clk);
 		SimProcess assertUnsupportedTlp(const Clock& clk);
-		SimProcess completeRequests(const Clock& clk, size_t delay = 0);
+		SimProcess completeRequests(const Clock& clk, size_t delay = 0, std::optional<uint8_t> rngReadyPercentage = {});
 
 	private:
 		std::unique_ptr<hlim::MemoryStorage> m_mem;
