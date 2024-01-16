@@ -73,8 +73,7 @@ namespace gtry::scl::sim {
 			strm::SimPacket completionPacket(completion.asDefaultBitVectorState(true));
 
 			size_t baseBitAddress = *request.wordAddress * 32;
-			size_t numPackets = payloadSizeInBytes / m_chunkSizeInBytes + 1;
-			numPackets -= (payloadSizeInBytes % m_chunkSizeInBytes == 0) ? 1 : 0;
+			size_t numPackets = (payloadSizeInBytes + m_chunkSizeInBytes - 1) / m_chunkSizeInBytes;
 			for (size_t i = 0; i < numPackets; i++)
 			{
 				size_t sentBytes = 0;

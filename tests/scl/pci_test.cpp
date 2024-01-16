@@ -419,7 +419,7 @@ BOOST_FIXTURE_TEST_CASE(pci_requesterCompletion_tileLink_fullW_test, BoostUnitTe
 		scl::SimulationSequencer seq;
 		for (size_t i = 0; i < iterations; i++)
 		{
-			fork([&, this]()->SimProcess { return scl::strm::sendPacket(rc, reqCompPacket, clk, seq); });
+			fork(scl::strm::sendPacket(rc, reqCompPacket, clk, seq));
 		}
 
 		for (size_t i = 0; i < iterations; i++)
@@ -427,15 +427,7 @@ BOOST_FIXTURE_TEST_CASE(pci_requesterCompletion_tileLink_fullW_test, BoostUnitTe
 			co_await scl::strm::performTransferWait(d, clk);
 			BOOST_TEST(simu(d->source) == reqComp.tag);
 			BOOST_TEST(simu(d->size) == 6);
-			auto sigHandle = simu(d->data);
-			sim::DefaultBitVectorState dbv = sigHandle.eval();
-			for (size_t j = 0; j < 512 / 32; j++)
-			{
-				uint32_t mask = dbv.extractNonStraddling(sim::DefaultConfig::DEFINED, j * 32, 32);
-				BOOST_TEST(mask == (uint32_t)((1ull << 32) - 1));
-				uint32_t word = dbv.extractNonStraddling(sim::DefaultConfig::VALUE, j * 32, 32);
-				BOOST_TEST(reqComp.payload->at(j) == word);
-			}
+			simu(d->data) == reqComp.payload;
 		}
 
 

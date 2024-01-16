@@ -140,9 +140,9 @@ namespace gtry::scl::sim {
 		SimulationSequencer sendingSeq;
 
 		if(rngReadyPercentage)
-			fork([&, this]()->SimProcess { return scl::strm::readyDriverRNG(*m_rr, clk, *rngReadyPercentage); });
+			fork(scl::strm::readyDriverRNG(*m_rr, clk, *rngReadyPercentage));
 		else
-			fork([&, this]()->SimProcess { return scl::strm::readyDriver(*m_rr, clk); });
+			fork(scl::strm::readyDriver(*m_rr, clk));
 			
 		
 		while (true) {

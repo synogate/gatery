@@ -1436,157 +1436,105 @@ BOOST_FIXTURE_TEST_CASE(streamShiftLeft_test, BoostUnitTestSimulationFixture)
 	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
 }
 
-BOOST_FIXTURE_TEST_CASE(stream_shiftRight_test_poc, BoostUnitTestSimulationFixture)
+struct stream_shiftRight_test : BoostUnitTestSimulationFixture
 {
-	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
-	ClockScope clkScope(clk);
+	size_t streamShift = 12;
+	BitWidth packetSize = 64_b;
+	BitWidth streamW = 16_b;
 
-	UInt shift = 4;
+	std::optional<uint8_t> backpressureReadyPercentage;
 
-	scl::RvPacketStream<BVec, scl::EmptyBits> in{ 16_b };
-	emptyBits(in) = 4_b;
+	bool hasAnticipatedEnd() { return (packetSize.value % streamW.value) <= streamShift; }
 
-	auto out = streamShiftRight(move(in), shift);
-	pinIn(in, "in");
-	pinOut(out, "out");
+	void execute() {
+		std::mt19937_64 mt(std::random_device{}());
+		Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+		ClockScope clkScope(clk);
 
-	scl::strm::SimPacket inputPacket(0x123456789abcdefull, 60_b);
+		UInt shift = streamShift;
 
-	size_t iterations = 4;
+		scl::RvPacketStream<BVec, scl::EmptyBits> in{ streamW };
+		emptyBits(in) = 4_b;
 
-	addSimulationProcess(
-		[&, this]()->SimProcess {
-			return scl::strm::readyDriver(out, clk);
-		}
-	);
+		auto out = streamShiftRight(move(in), shift);
+		pinIn(in, "in");
+		pinOut(out, "out");
 
-	addSimulationProcess(
-		[&, this]()->SimProcess {
-			scl::SimulationSequencer seq;
-			for (size_t i = 0; i < iterations; i++)
-			{
-				fork([&, this]()->SimProcess { return scl::strm::sendPacket(in, inputPacket, clk, seq); });
+		uint64_t payload = mt() & packetSize.mask();
+		scl::strm::SimPacket inputPacket(payload, packetSize);
+
+		size_t iterations = 4;
+
+		addSimulationProcess(
+			[&, this]()->SimProcess {
+				if(backpressureReadyPercentage)
+					return scl::strm::readyDriverRNG(out, clk, *backpressureReadyPercentage);
+				else
+					return scl::strm::readyDriver(out, clk);
 			}
-			
-			for (size_t i = 0; i < iterations; i++)
-			{
-				scl::strm::SimPacket outputPacket = co_await scl::strm::receivePacket(out, clk);
-				BOOST_TEST(outputPacket.payload == scl::strm::SimPacket(0x123456789abcdeull, 56_b).payload);
-			}
-			co_await OnClk(clk);
-			co_await OnClk(clk);
-			co_await OnClk(clk);
-			co_await OnClk(clk);
-			stopTest();
-		}
-	);
+		);
 
-	if (false) recordVCD("stream_shiftRight.vcd");
-	design.postprocess();
-	//design.visualize("stream_shiftRight");
-	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+		addSimulationProcess(
+			[&, this]()->SimProcess {
+				scl::SimulationSequencer seq;
+				for (size_t i = 0; i < iterations; i++)
+				{
+					fork(scl::strm::sendPacket(in, inputPacket, clk, seq));
+				}
+
+				for (size_t i = 0; i < iterations; i++)
+				{
+					scl::strm::SimPacket outputPacket = co_await scl::strm::receivePacket(out, clk);
+					BOOST_TEST(outputPacket.payload == scl::strm::SimPacket(payload >> streamShift, packetSize - streamShift).payload);
+				}
+				co_await OnClk(clk);
+				co_await OnClk(clk);
+				co_await OnClk(clk);
+				stopTest();
+			}
+		);
+
+		if(false) recordVCD("stream_shiftRight.vcd");
+		design.postprocess();
+		//design.visualize("stream_shiftRight");
+		BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+	}
+};
+
+BOOST_FIXTURE_TEST_CASE(stream_shiftRight_test_poc, stream_shiftRight_test)
+{
+	streamShift = 4;
+	packetSize = 64_b;
+	streamW = 16_b;
+
+	execute();
+}
+BOOST_FIXTURE_TEST_CASE(stream_shiftRight_test_anticipated_end, stream_shiftRight_test)
+{
+	streamShift = 12;
+	packetSize = 60_b;
+	streamW = 16_b;
+	BOOST_TEST(hasAnticipatedEnd());
+	execute();
 }
 
-BOOST_FIXTURE_TEST_CASE(stream_shiftRight_test_anticipated_end, BoostUnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(stream_shiftRight_test_no_anticipated_end, stream_shiftRight_test)
 {
-	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
-	ClockScope clkScope(clk);
-
-	UInt shift =  12;
-
-	scl::RvPacketStream<BVec, scl::EmptyBits> in{ 16_b };
-	emptyBits(in) = 4_b;
-
-	auto out = streamShiftRight(move(in), shift);
-	pinIn(in, "in");
-	pinOut(out, "out");
-
-	scl::strm::SimPacket inputPacket(0x123456789abcdefull, 60_b);
-
-	size_t iterations = 4;
-
-	addSimulationProcess(
-		[&, this]()->SimProcess {
-			return scl::strm::readyDriver(out, clk);
-		}
-	);
-
-	addSimulationProcess(
-		[&, this]()->SimProcess {
-			scl::SimulationSequencer seq;
-			for (size_t i = 0; i < iterations; i++)
-			{
-				fork([&, this]()->SimProcess { return scl::strm::sendPacket(in, inputPacket, clk, seq); });
-			}
-
-			for (size_t i = 0; i < iterations; i++)
-			{
-				scl::strm::SimPacket outputPacket = co_await scl::strm::receivePacket(out, clk);
-				BOOST_TEST(outputPacket.payload == scl::strm::SimPacket(0x123456789abcull, 48_b).payload);
-			}
-			co_await OnClk(clk);
-			co_await OnClk(clk);
-			co_await OnClk(clk);
-			stopTest();
-		}
-	);
-
-	if(false) recordVCD("stream_shiftRight.vcd");
-	design.postprocess();
-	//design.visualize("stream_shiftRight");
-	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+	streamShift = 11;
+	packetSize = 60_b;
+	streamW = 16_b;
+	BOOST_TEST(!hasAnticipatedEnd());
+	execute();
 }
 
-BOOST_FIXTURE_TEST_CASE(stream_shiftRight_test_anticipated_end_chaos_light, BoostUnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(stream_shiftRight_test_anticipated_end_chaos_light, stream_shiftRight_test)
 {
-	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
-	ClockScope clkScope(clk);
-
-	UInt shift =  12;
-
-	scl::RvPacketStream<BVec, scl::EmptyBits> in{ 16_b };
-	emptyBits(in) = 4_b;
-
-	auto out = streamShiftRight(move(in), shift);
-	pinIn(in, "in");
-	pinOut(out, "out");
-
-	scl::strm::SimPacket inputPacket(0x123456789abcdefull, 60_b);
-	inputPacket.invalidBeats(0b0011001000011010101011100101ull);
-
-	size_t iterations = 4;
-
-	addSimulationProcess(
-		[&, this]()->SimProcess {
-			return scl::strm::readyDriverRNG(out, clk, 50);
-			//return scl::strm::readyDriver(out, clk);
-		}
-	);
-
-	addSimulationProcess(
-		[&, this]()->SimProcess {
-			scl::SimulationSequencer seq;
-			for (size_t i = 0; i < iterations; i++)
-			{
-				fork([&, this]()->SimProcess { return scl::strm::sendPacket(in, inputPacket, clk, seq); });
-			}
-
-			for (size_t i = 0; i < iterations; i++)
-			{
-				scl::strm::SimPacket outputPacket = co_await scl::strm::receivePacket(out, clk);
-				BOOST_TEST(outputPacket.payload == scl::strm::SimPacket(0x123456789abcull, 48_b).payload);
-			}
-			co_await OnClk(clk);
-			co_await OnClk(clk);
-			co_await OnClk(clk);
-			stopTest();
-		}
-	);
-
-	if(false) recordVCD("stream_shiftRight.vcd");
-	design.postprocess();
-	//design.visualize("stream_shiftRight");
-	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+	streamShift = 12;
+	packetSize = 60_b;
+	streamW = 16_b;
+	backpressureReadyPercentage = 50;
+	BOOST_TEST(hasAnticipatedEnd());
+	execute();
 }
 BOOST_FIXTURE_TEST_CASE(streamInsert_test, BoostUnitTestSimulationFixture)
 {

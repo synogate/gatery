@@ -36,7 +36,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 using namespace gtry;
 
-BOOST_FIXTURE_TEST_CASE(dma_pcieHost_to_axi_pocSlave_test, BoostUnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(dma_pcieHost_to_axi_slave_test, BoostUnitTestSimulationFixture)
 {
 	Clock clk({ .absoluteFrequency = 100'000'000, .memoryResetType = ClockConfig::ResetType::NONE });
 	ClockScope clkScp(clk);
@@ -82,7 +82,7 @@ BOOST_FIXTURE_TEST_CASE(dma_pcieHost_to_axi_pocSlave_test, BoostUnitTestSimulati
 	};
 	scl::Axi4& slaveAxi = axiMemorySimulation(cfg);
 
-	scl::AxiTransferReport report = scl::axiTransferAuditor(slaveAxi, depositCmd->bytesPerBurst);
+	scl::AxiTransferReport report = scl::axiTransferAuditor(slaveAxi, BitWidth(depositCmd->bytesPerBurst*8));
 	pinOut(report, "axi_report");
 
 	scl::tileLinkToAxiDMA(move(fetchCmd), move(depositCmd), move(slaveTL), slaveAxi);
@@ -116,7 +116,7 @@ BOOST_FIXTURE_TEST_CASE(dma_pcieHost_to_axi_pocSlave_test, BoostUnitTestSimulati
 
 		BOOST_TEST(simu(report.burstCount) == 1);
 		BOOST_TEST(simu(report.failCount) == 0);
-		BOOST_TEST(simu(report.bytesPerBurst) == 1024);
+		BOOST_TEST(simu(report.bitsPerBurst) == (1_KiB).bits()); 
 
 		BOOST_TEST(axiStorage->read(destStartAddress * 8, 1024 * 8) == hostModel.memory().read(hostByteAddressStart * 8, 1024 * 8));
 		stopTest();

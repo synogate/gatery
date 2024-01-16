@@ -781,14 +781,10 @@ namespace gtry::scl::strm
 
 	scl::EmptyBits shiftRightMeta(scl::EmptyBits& in, auto& inStream, const ShiftRightMetaParams& param)
 	{
-		scl::EmptyBits ret = constructFrom(in);
+		HCL_DESIGNCHECK_HINT(std::popcount(inStream->width().bits()) == 1, "only for streams with powers of 2 data bus widths");
 
-		ENIF(valid(inStream) & eop(inStream)) {
-			ret = reg(ret);
-		}
-		IF(valid(inStream) & eop(inStream)) {
-			ret.emptyBits = in.emptyBits + zext(param.shift);
-		}
+		scl::EmptyBits ret = { capture(in.emptyBits + zext(param.shift), valid(inStream) & eop(inStream)) };
+
 		return ret;
 	}
 

@@ -19,6 +19,7 @@
 #include "TileLinkStreamFetch.h"
 #include <gatery/scl/utils/OneHot.h>
 #include <gatery/scl/utils/BitCount.h>
+#include <gatery/scl/utils/math.h>
 
 namespace gtry::scl
 {
@@ -32,43 +33,45 @@ namespace gtry::scl
 		auto ent = m_area.enter();
 		HCL_NAMED(cmdIn);
 
-		std::optional<BitWidth> size = std::nullopt;
+		std::optional<BitWidth> size;
 		UInt logByteSize;
+
 		if (m_maxBurstSizeInBits) {
-			//calculate logByteSize from beats, assuming it fits well
 
-			const size_t bitsPerBeat = dataOut->width().bits();
+			const UInt bitsPerBeat = dataOut->width().bits();
 
-			UInt numBits = zext(cmdIn->beats, BitWidth::last(*m_maxBurstSizeInBits)) * bitsPerBeat;
-			HCL_NAMED(numBits);
-			IF(valid(cmdIn))	
-				sim_assert(numBits % 8 == 0) << "not a full amount of bytes?";
+			UInt numBitsTotal = zext(cmdIn->beats) * zext(bitsPerBeat, cmdIn->beats.width() + bitsPerBeat.width());
+			HCL_NAMED(numBitsTotal);
 
-			UInt numBytes = numBits.upper(-3_b);
-			HCL_NAMED(numBytes);
+			IF(valid(cmdIn)) {
+				sim_assert(numBitsTotal % 8 == 0) << "not a full amount of bytes";
+				sim_assert(numBitsTotal % *m_maxBurstSizeInBits == 0) << "the specified amount of beats is not a full amount of bursts.";
+			}
+
+			UInt numBytesTotal = numBitsTotal.upper(-3_b);
+			HCL_NAMED(numBytesTotal);
+
+			HCL_DESIGNCHECK_HINT(*m_maxBurstSizeInBits % 8 == 0, "max burst size must be multiple bytes");
+			UInt numBytesBurst = *m_maxBurstSizeInBits / 8;
 
 			IF(valid(cmdIn))
-				sim_assert(bitcount(numBytes) == 1) << "not a possible tileLink burst";
-			logByteSize = encoder((OneHot) numBytes);
+				sim_assert(bitcount(numBytesBurst) == 1) << "TileLink Bursts have to be a power of two amount of bytes";
+
+			logByteSize = encoder((OneHot) numBytesBurst);
 			HCL_NAMED(logByteSize); 
 			size = logByteSize.width();
-
 		}
 
 
 		auto link = tileLinkInit<TileLinkUB>(cmdIn->address.width(), dataOut->width(), sourceW, size);
 		link.a->opcode = (size_t)TileLinkA::Get;
 		link.a->param = 0;
-		Bit isBurst = '0';
 		if (m_maxBurstSizeInBits) {
 			link.a->size = logByteSize;
-			IF(logByteSize > utils::Log2C(link.a->mask.width().bits()))
-				isBurst = '1';
 		}
 		else {
 			link.a->size = utils::Log2C(link.a->mask.width().bits());
 		}
-		HCL_NAMED(isBurst);
 
 		//link.a->source = 0;
 		link.a->mask = link.a->mask.width().mask(); //only full bus reads
@@ -115,8 +118,11 @@ namespace gtry::scl
 		ready(cmdIn) = '0';
 		IF(transfer(link.a))
 		{
-			addressOffset += 1;
-			IF(addressOffset == cmdIn->beats | isBurst) // this condition signals that the input command has been fulfilled. 
+			if (m_maxBurstSizeInBits)
+				addressOffset += (*m_maxBurstSizeInBits / dataOut->width().bits());
+			else
+				addressOffset += 1;
+			IF(addressOffset == cmdIn->beats)
 			{
 				ready(cmdIn) = '1';
 				addressOffset = 0;

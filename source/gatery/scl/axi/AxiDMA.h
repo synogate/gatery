@@ -40,10 +40,10 @@ namespace gtry::scl
 	struct AxiTransferReport {
 		UInt burstCount;
 		UInt failCount;
-		UInt bytesPerBurst;
+		UInt bitsPerBurst;
 	};
 
-	AxiTransferReport axiTransferAuditor(const Axi4& streamToSniff, size_t bytesPerBurst);
+	AxiTransferReport axiTransferAuditor(const Axi4& streamToSniff, BitWidth bitsPerBurst, BitWidth counterW = 32_b);
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::AxiToStreamCmd,
@@ -56,5 +56,5 @@ BOOST_HANA_ADAPT_STRUCT(gtry::scl::AxiToStreamCmd,
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::AxiTransferReport,
 	burstCount,
 	failCount,
-	bytesPerBurst
+	bitsPerBurst
 );

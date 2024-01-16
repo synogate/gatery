@@ -822,7 +822,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_burst_stream_fetch_test, BoostUnitTestSimulatio
 
 	RvStream<TileLinkStreamFetch::Command> cmd;
 	cmd->address = mem.addressWidth();
-	cmd->beats = 4_b;
+	cmd->beats = 5_b;
 	pinIn(cmd, "cmd");
 
 	RvStream<BVec> data{ 16_b };
@@ -836,8 +836,8 @@ BOOST_FIXTURE_TEST_CASE(tilelink_burst_stream_fetch_test, BoostUnitTestSimulatio
 
 	std::array<std::array<size_t, 2>, 3> testCases = {
 		std::array<size_t, 2>{ 16, 4 },
-		std::array<size_t, 2>{ 32, 2 },
-		std::array<size_t, 2>{ 32, 1 },
+		std::array<size_t, 2>{ 32, 8 },
+		std::array<size_t, 2>{ 0, 16 },
 	};
 
 	addSimulationProcess([&]()->SimProcess {
@@ -868,7 +868,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_burst_stream_fetch_test, BoostUnitTestSimulatio
 
 	if (true) recordVCD("dut.vcd");
 	design.postprocess();
-	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+	BOOST_TEST(!runHitsTimeout({ 5, 1'000'000 }));
 }
 
 class LinkTest : public ClockedTest

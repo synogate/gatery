@@ -165,42 +165,57 @@ namespace gtry::scl::pci {
 		return ret;
 	}
 
-	TlpPacketStream<EmptyBits> tileLinkAToRequesterRequest(TileLinkChannelA&& a, BitWidth tlpW)
+	static RequestHeader fromTileLinkA(TileLinkA a) {
+		RequestHeader hdr;
+		hdr.common.poisoned= '0';
+		hdr.common.digest= '0';
+		hdr.common.processingHintPresence = '0';
+		hdr.common.attributes = {'0','0','0'};
+		hdr.common.addressType = (size_t) AddressType::defaultOption;
+		hdr.common.trafficClass = (size_t) TrafficClass::defaultOption;
+		hdr.common.opcode(TlpOpcode::memoryReadRequest64bit);
+
+		IF(a.isPut()) {
+			hdr.common.opcode(TlpOpcode::memoryWriteRequest64bit);
+		}
+
+		UInt bytes = (UInt) decoder(a.size);
+		setName(bytes, "rr_bytes");
+
+		hdr.common.dataLength(length(bytes, a.address));
+
+		hdr.requesterId = 0;
+		HCL_DESIGNCHECK_HINT(a.source.width() <= 8_b, "source is too large for the fixed (non-extended) tag field");
+		hdr.tag = (BVec) zext(a.source);
+
+		hdr.lastDWByteEnable = lastDwByteEnable(bytes, a.address);
+		hdr.firstDWByteEnable = firstDwByteEnable(a.address);
+		hdr.wordAddress = zext(a.address.upper(-2_b));
+		hdr.processingHint = (size_t) ProcessingHint::defaultOption;
+		
+		return hdr;
+	}
+
+	TlpPacketStream<EmptyBits> tileLinkAToRequesterRequest(TileLinkChannelA&& a, std::optional<BitWidth> tlpW)
 	{
 		Area area{ "scl_TL_A_to_requester_request_tlp", true };
+		BitWidth rrW = a->data.width();
 
-		TlpPacketStream<EmptyBits> rr(tlpW);
+		if (tlpW)
+			rrW = *tlpW;
+
+		TlpPacketStream<EmptyBits> rr(rrW);
 		emptyBits(rr) = BitWidth::count(rr->width().bits());
 
-		RequestHeader hdr;
-		hdr.common.poisoned= '0';
-		hdr.common.digest= '0';
-		hdr.common.processingHintPresence = '0';
-		hdr.common.attributes = {'0','0','0'};
-		hdr.common.addressType = (size_t) AddressType::defaultOption;
-		hdr.common.trafficClass = (size_t) TrafficClass::defaultOption;
-		hdr.common.opcode(TlpOpcode::memoryReadRequest64bit);
+		RequestHeader hdr = fromTileLinkA(*a);
 
-		IF(valid(a) & a->isPut()) {
-			sim_assert('0') << "untested, consider it non-working";
-			hdr.common.opcode(TlpOpcode::memoryWriteRequest64bit);
+		IF(valid(a)) {
+			sim_assert(a->isGet()) << "non-get is untested";
+			IF(zext(a->size) > zext(a->data.width().bits()))
+				sim_assert(a->source.width() == 0_b) << "no support for multiple ongoing bursts yet";
 		}
 
-		UInt bytes = (UInt) decoder(a->size);
-		setName(bytes, "rr_bytes");
-
-		hdr.common.dataLength(length(bytes, a->address));
-
-		hdr.requesterId = 0;
-		HCL_DESIGNCHECK_HINT(a->source.width() <= 8_b, "source is too large for the fixed (non-extended) tag field");
-		hdr.tag = (BVec) zext(a->source);
-
-		hdr.lastDWByteEnable = lastDwByteEnable(bytes, a->address);
-		hdr.firstDWByteEnable = firstDwByteEnable(a->address);
-		hdr.wordAddress = zext(a->address.upper(-2_b));
-		hdr.processingHint = (size_t) ProcessingHint::defaultOption;
 		setName(hdr, "rr_hdr");
-
 		*rr = 0;
 		IF(sop(a)) {
 			rr->lower(128_b) = (BVec)hdr;
@@ -212,61 +227,6 @@ namespace gtry::scl::pci {
 		emptyBits(rr) = rr->width().bits() - 4 * 32;
 
 		return rr;
-	}
-
-	TlpPacketStream<EmptyBits> tileLinkAToRequesterRequestCheapBurst(TileLinkChannelA&& a)
-	{
-		Area area{ "TL_A_to_requester_request_tlp", true };
-
-		HCL_DESIGNCHECK_HINT(a->source.width() == 0_b, "For this cheap implementation, only one request can be issued at a time. Thus there can be no source.")
-
-		TlpPacketStream<EmptyBits> rr(a->data.width());
-		emptyBits(rr) = BitWidth::count(rr->width().bits());
-
-		RequestHeader hdr;
-		hdr.common.poisoned= '0';
-		hdr.common.digest= '0';
-		hdr.common.processingHintPresence = '0';
-		hdr.common.attributes = {'0','0','0'};
-		hdr.common.addressType = (size_t) AddressType::defaultOption;
-		hdr.common.trafficClass = (size_t) TrafficClass::defaultOption;
-		hdr.common.opcode(TlpOpcode::memoryReadRequest64bit);
-
-		IF(valid(a) & a->isPut()) {
-			sim_assert('0') << "untested, consider it non-working";
-			hdr.common.opcode(TlpOpcode::memoryWriteRequest64bit);
-		}
-
-		UInt bytes = (UInt) decoder(a->size);
-		setName(bytes, "rr_bytes");
-
-		hdr.common.dataLength(length(bytes, a->address));
-
-		hdr.requesterId = 0;
-		hdr.tag = 0xFC;
-
-		hdr.lastDWByteEnable = lastDwByteEnable(bytes, a->address);
-		hdr.firstDWByteEnable = firstDwByteEnable(a->address);
-		hdr.wordAddress = zext(a->address.upper(-2_b));
-		hdr.processingHint = (size_t) ProcessingHint::defaultOption;
-		setName(hdr, "rr_hdr");
-
-		*rr = 0;
-		IF(sop(a)) {
-			rr->lower(128_b) = (BVec)hdr;
-		}
-
-		valid(rr) = valid(a);
-		eop(rr) = eop(a);
-		ready(a) = ready(rr);
-		emptyBits(rr) = rr->width().bits() - 4 * 32;
-
-		return rr;
-	}
-
-	static UInt logByteSize(const UInt& lengthInBytes) {
-		
-		return encoder((OneHot) lengthInBytes);
 	}
 
 	TileLinkChannelD requesterCompletionToTileLinkD(TlpPacketStream<EmptyBits>&& rc, BitWidth byteAddressW, BitWidth dataW)
@@ -299,9 +259,6 @@ namespace gtry::scl::pci {
 		return d;
 	}
 
-
-	
-
 	TileLinkChannelD requesterCompletionToTileLinkDFullW(TlpPacketStream<EmptyBits>&& rc)
 	{
 		Area area{ "requester_completion_tlp_to_TL_D", true };
@@ -310,15 +267,13 @@ namespace gtry::scl::pci {
 		CompletionHeader hdr = CompletionHeader::fromRaw(rc->lower(96_b));
 
 		ENIF(valid(rc) & sop(rc)) {
-			hdr = reg(hdr); // captures and holds the header before it gets squished by the shift right.
+			hdr = reg(hdr); // captures and holds the header before it gets squashed by the shift right.
 		}
 
 		auto rcPayloadStream = scl::strm::streamShiftRight(move(rc), 96);
 
-		IF(valid(rcPayloadStream) & sop(rcPayloadStream))
-			sim_assert(bitcount(hdr.byteCount) == 1) << "TileLink cannot represent non powers of 2 amount of bytes";
 
-		TileLinkChannelD d = move(*(tileLinkInit<TileLinkUL>(64_b, rcPayloadStream->width(), 8_b).d));
+		TileLinkChannelD d = constructFrom(*(tileLinkInit<TileLinkUL>(64_b, rcPayloadStream->width(), 8_b).d));
 
 		d->data = *rcPayloadStream;
 		d->opcode = (size_t) TileLinkD::OpCode::AccessAckData;
@@ -328,17 +283,19 @@ namespace gtry::scl::pci {
 		d->error = hdr.common.poisoned | (hdr.completionStatus != (size_t) CompletionStatus::successfulCompletion);
 
 
-		UInt size = logByteSize(hdr.byteCount);
 		IF(valid(rcPayloadStream) & sop(rcPayloadStream))
-			sim_assert(size < d->size.width().count()) << "breaking this assertion invalidates the next line's truncation";
-		d->size = size.lower(d->size.width());
+			sim_assert(bitcount(hdr.byteCount) == 1) << "TileLink cannot represent non powers of 2 amount of bytes";
+		UInt logByteSize = encoder((OneHot) hdr.byteCount);
+		IF(valid(rcPayloadStream) & sop(rcPayloadStream))
+			sim_assert(logByteSize < d->size.width().count()) << "breaking this assertion invalidates the next line's truncation";
+		d->size = logByteSize.lower(d->size.width());
 
 		valid(d) = valid(rcPayloadStream);
 		ready(rcPayloadStream) = ready(d);
 
 		return d;
 	}
-	//
+	
 
 	TileLinkChannelD requesterCompletionToTileLinkDCheapBurst(TlpPacketStream<EmptyBits>&& rc, std::optional<BitWidth> sizeW)
 	{
@@ -364,10 +321,7 @@ namespace gtry::scl::pci {
 		setName(hdr.byteCount, "byteCount");
 		auto rcPayloadStream = scl::strm::streamShiftRight(move(rc), 96);
 
-		IF(valid(rcPayloadStream) & sop(rcPayloadStream))
-			sim_assert(bitcount(hdr.byteCount) == 1) << "TileLink cannot represent non powers of 2 amount of bytes";
-
-		TileLinkChannelD d = move(*(tileLinkInit<TileLinkUL>(64_b, rcPayloadStream->width(), 0_b, sizeW).d));
+		TileLinkChannelD d = constructFrom(*(tileLinkInit<TileLinkUL>(64_b, rcPayloadStream->width(), 0_b, sizeW).d));
 
 		d->data = *rcPayloadStream; //cannot support smaller than full width requests.
 		d->opcode = (size_t) TileLinkD::OpCode::AccessAckData;
@@ -375,11 +329,12 @@ namespace gtry::scl::pci {
 		d->param = 0;
 		d->error = hdr.common.poisoned | (hdr.completionStatus != (size_t) CompletionStatus::successfulCompletion);
 
-		UInt size = logByteSize(hdr.byteCount);
-		setName(size, "held_size");
 		IF(valid(rcPayloadStream) & sop(rcPayloadStream))
-			sim_assert(size <= d->size.width().last()) << "breaking this assertion invalidates the next line's truncation";
-		d->size = size.lower(d->size.width());
+			sim_assert(bitcount(hdr.byteCount) == 1) << "TileLink cannot represent non powers of 2 amount of bytes";
+		UInt logByteSize = encoder((OneHot) hdr.byteCount);
+		IF(valid(rcPayloadStream) & sop(rcPayloadStream))
+			sim_assert(zext(logByteSize) < zext(d->size.width().count())) << "breaking this assertion invalidates the next line's truncation";
+		d->size = logByteSize.lower(d->size.width());
 
 		valid(d) = valid(rcPayloadStream);
 		ready(rcPayloadStream) = ready(d);
@@ -420,7 +375,7 @@ namespace gtry::scl::pci {
 		TileLinkChannelA a = constructFrom(ret.a);
 		a <<= ret.a;
 
-		reqInt.request <<= tileLinkAToRequesterRequestCheapBurst(move(a));
+		reqInt.request <<= tileLinkAToRequesterRequest(move(a));
 		*ret.d = requesterCompletionToTileLinkDCheapBurst(move(reqInt.completion), sizeW);
 
 		return ret;
