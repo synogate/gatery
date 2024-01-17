@@ -186,7 +186,7 @@ Gatery provides tools for accessing it from a user space process.
 
 Linux lists PCIe devices in the `/sys/bus/pci/devices/` folder, which can be enumerated:
 ```cpp
-	gtry::scl::driver::PCIDeviceFunctionList devices;
+	gtry::scl::driver::lnx::PCIDeviceFunctionList devices;
 	for (auto function : devices)
 		std::cout << "Vendor: " << function.vendorId() << "  Device: " <<  function.deviceId() << "   Class: " << function.deviceClass() << std::endl;
 ```
@@ -216,12 +216,12 @@ The static memory map can be build as explained above:
 ```cpp
 	using MyMemoryMap = gtry::scl::driver::StaticMemoryMap<memory_map>;
 ```
-To write to the registers, the `gtry::scl::driver::UserSpaceMapped32BitEndpoint` class implements `gtry::scl::driver::MemoryMapInterface` and handles the memory mapping of the device's resource file as well as access to it.
+To write to the registers, the `gtry::scl::driver::lnx::UserSpaceMapped32BitEndpoint` class implements `gtry::scl::driver::MemoryMapInterface` and handles the memory mapping of the device's resource file as well as access to it.
 This allows to run the exact same driver code as in the simulation:
 ```cpp
 	// I know, this needs cleaning up.
 	size_t memoryMapWidth = ((gtry::scl::driver::MemoryMapEntryHandle) MyMemoryMap{}).width() / 8;
-	gtry::scl::driver::UserSpaceMapped32BitEndpoint driverInterface(function, memoryMapWidth);
+	gtry::scl::driver::lnx::UserSpaceMapped32BitEndpoint driverInterface(function, memoryMapWidth);
 
 	runDriverCode(driverInterface, MyMemoryMap{});
 ```

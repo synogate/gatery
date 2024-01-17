@@ -37,7 +37,6 @@ namespace gtry::scl::sim {
 	{
 	public:
 		PcieHostModel(std::optional<RandomBlockDefinition> randomBlockDefinition = {}, uint64_t memorySizeInBytes = 1ull << 48); // 48 bit, byte-addressable memory
-		PcieHostModel(std::unique_ptr<hlim::MemoryStorage> mem) : m_mem(move(mem)) {}
 
 		PcieHostModel& defaultHandlers();
 
@@ -51,7 +50,7 @@ namespace gtry::scl::sim {
 
 		PciRequestHandler* handler(TlpOpcode);
 
-		hlim::MemoryStorage& memory() { return *m_mem; }
+		hlim::MemoryStorage& memory();
 
 		SimProcess assertInvalidTlp(const Clock& clk);
 		SimProcess assertPayloadSizeDoesntMatchHeader(const Clock& clk);
@@ -59,7 +58,10 @@ namespace gtry::scl::sim {
 		SimProcess completeRequests(const Clock& clk, size_t delay = 0, std::optional<uint8_t> rngReadyPercentage = {});
 
 	private:
-		std::unique_ptr<hlim::MemoryStorage> m_mem;
+		static constexpr const char *memLabel = "PcieHostModel_memory";
+
+		size_t m_memSize;
+		hlim::MemoryStorage::Initialization m_memInit;
 		std::optional<TlpPacketStream<EmptyBits>> m_rr;
 		std::optional<TlpPacketStream<EmptyBits>> m_rc;
 		std::map<TlpOpcode, std::unique_ptr<PciRequestHandler>> m_requestHandlers;

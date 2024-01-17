@@ -57,14 +57,14 @@ namespace gtry::scl
 			if (!validDefined(stream)) {
 				hlim::BaseNode *node = valid(stream).readPort().node;
 				std::stringstream msg;
-				msg << "Stream has undefined valid signal at " << sim::SimulationContext::nowNs() << " ns.";// Node from " << node->getStackTrace();
+				msg << "Stream has undefined valid signal at " << nowNs() << " ns.";// Node from " << node->getStackTrace();
 				sim::SimulationContext::current()->onAssert(node, msg.str());
 			}
 			else if (validValue(stream) && !readyDefined(stream))
 			{
 				hlim::BaseNode* node = ready(stream).readPort().node;
 				std::stringstream msg;
-				msg << "Stream has undefined ready signal while valid is high at " << sim::SimulationContext::nowNs() << " ns.";// Node from " << node->getStackTrace();
+				msg << "Stream has undefined ready signal while valid is high at " << nowNs() << " ns.";// Node from " << node->getStackTrace();
 				sim::SimulationContext::current()->onAssert(node, msg.str());
 			}
 			co_await OnClk(clk);
@@ -107,7 +107,7 @@ namespace gtry::scl
 				{
 					hlim::BaseNode* node = channelA->source.readPort().node;
 					std::stringstream msg;
-					msg << "TileLink 5.4 violated: Source ID is reused while inflight at " << sim::SimulationContext::nowNs() << " ns.";
+					msg << "TileLink 5.4 violated: Source ID is reused while inflight at " << nowNs() << " ns.";
 					sim::SimulationContext::current()->onAssert(node, msg.str());
 				}
 				sourceIdInUse[sourceA.value()] = true;
@@ -137,7 +137,7 @@ namespace gtry::scl
 				{
 					hlim::BaseNode* node = channelA->size.readPort().node;
 					std::stringstream msg;
-					msg << "TileLink violated: Request size must match response size at " << sim::SimulationContext::nowNs() << " ns.";
+					msg << "TileLink violated: Request size must match response size at " << nowNs() << " ns.";
 					sim::SimulationContext::current()->onAssert(node, msg.str());
 				}
 
@@ -149,7 +149,7 @@ namespace gtry::scl
 					{
 						hlim::BaseNode* node = channelA->size.readPort().node;
 						std::stringstream msg;
-						msg << "TileLink 6.1 violated: A response to Get must be AccessAckData at " << sim::SimulationContext::nowNs() << " ns.";
+						msg << "TileLink 6.1 violated: A response to Get must be AccessAckData at " << nowNs() << " ns.";
 						sim::SimulationContext::current()->onAssert(node, msg.str());
 					}
 					break;
@@ -159,7 +159,7 @@ namespace gtry::scl
 					{
 						hlim::BaseNode* node = channelA->size.readPort().node;
 						std::stringstream msg;
-						msg << "TileLink 6.1 violated: A response to Put* must be AccessAck at " << sim::SimulationContext::nowNs() << " ns.";
+						msg << "TileLink 6.1 violated: A response to Put* must be AccessAck at " << nowNs() << " ns.";
 						sim::SimulationContext::current()->onAssert(node, msg.str());
 					}
 					break;
@@ -169,7 +169,7 @@ namespace gtry::scl
 					{
 						hlim::BaseNode* node = channelA->size.readPort().node;
 						std::stringstream msg;
-						msg << "TileLink 7.1 violated: A response to atomic operations must be AccessAckData at " << sim::SimulationContext::nowNs() << " ns.";
+						msg << "TileLink 7.1 violated: A response to atomic operations must be AccessAckData at " << nowNs() << " ns.";
 						sim::SimulationContext::current()->onAssert(node, msg.str());
 					}
 					break;
@@ -178,7 +178,7 @@ namespace gtry::scl
 					{
 						hlim::BaseNode* node = channelA->size.readPort().node;
 						std::stringstream msg;
-						msg << "TileLink 7.1 violated: A response to Intent must be HintAck at " << sim::SimulationContext::nowNs() << " ns.";
+						msg << "TileLink 7.1 violated: A response to Intent must be HintAck at " << nowNs() << " ns.";
 						sim::SimulationContext::current()->onAssert(node, msg.str());
 					}
 					break;
@@ -210,7 +210,7 @@ namespace gtry::scl
 					{
 						hlim::BaseNode* node = sig.readPort().node;
 						std::stringstream msg;
-						msg << "TileLink 4.1 violated: a_" << name << " undefined while valid is high at " << sim::SimulationContext::nowNs() << " ns.";
+						msg << "TileLink 4.1 violated: a_" << name << " undefined while valid is high at " << nowNs() << " ns.";
 						sim::SimulationContext::current()->onAssert(node, msg.str());
 					}
 				};
@@ -238,7 +238,7 @@ namespace gtry::scl
 					{
 						hlim::BaseNode* node = sig.readPort().node;
 						std::stringstream msg;
-						msg << "TileLink 4.1 violated: d_" << name << " undefined while valid is high at " << sim::SimulationContext::nowNs() << " ns.";
+						msg << "TileLink 4.1 violated: d_" << name << " undefined while valid is high at " << nowNs() << " ns.";
 						sim::SimulationContext::current()->onAssert(node, msg.str());
 					}
 				};
@@ -267,7 +267,7 @@ namespace gtry::scl
 				{
 					hlim::BaseNode* node = a->size.readPort().node;
 					std::stringstream msg;
-					msg << "TileLink 6 TL-UL violated: Burst is not allowed at " << sim::SimulationContext::nowNs() << " ns.";
+					msg << "TileLink 6 TL-UL violated: Burst is not allowed at " << nowNs() << " ns.";
 					sim::SimulationContext::current()->onAssert(node, msg.str());
 				}
 			}
@@ -286,7 +286,7 @@ namespace gtry::scl
 				{
 					hlim::BaseNode* node = a->size.readPort().node;
 					std::stringstream msg;
-					msg << "TileLink 4.6 violated: Address must be aligned to access size at " << sim::SimulationContext::nowNs() << " ns.";
+					msg << "TileLink 4.6 violated: Address must be aligned to access size at " << nowNs() << " ns.";
 					sim::SimulationContext::current()->onAssert(node, msg.str());
 				}
 			}
@@ -305,7 +305,7 @@ namespace gtry::scl
 				{
 					hlim::BaseNode* node = a->opcode.readPort().node;
 					std::stringstream msg;
-					msg << "TileLink violated: a_opcode is not allowed by TileLink conformance level at " << sim::SimulationContext::nowNs() << " ns.";
+					msg << "TileLink violated: a_opcode is not allowed by TileLink conformance level at " << nowNs() << " ns.";
 					sim::SimulationContext::current()->onAssert(node, msg.str());
 				}
 			}
@@ -329,7 +329,7 @@ namespace gtry::scl
 				{
 					hlim::BaseNode* node = a->mask.readPort().node;
 					std::stringstream msg;
-					msg << "TileLink 4.6 violated: a_mask must be LOW for all inactive byte lanes at " << sim::SimulationContext::nowNs() << " ns.";
+					msg << "TileLink 4.6 violated: a_mask must be LOW for all inactive byte lanes at " << nowNs() << " ns.";
 					sim::SimulationContext::current()->onAssert(node, msg.str());
 				}
 
@@ -338,7 +338,7 @@ namespace gtry::scl
 				{
 					hlim::BaseNode* node = a->mask.readPort().node;
 					std::stringstream msg;
-					msg << "TileLink 4.6 violated: The bits of a_mask must be HIGH for all active byte lanes at " << sim::SimulationContext::nowNs() << " ns.";
+					msg << "TileLink 4.6 violated: The bits of a_mask must be HIGH for all active byte lanes at " << nowNs() << " ns.";
 					sim::SimulationContext::current()->onAssert(node, msg.str());
 				}
 
@@ -397,7 +397,7 @@ namespace gtry::scl
 				{
 					hlim::BaseNode* node = a->opcode.readPort().node;
 					std::stringstream msg;
-					msg << "TileLink 4.1 violated: Control signals must be stable during all beats of a burst at " << sim::SimulationContext::nowNs() << " ns.";
+					msg << "TileLink 4.1 violated: Control signals must be stable during all beats of a burst at " << nowNs() << " ns.";
 					sim::SimulationContext::current()->onAssert(node, msg.str());
 				}
 				
@@ -452,7 +452,7 @@ namespace gtry::scl
 				{
 					hlim::BaseNode* node = d->opcode.readPort().node;
 					std::stringstream msg;
-					msg << "TileLink 4.1 violated: Control signals must be stable during all beats of a burst at " << sim::SimulationContext::nowNs() << " ns.";
+					msg << "TileLink 4.1 violated: Control signals must be stable during all beats of a burst at " << nowNs() << " ns.";
 					sim::SimulationContext::current()->onAssert(node, msg.str());
 				}
 

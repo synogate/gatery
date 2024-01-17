@@ -29,7 +29,9 @@ namespace gtry::scl
 		size_t readLatency = 1;
 		BitWidth wordStride;
 
-		std::shared_ptr<hlim::MemoryStorage> storage;
+		std::optional<BitWidth> memorySize;
+		hlim::MemoryStorage::Initialization initialization;
+		std::string memoryRegistrationKey = "axiMemory";
 	};
 
 	Axi4& axiMemorySimulation(AxiMemorySimulationConfig cfg);

@@ -30,7 +30,7 @@
  * @{
  */
 
-namespace gtry::scl::driver {
+namespace gtry::scl::driver::lnx {
 
 class PCIDeviceFunctionList;
 

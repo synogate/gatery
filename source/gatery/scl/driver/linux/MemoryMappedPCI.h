@@ -21,7 +21,7 @@
  * Do not include the regular gatery headers since this is meant to compile stand-alone in driver/userspace application code. 
  */
 
-#include "MemoryMapInterface.h"
+#include "../MemoryMapInterface.h"
 
 #include <span>
 
@@ -31,7 +31,7 @@
  */
 
 
-namespace gtry::scl::driver {
+namespace gtry::scl::driver::lnx {
 
 class PCIDeviceFunction;
 

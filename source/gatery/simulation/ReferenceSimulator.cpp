@@ -1207,6 +1207,26 @@ void ReferenceSimulator::startCoroutine(SimulationFunction<void> coroutine)
 	m_coroutineHandler.run();
 }
 
+bool ReferenceSimulator::hasAuxData(std::string_view key) const
+{
+	return m_dataState.auxData.contains(key);
+}
+
+std::any& ReferenceSimulator::registerAuxData(std::string_view key, std::any data)
+{
+	auto [it, success] = m_dataState.auxData.emplace(key, std::move(data));
+	if (!success)
+		throw std::runtime_error("Aux data with that key already registered");
+	return it->second;
+}
+
+std::any& ReferenceSimulator::getAuxData(std::string_view key)
+{
+	auto it = m_dataState.auxData.find(key);
+	if (it == m_dataState.auxData.end())
+		throw std::runtime_error("Aux data not found!");
+	return it->second;
+}
 
 
 }

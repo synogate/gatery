@@ -55,6 +55,7 @@ struct DataState
 	DefaultBitVectorState signalState;
 	std::vector<ClockState> clockState;
 	std::vector<ResetState> resetState;
+	std::map<std::string, std::any, std::less<>> auxData;
 };
 
 struct StateMapping
@@ -261,6 +262,10 @@ class ReferenceSimulator : public Simulator
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock, utils::RestrictTo<RunTimeSimulationContext>) override;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitChange &waitChange, utils::RestrictTo<RunTimeSimulationContext>) override;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitStable &waitStable, utils::RestrictTo<RunTimeSimulationContext>) override;
+
+		virtual bool hasAuxData(std::string_view key) const override;
+		virtual std::any& registerAuxData(std::string_view key, std::any data) override;
+		virtual std::any& getAuxData(std::string_view key) override;
 	protected:
 		Program m_program;
 		DataState m_dataState;

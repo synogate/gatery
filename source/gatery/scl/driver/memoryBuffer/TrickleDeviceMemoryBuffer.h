@@ -1,5 +1,5 @@
 /*  This file is part of Gatery, a library for circuit design.
-	Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2023 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
@@ -15,33 +15,41 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
-#include "SimulationContext.h"
-#include "Simulator.h"
+#pragma once
 
-#include "../hlim/ClockRational.h"
-#include "../utils/Exceptions.h"
-#include "../utils/Preprocessor.h"
-
-namespace gtry::sim {
-
-	thread_local SimulationContext *SimulationContext::m_current = nullptr;
-
-
-	SimulationContext::SimulationContext()
-	{
-		m_overshadowed = m_current;
-		m_current = this;
-	}
-
-	SimulationContext::~SimulationContext()
-	{
-		m_current = m_overshadowed;
-	}
 /*
-	double SimulationContext::nowNs()
-	{
-		return hlim::toNanoseconds(m_current->getSimulator()->getCurrentSimulationTime());
-	}
-*/
+ * Do not include the regular gatery headers since this is meant to compile stand-alone in driver/userspace application code. 
+ */
+
+#include "MemoryBuffer.h"
+#include "PinnedHostMemoryBuffer.h"
+
+#include <memory>
+
+#include <cstddef>
+#include <span>
+#include <vector>
+#include <cstdint>
+
+/**
+ * @addtogroup gtry_scl_driver
+ * @{
+ */
+
+namespace gtry::scl::driver {
+
+	class TrickleDeviceMemoryBuffer : public MemoryBuffer {
+		public:
+			virtual std::span<std::byte> lock(Flags flags) override;
+			virtual void unlock() override;
+		protected:
+			std::vector<std::byte> m_uploadBuffer;
+			Flags m_lockFlags;
+	};
+
+	class TrickleDeviceMemoryBufferFactory : public MemoryBufferFactory {
+	};
+
 }
+
+/**@}*/

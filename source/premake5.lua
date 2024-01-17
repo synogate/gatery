@@ -65,9 +65,6 @@ project "gatery"
         "gatery/*"
     }
 
-    removefiles  {
-        "gatery/scl/driver/**.cpp"
-    }
 
     pchsource "gatery/pch.cpp"
     pchheader "gatery/pch.h"
@@ -77,6 +74,10 @@ project "gatery"
 
     filter "system:windows"
         flags { "FatalCompileWarnings" }
+
+        removefiles {
+            "gatery/scl/driver/linux/**.cpp"
+        }
 
     filter "files:**.c"
         flags {"NoPCH"}

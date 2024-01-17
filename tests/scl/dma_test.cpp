@@ -65,8 +65,6 @@ BOOST_FIXTURE_TEST_CASE(dma_pcieHost_to_axi_slave_test, BoostUnitTestSimulationF
 
 	scl::TileLinkUB slaveTL = scl::pci::makePciMasterCheapBurst(hostModel.requesterInterface(512_b), 4_b, 48_b); //4 bits are enough to hold the number 10, which is the required logByteSize for 1kiB burst transfer
 
-	auto axiStorage = std::make_shared<hlim::MemoryStorageSparse>((uint64_t)(8ull << 48)); //48 byte-addressable bits of sparse memory space;
-
 	scl::AxiMemorySimulationConfig cfg{
 		.axiCfg{
 			.addrW = 48_b,
@@ -78,7 +76,7 @@ BOOST_FIXTURE_TEST_CASE(dma_pcieHost_to_axi_slave_test, BoostUnitTestSimulationF
 			.bUserW = 0_b,
 			.rUserW = 0_b,
 		},
-		.storage = axiStorage,
+		.memorySize = { BitWidth(8ull << 48) }, //48 byte-addressable bits of sparse memory space
 	};
 	scl::Axi4& slaveAxi = axiMemorySimulation(cfg);
 
@@ -118,7 +116,9 @@ BOOST_FIXTURE_TEST_CASE(dma_pcieHost_to_axi_slave_test, BoostUnitTestSimulationF
 		BOOST_TEST(simu(report.failCount) == 0);
 		BOOST_TEST(simu(report.bitsPerBurst) == (1_KiB).bits()); 
 
-		BOOST_TEST(axiStorage->read(destStartAddress * 8, 1024 * 8) == hostModel.memory().read(hostByteAddressStart * 8, 1024 * 8));
+		auto &axiStorage = gtry::getSimData<hlim::MemoryStorageSparse>("/scl_axiMemorySimulation0/axiMemory");
+
+		BOOST_TEST(axiStorage.read(destStartAddress * 8, 1024 * 8) == hostModel.memory().read(hostByteAddressStart * 8, 1024 * 8));
 		stopTest();
 
 	});

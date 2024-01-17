@@ -20,16 +20,16 @@
  * Do not include the regular gatery headers since this is meant to compile stand-alone in driver/userspace application code. 
  */
 
-#include "LinuxAddressTranslator.h"
+#include "AddressTranslator.h"
 
 #include <unistd.h>
 #include <fcntl.h>
 
 #include <stdexcept>
 
-namespace gtry::scl::driver {
+namespace gtry::scl::driver::lnx {
 
-LinuxAddressTranslator::LinuxAddressTranslator()
+AddressTranslator::AddressTranslator()
 {
 	m_pageMapFd = open("/proc/self/pagemap", O_RDONLY);
     if (m_pageMapFd < 0)
@@ -38,12 +38,12 @@ LinuxAddressTranslator::LinuxAddressTranslator()
 	m_pageSize = sysconf(_SC_PAGE_SIZE);
 }
 
-LinuxAddressTranslator::~LinuxAddressTranslator()
+AddressTranslator::~AddressTranslator()
 {
     close(m_pageMapFd);
 }
 
-PhysicalAddr LinuxAddressTranslator::userToPhysical(void *usrSpaceAddr) const
+PhysicalAddr AddressTranslator::userToPhysical(void *usrSpaceAddr) const
 {
 	uint64_t virtualFrameNumber = (uint64_t) usrSpaceAddr / m_pageSize;
 

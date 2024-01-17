@@ -634,7 +634,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_fuzz_test, SdramControllerTest)
 						std::stringstream msg;
 						msg << "Unexpected memory read result at address " << std::hex << address + i << 
 							", data is " << (size_t)readValue << " should be " << (size_t)it->second << 
-							" at " << sim::SimulationContext::nowNs() << " ns. seed " << seed;
+							" at " << nowNs() << " ns. seed " << seed;
 
 						sim::SimulationContext::current()->onAssert(node, msg.str());
 					}

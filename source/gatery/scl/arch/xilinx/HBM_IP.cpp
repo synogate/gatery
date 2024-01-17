@@ -128,7 +128,7 @@ namespace gtry::scl::arch::xilinx
 		axi.b->id = out(prefix + "BID", 6_b);
 
 		return axiMemorySimulationOverride({
-			.storage = std::make_shared<hlim::MemoryStorageSparse>(addrW.count() * 8, hlim::MemoryStorage::Initialization{}),
+			.memorySize = BitWidth{ addrW.count() * 8 },
 		}, move(axi));
 	}
 

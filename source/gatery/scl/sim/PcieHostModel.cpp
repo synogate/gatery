@@ -31,15 +31,12 @@ namespace gtry::scl::sim {
 
 	PcieHostModel::PcieHostModel(std::optional<RandomBlockDefinition> randomBlockDefinition, uint64_t memorySizeInBytes)
 	{
-		hlim::MemoryStorage::Initialization memInit;
+		m_memSize = 8 * memorySizeInBytes;
 		if (randomBlockDefinition)
-			memInit = hlim::MemoryStorage::Initialization::setAllDefinedRandom(
+			m_memInit = hlim::MemoryStorage::Initialization::setAllDefinedRandom(
 				randomBlockDefinition->size,
 				randomBlockDefinition->offset,
 				randomBlockDefinition->seed);
-
-		hlim::MemoryStorageSparse mem(8 * memorySizeInBytes, memInit);
-		m_mem = std::make_unique<hlim::MemoryStorageSparse>(mem);
 	}
 
 	PcieHostModel& PcieHostModel::defaultHandlers()
@@ -134,6 +131,8 @@ namespace gtry::scl::sim {
 
 	SimProcess PcieHostModel::completeRequests(const Clock& clk, size_t delay, std::optional<uint8_t> rngReadyPercentage)
 	{
+		auto &mem = emplaceSimData<hlim::MemoryStorageDense>(memLabel, m_memSize, m_memInit);
+
 		HCL_DESIGNCHECK_HINT(m_rr, "requesterRequest port is not connected");
 		HCL_DESIGNCHECK_HINT(m_rc, "requesterCompletion port is not connected");
 		simu(valid(*m_rc)) = '0';
@@ -152,8 +151,12 @@ namespace gtry::scl::sim {
 				for (size_t i = 0; i < delay; i++)
 					co_await OnClk(clk);
 				TlpInstruction request = TlpInstruction::createFrom(simPacket.payload);
-				co_await this->handler(request.opcode)->respond(request, *m_mem, *m_rc, clk, sendingSeq);
+				co_await this->handler(request.opcode)->respond(request, mem, *m_rc, clk, sendingSeq);
 			});
 		}
+	}
+
+	hlim::MemoryStorage& PcieHostModel::memory() {
+		return getSimData<hlim::MemoryStorageDense>(memLabel);
 	}
 }

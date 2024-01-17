@@ -20,9 +20,9 @@
  * Do not include the regular gatery headers since this is meant to compile stand-alone in driver/userspace application code. 
  */
  
-#include "LinuxMemoryMappedPCI.h"
+#include "MemoryMappedPCI.h"
 
-#include "LinuxPCIDeviceFunctionList.h"
+#include "PCIDeviceFunctionList.h"
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -30,7 +30,7 @@
 
 #include <stdexcept>
 
-namespace gtry::scl::driver {
+namespace gtry::scl::driver::lnx {
 
 UserSpaceMapped32BitEndpoint::UserSpaceMapped32BitEndpoint(const PCIDeviceFunction &function, size_t size)
 {

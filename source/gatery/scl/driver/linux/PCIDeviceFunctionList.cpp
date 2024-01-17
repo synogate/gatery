@@ -19,14 +19,14 @@
 /*
  * Do not include the regular gatery headers since this is meant to compile stand-alone in driver/userspace application code. 
  */
-#include "LinuxPCIDeviceFunctionList.h"
+#include "PCIDeviceFunctionList.h"
 
 #include <boost/format.hpp>
 #include <boost/regex.hpp>
 
 #include <fstream>
 
-namespace gtry::scl::driver {
+namespace gtry::scl::driver::lnx {
 
 static const boost::regex functionFilenameRegex(".*([0-9a-fA-F]{4}):([0-9a-fA-F]{2}):([0-9a-fA-F]{2})\\.([0-9a-fA-F])/?");
 

@@ -111,6 +111,21 @@ void RunTimeSimulationContext::onAssert(const hlim::BaseNode *src, std::string m
 	m_simulator->onAssert(src, std::move(msg));
 }
 
+bool RunTimeSimulationContext::hasAuxData(std::string_view key) const
+{
+	return m_simulator->hasAuxData(key);
+}
+
+std::any& RunTimeSimulationContext::registerAuxData(std::string_view key, std::any data)
+{
+	return m_simulator->registerAuxData(key, std::move(data));
+}
+
+std::any& RunTimeSimulationContext::getAuxData(std::string_view key)
+{
+	return m_simulator->getAuxData(key);
+}
+
 
 
 

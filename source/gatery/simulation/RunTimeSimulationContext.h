@@ -49,6 +49,10 @@ class RunTimeSimulationContext : public SimulationContext {
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitChange &waitChange) override;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitStable &waitStable) override;
 
+		virtual bool hasAuxData(std::string_view key) const override;
+		virtual std::any& registerAuxData(std::string_view key, std::any data) override;
+		virtual std::any& getAuxData(std::string_view key) override;
+
 		virtual Simulator *getSimulator() override { return m_simulator; }
 	protected:
 		Simulator *m_simulator;

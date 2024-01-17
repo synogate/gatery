@@ -30,17 +30,17 @@
  * @{
  */
 
-namespace gtry::scl::driver {
+namespace gtry::scl::driver::lnx {
 
 	typedef std::uint64_t PhysicalAddr;
 
-	class LinuxAddressTranslator {
+	class AddressTranslator {
 		public:
-			LinuxAddressTranslator();
-			~LinuxAddressTranslator();
+			AddressTranslator();
+			~AddressTranslator();
 
-			LinuxAddressTranslator(const LinuxAddressTranslator&) = delete;
-			void operator=(const LinuxAddressTranslator&) = delete;
+			AddressTranslator(const AddressTranslator&) = delete;
+			void operator=(const AddressTranslator&) = delete;
 
 			PhysicalAddr userToPhysical(void *usrSpaceAddr) const;
 

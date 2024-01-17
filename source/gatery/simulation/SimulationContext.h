@@ -51,8 +51,12 @@ class SimulationContext {
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitChange &waitChange) = 0;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitStable &waitChange) = 0;
 
+		virtual bool hasAuxData(std::string_view key) const = 0;
+		virtual std::any& registerAuxData(std::string_view key, std::any data) = 0;
+		virtual std::any& getAuxData(std::string_view key) = 0;
+
 		static SimulationContext *current() { return m_current; }
-		static double nowNs();
+		//static double nowNs();
 
 		virtual Simulator *getSimulator() = 0;
 	protected:

@@ -352,6 +352,7 @@ namespace gtry {
 	constexpr auto toNanoseconds = hlim::toNanoseconds;
 
 	Seconds getCurrentSimulationTime();
+	inline double nowNs() { return toNanoseconds(getCurrentSimulationTime()); }
 
 	/// @brief Returns true in the time period where the simulator is pulling down all the simulation coroutines on reseting or closing the simulation.
 	/// @details This allows coroutine code to differentiate between destructing because of going out of scope normally and destructing because the
@@ -411,8 +412,18 @@ namespace gtry {
 	void simAnnotationEnd(const std::string& id);
 	void simAnnotationEndDelayed(const std::string& id, const Clock& clk, int cycles);
 
-	/**@}*/
 
+	bool simHasData(std::string_view key);
+	std::any& registerSimData(std::string_view key, std::any data);
+	std::any& getSimData(std::string_view key);
+
+	template<typename T>
+	T& getSimData(std::string_view key) { return std::any_cast<T&>(getSimData(key)); }
+
+	template<typename T, typename... Args>
+	T& emplaceSimData(std::string_view key, Args&&... args) { return std::any_cast<T&>(registerSimData(key, std::make_any<T>(std::forward<Args>(args)...))); }
+
+	/**@}*/
 }
 
 namespace std {

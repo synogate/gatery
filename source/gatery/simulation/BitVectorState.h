@@ -28,6 +28,7 @@
 #include <array>
 #include <cstdint>
 #include <string.h>
+#include <span>
 
 namespace gtry::sim {
 
@@ -124,6 +125,9 @@ class BitVectorState
 
 		typename Config::BaseType *data(typename Config::Plane plane);
 		const typename Config::BaseType *data(typename Config::Plane plane) const;
+
+		std::span<std::byte> asWritableBytes(typename Config::Plane plane);
+		std::span<const std::byte> asBytes(typename Config::Plane plane) const;
 
 		BitVectorState<Config> extract(size_t start, size_t size) const;
 		void insert(const BitVectorState& state, size_t offset, size_t size = 0);
@@ -781,6 +785,19 @@ const typename Config::BaseType *BitVectorState<Config>::data(typename Config::P
 {
 	return m_values[plane].data();
 }
+
+template<class Config>
+std::span<std::byte> BitVectorState<Config>::asWritableBytes(typename Config::Plane plane)
+{
+	return std::span<std::byte>((std::byte*)m_values[plane].data(), (m_size + 7)/8);
+}
+
+template<class Config>
+std::span<const std::byte> BitVectorState<Config>::asBytes(typename Config::Plane plane) const
+{
+	return std::span<const std::byte>((const std::byte*)m_values[plane].data(), (m_size + 7)/8);
+}
+
 
 template<class Config>
 BitVectorState<Config> BitVectorState<Config>::extract(size_t start, size_t size) const
