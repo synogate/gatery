@@ -766,8 +766,8 @@ BOOST_FIXTURE_TEST_CASE(tilelink_stream_fetch_test, BoostUnitTestSimulationFixtu
 
 	RvStream<BVec> data{ 16_b };
 	pinOut(data, "data");
-
-	mem <<= TileLinkStreamFetch{}.generate(cmd, data, 1_b);
+	TileLinkUB memUB = TileLinkStreamFetch{}.generate(cmd, data, 1_b);
+	mem <<= (TileLinkUL&) memUB;
 
 	std::array<std::array<size_t, 2>, 3> testCases = {
 		std::array<size_t, 2>{ 16, 4 },
@@ -803,6 +803,72 @@ BOOST_FIXTURE_TEST_CASE(tilelink_stream_fetch_test, BoostUnitTestSimulationFixtu
 
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(tilelink_burst_stream_fetch_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ 
+		.absoluteFrequency = 100'000'000,
+		.memoryResetType = ClockConfig::ResetType::NONE
+		});
+	ClockScope clkScp(clock);
+
+	std::vector<uint8_t> memData;
+	for (uint16_t i = 0; i < 512; ++i)
+		memData.push_back((uint8_t)i);
+
+	Memory<BVec> mem(256, 16_b);
+	mem.fillPowerOnState(sim::createDefaultBitVectorState(memData.size()*8, memData.data()));
+
+	RvStream<TileLinkStreamFetch::Command> cmd;
+	cmd->address = mem.addressWidth();
+	cmd->beats = 5_b;
+	pinIn(cmd, "cmd");
+
+	RvStream<BVec> data{ 16_b };
+	pinOut(data, "data");
+
+	TileLinkUB fetcher = TileLinkStreamFetch{}.enableBursts(64).generate(cmd, data, 0_b); //maximum burst size is 4 beats ->64 bits
+
+	TileLinkUL memTL = tileLinkInit<TileLinkUL>(fetcher.a->address.width(), fetcher.a->data.width(), fetcher.a->source.width() + 5_b);
+	mem <<= memTL;
+	tileLinkAddBurst(memTL, fetcher.a->size.width()) <<= fetcher;
+
+	std::array<std::array<size_t, 2>, 3> testCases = {
+		std::array<size_t, 2>{ 16, 4 },
+		std::array<size_t, 2>{ 32, 8 },
+		std::array<size_t, 2>{ 0, 16 },
+	};
+
+	addSimulationProcess([&]()->SimProcess {
+		for (const auto& tc : testCases)
+		{
+			simu(cmd->address) = tc[0];
+			simu(cmd->beats) = tc[1];
+			co_await performTransfer(cmd, clock);
+		}
+		});
+
+	addSimulationProcess([&]()->SimProcess {
+		fork(scl::strm::readyDriverRNG(data, clock, 80));
+
+		for(const auto& tc : testCases)
+			for (size_t i = 0; i < tc[1]; ++i)
+			{
+				const size_t expectedByte = tc[0] + i * 2;
+				const size_t expectedWord = ((expectedByte + 1) << 8) | expectedByte;
+				auto a = co_await scl::strm::receivePacket(data, clock);
+				BOOST_TEST(a.asUint64(data->width()) == expectedWord);
+			}
+
+		co_await OnClk(clock);
+		BOOST_TEST(simu(valid(data)) == '0');
+		stopTest();
+		});
+
+	if (true) recordVCD("dut.vcd");
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 5, 1'000'000 }));
 }
 
 class LinkTest : public ClockedTest
@@ -1039,3 +1105,6 @@ BOOST_FIXTURE_TEST_CASE(tilelink_FromStream_test, BoostUnitTestSimulationFixture
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
+
+
+

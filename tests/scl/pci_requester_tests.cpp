@@ -43,7 +43,16 @@ BOOST_FIXTURE_TEST_CASE(tileLink_requester_test_read_1word, BoostUnitTestSimulat
 
 	BitWidth tlpW = 256_b;
 
-	scl::sim::PcieHostModel model;
+	const size_t memSizeInBytes = 4;
+	static_assert(memSizeInBytes % 4 == 0);
+
+	scl::sim::RandomBlockDefinition testSpace{
+		.offset = 0,
+		.size = memSizeInBytes * 8,
+		.seed = 1234,
+	};
+
+	scl::sim::PcieHostModel model(testSpace);
 	model.defaultHandlers();
 	scl::pci::RequesterInterface reqInt = model.requesterInterface(tlpW);
 
@@ -77,7 +86,17 @@ BOOST_FIXTURE_TEST_CASE(tileLink_requester_test_read_any_word_in_256_b_data_beat
 
 	BitWidth tlpW = 512_b;
 
-	scl::sim::PcieHostModel model;
+	const size_t memSizeInBytes = 32;
+	static_assert(memSizeInBytes % 4 == 0);
+
+	scl::sim::RandomBlockDefinition testSpace{
+		.offset = 0,
+		.size = memSizeInBytes * 8,
+		.seed = 1234,
+	};
+
+	scl::sim::PcieHostModel model(testSpace);
+
 	model.defaultHandlers();
 	scl::pci::RequesterInterface reqInt = model.requesterInterface(tlpW);
 	addSimulationProcess([&, this]()->SimProcess { return model.completeRequests(clk, 3); });

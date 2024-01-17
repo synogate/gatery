@@ -48,7 +48,13 @@ BOOST_FIXTURE_TEST_CASE(host_read_1dw_512_b, BoostUnitTestSimulationFixture) {
 	const size_t memSizeInBytes = 16;
 	static_assert(memSizeInBytes % 4 == 0);
 
-	scl::sim::PcieHostModel host(memSizeInBytes);
+	scl::sim::RandomBlockDefinition testSpace{
+		.offset = 0,
+		.size = memSizeInBytes * 8,
+		.seed = 1234,
+	};
+
+	scl::sim::PcieHostModel host(testSpace);
 	host.defaultHandlers();
 	host.requesterRequest(move(requesterRequest));
 
@@ -104,7 +110,14 @@ BOOST_FIXTURE_TEST_CASE(host_read_64dw_512_b, BoostUnitTestSimulationFixture) {
 	const size_t memSizeInBytes = 128;
 	static_assert(memSizeInBytes % 4 == 0);
 
-	scl::sim::PcieHostModel host(memSizeInBytes);
+
+	scl::sim::RandomBlockDefinition testSpace{
+		.offset = 0,
+		.size = memSizeInBytes * 8,
+		.seed = 1234,
+	};
+
+	scl::sim::PcieHostModel host(testSpace);
 	host.defaultHandlers();
 	host.requesterRequest(move(requesterRequest));
 
@@ -148,7 +161,7 @@ BOOST_FIXTURE_TEST_CASE(host_read_64dw_512_b, BoostUnitTestSimulationFixture) {
 }
 
 
-BOOST_FIXTURE_TEST_CASE(host_read_chunks64b_1dw_512_b, BoostUnitTestSimulationFixture) {
+BOOST_FIXTURE_TEST_CASE(host_read_chunks64B_1dw_512_b, BoostUnitTestSimulationFixture) {
 	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScope(clk);
 	BitWidth streamW = 512_b;
@@ -160,7 +173,13 @@ BOOST_FIXTURE_TEST_CASE(host_read_chunks64b_1dw_512_b, BoostUnitTestSimulationFi
 	const size_t memSizeInBytes = 128;
 	static_assert(memSizeInBytes % 4 == 0);
 
-	scl::sim::PcieHostModel host(memSizeInBytes);
+	scl::sim::RandomBlockDefinition testSpace{
+		.offset = 0,
+		.size = memSizeInBytes * 8,
+		.seed = 1234,
+	};
+
+	scl::sim::PcieHostModel host(testSpace);
 	host.updateHandler(pci::TlpOpcode::memoryReadRequest64bit, std::make_unique<scl::sim::CompleterInChunks>(64));
 	host.requesterRequest(move(requesterRequest));
 
@@ -202,7 +221,7 @@ BOOST_FIXTURE_TEST_CASE(host_read_chunks64b_1dw_512_b, BoostUnitTestSimulationFi
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
 
-BOOST_FIXTURE_TEST_CASE(host_read_chunks64b_16dw_512_b, BoostUnitTestSimulationFixture) {
+BOOST_FIXTURE_TEST_CASE(host_read_chunks64B_16dw_512_b, BoostUnitTestSimulationFixture) {
 	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScope(clk);
 	BitWidth streamW = 512_b;
@@ -214,7 +233,14 @@ BOOST_FIXTURE_TEST_CASE(host_read_chunks64b_16dw_512_b, BoostUnitTestSimulationF
 	const size_t memSizeInBytes = 128;
 	static_assert(memSizeInBytes % 4 == 0);
 
-	scl::sim::PcieHostModel host(memSizeInBytes);
+
+	scl::sim::RandomBlockDefinition testSpace{
+		.offset = 0,
+		.size = memSizeInBytes * 8,
+		.seed = 1234,
+	};
+
+	scl::sim::PcieHostModel host(testSpace);
 	host.updateHandler(pci::TlpOpcode::memoryReadRequest64bit, std::make_unique<scl::sim::CompleterInChunks>(64));
 	host.requesterRequest(move(requesterRequest));
 
@@ -256,7 +282,7 @@ BOOST_FIXTURE_TEST_CASE(host_read_chunks64b_16dw_512_b, BoostUnitTestSimulationF
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
 
-BOOST_FIXTURE_TEST_CASE(host_read_chunks64b_17dw_512_b, BoostUnitTestSimulationFixture) {
+BOOST_FIXTURE_TEST_CASE(host_read_chunks64B_17dw_512_b, BoostUnitTestSimulationFixture) {
 	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScope(clk);
 	BitWidth streamW = 512_b;
@@ -268,7 +294,14 @@ BOOST_FIXTURE_TEST_CASE(host_read_chunks64b_17dw_512_b, BoostUnitTestSimulationF
 	const size_t memSizeInBytes = 128;
 	static_assert(memSizeInBytes % 4 == 0);
 
-	scl::sim::PcieHostModel host(memSizeInBytes);
+
+	scl::sim::RandomBlockDefinition testSpace{
+		.offset = 0,
+		.size = memSizeInBytes * 8,
+		.seed = 1234,
+	};
+
+	scl::sim::PcieHostModel host(testSpace);
 	size_t bytesPerChunk = 64;
 	host.updateHandler(pci::TlpOpcode::memoryReadRequest64bit, std::make_unique<scl::sim::CompleterInChunks>(bytesPerChunk));
 	host.requesterRequest(move(requesterRequest));
@@ -300,7 +333,7 @@ BOOST_FIXTURE_TEST_CASE(host_read_chunks64b_17dw_512_b, BoostUnitTestSimulationF
 			gtry::sim::DefaultBitVectorState tlpPayload = responsePacket.payload.extract(96, responsePacket.payload.size() - 96);
 
 			BOOST_TEST(tlpPayload == host.memory().read(bitAddress, std::min(bitsLeft, bytesPerChunk * 8)));
-			BOOST_TEST(*tlp.byteCount == std::min(bitsLeft / 8, bytesPerChunk));
+			BOOST_TEST(*tlp.byteCount == (bitsLeft / 8));
 			bitAddress += bytesPerChunk * 8;
 			bitsLeft -= bytesPerChunk * 8;
 
@@ -334,7 +367,14 @@ BOOST_FIXTURE_TEST_CASE(host_unsupported_completer, BoostUnitTestSimulationFixtu
 	const size_t memSizeInBytes = 4;
 	static_assert(memSizeInBytes % 4 == 0);
 
-	scl::sim::PcieHostModel host(memSizeInBytes);
+
+	scl::sim::RandomBlockDefinition testSpace{
+		.offset = 0,
+		.size = memSizeInBytes * 8,
+		.seed = 1234,
+	};
+
+	scl::sim::PcieHostModel host(testSpace);
 	//host.defaultHandlers(); don't set any support
 	host.requesterRequest(move(requesterRequest));
 

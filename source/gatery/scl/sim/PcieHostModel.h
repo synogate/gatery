@@ -27,10 +27,16 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 namespace gtry::scl::sim {
 	using namespace scl::pci;
 
+	struct RandomBlockDefinition{
+		uint64_t offset;
+		uint64_t size;
+		uint32_t seed = 918123;
+	};
+
 	class PcieHostModel
 	{
 	public:
-		PcieHostModel(uint64_t memorySizeInBytes = 64, bool memInitRandomDefined = true, uint32_t seed = 1259);
+		PcieHostModel(std::optional<RandomBlockDefinition> randomBlockDefinition = {}, uint64_t memorySizeInBytes = 1ull << 48); // 48 bit, byte-addressable memory
 		PcieHostModel(std::unique_ptr<hlim::MemoryStorage> mem) : m_mem(move(mem)) {}
 
 		PcieHostModel& defaultHandlers();
@@ -50,7 +56,7 @@ namespace gtry::scl::sim {
 		SimProcess assertInvalidTlp(const Clock& clk);
 		SimProcess assertPayloadSizeDoesntMatchHeader(const Clock& clk);
 		SimProcess assertUnsupportedTlp(const Clock& clk);
-		SimProcess completeRequests(const Clock& clk, size_t delay = 0);
+		SimProcess completeRequests(const Clock& clk, size_t delay = 0, std::optional<uint8_t> rngReadyPercentage = {});
 
 	private:
 		std::unique_ptr<hlim::MemoryStorage> m_mem;

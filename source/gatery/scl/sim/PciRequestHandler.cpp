@@ -15,7 +15,6 @@ You should have received a copy of the GNU Lesser General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#pragma once
 #include <gatery/pch.h>
 #include <gatery/hlim/postprocessing/MemoryStorage.h>
 #include <gatery/scl/stream/SimuHelpers.h>
@@ -39,18 +38,18 @@ namespace gtry::scl::sim {
 		if(request.opcode == TlpOpcode::memoryReadRequest64bit)
 		{
 			completion.opcode = TlpOpcode::completionWithData;
-			completion.lowerByteAddress = (uint8_t) (*request.wordAddress << 2); //initial lower byte address
+			completion.lowerByteAddress = (uint8_t) (*request.wordAddress * 4); //initial lower byte address
 			completion.completerID = m_completerId;
-			completion.byteCount = *request.length << 2; // initial byte count left
+			completion.byteCount = *request.length * 4; // initial byte count left
 			completion.completionStatus = CompletionStatus::successfulCompletion;
 			
 			strm::SimPacket completionPacket(completion.asDefaultBitVectorState(true));
 		
-			size_t baseBitAddress = *request.wordAddress << 5;
+			size_t baseBitAddress = *request.wordAddress * 32;
 			for (size_t dword = 0; dword < request.length; dword++)
 			{
-				completionPacket << mem.read(baseBitAddress, 32);
-				baseBitAddress += 32;
+				completionPacket << mem.read(baseBitAddress + dword * 32, 32);
+				
 			}
 			co_await strm::sendPacket(responseStream, completionPacket, clk, sendingSeq);
 		} 
@@ -64,17 +63,17 @@ namespace gtry::scl::sim {
 		if(request.opcode == TlpOpcode::memoryReadRequest64bit)
 		{
 			completion.opcode = TlpOpcode::completionWithData;
-			completion.lowerByteAddress = (uint8_t) (*request.wordAddress << 2); //initial lower byte address
+			completion.lowerByteAddress = (uint8_t) (*request.wordAddress * 4); //initial lower byte address
 			completion.completerID = m_completerId;
-			size_t payloadSizeInBytes = *request.length << 2; //can be adapted to include first_be and last_be
+			size_t payloadSizeInBytes = *request.length * 4; //can be adapted to include first_be and last_be
 			size_t bytesLeft = payloadSizeInBytes;
-			completion.byteCount = std::min(bytesLeft, m_chunkSizeInBytes);
+			completion.byteCount = bytesLeft;
 			completion.completionStatus = CompletionStatus::successfulCompletion;
 
 			strm::SimPacket completionPacket(completion.asDefaultBitVectorState(true));
 
-			size_t baseBitAddress = *request.wordAddress << 5;
-			size_t numPackets = payloadSizeInBytes / m_chunkSizeInBytes + 1;
+			size_t baseBitAddress = *request.wordAddress * 32;
+			size_t numPackets = (payloadSizeInBytes + m_chunkSizeInBytes - 1) / m_chunkSizeInBytes;
 			for (size_t i = 0; i < numPackets; i++)
 			{
 				size_t sentBytes = 0;
@@ -85,10 +84,12 @@ namespace gtry::scl::sim {
 					sentBytes++;
 				}
 				bytesLeft -= sentBytes;
+
+				for (size_t j = 0; j < m_gapInCyclesBetweenChunksOfSameRequest; j++) co_await OnClk(clk);
 				
 				co_await strm::sendPacket(responseStream, completionPacket, clk, sendingSeq);
 
-				completion.byteCount = std::min(bytesLeft, m_chunkSizeInBytes);
+				completion.byteCount = bytesLeft;
 				*completion.lowerByteAddress = (uint8_t) (baseBitAddress >> 3);
 				completionPacket = completion.asDefaultBitVectorState(true);
 			}

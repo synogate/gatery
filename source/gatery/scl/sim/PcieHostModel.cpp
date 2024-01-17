@@ -29,12 +29,17 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 namespace gtry::scl::sim {
 	using namespace gtry;
 
-
-	PcieHostModel::PcieHostModel(uint64_t memorySizeInBytes, bool memInitRandomDefined, uint32_t seed)
+	PcieHostModel::PcieHostModel(std::optional<RandomBlockDefinition> randomBlockDefinition, uint64_t memorySizeInBytes)
 	{
-		hlim::MemoryStorageDense mem(8 * memorySizeInBytes);
-		mem.setAllDefinedRandom(seed);
-		m_mem = std::make_unique<hlim::MemoryStorageDense>(mem);
+		hlim::MemoryStorage::Initialization memInit;
+		if (randomBlockDefinition)
+			memInit = hlim::MemoryStorage::Initialization::setAllDefinedRandom(
+				randomBlockDefinition->size,
+				randomBlockDefinition->offset,
+				randomBlockDefinition->seed);
+
+		hlim::MemoryStorageSparse mem(8 * memorySizeInBytes, memInit);
+		m_mem = std::make_unique<hlim::MemoryStorageSparse>(mem);
 	}
 
 	PcieHostModel& PcieHostModel::defaultHandlers()
@@ -127,13 +132,19 @@ namespace gtry::scl::sim {
 
 	
 
-	SimProcess PcieHostModel::completeRequests(const Clock& clk, size_t delay)
+	SimProcess PcieHostModel::completeRequests(const Clock& clk, size_t delay, std::optional<uint8_t> rngReadyPercentage)
 	{
 		HCL_DESIGNCHECK_HINT(m_rr, "requesterRequest port is not connected");
 		HCL_DESIGNCHECK_HINT(m_rc, "requesterCompletion port is not connected");
 		simu(valid(*m_rc)) = '0';
 		SimulationSequencer sendingSeq;
-		fork([&, this]()->SimProcess { return scl::strm::readyDriver(*m_rr, clk); });
+
+		if(rngReadyPercentage)
+			fork(scl::strm::readyDriverRNG(*m_rr, clk, *rngReadyPercentage));
+		else
+			fork(scl::strm::readyDriver(*m_rr, clk));
+			
+		
 		while (true) {
 			auto simPacket = co_await gtry::scl::strm::receivePacket(*m_rr, clk);
 			//simPacket must be captured by copy because it might get overwritten with the next request before the first response has even gotten out

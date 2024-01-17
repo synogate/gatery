@@ -17,6 +17,9 @@
 */
 #include "gatery/pch.h"
 #include "TileLinkStreamFetch.h"
+#include <gatery/scl/utils/OneHot.h>
+#include <gatery/scl/utils/BitCount.h>
+#include <gatery/scl/utils/math.h>
 
 namespace gtry::scl
 {
@@ -25,19 +28,56 @@ namespace gtry::scl
 		m_area.leave();
 	}
 
-	TileLinkUL TileLinkStreamFetch::generate(RvStream<Command>& cmdIn, RvStream<BVec>& dataOut, BitWidth sourceW)
+	TileLinkUB TileLinkStreamFetch::generate(RvStream<Command>& cmdIn, RvStream<BVec>& dataOut, BitWidth sourceW)
 	{
 		auto ent = m_area.enter();
 		HCL_NAMED(cmdIn);
 
-		auto link = tileLinkInit<TileLinkUL>(cmdIn->address.width(), dataOut->width(), sourceW);
+		std::optional<BitWidth> size;
+		UInt logByteSize;
+
+		if (m_maxBurstSizeInBits) {
+
+			const UInt bitsPerBeat = dataOut->width().bits();
+
+			UInt numBitsTotal = zext(cmdIn->beats) * zext(bitsPerBeat, cmdIn->beats.width() + bitsPerBeat.width());
+			HCL_NAMED(numBitsTotal);
+
+			IF(valid(cmdIn)) {
+				sim_assert(numBitsTotal % 8 == 0) << "not a full amount of bytes";
+				sim_assert(numBitsTotal % *m_maxBurstSizeInBits == 0) << "the specified amount of beats is not a full amount of bursts.";
+			}
+
+			UInt numBytesTotal = numBitsTotal.upper(-3_b);
+			HCL_NAMED(numBytesTotal);
+
+			HCL_DESIGNCHECK_HINT(*m_maxBurstSizeInBits % 8 == 0, "max burst size must be multiple bytes");
+			UInt numBytesBurst = *m_maxBurstSizeInBits / 8;
+
+			IF(valid(cmdIn))
+				sim_assert(bitcount(numBytesBurst) == 1) << "TileLink Bursts have to be a power of two amount of bytes";
+
+			logByteSize = encoder((OneHot) numBytesBurst);
+			HCL_NAMED(logByteSize); 
+			size = logByteSize.width();
+		}
+
+
+		auto link = tileLinkInit<TileLinkUB>(cmdIn->address.width(), dataOut->width(), sourceW, size);
 		link.a->opcode = (size_t)TileLinkA::Get;
 		link.a->param = 0;
-		link.a->size = utils::Log2C(link.a->mask.width().bits());
+		if (m_maxBurstSizeInBits) {
+			link.a->size = logByteSize;
+		}
+		else {
+			link.a->size = utils::Log2C(link.a->mask.width().bits());
+		}
+
 		//link.a->source = 0;
-		link.a->mask = link.a->mask.width().mask();
+		link.a->mask = link.a->mask.width().mask(); //only full bus reads
 		link.a->data = ConstBVec(link.a->data.width());
 
+		//here we calculate the address for the next request.
 		UInt addressOffset = cmdIn->beats.width();
 		HCL_NAMED(addressOffset);
 		addressOffset = reg(addressOffset, 0);
@@ -59,16 +99,29 @@ namespace gtry::scl
 			setName(*m_pauseFetch, "pauseFetch");
 		}
 
-		IF(transfer(*link.d))
-			readySource[(*link.d)->source] = '1';
-		IF(transfer(link.a))
-			readySource[link.a->source] = '0';
+		IF(transfer(*link.d) & eop(*link.d)) {
+			if ((*link.d)->source.width() == 0_b)
+				readySource[0] = '1';
+			else 
+				readySource[(*link.d)->source] = '1';
+		}
+		IF(transfer(link.a)) {
+			if (link.a->source.width() == 0_b)
+				readySource[0] = '0';
+			else 
+				readySource[link.a->source] = '0';
+		}
+
+
 		readySource = reg(readySource, BVec{ readySource.width().mask() });
 
 		ready(cmdIn) = '0';
 		IF(transfer(link.a))
 		{
-			addressOffset += 1;
+			if (m_maxBurstSizeInBits)
+				addressOffset += (*m_maxBurstSizeInBits / dataOut->width().bits());
+			else
+				addressOffset += 1;
 			IF(addressOffset == cmdIn->beats)
 			{
 				ready(cmdIn) = '1';

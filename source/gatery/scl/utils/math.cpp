@@ -18,19 +18,32 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <gatery/pch.h>
 #include "math.h"
 
-namespace gtry::scl::math {
-	UInt min(const UInt& a, const UInt& b){
-		BitWidth retW = BitWidth(std::min(a.width().bits(), b.width().bits()));
-		UInt ret = retW;
+namespace gtry::scl{
+
+	template <Signal T>
+	T min(const T& a, const T& b){
+		BitWidth retW = std::min(a.width(), b.width());
+		T ret = retW;
 		ret = a;
 		IF(a > b) ret = b;
 		return ret;
 	}
-	UInt max(const UInt& a, const UInt& b) {
-		BitWidth retW = BitWidth(std::max(a.width().bits(), b.width().bits()));
-		UInt ret = retW;
+	template <Signal T>
+	T max(const T& a, const T& b) {
+		BitWidth retW = std::max(a.width(), b.width());
+		T ret = retW;
 		ret = a;
 		IF(a < b) ret = b;
 		return ret;
+	}
+
+	UInt biggestPowerOfTwo(UInt input) {
+		UInt result = ConstUInt(0, input.width());
+		for (size_t i = 0; i < input.width().bits(); i++){
+			UInt candidate = 1 << i;
+			IF(input.at(i) == '1')
+				result = zext(candidate);
+		}
+		return result;
 	}
 }
