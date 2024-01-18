@@ -24,9 +24,11 @@
 #include <iostream>
 #include <iomanip>
 
-#include <gatery/scl/io/pci.h>
+#include <gatery/scl/io/pci/pci.h>
 #include <gatery/scl/sim/SimPci.h> 
-#include <gatery/scl/io/PciToTileLink.h> 
+#include <gatery/scl/io/pci/PciToTileLink.h> 
+#include <gatery/scl/tilelink/TileLinkMasterModel.h>
+#include <gatery/scl/sim/PcieHostModel.h>
 
 using namespace boost::unit_test;
 using namespace gtry;
@@ -113,7 +115,7 @@ BOOST_FIXTURE_TEST_CASE(tlp_RequestHeader_test, BoostUnitTestSimulationFixture) 
 
 	std::mt19937 rng{ std::random_device{}() };
 
-	TlpInstruction read = TlpInstruction::randomize(TlpOpcode::memoryReadRequest64bit, std::random_device{}() );
+	TlpInstruction read = TlpInstruction::randomizeNaive(TlpOpcode::memoryReadRequest64bit, std::random_device{}() );
 
 	BVec rawHeader = 128_b;
 	pinIn(rawHeader, "in_raw", {.simulationOnlyPin = true});
@@ -190,8 +192,6 @@ BOOST_FIXTURE_TEST_CASE(tlp_CompletionHeader_test, BoostUnitTestSimulationFixtur
 	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScope(clk);
 
-	TlpInstruction comp = TlpInstruction::randomize(TlpOpcode::completionWithData,  std::random_device{}());
-
 	BVec rawHeader = 96_b;
 	pinIn(rawHeader, "in_raw");
 
@@ -208,58 +208,65 @@ BOOST_FIXTURE_TEST_CASE(tlp_CompletionHeader_test, BoostUnitTestSimulationFixtur
 
 	addSimulationProcess(
 		[&, this]()->SimProcess {
-			co_await OnClk(clk);
-			simu(rawHeader) = (sim::DefaultBitVectorState) comp;
-			co_await WaitFor(Seconds{ 0, 1});
-			BOOST_TEST(simu(compHdr.common.type) == ((size_t) comp.opcode & 0x1Fu));
-			BOOST_TEST(simu(compHdr.common.fmt) == ((size_t) comp.opcode >> 5));
-			BOOST_TEST(simu(compHdr.common.addressType) == comp.at);
-			BOOST_TEST(simu(compHdr.common.processingHintPresence) == comp.th);
-			BOOST_TEST(simu(compHdr.common.attributes.idBasedOrdering) == comp.idBasedOrderingAttr2);
-			BOOST_TEST(simu(compHdr.common.attributes.noSnoop) == comp.noSnoopAttr0);
-			BOOST_TEST(simu(compHdr.common.attributes.relaxedOrdering) == comp.relaxedOrderingAttr1);
-			BOOST_TEST(simu(compHdr.common.digest) == comp.td);
-			BOOST_TEST(simu(compHdr.common.poisoned) == comp.ep);
-			BOOST_TEST(simu(compHdr.common.length) == *comp.length);
-			BOOST_TEST(simu(compHdr.common.trafficClass) == comp.tc);
+			for (size_t i = 0; i < 100; i++)
+			{
+				TlpInstruction comp = TlpInstruction::randomizeNaive(TlpOpcode::completionWithData, i);
+				co_await OnClk(clk);
+				simu(rawHeader) = (sim::DefaultBitVectorState)comp;
+				co_await WaitFor(Seconds{ 0, 1 });
+				BOOST_TEST(simu(compHdr.common.type) == ((size_t)comp.opcode & 0x1Fu));
+				BOOST_TEST(simu(compHdr.common.fmt) == ((size_t)comp.opcode >> 5));
+				BOOST_TEST(simu(compHdr.common.addressType) == comp.at);
+				BOOST_TEST(simu(compHdr.common.processingHintPresence) == comp.th);
+				BOOST_TEST(simu(compHdr.common.attributes.idBasedOrdering) == comp.idBasedOrderingAttr2);
+				BOOST_TEST(simu(compHdr.common.attributes.noSnoop) == comp.noSnoopAttr0);
+				BOOST_TEST(simu(compHdr.common.attributes.relaxedOrdering) == comp.relaxedOrderingAttr1);
+				BOOST_TEST(simu(compHdr.common.digest) == comp.td);
+				BOOST_TEST(simu(compHdr.common.poisoned) == comp.ep);
+				BOOST_TEST(simu(compHdr.common.length) == *comp.length);
+				BOOST_TEST(simu(compHdr.common.trafficClass) == comp.tc);
 
 
-			BOOST_TEST(simu(compHdr.requesterId) == comp.requesterID);
-			BOOST_TEST(simu(compHdr.completerId) == *comp.completerID);
-			BOOST_TEST(simu(compHdr.tag) == comp.tag);
-			BOOST_TEST(simu(compHdr.byteCount) == *comp.byteCount);
-			BOOST_TEST(simu(compHdr.byteCountModifier) == comp.byteCountModifier);
-			BOOST_TEST(simu(compHdr.lowerByteAddress) == *comp.lowerByteAddress);
-			BOOST_TEST(simu(compHdr.completionStatus) == comp.completionStatus);
+				BOOST_TEST(simu(compHdr.requesterId) == comp.requesterID);
+				BOOST_TEST(simu(compHdr.completerId) == *comp.completerID);
+				BOOST_TEST(simu(compHdr.tag) == comp.tag);
+				BOOST_TEST(simu(compHdr.completionStatus) == (size_t)comp.completionStatus);
+				if (comp.completionStatus == CompletionStatus::successfulCompletion) {
+					BOOST_TEST(simu(compHdr.byteCount) == *comp.byteCount);
+					BOOST_TEST(simu(compHdr.byteCountModifier) == comp.byteCountModifier);
+					BOOST_TEST(simu(compHdr.lowerByteAddress) == *comp.lowerByteAddress);
+				}
 
-			BOOST_TEST(simu(compHdrRecon.common.type) == simu(compHdr.common.type));
-			BOOST_TEST(simu(compHdrRecon.common.fmt)  == simu(compHdr.common.fmt));
-			BOOST_TEST(simu(compHdrRecon.common.addressType)  == simu(compHdr.common.addressType));
-			BOOST_TEST(simu(compHdrRecon.common.processingHintPresence)  == simu(compHdr.common.processingHintPresence));
-			BOOST_TEST(simu(compHdrRecon.common.attributes.idBasedOrdering)  == simu(compHdr.common.attributes.idBasedOrdering));
-			BOOST_TEST(simu(compHdrRecon.common.attributes.noSnoop)  == simu(compHdr.common.attributes.noSnoop));
-			BOOST_TEST(simu(compHdrRecon.common.attributes.relaxedOrdering)  == simu(compHdr.common.attributes.relaxedOrdering));
-			BOOST_TEST(simu(compHdrRecon.common.digest)  == simu(compHdr.common.digest));
-			BOOST_TEST(simu(compHdrRecon.common.poisoned)  == simu(compHdr.common.poisoned));
-			BOOST_TEST(simu(compHdrRecon.common.length)  == simu(compHdr.common.length));
-			BOOST_TEST(simu(compHdrRecon.common.trafficClass)  == simu(compHdr.common.trafficClass));
-			
-			BOOST_TEST(simu(compHdrRecon.requesterId) == simu(compHdr.requesterId));
-			BOOST_TEST(simu(compHdrRecon.tag) == simu(compHdr.tag));
-			BOOST_TEST(simu(compHdrRecon.completerId) == simu(compHdr.completerId));
-			BOOST_TEST(simu(compHdrRecon.byteCount) == simu(compHdr.byteCount));
-			BOOST_TEST(simu(compHdrRecon.byteCountModifier) == simu(compHdr.byteCountModifier));
-			BOOST_TEST(simu(compHdrRecon.lowerByteAddress) == simu(compHdr.lowerByteAddress));
-			BOOST_TEST(simu(compHdrRecon.completionStatus) == simu(compHdr.completionStatus));
+				BOOST_TEST(simu(compHdrRecon.common.type) == simu(compHdr.common.type));
+				BOOST_TEST(simu(compHdrRecon.common.fmt) == simu(compHdr.common.fmt));
+				BOOST_TEST(simu(compHdrRecon.common.addressType) == simu(compHdr.common.addressType));
+				BOOST_TEST(simu(compHdrRecon.common.processingHintPresence) == simu(compHdr.common.processingHintPresence));
+				BOOST_TEST(simu(compHdrRecon.common.attributes.idBasedOrdering) == simu(compHdr.common.attributes.idBasedOrdering));
+				BOOST_TEST(simu(compHdrRecon.common.attributes.noSnoop) == simu(compHdr.common.attributes.noSnoop));
+				BOOST_TEST(simu(compHdrRecon.common.attributes.relaxedOrdering) == simu(compHdr.common.attributes.relaxedOrdering));
+				BOOST_TEST(simu(compHdrRecon.common.digest) == simu(compHdr.common.digest));
+				BOOST_TEST(simu(compHdrRecon.common.poisoned) == simu(compHdr.common.poisoned));
+				BOOST_TEST(simu(compHdrRecon.common.length) == simu(compHdr.common.length));
+				BOOST_TEST(simu(compHdrRecon.common.trafficClass) == simu(compHdr.common.trafficClass));
 
-			co_await OnClk(clk);
+				BOOST_TEST(simu(compHdrRecon.requesterId) == simu(compHdr.requesterId));
+				BOOST_TEST(simu(compHdrRecon.tag) == simu(compHdr.tag));
+				BOOST_TEST(simu(compHdrRecon.completerId) == simu(compHdr.completerId));
+				BOOST_TEST(simu(compHdrRecon.byteCount) == simu(compHdr.byteCount));
+				BOOST_TEST(simu(compHdrRecon.byteCountModifier) == simu(compHdr.byteCountModifier));
+				BOOST_TEST(simu(compHdrRecon.lowerByteAddress) == simu(compHdr.lowerByteAddress));
+				BOOST_TEST(simu(compHdrRecon.completionStatus) == simu(compHdr.completionStatus));
+
+				co_await OnClk(clk);
+			}
 			stopTest();
 		}
 	);
 
+	if (false) { recordVCD("dut.vcd"); }
 	design.postprocess();
 
-	BOOST_TEST(!runHitsTimeout({1,1'000'000}));
+	BOOST_TEST(!runHitsTimeout({ 3, 1'000'000 }));
 }
 
 
@@ -336,9 +343,294 @@ BOOST_FIXTURE_TEST_CASE(tlp_to_tilelink_rw64_1dw, BoostUnitTestSimulationFixture
 		});
 
 
-	if (true) { recordVCD("dut.vcd"); }
+	if (false) { recordVCD("dut.vcd"); }
 	design.postprocess();
 
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(pci_deadbeef_test, BoostUnitTestSimulationFixture) {
+	using namespace scl::pci;
+	using namespace scl::sim;
+	Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+
+	const uint64_t deadbeef = 0xABCD'DEAD'BEEF'ABCDull;
+
+	UInt addr = ConstUInt(deadbeef, 64_b);
+
+	RequestHeader hdr;
+	//hdr.wordAddress = addr >> 2; this line silently resizes the vector 
+	hdr.wordAddress = zext(addr.upper(-2_b));
+
+	BOOST_TEST(hdr.wordAddress.width() == 62_b);
+
+	BVec raw = (BVec)hdr;
+
+	RequestHeader reconstructed = hdr.fromRaw(raw);
+	addSimulationProcess([&, this]()->SimProcess {
+		co_await OnClk(clk);
+			BOOST_TEST(simu(reconstructed.wordAddress) == simu(hdr.wordAddress));
+			stopTest();
+		}
+	);
+
+	design.postprocess();
+
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+
+BOOST_FIXTURE_TEST_CASE(pci_requesterCompletion_tileLink_fullW_test, BoostUnitTestSimulationFixture) {
+	using namespace scl::pci;
+	using namespace scl::sim;
+	Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+
+	size_t payloadBits = 512;
+
+	TlpInstruction reqComp;
+	reqComp.opcode = TlpOpcode::completionWithData;
+	reqComp.byteCount	= payloadBits / 8;
+	reqComp.length		= payloadBits / 32;
+	reqComp.completerID = 0x5678;
+	reqComp.lowerByteAddress = 0x7A;
+	reqComp.payload = { 0x01234567, 0x89ABCDEF, 0x01234567, 0x89ABCDEF, 0x01234567, 0x89ABCDEF, 0x01234567, 0x89ABCDEF, 0x01234567, 0x89ABCDEF, 0x01234567, 0x89ABCDEF, 0x01234567, 0x89ABCDEF, 0x01234567, 0x89ABCDEF };
+
+	scl::strm::SimPacket reqCompPacket(reqComp);
+	reqCompPacket.invalidBeats(0b01011100101);
+
+
+	TlpPacketStream<scl::EmptyBits> rc(512_b);
+	emptyBits(rc) = BitWidth::count(rc->width().bits());
+	pinIn(rc, "rc");
+
+	scl::TileLinkChannelD d = scl::pci::requesterCompletionToTileLinkDFullW(move(rc));
+	pinOut(d, "d");
+
+	BOOST_TEST(d->data.width() == rc->width());
+
+	addSimulationProcess([&, this]()->SimProcess { return scl::strm::readyDriverRNG(d, clk, 50); });
+
+	size_t iterations = 4;
+	addSimulationProcess([&, this]()->SimProcess {
+		scl::SimulationSequencer seq;
+		for (size_t i = 0; i < iterations; i++)
+		{
+			fork(scl::strm::sendPacket(rc, reqCompPacket, clk, seq));
+		}
+
+		for (size_t i = 0; i < iterations; i++)
+		{
+			co_await scl::strm::performTransferWait(d, clk);
+			BOOST_TEST(simu(d->source) == reqComp.tag);
+			BOOST_TEST(simu(d->size) == 6);
+			simu(d->data) == reqComp.payload;
+		}
+
+
+		co_await OnClk(clk);
+		co_await OnClk(clk);
+		co_await OnClk(clk);
+		co_await OnClk(clk);
+		co_await OnClk(clk);
+		co_await OnClk(clk);
+		stopTest();
+		}
+	);
+
+	if (false) recordVCD("dut.vcd");
+	design.postprocess();
+
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(pci_requester_512bit_tilelink_to_hostModel_test, BoostUnitTestSimulationFixture)
+{
+	Area area{ "top_area", true };
+	using namespace scl::pci;
+	const Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+
+	const size_t memSizeInBytes = 64;
+
+	scl::sim::PcieHostModel host(scl::sim::RandomBlockDefinition{ 0, memSizeInBytes * 8, 1039834 });
+	host.defaultHandlers();
+	addSimulationProcess([&, this]()->SimProcess { return host.completeRequests(clk, 0, 50); });
+
+	scl::TileLinkUL master = makePciMasterFullW(host.requesterInterface(512_b));
+
+	pinIn(master, "link");
+
+	addSimulationProcess([&, this]()->SimProcess { return scl::strm::readyDriverRNG(*master.d, clk, 50); });
+
+	addSimulationProcess(
+		[&, this]()->SimProcess {
+			simu(valid(master.a)) = '0';
+			co_await OnClk(clk);
+			simu(master.a->address) = 0;
+			simu(master.a->opcode) = (size_t) scl::TileLinkA::OpCode::Get;
+			simu(master.a->param) = 0;
+			simu(master.a->source) = 42;
+			simu(master.a->size) = 6;
+			simu(valid(master.a)) = '1';
+
+			co_await scl::strm::performTransferWait(master.a, clk);
+			simu(valid(master.a)) = '0';
+			co_await OnClk(clk);
+			co_await OnClk(clk);
+			co_await OnClk(clk);
+			co_await OnClk(clk);
+			simu(master.a->address) = 0;
+			simu(master.a->opcode) = (size_t) scl::TileLinkA::OpCode::Get;
+			simu(master.a->param) = 0;
+			simu(master.a->source) = 24;
+			simu(master.a->size) = 6;
+			simu(valid(master.a)) = '1';
+
+			co_await scl::strm::performTransferWait(master.a, clk);
+			simu(valid(master.a)) = '0';
+		}
+	);
+
+	addSimulationProcess(
+		[&, this]()->SimProcess {
+
+			co_await scl::strm::performTransferWait(*master.d, clk);
+			BOOST_TEST(host.memory().read(0,512) == (sim::DefaultBitVectorState) simu((*master.d)->data));
+			BOOST_TEST(simu((*master.d)->source) == 42);
+
+			co_await scl::strm::performTransferWait(*master.d, clk);
+			BOOST_TEST(host.memory().read(0,512) == (sim::DefaultBitVectorState) simu((*master.d)->data));
+			BOOST_TEST(simu((*master.d)->source) == 24);
+			co_await OnClk(clk);
+			stopTest();
+		}
+	);
+
+	if (false) recordVCD("dut.vcd");
+	design.postprocess();
+	//design.visualize("dut");
+
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(pci_requester_512bit_cheapBurst_test_rng_backpressure, BoostUnitTestSimulationFixture)
+{
+	Area area{ "top_area", true };
+	using namespace scl::pci;
+	const Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+
+	const size_t memSizeInBytes = 1 << 10; // 1kB space
+
+	scl::sim::PcieHostModel host(scl::sim::RandomBlockDefinition{ 0, memSizeInBytes * 8, 1039834});
+	host.defaultHandlers();
+	addSimulationProcess([&, this]()->SimProcess { return host.completeRequests(clk, 0, 50); });
+
+	scl::TileLinkUB master = makePciMasterCheapBurst(host.requesterInterface(512_b), 4_b);
+
+	pinIn(master, "link");
+
+	addSimulationProcess([&, this]()->SimProcess { return scl::strm::readyDriverRNG(*master.d, clk, 50); });
+
+	addSimulationProcess(
+		[&, this]()->SimProcess {
+			simu(valid(master.a)) = '0';
+			co_await OnClk(clk);
+
+			for (size_t i = 6; i < 10; i++) // from 64B to 1kB
+			{
+				//make request
+				simu(master.a->address) = 0;
+				simu(master.a->opcode) = (size_t) scl::TileLinkA::OpCode::Get;
+				simu(master.a->param) = 0;
+				simu(master.a->size) = i;
+				simu(valid(master.a)) = '1';
+
+				co_await scl::strm::performTransferWait(master.a, clk);
+				simu(valid(master.a)) = '0';
+
+				size_t expectedBeats = 8 * (1 << i) / 512;
+				//get response and check
+				for (size_t j = 0; j < expectedBeats; j++)
+				{
+					co_await scl::strm::performTransferWait(*master.d, clk);
+					BOOST_TEST(host.memory().read(j * 512, 512) == (sim::DefaultBitVectorState) simu((*master.d)->data));
+				}
+			}
+			co_await OnClk(clk);
+			stopTest();
+		}
+	);
+
+	if (false) recordVCD("dut.vcd");
+	design.postprocess();
+	//design.visualize("dut");
+
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+
+BOOST_FIXTURE_TEST_CASE(pci_requester_512bit_cheapBurst_chopped_test, BoostUnitTestSimulationFixture)
+{
+	Area area{ "top_area", true };
+	using namespace scl::pci;
+	const Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+
+	const size_t memSizeInBytes = 1 << 10; // 1kB space
+
+	scl::sim::PcieHostModel host(scl::sim::RandomBlockDefinition{ 0, memSizeInBytes * 8, 1039834});
+	host.defaultHandlers();
+	host.updateHandler(TlpOpcode::memoryReadRequest64bit, std::make_unique<scl::sim::CompleterInChunks>(64, 5));
+	addSimulationProcess([&, this]()->SimProcess { return host.completeRequests(clk, 0, 50); });
+
+	scl::TileLinkUB master = makePciMasterCheapBurst(host.requesterInterface(512_b), 4_b);
+
+	pinIn(master, "link");
+
+	addSimulationProcess([&, this]()->SimProcess { return scl::strm::readyDriverRNG(*master.d, clk, 50); });
+
+	addSimulationProcess(
+		[&, this]()->SimProcess {
+			simu(valid(master.a)) = '0';
+			co_await OnClk(clk);
+
+			for (size_t i = 6; i < 10; i++) // from 64B to 1kB
+			{
+				//make request
+				simu(master.a->address) = 0;
+				simu(master.a->opcode) = (size_t) scl::TileLinkA::OpCode::Get;
+				simu(master.a->param) = 0;
+				simu(master.a->size) = i;
+				simu(valid(master.a)) = '1';
+
+				co_await scl::strm::performTransferWait(master.a, clk);
+				simu(valid(master.a)) = '0';
+
+				//get response and check
+				size_t expectedBeats = 8 * (1 << i) / 512;
+				for (size_t j = 0; j < expectedBeats; j++)
+				{
+					co_await scl::strm::performTransferWait(*master.d, clk);
+					BOOST_TEST(host.memory().read(j * 512, 512) == (sim::DefaultBitVectorState) simu((*master.d)->data));
+					BOOST_TEST(simu((*master.d)->size) == i);
+					BOOST_TEST(simu((*master.d)->opcode) == (size_t) scl::TileLinkD::AccessAckData);
+					BOOST_TEST(simu((*master.d)->error) == '0');
+				}
+			}
+			co_await OnClk(clk);
+			stopTest();
+		}
+	);
+
+	if (false) recordVCD("dut.vcd");
+	design.postprocess();
+	//design.visualize("dut");
+
+	BOOST_TEST(!runHitsTimeout({ 5, 1'000'000 }));
 }
 

@@ -536,6 +536,7 @@ void ReferenceSimulator::destroyPendingEvents()
 
 	m_coroutineHandler.stopAll();
 	m_processesAwaitingCommit.clear();
+	m_simFibers.clear();
 	m_simulationIsShuttingDown = false;
 }
 
@@ -681,11 +682,18 @@ void ReferenceSimulator::powerOn()
 	{
 		RunTimeSimulationContext context(this);
 
+		m_simFibers.clear();
 		m_coroutineHandler.stopAll();
 
-		// start all fibers
+		// start all sim procs
 		for (auto &f : m_simProcs) {
-			m_coroutineHandler.start(f());
+			startCoroutine(f());
+		}
+
+		// start all fibers
+		for (auto &f : m_simFiberBodies) {
+			m_simFibers.emplace_back(m_coroutineHandler, f);
+			m_simFibers.back().start();
 			m_coroutineHandler.run();
 		}
 	}
@@ -1088,6 +1096,11 @@ void ReferenceSimulator::addSimulationProcess(std::function<SimulationFunction<v
 	m_simProcs.push_back(std::move(simProc));
 }
 
+void ReferenceSimulator::addSimulationFiber(std::function<void()> simProc)
+{
+	m_simFiberBodies.push_back(std::move(simProc));
+}
+
 void ReferenceSimulator::addSimulationVisualization(sim::SimulationVisualization simVis)
 {
 	HCL_ASSERT(simVis.stateAlignment <= 8);
@@ -1187,6 +1200,12 @@ void ReferenceSimulator::suspendUntilProcessCompletion(std::coroutine_handle<> h
 {
 }
 */
+
+void ReferenceSimulator::startCoroutine(SimulationFunction<void> coroutine)
+{
+	m_coroutineHandler.start(coroutine);
+	m_coroutineHandler.run();
+}
 
 
 

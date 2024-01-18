@@ -18,9 +18,6 @@
 #pragma once
 
 #include <gatery/frontend.h>
-#include <gatery/utils/Traits.h>
-
-#include <iostream>
 
 namespace gtry::scl {
  

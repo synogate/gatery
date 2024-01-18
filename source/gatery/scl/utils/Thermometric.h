@@ -18,9 +18,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #pragma once
 
 #include <gatery/frontend.h>
-#include <gatery/utils/Traits.h>
-
-#include <iostream>
 
 /**
  * @brief Thermometric encoding, for the purpose of these helper functions, is defined with the following table

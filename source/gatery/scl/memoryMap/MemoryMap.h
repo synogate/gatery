@@ -64,6 +64,13 @@ namespace gtry::scl
 	void format(std::ostream &stream, const AddressSpaceDescription &desc, size_t indent = 0);
 	inline std::ostream &operator<<(std::ostream &stream, const AddressSpaceDescription &desc) { format(stream, desc); return stream; }
 
+	namespace driver {
+		struct MemoryMapEntry;
+	}
+	std::vector<driver::MemoryMapEntry> exportAddressSpaceDescription(const AddressSpaceDescription &desc);
+	void format(std::ostream &stream, std::string_view name, std::span<const driver::MemoryMapEntry> memoryMap);
+	void writeGTKWaveFilterFile(std::ostream &stream, std::span<const driver::MemoryMapEntry> memoryMap);
+
 	/**
 	 * @brief Interface and no-op fallback implementation for the automatic generation of memory mapped control registers.
 	 * @details To register signals, use the @ref gtry::scl::mapIn and @ref gtry::scl::mapOut freestanding functions.

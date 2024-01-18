@@ -17,13 +17,17 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
 #include <gatery/frontend.h>
-#include <gatery/scl/io/pci.h>
+#include <gatery/scl/io/pci/pci.h>
 #include "XilinxPciStructs.h"
 
 namespace gtry::scl::pci::xilinx {
 
 	RequestHeader createHeader(const CompleterRequestDescriptor& desc, const CQUser& cqUser);
-	CompleterCompletionDescriptor createDescriptor(const CompletionHeader& desc);
+	CompleterCompletionDescriptor createDescriptor(const CompletionHeader& hdr);
+
+	RequesterRequestDescriptor createDescriptor(const RequestHeader& hdr);
+	CompletionHeader createHeader(const RequesterCompletionDescriptor& desc);
+	
 	
 	/** @brief amd axi4 generic packet stream */
 	template<Signal ...Meta>
@@ -36,5 +40,11 @@ namespace gtry::scl::pci::xilinx {
 	*/
 	TlpPacketStream<scl::EmptyBits, pci::BarInfo> completerRequestVendorUnlocking(Axi4PacketStream<CQUser>&& in);
 	Axi4PacketStream<CCUser> completerCompletionVendorUnlocking(TlpPacketStream<EmptyBits>&& in);
+
+	Axi4PacketStream<RQUser> requesterRequestVendorUnlocking(TlpPacketStream<scl::EmptyBits>&& in);
+	TlpPacketStream<scl::EmptyBits> requesterCompletionVendorUnlocking(Axi4PacketStream<RCUser>&& in, bool straddle = false);
+
+	RequesterInterface requesterVendorUnlocking(Axi4PacketStream<RCUser>&& completion, Axi4PacketStream<RQUser>& request);
+	
 }
 	
