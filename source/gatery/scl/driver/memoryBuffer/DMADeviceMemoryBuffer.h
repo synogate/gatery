@@ -21,7 +21,7 @@
  * Do not include the regular gatery headers since this is meant to compile stand-alone in driver/userspace application code. 
  */
 
-#include "MemoryBuffer.h"
+#include "DeviceMemoryBuffer.h"
 #include "PinnedHostMemoryBuffer.h"
 
 #include <memory>
@@ -40,9 +40,19 @@ namespace gtry::scl::driver {
 
 	class DMAMemoryBufferFactory;
 
-	class DMADeviceMemoryBuffer : public MemoryBuffer {
+	class DeviceDMAController {
 		public:
-			DMADeviceMemoryBuffer(DMAMemoryBufferFactory &factory);
+			virtual void uploadContinuousChunk(PhysicalAddr hostAddr, PhysicalAddr deviceAddr, size_t size) = 0;
+			virtual void downloadContinuousChunk(PhysicalAddr hostAddr, PhysicalAddr deviceAddr, size_t size) const = 0;
+		protected:
+			bool m_canUpload = true;
+			bool m_canDownload = true;
+			std::uint64_t m_accessAlignment = 1;
+	};
+
+	class DMADeviceMemoryBuffer : public DeviceMemoryBuffer {
+		public:
+			DMADeviceMemoryBuffer(DMAMemoryBufferFactory &factory, std::uint64_t bytes, PhysicalAddr deviceAddr, DeviceMemoryAllocator &allocator);
 			
 			virtual std::span<std::byte> lock(Flags flags) override;
 			virtual void unlock() override;
@@ -52,20 +62,22 @@ namespace gtry::scl::driver {
 			DMAMemoryBufferFactory &m_factory;
 			std::unique_ptr<PinnedHostMemoryBuffer> m_uploadBuffer;
 			Flags m_lockFlags;
-
-			virtual void uploadContinuousChunk(PhysicalAddr hostPageStart, PhysicalAddr deviceBufferOffset, size_t size) = 0;
-			virtual void downloadContinuousChunk(PhysicalAddr hostPageStart, PhysicalAddr deviceBufferOffset, size_t size) const = 0;
 	};
 
-	class DMAMemoryBufferFactory : public MemoryBufferFactory {
+	class DMAMemoryBufferFactory : public DeviceMemoryBufferFactory {
 		public:
-			DMAMemoryBufferFactory(PinnedHostMemoryBufferFactory &uploadBufferFactory);
+			DMAMemoryBufferFactory(DeviceMemoryAllocator &allocator, PinnedHostMemoryBufferFactory &uploadBufferFactory, DeviceDMAController &dmaController);
 
 			std::unique_ptr<PinnedHostMemoryBuffer> allocateUploadBuffer(std::uint64_t bytes);
+			DeviceDMAController &dmaController() { return m_dmaController; }
 
 			inline size_t pageSize() const { return m_uploadBufferFactory.pageSize(); }
+
+			inline auto allocateDerived(uint64_t bytes) { return allocateDerivedImpl<DMADeviceMemoryBuffer>(bytes); }
 		protected:
 			PinnedHostMemoryBufferFactory &m_uploadBufferFactory;
+			DeviceDMAController &m_dmaController;
+			virtual std::unique_ptr<MemoryBuffer> createBuffer(PhysicalAddr deviceAddr, uint64_t bytes) override;
 	};
 
 

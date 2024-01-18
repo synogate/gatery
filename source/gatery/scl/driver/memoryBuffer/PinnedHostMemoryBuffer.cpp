@@ -26,6 +26,10 @@
 
 namespace gtry::scl::driver {
 
+PinnedHostMemoryBuffer::PinnedHostMemoryBuffer(std::span<std::byte> buffer, size_t pageSize) : MemoryBuffer(buffer.size()), m_pageSize(pageSize), m_buffer(buffer)
+{
+}
+
 std::span<std::byte> PinnedHostMemoryBuffer::lock(Flags flags)
 {
 	return m_buffer;

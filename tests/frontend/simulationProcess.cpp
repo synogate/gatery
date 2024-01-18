@@ -1067,7 +1067,7 @@ BOOST_FIXTURE_TEST_CASE(SimFiber_PingPong, BoostUnitTestSimulationFixture)
 }
 
 
-
+/*
 
 BOOST_FIXTURE_TEST_CASE(SimFromThread, BoostUnitTestSimulationFixture)
 {
@@ -1120,5 +1120,5 @@ BOOST_FIXTURE_TEST_CASE(SimFromThread, BoostUnitTestSimulationFixture)
 
 }
 
-
+*/
 

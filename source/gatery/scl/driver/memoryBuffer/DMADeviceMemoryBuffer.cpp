@@ -30,7 +30,8 @@
 
 namespace gtry::scl::driver {
 
-DMADeviceMemoryBuffer::DMADeviceMemoryBuffer(DMAMemoryBufferFactory &factory) : m_factory(factory)
+DMADeviceMemoryBuffer::DMADeviceMemoryBuffer(DMAMemoryBufferFactory &factory, std::uint64_t bytes, PhysicalAddr deviceAddr, DeviceMemoryAllocator &allocator)
+		 : DeviceMemoryBuffer(bytes, deviceAddr, allocator), m_factory(factory)
 {
 }
 			
@@ -48,15 +49,15 @@ std::span<std::byte> DMADeviceMemoryBuffer::lock(Flags flags)
 
 	m_lockFlags = flags;
 
-	if ((std::uint32_t)m_lockFlags & (std::uint32_t)Flags::DISCARD == 0) {
+	if (((std::uint32_t)m_lockFlags & (std::uint32_t)Flags::DISCARD) == 0) {
 		size_t pageSize = m_uploadBuffer->pageSize();
 		size_t numFullPages = (size_t)(m_size / pageSize);
 		for (size_t page = 0; page < numFullPages; page++)
-			downloadContinuousChunk(m_uploadBuffer->physicalPageStart(page), pageSize * page, pageSize);
+			m_factory.dmaController().downloadContinuousChunk(m_uploadBuffer->physicalPageStart(page), pageSize * page, pageSize);
 
 		size_t remaining = (size_t)(m_size % pageSize);
 		if (remaining > 0)
-			downloadContinuousChunk(m_uploadBuffer->physicalPageStart(numFullPages), pageSize * numFullPages, remaining);
+			m_factory.dmaController().downloadContinuousChunk(m_uploadBuffer->physicalPageStart(numFullPages), pageSize * numFullPages, remaining);
 	}
 
 	return res;
@@ -67,15 +68,15 @@ void DMADeviceMemoryBuffer::unlock()
 	if (m_uploadBuffer == nullptr) throw std::runtime_error("Buffer is not locked!");
 	m_uploadBuffer->unlock();
 
-	if ((std::uint32_t)m_lockFlags & (std::uint32_t)Flags::READ_ONLY == 0) {
+	if (((std::uint32_t)m_lockFlags & (std::uint32_t)Flags::READ_ONLY) == 0) {
 		size_t pageSize = m_uploadBuffer->pageSize();
 		size_t numFullPages = (size_t)(m_size / pageSize);
 		for (size_t page = 0; page < numFullPages; page++)
-			uploadContinuousChunk(m_uploadBuffer->physicalPageStart(page), pageSize * page, pageSize);
+			m_factory.dmaController().uploadContinuousChunk(m_uploadBuffer->physicalPageStart(page), m_deviceAddr + pageSize * page, pageSize);
 
 		size_t remaining = (size_t)(m_size % pageSize);
 		if (remaining > 0)
-			uploadContinuousChunk(m_uploadBuffer->physicalPageStart(numFullPages), pageSize * numFullPages, remaining);
+			m_factory.dmaController().uploadContinuousChunk(m_uploadBuffer->physicalPageStart(numFullPages), m_deviceAddr + pageSize * numFullPages, remaining);
 	}
 }
 
@@ -102,7 +103,7 @@ void DMADeviceMemoryBuffer::write(std::span<const std::byte> data)
 	for (std::uint64_t page = 0; page < numPages; page++) {
 		std::uint64_t chunkSize = std::min(pageSize, data.size() - (std::uint64_t) page * pageSize);
 		frontPageBuffer->write(data.subspan(page * pageSize, chunkSize));
-		uploadContinuousChunk(frontPageBufferAddr, pageSize * page, chunkSize);
+		m_factory.dmaController().uploadContinuousChunk(frontPageBufferAddr, pageSize * page, chunkSize);
 		std::swap(frontPageBuffer, frontPageBuffer);
 		std::swap(frontPageBufferAddr, backPageBufferAddr);
 	}
@@ -129,7 +130,7 @@ void DMADeviceMemoryBuffer::read(std::span<std::byte> data) const
 	std::uint64_t numPages = (data.size() + pageSize-1) / pageSize;
 	for (std::uint64_t page = 0; page < numPages; page++) {
 		std::uint64_t chunkSize = std::min(pageSize, data.size() - (std::uint64_t) page * pageSize);
-		downloadContinuousChunk(frontPageBufferAddr, pageSize * page, chunkSize);
+		m_factory.dmaController().downloadContinuousChunk(frontPageBufferAddr, pageSize * page, chunkSize);
 		frontPageBuffer->read(data.subspan(page * pageSize, chunkSize));
 		std::swap(frontPageBuffer, frontPageBuffer);
 		std::swap(frontPageBufferAddr, backPageBufferAddr);
@@ -139,11 +140,17 @@ void DMADeviceMemoryBuffer::read(std::span<std::byte> data) const
 
 std::unique_ptr<PinnedHostMemoryBuffer> DMAMemoryBufferFactory::allocateUploadBuffer(std::uint64_t bytes)
 {
-	return m_uploadBufferFactory.allocateDerived<PinnedHostMemoryBuffer>(bytes);
+	return m_uploadBufferFactory.allocateDerived(bytes);
 }
 
-DMAMemoryBufferFactory::DMAMemoryBufferFactory(PinnedHostMemoryBufferFactory &uploadBufferFactory) : m_uploadBufferFactory(uploadBufferFactory)
+DMAMemoryBufferFactory::DMAMemoryBufferFactory(DeviceMemoryAllocator &allocator, PinnedHostMemoryBufferFactory &uploadBufferFactory, DeviceDMAController &dmaController) 
+		: DeviceMemoryBufferFactory(allocator), m_uploadBufferFactory(uploadBufferFactory), m_dmaController(dmaController)
 {
+}
+
+std::unique_ptr<MemoryBuffer> DMAMemoryBufferFactory::createBuffer(PhysicalAddr deviceAddr, uint64_t bytes)
+{
+	return std::make_unique<DMADeviceMemoryBuffer>(*this, bytes, deviceAddr, m_allocator);
 }
 
 

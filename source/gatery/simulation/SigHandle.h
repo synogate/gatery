@@ -49,11 +49,11 @@ class SigHandle {
 		void operator=(const BigInt_ &v) { assign(v); }
 
 		/// Interprete the given array of integers as one concatenated bit string to assign to this signal
-		void operator=(std::pair<const void*, size_t> array);
+		void operator=(std::span<const std::byte> rhs);
 
 		/// Interprete the given array of integers as one concatenated bit string to assign to this signal
-		template<typename T>
-		void operator=(std::span<T> array) { operator=({array.data(), array.size() * sizeof(T)}); }
+		template<typename T> requires (std::is_trivially_copyable_v<T>)
+		void operator=(std::span<T> array) { operator=(std::as_bytes(array)); }
 
 
 		template<EnumType T>
@@ -64,13 +64,13 @@ class SigHandle {
 		bool operator==(char v) const;
 
 		/// Interprete the given array of integers as one concatenated bit string and return true if all bits in the signal are defined and equal to the given bit string.
-		bool operator==(std::pair<const void*, size_t> array) const;
+		bool operator==(std::span<const std::byte> rhs) const;
 		/// Interprete the given array of integers as one concatenated bit string and return true if all bits in the signal are defined and equal to the given bit string.
-		template<typename T>
-		bool operator==(std::span<T> array) const { return operator==({array.data(), array.size() * sizeof(T)}); }
+		template<typename T>  requires (std::is_trivially_copyable_v<T>)
+		bool operator==(std::span<T> array) const { return operator==(std::as_bytes(array)); }
 		/// Interprete the given array of integers as one concatenated bit string and return true if all bits in the signal are defined and equal to the given bit string.
-		template<typename T, size_t N>
-		bool operator==(std::span<T, N> array) const { return operator==({array.data(), array.size() * sizeof(T)}); }
+		template<typename T, size_t N>  requires (std::is_trivially_copyable_v<T>)
+		bool operator==(std::span<T, N> array) const { return operator==(std::as_bytes(array)); }
 
 
 		operator std::uint64_t () const { return value(); }

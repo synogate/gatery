@@ -40,6 +40,8 @@ namespace gtry::scl::driver {
 
 	class TrickleDeviceMemoryBuffer : public MemoryBuffer {
 		public:
+			TrickleDeviceMemoryBuffer(std::uint64_t size);
+
 			virtual std::span<std::byte> lock(Flags flags) override;
 			virtual void unlock() override;
 		protected:

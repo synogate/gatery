@@ -20,36 +20,41 @@
  * Do not include the regular gatery headers since this is meant to compile stand-alone in driver/userspace application code. 
  */
 
-#include "TrickleDeviceMemoryBuffer.h"
+#include "DeviceMemoryBuffer.h"
+
+/**
+ * @addtogroup gtry_scl_driver
+ * @{
+ */
 
 namespace gtry::scl::driver {
 
-TrickleDeviceMemoryBuffer::TrickleDeviceMemoryBuffer(std::uint64_t size) : MemoryBuffer(size)
+DeviceMemoryBuffer::DeviceMemoryBuffer(std::uint64_t size, PhysicalAddr deviceAddr, DeviceMemoryAllocator &allocator) : MemoryBuffer(size), m_deviceAddr(deviceAddr), m_allocator(allocator)
 {
 }
 
-std::span<std::byte> TrickleDeviceMemoryBuffer::lock(Flags flags)
+DeviceMemoryBuffer::~DeviceMemoryBuffer()
 {
-	checkFlags(flags);
-
-	if (!m_uploadBuffer.empty()) throw std::runtime_error("Buffer is already locked!");
-	m_uploadBuffer.resize(m_size);
-
-	m_lockFlags = flags;
-
-	if (((std::uint32_t)m_lockFlags & (std::uint32_t)Flags::DISCARD) == 0)
-		read(m_uploadBuffer);
-
-	return m_uploadBuffer;
+	m_allocator.free(m_deviceAddr, m_size);
 }
 
-void TrickleDeviceMemoryBuffer::unlock()
-{
-	if (m_uploadBuffer.empty()) throw std::runtime_error("Buffer is not locked!");
 
-	if (((std::uint32_t)m_lockFlags & (std::uint32_t)Flags::READ_ONLY) == 0)
-		write(m_uploadBuffer);
+DeviceMemoryBufferFactory::DeviceMemoryBufferFactory(DeviceMemoryAllocator &allocator) : m_allocator(allocator)
+{
 }
+
+std::unique_ptr<MemoryBuffer> DeviceMemoryBufferFactory::alias(PhysicalAddr deviceAddr, uint64_t bytes)
+{
+	m_allocator.reserve(deviceAddr, bytes);
+	return createBuffer(deviceAddr, bytes);
+}
+
+std::unique_ptr<MemoryBuffer> DeviceMemoryBufferFactory::allocate(uint64_t bytes)
+{
+	return createBuffer(m_allocator.allocate(bytes), bytes);
+}
+
+
 
 }
 

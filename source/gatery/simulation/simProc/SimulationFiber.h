@@ -30,8 +30,6 @@
 
 namespace gtry::sim {
 
-	class SimulationFiber;
-
 	class SimulationFiber {
 		public:
 			class SimulationTerminated : public std::exception { };

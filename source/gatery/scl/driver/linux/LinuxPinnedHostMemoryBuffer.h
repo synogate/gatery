@@ -52,6 +52,8 @@ namespace gtry::scl::driver::lnx {
 		public:
 			virtual std::unique_ptr<MemoryBuffer> allocate(uint64_t bytes) override;
 			virtual void returnPinnedMemory(PinnedMemory &&pinnedMemory);
+
+			inline auto allocateDerived(uint64_t bytes) { return allocateDerivedImpl<LinuxPinnedHostMemoryBuffer>(bytes); }
 		protected:
 			std::map<std::uint64_t, std::vector<PinnedMemory>> m_pool;
 			AddressTranslator m_addrTranslator;

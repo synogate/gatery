@@ -25,9 +25,9 @@
 namespace gtry::scl::driver::lnx {
 
 LinuxPinnedHostMemoryBuffer::LinuxPinnedHostMemoryBuffer(LinuxPinnedHostMemoryBufferFactory &factory, PinnedMemory &&pinnedMemory)
-			 : m_factory(factory), m_pinnedMemory(std::move(pinnedMemory))
+			 : PinnedHostMemoryBuffer(pinnedMemory.userSpaceBuffer(), pinnedMemory.pageSize()), m_factory(factory), m_pinnedMemory(std::move(pinnedMemory))
 {
-	m_pageSize = m_pinnedMemory.pageSize();
+
 }
 
 LinuxPinnedHostMemoryBuffer::~LinuxPinnedHostMemoryBuffer()

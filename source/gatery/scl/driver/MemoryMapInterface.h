@@ -81,6 +81,7 @@ uint64_t MemoryMapInterface::readUInt(MemoryMapEntryHandle addr) const
 	if (addr.width() <= 16) return readU16(addr.addr()/8);
 	if (addr.width() <= 32) return readU32(addr.addr()/8);
 	if (addr.width() <= 64) return readU64(addr.addr()/8);
+	return ~0ull;
 }
 
 void MemoryMapInterface::writeUInt(MemoryMapEntryHandle addr, uint64_t data)

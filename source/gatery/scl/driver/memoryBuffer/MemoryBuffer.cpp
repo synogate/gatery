@@ -41,12 +41,17 @@ ConstLockedSpan::~ConstLockedSpan()
 	m_buffer.unlock();
 }
 
+
+MemoryBuffer::MemoryBuffer(std::uint64_t size) : m_size(size)
+{
+}
+
 void MemoryBuffer::checkFlags(Flags flags)
 {
-	if (((std::uint32_t)flags & (std::uint32_t)Flags::DISCARD == 0) && !m_canRead)
+	if ((((std::uint32_t)flags & (std::uint32_t)Flags::DISCARD) == 0) && !m_canRead)
 		throw std::runtime_error("The buffer can not be read and must be locked as DISCARD!");
 
-	if (((std::uint32_t)flags &(std::uint32_t)Flags::READ_ONLY == 0) && !m_canWrite)
+	if ((((std::uint32_t)flags &(std::uint32_t)Flags::READ_ONLY) == 0) && !m_canWrite)
 		throw std::runtime_error("The buffer can not be written and must be locked as READ_ONLY!");
 }
 

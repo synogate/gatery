@@ -131,7 +131,7 @@ namespace gtry::scl::sim {
 
 	SimProcess PcieHostModel::completeRequests(const Clock& clk, size_t delay, std::optional<uint8_t> rngReadyPercentage)
 	{
-		auto &mem = emplaceSimData<hlim::MemoryStorageDense>(memLabel, m_memSize, m_memInit);
+		auto &mem = emplaceSimData<hlim::MemoryStorageSparse>(memLabel, m_memSize, m_memInit);
 
 		HCL_DESIGNCHECK_HINT(m_rr, "requesterRequest port is not connected");
 		HCL_DESIGNCHECK_HINT(m_rc, "requesterCompletion port is not connected");
@@ -142,8 +142,7 @@ namespace gtry::scl::sim {
 			fork(scl::strm::readyDriverRNG(*m_rr, clk, *rngReadyPercentage));
 		else
 			fork(scl::strm::readyDriver(*m_rr, clk));
-			
-		
+
 		while (true) {
 			auto simPacket = co_await gtry::scl::strm::receivePacket(*m_rr, clk);
 			//simPacket must be captured by copy because it might get overwritten with the next request before the first response has even gotten out
@@ -157,6 +156,6 @@ namespace gtry::scl::sim {
 	}
 
 	hlim::MemoryStorage& PcieHostModel::memory() {
-		return getSimData<hlim::MemoryStorageDense>(memLabel);
+		return getSimData<hlim::MemoryStorageSparse>(memLabel);
 	}
 }

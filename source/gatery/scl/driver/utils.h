@@ -15,40 +15,34 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#pragma once
 
 /*
  * Do not include the regular gatery headers since this is meant to compile stand-alone in driver/userspace application code. 
  */
 
-#include "TrickleDeviceMemoryBuffer.h"
+#include <cstdint>
+#include <string_view>
+
+
+/**
+ * @addtogroup gtry_scl_driver
+ * @{
+ */
 
 namespace gtry::scl::driver {
 
-TrickleDeviceMemoryBuffer::TrickleDeviceMemoryBuffer(std::uint64_t size) : MemoryBuffer(size)
-{
-}
+typedef std::uint64_t PhysicalAddr;
 
-std::span<std::byte> TrickleDeviceMemoryBuffer::lock(Flags flags)
-{
-	checkFlags(flags);
+template<typename T>
+consteval std::size_t typeIdNoRtti() {
+    std::string_view name = __PRETTY_FUNCTION__;
+    
+	std::size_t hash = 0xcbf29ce484222325;
+    for (char c : name)
+        hash = (hash ^ c) * 1099511628211;
 
-	if (!m_uploadBuffer.empty()) throw std::runtime_error("Buffer is already locked!");
-	m_uploadBuffer.resize(m_size);
-
-	m_lockFlags = flags;
-
-	if (((std::uint32_t)m_lockFlags & (std::uint32_t)Flags::DISCARD) == 0)
-		read(m_uploadBuffer);
-
-	return m_uploadBuffer;
-}
-
-void TrickleDeviceMemoryBuffer::unlock()
-{
-	if (m_uploadBuffer.empty()) throw std::runtime_error("Buffer is not locked!");
-
-	if (((std::uint32_t)m_lockFlags & (std::uint32_t)Flags::READ_ONLY) == 0)
-		write(m_uploadBuffer);
+    return hash;
 }
 
 }

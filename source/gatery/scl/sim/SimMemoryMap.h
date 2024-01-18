@@ -61,7 +61,7 @@ class SimulationFiberMapped32BitTileLink : public MemoryMapInterface {
 
 class SimulationMapped32BitTileLink : public MemoryMapInterface {
 	public:
-		SimulationMapped32BitTileLink(scl::TileLinkMasterModel &linkModel, const Clock &clock, sim::Simulator &simulator);
+		SimulationMapped32BitTileLink(scl::TileLinkMasterModel &linkModel, const Clock &clock, gtry::sim::Simulator &simulator);
 
 		virtual uint8_t readU8(size_t addr) const override;
 		virtual void writeU8(size_t addr, uint8_t data) override;
@@ -80,7 +80,7 @@ class SimulationMapped32BitTileLink : public MemoryMapInterface {
 	protected:
 		scl::TileLinkMasterModel &m_linkModel;
 		const Clock &m_clock;
-		sim::Simulator &m_simulator;
+		gtry::sim::Simulator &m_simulator;
 };
 
 

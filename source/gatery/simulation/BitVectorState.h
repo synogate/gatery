@@ -562,6 +562,16 @@ DefaultBitVectorState createDefaultBitVectorState(std::size_t numWords, std::siz
 
 DefaultBitVectorState createDefaultBitVectorState(std::size_t bitWidth, const void *data);
 DefaultBitVectorState createDefaultBitVectorState(std::size_t bitWidth, size_t value);
+DefaultBitVectorState createRandomDefaultBitVectorState(std::size_t bitWidth, std::mt19937 &rng);
+
+bool operator==(const DefaultBitVectorState &lhs, std::span<const std::byte> rhs);
+inline bool operator!=(const DefaultBitVectorState &lhs, std::span<const std::byte> rhs) { return !(lhs == rhs); }
+template<typename T> requires (std::is_trivially_copyable_v<T>)
+inline bool operator==(const DefaultBitVectorState &lhs, std::span<const T> rhs) { return lhs == std::as_bytes(rhs); }
+template<typename T> requires (std::is_trivially_copyable_v<T>)
+inline bool operator!=(const DefaultBitVectorState &lhs, std::span<const T> rhs) { return lhs != std::as_bytes(rhs); }
+
+void asData(const DefaultBitVectorState &src, std::span<std::byte> dst, std::span<const std::byte> undefinedFiller);
 
 template<class Config>
 void BitVectorState<Config>::resize(size_t size)

@@ -27,6 +27,7 @@
 #include <span>
 #include <vector>
 #include <cstdint>
+#include "../utils.h"
 
 /**
  * @addtogroup gtry_scl_driver
@@ -46,6 +47,8 @@ namespace gtry::scl::driver {
 
 			LockedSpan(MemoryBuffer &buffer, std::span<std::byte> data);
 			~LockedSpan();
+
+			inline operator std::span<std::byte>() { return view<std::byte>(); }
 		private:
 			MemoryBuffer &m_buffer;
 			std::span<std::byte> m_data;
@@ -58,6 +61,8 @@ namespace gtry::scl::driver {
 
 			ConstLockedSpan(MemoryBuffer &buffer, std::span<const std::byte> data);
 			~ConstLockedSpan();
+
+			inline operator std::span<const std::byte>() { return view<std::byte>(); }
 		private:
 			MemoryBuffer &m_buffer;
 			std::span<const std::byte> m_data;
@@ -69,7 +74,8 @@ namespace gtry::scl::driver {
 				DISCARD	  = 1 << 0,
 				READ_ONLY = 1 << 1,
 			};
-
+			
+			MemoryBuffer(std::uint64_t size);
 			virtual ~MemoryBuffer() = default;
 
 			inline std::uint64_t size() const { return m_size; }
@@ -102,9 +108,9 @@ namespace gtry::scl::driver {
 			virtual ~MemoryBufferFactory() = default;
 
 			virtual std::unique_ptr<MemoryBuffer> allocate(uint64_t bytes) = 0;
-
+		protected:
 			template<typename T>
-			inline std::unique_ptr<T> allocateDerived(uint64_t bytes) {
+			inline std::unique_ptr<T> allocateDerivedImpl(uint64_t bytes) {
 				auto buf = allocate(bytes);
 				return std::unique_ptr<T>(static_cast<T*>(buf.release()));
 			}

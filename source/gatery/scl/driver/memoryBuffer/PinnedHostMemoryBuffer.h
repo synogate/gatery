@@ -33,6 +33,8 @@ namespace gtry::scl::driver {
 
 	class PinnedHostMemoryBuffer : public MemoryBuffer {
 		public:
+			PinnedHostMemoryBuffer(std::span<std::byte> buffer, size_t pageSize);
+
 			inline size_t pageSize() const { return m_pageSize; }
 			virtual PhysicalAddr physicalPageStart(size_t page) const = 0;
 
@@ -49,6 +51,8 @@ namespace gtry::scl::driver {
 	class PinnedHostMemoryBufferFactory : public MemoryBufferFactory {
 		public:
 			inline size_t pageSize() const { return m_pageSize; }
+
+			inline auto allocateDerived(uint64_t bytes) { return allocateDerivedImpl<PinnedHostMemoryBuffer>(bytes); }
 		protected:
 			size_t m_pageSize = 0;
 	};

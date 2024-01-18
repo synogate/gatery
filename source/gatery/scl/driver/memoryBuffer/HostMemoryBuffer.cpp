@@ -26,7 +26,7 @@
 
 namespace gtry::scl::driver {
 
-HostMemoryBuffer::HostMemoryBuffer(uint64_t bytes)
+HostMemoryBuffer::HostMemoryBuffer(uint64_t bytes) : MemoryBuffer(bytes)
 {
 	m_buffer.resize(bytes);
 }
