@@ -62,6 +62,8 @@ namespace gtry::scl::strm
 			return std::span<uint8_t>((uint8_t*)payload.data(gtry::sim::DefaultConfig::VALUE), payload.size() / 8);
 		}
 		operator std::span<uint8_t>() { return data(); }
+
+		bool operator == (const SimPacket& other) const { return payload == other.payload && m_txid == other.m_txid && m_error == other.m_error; }
 	protected:
 		size_t m_txid = 0;
 		char m_error = '0';
@@ -181,17 +183,17 @@ namespace gtry::scl::strm
 	template<StreamSignal StreamT>
 	SimProcess sendBeat(const StreamT& stream, size_t payload, const Clock& clk)
 	{
-		BitWidth payloadW = stream->width();
+		BitWidth payloadW = width(*stream);
 		payload &= payloadW.mask();
-		return strm::sendPacket(stream, SimPacket{ payload,stream->width() }, clk);
+		return strm::sendPacket(stream, SimPacket{ payload, payloadW }, clk);
 	}
 
 	template<StreamSignal StreamT>
 	SimProcess sendBeat(const StreamT& stream, size_t payload, const Clock& clk, SimulationSequencer& sequencer)
 	{
-		BitWidth payloadW = stream->width();
+		BitWidth payloadW = width(*stream);
 		payload &= payloadW.mask();
-		return strm::sendPacket(stream, SimPacket{ payload,stream->width() }, clk, sequencer);
+		return strm::sendPacket(stream, SimPacket{ payload, payloadW }, clk, sequencer);
 	}
 
 	template<StreamSignal StreamT>
