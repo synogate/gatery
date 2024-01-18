@@ -39,6 +39,7 @@ namespace gtry::scl
 
 	void tileLinkToAxiDMA(RvStream<TileLinkStreamFetch::Command>&& fetchCmd, RvStream<AxiToStreamCmd>&& depositCmd, TileLinkUB&& dataSource, Axi4& dataDest)
 	{
+		Area ent{ "scl_tileLink_to_axi_dma", true };
 		RvStream<BVec> dataStream(dataSource.a->data.width());
 
 		auto dataSourceMaster = TileLinkStreamFetch{}.enableBursts(depositCmd->bytesPerBurst * 8).generate(fetchCmd, dataStream, 0_b);
