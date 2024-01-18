@@ -97,7 +97,7 @@ namespace gtry::scl
 	void axiFromStream(RvStream<BVec>&& in, RvPacketStream<AxiWriteData>& out, size_t beatsPerBurst)
 	{
 		scl::Counter beatCtr{ beatsPerBurst };
-
+		HCL_DESIGNCHECK_HINT(in->width() == out->data.width(), "the data stream and axi data widths do not match");
 		out <<= in.transform([&](const BVec& data) {
 			return AxiWriteData{
 				.data = data,
@@ -115,6 +115,7 @@ namespace gtry::scl
 		Area area{ "scl_axiFromStream", true };
 		HCL_NAMED(data);
 		HCL_NAMED(cmd);
+		
 
 		*axi.aw <<= axiGenerateAddressFromCommand(move(cmd), axi.config());
 		axiFromStream(move(data), *axi.w, cmd->bytesPerBurst / axi.config().alignedDataW().bytes());

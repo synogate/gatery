@@ -45,7 +45,7 @@ namespace gtry::scl
 
 		dataSource <<= dataSourceMaster;
 
-		axiFromStream(move(depositCmd), move(dataStream), dataDest);
+		axiFromStream(move(depositCmd), regDownstream(move(dataStream)), dataDest);
 	}
 
 	
