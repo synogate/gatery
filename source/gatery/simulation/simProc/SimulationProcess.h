@@ -21,6 +21,9 @@
 #include "../../utils/Exceptions.h"
 #include "../../utils/Preprocessor.h"
 
+#include <queue>
+#include <set>
+
 namespace gtry::sim {
 
 class Simulator;
