@@ -509,6 +509,7 @@ void Circuit::mergeMuxes(Subnet &subnet)
 						continue;
 
 					if (Node_Multiplexer *prevMuxNode = dynamic_cast<Node_Multiplexer*>(input0.node)) {
+						if (prevMuxNode->getNumInputPorts() != 3) continue;
 						if (prevMuxNode == muxNode) continue; // sad thing
 						if (!subnet.contains(prevMuxNode)) continue; // todo: Optimize
 

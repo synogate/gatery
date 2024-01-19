@@ -27,6 +27,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "CreditStream.h"
 #include "StreamArbiter.h"
+#include "StreamDemux.h"
 #include "Packet.h"
 #include "SimuHelpers.h"
 #include "StreamBroadcaster.h"

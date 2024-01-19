@@ -2161,3 +2161,45 @@ BOOST_FIXTURE_TEST_CASE(stream_credit_fifo, BoostUnitTestSimulationFixture)
 
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
+
+BOOST_FIXTURE_TEST_CASE(stream_demux_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	scl::RvStream<UInt> in{ .data = 10_b };
+	pinIn(in, "in");
+	UInt select = pinIn(1_b).setName("select");
+
+	addSimulationProcess([&, this]() -> SimProcess {
+		for (size_t s = 0; s < select.width().count(); ++s)
+		{
+			simu(select) = s;
+
+			for (size_t i = 0; i < 4; i++)
+				co_await scl::strm::sendBeat(in, i, clk);
+		}
+	});
+
+	scl::StreamDemux<scl::RvStream<UInt>> demux{ move(in), select };
+	Vector out = demux.out();
+	pinOut(out, "out");
+
+	addSimulationProcess([&, this]() -> SimProcess {
+		uint32_t seed = 0;
+		for (scl::RvStream<UInt>& o : out)
+			fork(scl::strm::readyDriverRNG(o, clk, 80, seed++));
+
+		for (scl::RvStream<UInt>& o : out)
+		{
+			for (size_t i = 0; i < 4; ++i)
+			{
+				co_await scl::strm::performTransferWait(o, clk);
+				BOOST_TEST(simu(*o) == i);
+			}
+		}
+		stopTest();
+	});
+
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}

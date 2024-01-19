@@ -95,6 +95,8 @@ namespace gtry::scl
 	};
 
 	/// Overload of connect(...) for StreamBroadcaster to allow using the <<= operator with broadcasters.
+	using gtry::connect;
+
 	template<StreamSignal StreamT>
 	void connect(StreamT& sink, StreamBroadcaster<StreamT>& broadcaster) { broadcaster.broadcastTo(sink); }
 

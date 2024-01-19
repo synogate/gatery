@@ -397,6 +397,9 @@ namespace gtry {
 			createNode(in.width().bits(), in.expansionPolicy);
 
 		const bool incrementWidth = in.width().bits() > width().bits();
+		
+		HCL_DESIGNCHECK_HINT(m_node->getDirectlyDriven(0).empty() || !incrementWidth, "Can not increase width of a bit vector that is already driving signals.");
+
 		if(!incrementWidth)
 			in = in.expand(width().bits(), hlim::ConnectionType::BITVEC);
 

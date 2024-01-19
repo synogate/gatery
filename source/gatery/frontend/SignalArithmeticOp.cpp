@@ -35,6 +35,9 @@ namespace gtry {
 	}
 
 	SInt mul(const SInt& lhs, const SInt& rhs) {
+		if(lhs.width() == rhs.width())
+			return (SInt)mul((UInt)lhs, (UInt)rhs);
+
 		Bit lhSign = lhs.sign();
 		Bit rhSign = rhs.sign();
 		Bit resultSign = lhSign ^ rhSign;
