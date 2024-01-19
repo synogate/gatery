@@ -107,4 +107,14 @@ namespace gtry::scl::arch::xilinx
 	 * @return the accumulated multiplication results extended by 3 bits to 48 bits delayed by 4 clock cycles
 	*/
 	SInt mulAccumulate(SInt a1, SInt b1, SInt a2, SInt b2, Bit restart, Bit valid, std::string_view instanceName = {});
+
+	/**
+	 * @brief Wrapper for DSP48E3 to multiply arbitrary large numbers and return a subset of the result. Note that enable scopes are not yet implemented.
+	 * @param a 
+	 * @param b 
+	 * @param resultW
+	 * @param resultOffset 
+	 * @return The multiplication result and the latency in cycles between input and output.
+	*/
+	std::tuple<UInt, size_t> mul(const UInt& a, const UInt& b, BitWidth resultW, size_t resultOffset = 0);
 }
