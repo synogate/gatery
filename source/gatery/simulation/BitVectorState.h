@@ -29,6 +29,7 @@
 #include <cstdint>
 #include <string.h>
 #include <span>
+#include <random>
 
 namespace gtry::sim {
 
