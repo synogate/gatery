@@ -82,7 +82,7 @@ void SigHandle::operator=(std::span<const std::byte> rhs)
 {
 	auto width = getWidth();
 	HCL_DESIGNCHECK_HINT(width == rhs.size() * 8, "The array that is to be assigned to the simulation signal has the wrong size!");
-	auto state = sim::createDefaultBitVectorState(rhs.size(), rhs.data());
+	auto state = sim::createDefaultBitVectorState(rhs.size()*8, rhs.data());
 
 	if (m_overrideRegister)
 		SimulationContext::current()->overrideRegister(*this, state);
