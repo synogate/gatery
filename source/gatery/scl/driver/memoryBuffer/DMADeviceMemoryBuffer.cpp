@@ -22,6 +22,7 @@
 
 #include "DMADeviceMemoryBuffer.h"
 
+#include <stdexcept>
 
 /**
  * @addtogroup gtry_scl_driver

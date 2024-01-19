@@ -17,7 +17,7 @@
 */
 
 #include "MemoryBuffer.h"
-
+#include <stdexcept>
 
 namespace gtry::scl::driver {
 

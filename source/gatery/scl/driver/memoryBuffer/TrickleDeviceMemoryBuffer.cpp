@@ -21,6 +21,7 @@
  */
 
 #include "TrickleDeviceMemoryBuffer.h"
+#include <stdexcept>
 
 namespace gtry::scl::driver {
 
