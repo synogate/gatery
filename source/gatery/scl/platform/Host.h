@@ -45,6 +45,7 @@ namespace gtry::scl
 
 			virtual std::tuple<FlatAddressSpaceDescription, std::unique_ptr<driver::MemoryMapInterface>> addMemoryMap(scl::PackedMemoryMap &memoryMap);
 		protected:
+			virtual void instantiateHostMemory();
 			virtual void exposeMemoryMapTL(scl::TileLinkUL &cpuPort);
 
 			std::list<scl::TileLinkMasterModel> m_memoryMapTLModels;

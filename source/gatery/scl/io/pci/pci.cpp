@@ -157,4 +157,18 @@ namespace gtry::scl::pci {
 		
 		return ret;
 	}
+	
+	RequesterInterface simOverrideReqInt(RequesterInterface &&hardware, RequesterInterface &&simulation)
+	{
+		RequesterInterface result = constructFrom(hardware);
+
+		result.completion <<= simOverrideDownstream<TlpPacketStream<EmptyBits>>(move(hardware.completion), move(simulation.completion));
+
+		auto [requestToHardware, requestToSimulation] = simOverrideUpstream<TlpPacketStream<EmptyBits>>(move(result.request));
+
+		hardware.request <<= requestToHardware;
+		simulation.request <<= requestToSimulation;
+
+		return result;
+	}
 }

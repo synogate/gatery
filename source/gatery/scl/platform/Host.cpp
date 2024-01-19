@@ -30,16 +30,7 @@ namespace gtry::scl
 
 scl::TileLinkUB Host::addHostMemory()
 {
-	HCL_DESIGNCHECK_HINT(!m_exposedHostMemory, "host memory was already added!");
-
-	m_exposedHostMemory.emplace(std::optional<sim::RandomBlockDefinition>{}, 1ull << 48);
-	m_exposedHostMemory->defaultHandlers();
-	m_exposedHostMemory->updateHandler(scl::pci::TlpOpcode::memoryReadRequest64bit, std::make_unique<scl::sim::CompleterInChunks>(64, 2));
-
-	auto clk = ClockScope::getClk();
-
-	DesignScope::get()->getCircuit().addSimulationProcess([=,this]()->SimProcess { return m_exposedHostMemory->completeRequests(clk, 2); });
-
+	instantiateHostMemory();
 	return scl::pci::makePciMasterCheapBurst(m_exposedHostMemory->requesterInterface(512_b), 4_b, 48_b); //4 bits are enough to hold the number 10, which is the required logByteSize for 1kiB burst transfer
 }
 
@@ -49,6 +40,17 @@ hlim::MemoryStorage &Host::simuHostMemory()
 	return m_exposedHostMemory->memory();
 }
 
+void Host::instantiateHostMemory()
+{
+	if (!m_exposedHostMemory) {
+		m_exposedHostMemory.emplace(std::optional<sim::RandomBlockDefinition>{}, 1ull << 48);
+		m_exposedHostMemory->defaultHandlers();
+		m_exposedHostMemory->updateHandler(scl::pci::TlpOpcode::memoryReadRequest64bit, std::make_unique<scl::sim::CompleterInChunks>(64, 2));
+
+		auto clk = ClockScope::getClk();
+		DesignScope::get()->getCircuit().addSimulationProcess([=,this]()->SimProcess { return m_exposedHostMemory->completeRequests(clk, 2); });
+	}
+}
 
 std::tuple<FlatAddressSpaceDescription, std::unique_ptr<driver::MemoryMapInterface>> Host::addMemoryMap(scl::PackedMemoryMap &memoryMap)
 {
