@@ -21,7 +21,7 @@
 #include <gatery/scl/driver/MemoryMap.h>
 #include <gatery/scl/driver/MemoryMapInterface.h>
 #include <gatery/scl/memoryMap/PackedMemoryMap.h>
-#include <gatery/scl/tileLink/TileLinkMasterModel.h>
+#include <gatery/scl/tilelink/TileLinkMasterModel.h>
 #include <gatery/scl/sim/PcieHostModel.h>
 
 #include <gatery/hlim/postprocessing/MemoryStorage.h>

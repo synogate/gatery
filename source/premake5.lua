@@ -79,5 +79,8 @@ project "gatery"
             "gatery/scl/driver/linux/**.cpp"
         }
 
+    filter "files:gatery/scl/driver/**.cpp"
+        flags {"NoPCH"}
+
     filter "files:**.c"
         flags {"NoPCH"}
