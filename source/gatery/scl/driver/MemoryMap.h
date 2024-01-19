@@ -158,6 +158,8 @@ class StaticMemoryMap {
 
         template<TemplateString name>
         consteval auto get() const { return StaticMemoryMapEntryHandle<decltype(*this), name>{}; }
+
+		constexpr size_t width() const { return memoryMap.width(); }		
 };
 
 
