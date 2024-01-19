@@ -34,7 +34,7 @@ namespace gtry::scl {
 		axiFromStream(move(depositCmd), regDownstream(move(dataStream)), dataDest);
 	}
 
-	static void createDma(MemoryMap& map, TileLinkUB&& dataSource, Axi4& dataDest, BitWidth beatsW, size_t bytesPerBurst) {
+	void createDma(MemoryMap& map, TileLinkUB&& dataSource, Axi4& dataDest, BitWidth beatsW, size_t bytesPerBurst) {
 		Area ent{ "scl_memory_mapped_dma", true };
 		RvStream<AxiToStreamCmd> weightWriteCmd{ {
 				.startAddress = dataDest.config().addrW,

@@ -98,7 +98,7 @@ namespace gtry::scl
 		ready(axi.r) = '1';
 	}
 
-	scl::Axi4 axiRegDecouple(scl::Axi4&& slave, const RegisterSettings& settings = {}) {
+	scl::Axi4 axiRegDecouple(scl::Axi4&& slave, const RegisterSettings& settings) {
 		scl::Axi4 master = constructFrom(slave);
 
 		*slave.aw <<= scl::strm::regDecouple(*master.aw, settings);
