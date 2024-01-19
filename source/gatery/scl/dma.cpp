@@ -28,14 +28,15 @@ namespace gtry::scl {
 		RvStream<BVec> dataStream(dataSource.a->data.width());
 
 		auto dataSourceMaster = TileLinkStreamFetch{}.enableBursts(depositCmd->bytesPerBurst * 8).generate(fetchCmd, dataStream, 0_b);
-
 		dataSource <<= dataSourceMaster;
+		HCL_NAMED(dataStream);
 
 		axiFromStream(move(depositCmd), regDownstream(move(dataStream)), dataDest);
 	}
 
 	void createDma(MemoryMap& map, TileLinkUB&& dataSource, Axi4& dataDest, BitWidth beatsW, size_t bytesPerBurst) {
 		Area ent{ "scl_memory_mapped_dma", true };
+
 		RvStream<AxiToStreamCmd> weightWriteCmd{ {
 				.startAddress = dataDest.config().addrW,
 				.endAddress = dataDest.config().addrW,
@@ -52,6 +53,7 @@ namespace gtry::scl {
 
 		mapIn(map, move(weightFetchCmd), "weight_dma_fetch_cmd");
 		auto paddedHbmAxi = padWriteChannel(dataDest, dataSource.a->data.width());
+		HCL_NAMED(paddedHbmAxi);
 
 		tileLinkToAxiDMA(
 			regDecouple(weightFetchCmd),
