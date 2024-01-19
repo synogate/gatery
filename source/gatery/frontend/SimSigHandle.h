@@ -40,6 +40,7 @@
 #include <gatery/simulation/simProc/WaitClock.h>
 #include <gatery/simulation/simProc/WaitStable.h>
 
+#include <any>
 
 namespace gtry {
 
