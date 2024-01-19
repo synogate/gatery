@@ -34,6 +34,7 @@ namespace gtry::scl::driver {
 
 typedef std::uint64_t PhysicalAddr;
 
+/*
 template<typename T>
 consteval std::size_t typeIdNoRtti() {
     std::string_view name = __PRETTY_FUNCTION__;
@@ -44,6 +45,7 @@ consteval std::size_t typeIdNoRtti() {
 
     return hash;
 }
+*/
 
 }
 

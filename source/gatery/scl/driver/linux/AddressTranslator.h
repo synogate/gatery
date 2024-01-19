@@ -21,6 +21,8 @@
  * Do not include the regular gatery headers since this is meant to compile stand-alone in driver/userspace application code. 
  */
 
+#include "../utils.h"
+
 #include <cstdint>
 #include <cstddef>
 #include <span>
@@ -31,8 +33,6 @@
  */
 
 namespace gtry::scl::driver::lnx {
-
-	typedef std::uint64_t PhysicalAddr;
 
 	class AddressTranslator {
 		public:
