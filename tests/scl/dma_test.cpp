@@ -30,6 +30,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <gatery/scl/tilelink/tilelink.h>
 #include <gatery/scl/tilelink/TileLinkStreamFetch.h>
 #include <gatery/scl/tilelink/TileLinkDMA.h>
+#include <gatery/scl/dma.h>
 
 #include <gatery/scl/sim/PcieHostModel.h>
 #include <gatery/scl/io/pci/PciToTileLink.h>
