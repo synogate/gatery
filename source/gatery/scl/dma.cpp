@@ -34,37 +34,45 @@ namespace gtry::scl {
 		axiFromStream(move(depositCmd), regDownstream(move(dataStream)), dataDest);
 	}
 
+
+	struct AxiDmaControl {
+		scl::RvStream<scl::AxiToStreamCmd> depositCmd;
+		scl::RvStream<scl::TileLinkStreamFetch::Command> fetchCmd;
+		gtry::Reverse<scl::AxiTransferReport> axiReport;
+	};
+
 	void createDma(MemoryMap& map, TileLinkUB&& dataSource, Axi4& dataDest, BitWidth beatsW, size_t bytesPerBurst) {
 		Area ent{ "scl_memory_mapped_dma", true };
+		
+		AxiDmaControl dmaControl;
 
-		RvStream<AxiToStreamCmd> weightWriteCmd{ {
+		*dmaControl.depositCmd = scl::AxiToStreamCmd {
 				.startAddress = dataDest.config().addrW,
 				.endAddress = dataDest.config().addrW,
 				.bytesPerBurst = bytesPerBurst,
-			} };
-		HCL_NAMED(weightWriteCmd);
-		mapIn(map, move(weightWriteCmd), "weight_dma_write_cmd");
+		};
 
-		RvStream<TileLinkStreamFetch::Command> weightFetchCmd{ {
-				.address = dataSource.a->address.width(),
-				.beats = beatsW,
-			} };
-		HCL_NAMED(weightFetchCmd);
+		*dmaControl.fetchCmd = scl::TileLinkStreamFetch::Command {
+			.address = dataSource.a->address.width(),
+			.beats = beatsW,
+		};
 
-		mapIn(map, move(weightFetchCmd), "weight_dma_fetch_cmd");
 		auto paddedHbmAxi = padWriteChannel(dataDest, dataSource.a->data.width());
 		HCL_NAMED(paddedHbmAxi);
 
 		tileLinkToAxiDMA(
-			regDecouple(weightFetchCmd),
-			regDecouple(weightWriteCmd),
+			regDecouple(dmaControl.fetchCmd),
+			regDecouple(dmaControl.depositCmd),
 			tileLinkRegDecouple(move(dataSource)),
 			paddedHbmAxi);
 
-		mapOut(map, axiTransferAuditor(paddedHbmAxi, bytesPerBurst * 8_b), "dma_auditor");
+		dmaControl.axiReport = axiTransferAuditor(paddedHbmAxi, bytesPerBurst * 8_b);
+		
+		scl::mapIn(map, dmaControl, "dma_ctrl");
 	}
 }
 
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::AxiDmaControl, depositCmd, fetchCmd, axiReport);
 
 
 
