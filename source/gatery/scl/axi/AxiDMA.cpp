@@ -139,6 +139,7 @@ namespace gtry::scl
 	}
 	AxiTransferReport axiTransferAuditor(const Axi4& streamToSniff, BitWidth bitsPerBurst, BitWidth counterW)
 	{
+		Area area{ "scl_axiTransferAuditor", true };
 		Counter burstCounter(counterW.last());
 		IF(transfer(streamToSniff.b))
 			burstCounter.inc();

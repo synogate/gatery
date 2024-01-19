@@ -97,4 +97,38 @@ namespace gtry::scl
 		valid(*axi.ar) = '0';
 		ready(axi.r) = '1';
 	}
+
+	scl::Axi4 axiRegDecouple(scl::Axi4&& slave, const RegisterSettings& settings = {}) {
+		scl::Axi4 master = constructFrom(slave);
+
+		*slave.aw <<= scl::strm::regDecouple(*master.aw, settings);
+		*slave.w <<= scl::strm::regDecouple(*master.w, settings);
+		*slave.ar <<= scl::strm::regDecouple(*master.ar, settings);
+
+		master.r <<= scl::strm::regDecouple(slave.r, settings);
+		master.b <<= scl::strm::regDecouple(slave.b, settings);
+
+		return master;
+	}
+
+	scl::Axi4 padWriteChannel(scl::Axi4& slave, BitWidth paddedW) {
+		auto cfg = slave.config();
+		cfg.dataW = paddedW;
+
+		scl::Axi4 master = scl::Axi4::fromConfig(cfg);
+
+		*slave.aw <<= *master.aw;
+		*slave.w <<= master.w->transform(
+			[&](const scl::AxiWriteData& awd) {
+				return scl::AxiWriteData{
+					.data = awd.data.lower((*slave.w)->data.width()),
+					.strb = awd.strb.lower((*slave.w)->strb.width()),
+					.user = awd.user,
+				};
+			});
+
+		master.b <<= slave.b;
+
+		return master;
+	}
 }
