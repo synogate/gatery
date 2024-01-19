@@ -47,13 +47,13 @@ GenericMemoryEntity::GenericMemoryEntity(AST &ast, const std::string &desiredNam
 
 void GenericMemoryEntity::buildFrom(hlim::NodeGroup *memNodeGrp)
 {
-	m_memNodeGrp = memNodeGrp;
-	m_memGrp = dynamic_cast<hlim::MemoryGroup*>(m_memNodeGrp->getMetaInfo());
+	m_nodeGroup = memNodeGrp;
+	m_memGrp = dynamic_cast<hlim::MemoryGroup*>(m_nodeGroup->getMetaInfo());
 	HCL_ASSERT(m_memGrp != nullptr);
 	// probably not the best place to do it....
 	m_namespaceScope.allocateName({.node=m_memGrp->getMemory(), .port=0}, "memory", {}, CodeFormatting::SIG_LOCAL_SIGNAL);
 
-	for (auto node : m_memNodeGrp->getNodes())
+	for (auto node : m_nodeGroup->getNodes())
 		m_ast.getMapping().assignNodeToScope(node, this);
 
 	for (auto &wp : m_memGrp->getWritePorts()) {

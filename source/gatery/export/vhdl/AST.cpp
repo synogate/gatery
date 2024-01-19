@@ -124,6 +124,7 @@ void AST::distributeToFiles(OutputMode outputMode, std::filesystem::path singleF
 
 		std::map<Entity*, std::vector<Entity*>> entitiesByPartition;
 		for (auto *e : getDependencySortedEntities()) {
+			HCL_ASSERT(e->getNodeGroup() != nullptr);
 			const hlim::NodeGroup *partition = e->getNodeGroup()->getPartition();
 			Entity *entity;
 			if (partition != nullptr)
