@@ -22,6 +22,8 @@
 
 #include "../utils/CoroutineWrapper.h"
 
+#include <any>
+
 namespace gtry::sim {
 
 class Simulator;
