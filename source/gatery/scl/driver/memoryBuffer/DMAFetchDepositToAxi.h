@@ -42,7 +42,7 @@ namespace gtry::scl::driver {
 	template<IsStaticMemoryMapEntryHandle Addr>
 	class DMAFetchDepositToAxi : public DeviceDMAController {
 		public:
-			DMAFetchDepositToAxi(Addr addr, MemoryMapInterface &interface, std::uint64_t beatSize) : m_beatSize(beatSize), m_interface(interface) { 
+			DMAFetchDepositToAxi(Addr addr, MemoryMapInterface &interface_, std::uint64_t beatSize) : m_beatSize(beatSize), m_interface(interface_) { 
 				m_canDownload = false;
 
 				auto axiReport = addr.template get<"axiReport">();
