@@ -98,12 +98,12 @@ void DMADeviceMemoryBuffer::write(std::span<const std::byte> data)
 	auto backPageBufferAddr = backPageBuffer->physicalPageStart(0);
 
 
-	std::uint64_t pageSize = m_uploadBuffer->pageSize();
+	std::uint64_t pageSize = m_factory.pageSize();
 	std::uint64_t numPages = (data.size() + pageSize-1) / pageSize;
 	for (std::uint64_t page = 0; page < numPages; page++) {
 		std::uint64_t chunkSize = std::min(pageSize, data.size() - (std::uint64_t) page * pageSize);
 		frontPageBuffer->write(data.subspan(page * pageSize, chunkSize));
-		m_factory.dmaController().uploadContinuousChunk(frontPageBufferAddr, pageSize * page, chunkSize);
+		m_factory.dmaController().uploadContinuousChunk(frontPageBufferAddr, m_deviceAddr + pageSize * page, chunkSize);
 		std::swap(frontPageBuffer, frontPageBuffer);
 		std::swap(frontPageBufferAddr, backPageBufferAddr);
 	}

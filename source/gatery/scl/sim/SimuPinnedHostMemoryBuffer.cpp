@@ -61,14 +61,14 @@ void SimuPinnedHostMemoryBuffer::unlock()
 
 void SimuPinnedHostMemoryBuffer::write(std::span<const std::byte> data)
 {
-	if (data.size() != m_size) throw std::runtime_error("Wrong amount of data!");
+	if (data.size() > m_size) throw std::runtime_error("Wrong amount of data!");
 
 	m_hostMemoryStorage.write(m_physicalAddr*8, gtry::sim::createDefaultBitVectorState(data.size()*8, data.data()), false, {});
 }
 
 void SimuPinnedHostMemoryBuffer::read(std::span<std::byte> data) const
 {
-	if (data.size() != m_size) throw std::runtime_error("Wrong amount of data!");
+	if (data.size() > m_size) throw std::runtime_error("Wrong amount of data!");
 
 	auto chunk = m_hostMemoryStorage.read(m_physicalAddr*8, data.size());
 	std::string_view undefined = "Undefined Value";
@@ -82,11 +82,12 @@ SimuPinnedHostMemoryBufferFactory::SimuPinnedHostMemoryBufferFactory(hlim::Memor
 	: m_hostMemoryStorage(hostMemoryStorage)
 {
 	m_allocator = std::make_unique<gtry::scl::driver::DummyDeviceMemoryAllocator>(pinnedMemoryStart);
+	m_pageSize = 4096;
 }
 
 std::unique_ptr<gtry::scl::driver::MemoryBuffer> SimuPinnedHostMemoryBufferFactory::allocate(uint64_t bytes)
 {
-	return std::make_unique<SimuPinnedHostMemoryBuffer>(*m_allocator, m_hostMemoryStorage, m_allocator->allocate(bytes, 4096), bytes);
+	return std::make_unique<SimuPinnedHostMemoryBuffer>(*m_allocator, m_hostMemoryStorage, m_allocator->allocate(bytes, m_pageSize), bytes);
 }
 
 }

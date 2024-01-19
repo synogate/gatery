@@ -273,7 +273,7 @@ BOOST_FIXTURE_TEST_CASE(dma_pcieHost_to_axi_slave_test_DMAFetchDepositToAxi, dma
 
 
 
-BOOST_FIXTURE_TEST_CASE(dma_pcieHost_to_axi_slave_test_MemoryBuffer, dma_pcieHost_to_axi_slave_with_driver)
+BOOST_FIXTURE_TEST_CASE(dma_pcieHost_to_axi_slave_test_MemoryBuffer_Lock, dma_pcieHost_to_axi_slave_with_driver)
 {
 	execute([](scl::driver::MemoryMapInterface &driverInterface, hlim::MemoryStorage &hostMemory, hlim::MemoryStorage &axiMemory) {
 		std::mt19937 rng(234578);
@@ -304,6 +304,43 @@ BOOST_FIXTURE_TEST_CASE(dma_pcieHost_to_axi_slave_test_MemoryBuffer, dma_pcieHos
 
 				expected = std::vector<size_t>(data.begin(), data.end());
 			}
+
+			auto retrieved = axiMemory.read(buffer->deviceAddr()*8, buffer->size()*8);
+			
+			bool matches = retrieved == std::as_bytes(std::span(expected));
+			BOOST_TEST(matches);
+		}
+	});
+}
+
+
+BOOST_FIXTURE_TEST_CASE(dma_pcieHost_to_axi_slave_test_MemoryBuffer_Write, dma_pcieHost_to_axi_slave_with_driver)
+{
+	execute([](scl::driver::MemoryMapInterface &driverInterface, hlim::MemoryStorage &hostMemory, hlim::MemoryStorage &axiMemory) {
+		std::mt19937 rng(234578);
+
+		std::uniform_int_distribution<scl::driver::PhysicalAddr> randomSize(1, 10);
+
+		using Map = SimMap_dma_pcieHost_to_axi_slave_with_driver;
+		Map map{};
+
+		scl::sim::driver::SimuPinnedHostMemoryBufferFactory pinnedMemoryfactory(hostMemory, 0x1000'0000);
+		
+		scl::driver::DMAFetchDepositToAxi fetchController(map.template get<"dma_ctrl">(), driverInterface, 512/8);
+
+		scl::driver::DummyDeviceMemoryAllocator deviceAllocator;
+		scl::driver::DMAMemoryBufferFactory deviceBufferFactory(deviceAllocator, pinnedMemoryfactory, fetchController);
+
+		for (size_t i = 0; i < 10; i++) {
+
+			std::vector<size_t> expected;
+
+			auto buffer = deviceBufferFactory.allocateDerived(1024);// * randomSize(rng));
+
+			expected.resize(buffer->size() / sizeof(size_t));
+			for (auto &d : expected)
+				d = rng();
+			buffer->write(std::as_bytes(std::span(expected)));
 
 			auto retrieved = axiMemory.read(buffer->deviceAddr()*8, buffer->size()*8);
 			
