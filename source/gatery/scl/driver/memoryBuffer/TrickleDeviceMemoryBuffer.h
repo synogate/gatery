@@ -21,8 +21,7 @@
  * Do not include the regular gatery headers since this is meant to compile stand-alone in driver/userspace application code. 
  */
 
-#include "MemoryBuffer.h"
-#include "PinnedHostMemoryBuffer.h"
+#include "DeviceMemoryBuffer.h"
 
 #include <memory>
 
@@ -38,9 +37,9 @@
 
 namespace gtry::scl::driver {
 
-	class TrickleDeviceMemoryBuffer : public MemoryBuffer {
+	class TrickleDeviceMemoryBuffer : public DeviceMemoryBuffer {
 		public:
-			TrickleDeviceMemoryBuffer(std::uint64_t size);
+			TrickleDeviceMemoryBuffer(std::uint64_t size, PhysicalAddr deviceAddr, DeviceMemoryAllocator &allocator);
 
 			virtual std::span<std::byte> lock(Flags flags) override;
 			virtual void unlock() override;
@@ -49,7 +48,9 @@ namespace gtry::scl::driver {
 			Flags m_lockFlags;
 	};
 
-	class TrickleDeviceMemoryBufferFactory : public MemoryBufferFactory {
+	class TrickleDeviceMemoryBufferFactory : public DeviceMemoryBufferFactory {
+		public:
+			TrickleDeviceMemoryBufferFactory(DeviceMemoryAllocator &allocator);
 	};
 
 }

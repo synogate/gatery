@@ -25,7 +25,7 @@
 
 namespace gtry::scl::driver {
 
-TrickleDeviceMemoryBuffer::TrickleDeviceMemoryBuffer(std::uint64_t size) : MemoryBuffer(size)
+TrickleDeviceMemoryBuffer::TrickleDeviceMemoryBuffer(std::uint64_t size, PhysicalAddr deviceAddr, DeviceMemoryAllocator &allocator) : DeviceMemoryBuffer(size, deviceAddr, allocator)
 {
 }
 
@@ -50,6 +50,10 @@ void TrickleDeviceMemoryBuffer::unlock()
 
 	if (((std::uint32_t)m_lockFlags & (std::uint32_t)Flags::READ_ONLY) == 0)
 		write(m_uploadBuffer);
+}
+
+TrickleDeviceMemoryBufferFactory::TrickleDeviceMemoryBufferFactory(DeviceMemoryAllocator &allocator) : DeviceMemoryBufferFactory(allocator) 
+{
 }
 
 }
