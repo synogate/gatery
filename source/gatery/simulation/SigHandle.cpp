@@ -78,11 +78,11 @@ void SigHandle::operator=(const DefaultBitVectorState &state)
 		SimulationContext::current()->overrideSignal(*this, state);
 }
 
-void SigHandle::operator=(std::pair<const void*, size_t> array)
+void SigHandle::operator=(std::span<const std::byte> rhs)
 {
 	auto width = getWidth();
-	HCL_DESIGNCHECK_HINT(width == array.second*8, "The array that is to be assigned to the simulation signal has the wrong size!");
-	auto state = sim::createDefaultBitVectorState(array.second*8, array.first);
+	HCL_DESIGNCHECK_HINT(width == rhs.size() * 8, "The array that is to be assigned to the simulation signal has the wrong size!");
+	auto state = sim::createDefaultBitVectorState(rhs.size()*8, rhs.data());
 
 	if (m_overrideRegister)
 		SimulationContext::current()->overrideRegister(*this, state);
@@ -276,39 +276,15 @@ bool SigHandle::operator==(char v) const
 	}
 }
 
-bool SigHandle::operator==(std::pair<const void*, size_t> array) const
+bool SigHandle::operator==(std::span<const std::byte> rhs) const
 {
 	auto width = getWidth();
-	HCL_DESIGNCHECK_HINT(width == array.second*8, "The array that is to be compared to the simulation signal has the wrong size!");
+	HCL_DESIGNCHECK_HINT(width == rhs.size()*8, "The array that is to be compared to the simulation signal has the wrong size!");
 	
 	DefaultBitVectorState state;
 	SimulationContext::current()->getSignal(*this, state);
 
-	// If anything in the state is undefined, the comparison is always false.
-	if (!sim::allDefined<DefaultConfig>(state))
-		return false;
-
-	size_t numFullWords = width/8 / sizeof(sim::DefaultConfig::BaseType);
-	size_t remainingBytes = width/8 - numFullWords * sizeof(sim::DefaultConfig::BaseType);
-
-	const sim::DefaultConfig::BaseType *srcWords = (const sim::DefaultConfig::BaseType *) array.first;
-
-	// compare full words directly
-	for (auto wordIdx : utils::Range(numFullWords))
-		if (state.data(sim::DefaultConfig::VALUE)[wordIdx] != srcWords[wordIdx]) return false;
-
-	// For partial words, create a bit mask to mask the differences, then check if any differences remain after the masking.
-	if (remainingBytes > 0) {
-		auto lastStateWord = state.data(sim::DefaultConfig::VALUE)[numFullWords];
-		auto lastCompareWord = srcWords[numFullWords];
-		auto difference = lastStateWord ^ lastCompareWord;
-		sim::DefaultConfig::BaseType mask = ~0ull;
-		mask >>= (sizeof(sim::DefaultConfig::BaseType) - remainingBytes) * 8;
-		difference &= mask;
-		if (difference) 
-			return false;
-	}
-	return true;
+	return state == rhs;
 }
 
 void SigHandle::overrideDrivingRegister()

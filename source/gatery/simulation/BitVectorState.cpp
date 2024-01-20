@@ -38,6 +38,68 @@ DefaultBitVectorState createDefaultBitVectorState(std::size_t bitWidth, size_t v
 	return state;
 }
 
+DefaultBitVectorState createRandomDefaultBitVectorState(std::size_t bitWidth, std::mt19937 &rng)
+{
+	std::uniform_int_distribution<DefaultConfig::BaseType> random;
+
+	BitVectorState<DefaultConfig> state;
+	state.resize(bitWidth);
+	for (size_t i = 0; i < DefaultConfig::NUM_PLANES; i++)
+		for (size_t j = 0; j < state.getNumBlocks(); j++)
+			state.data((DefaultConfig::Plane) i)[j] = random(rng);
+	return state;
+}
+
+bool operator==(const DefaultBitVectorState &lhs, std::span<const std::byte> rhs)
+{
+	if (lhs.size() != rhs.size() * 8)
+		throw std::runtime_error("The array that is to be compared to the simulation signal has the wrong size!");
+
+	// If anything in the lhs is undefined, the comparison is always false.
+	if (!sim::allDefined<DefaultConfig>(lhs))
+		return false;
+
+	size_t numFullWords = rhs.size() / sizeof(sim::DefaultConfig::BaseType);
+	size_t remainingBytes = rhs.size() - numFullWords * sizeof(sim::DefaultConfig::BaseType);
+
+	const sim::DefaultConfig::BaseType *srcWords = (const sim::DefaultConfig::BaseType *) rhs.data();
+
+	// compare full words directly
+	for (auto wordIdx : utils::Range(numFullWords))
+		if (lhs.data(sim::DefaultConfig::VALUE)[wordIdx] != srcWords[wordIdx]) return false;
+
+	// For partial words, create a bit mask to mask the differences, then check if any differences remain after the masking.
+	if (remainingBytes > 0) {
+		auto lastStateWord = lhs.data(sim::DefaultConfig::VALUE)[numFullWords];
+		auto lastCompareWord = srcWords[numFullWords];
+		auto difference = lastStateWord ^ lastCompareWord;
+		sim::DefaultConfig::BaseType mask = ~0ull;
+		mask >>= (sizeof(sim::DefaultConfig::BaseType) - remainingBytes) * 8;
+		difference &= mask;
+		if (difference) 
+			return false;
+	}
+	return true;
+}
+
+
+void asData(const DefaultBitVectorState &src, std::span<std::byte> dst, std::span<const std::byte> undefinedFiller)
+{
+	HCL_DESIGNCHECK(dst.size()*8 == src.size());
+
+	std::byte *value = (std::byte *) src.data(DefaultConfig::VALUE);
+	std::byte *defined = (std::byte *) src.data(DefaultConfig::DEFINED);
+
+	for (size_t j = 0; j < dst.size(); j++) {
+		auto def = defined[j];
+		
+		std::byte filler = (std::byte)'X';
+		if (!undefinedFiller.empty()) filler = undefinedFiller[j % undefinedFiller.size()];
+
+		dst[j] = (value[j] & def) | (filler & ~def);
+	}
+}
+
 DefaultBitVectorState parseBit(char value)
 {
 	HCL_DESIGNCHECK(value == '0' || value == '1' || value == 'x' || value == 'X');

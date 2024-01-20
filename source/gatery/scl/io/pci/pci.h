@@ -195,6 +195,8 @@ namespace gtry::scl::pci
 		TlpPacketStream<EmptyBits> request;
 		TlpPacketStream<EmptyBits> completion;
 	};
+
+	RequesterInterface simOverrideReqInt(RequesterInterface &&hardware, RequesterInterface &&simulation);
 }
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::CompleterInterface, request, completion);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::RequesterInterface, request, completion);

@@ -37,7 +37,7 @@ namespace gtry::scl::driver {
 
 class SimulationFiberMapped32BitTileLink : public MemoryMapInterface {
 	public:
-		SimulationFiberMapped32BitTileLink(scl::TileLinkMasterModel &linkModel, Clock &clock);
+		SimulationFiberMapped32BitTileLink(scl::TileLinkMasterModel &linkModel, const Clock &clock);
 
 		virtual uint8_t readU8(size_t addr) const override;
 		virtual void writeU8(size_t addr, uint8_t data) override;
@@ -55,13 +55,13 @@ class SimulationFiberMapped32BitTileLink : public MemoryMapInterface {
 		virtual void writeBlock(const void *src, size_t addr, size_t size) override;
 	protected:
 		scl::TileLinkMasterModel &m_linkModel;
-		Clock &m_clock;
+		const Clock &m_clock;
 };
 
 
 class SimulationMapped32BitTileLink : public MemoryMapInterface {
 	public:
-		SimulationMapped32BitTileLink(scl::TileLinkMasterModel &linkModel, Clock &clock, sim::Simulator &simulator);
+		SimulationMapped32BitTileLink(scl::TileLinkMasterModel &linkModel, const Clock &clock, gtry::sim::Simulator &simulator);
 
 		virtual uint8_t readU8(size_t addr) const override;
 		virtual void writeU8(size_t addr, uint8_t data) override;
@@ -79,8 +79,8 @@ class SimulationMapped32BitTileLink : public MemoryMapInterface {
 		virtual void writeBlock(const void *src, size_t addr, size_t size) override;
 	protected:
 		scl::TileLinkMasterModel &m_linkModel;
-		Clock &m_clock;
-		sim::Simulator &m_simulator;
+		const Clock &m_clock;
+		gtry::sim::Simulator &m_simulator;
 };
 
 

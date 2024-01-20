@@ -121,4 +121,19 @@ bool simulationIsShuttingDown()
 	return sim->simulationIsShuttingDown();
 }
 
+bool simHasData(std::string_view key)
+{
+	return sim::SimulationContext::current()->hasAuxData(key);
+}
+
+std::any& registerSimData(std::string_view key, std::any data)
+{
+	return sim::SimulationContext::current()->registerAuxData(key, std::move(data));
+}
+
+std::any& getSimData(std::string_view key)
+{
+	return sim::SimulationContext::current()->getAuxData(key);
+}
+
 }

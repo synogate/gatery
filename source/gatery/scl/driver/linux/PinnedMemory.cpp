@@ -20,7 +20,7 @@
  * Do not include the regular gatery headers since this is meant to compile stand-alone in driver/userspace application code. 
  */
 
-#include "LinuxDMABuffer.h"
+#include "PinnedMemory.h"
 
 #include <cstring>
 #include <sys/mman.h>
@@ -31,7 +31,7 @@
 #include <x86gprintrin.h>
 #endif
 
-namespace gtry::scl::driver {
+namespace gtry::scl::driver::lnx {
 
 namespace {
 
@@ -54,7 +54,7 @@ struct MemoryToUnlockAndUnmap {
 }
 
 
-LinuxDMABuffer::LinuxDMABuffer(LinuxAddressTranslator &addrTranslator, size_t size, bool continuous, size_t retries) : m_addrTranslator(addrTranslator)
+PinnedMemory::PinnedMemory(AddressTranslator &addrTranslator, size_t size, bool continuous, size_t retries) : m_addrTranslator(addrTranslator)
 {
 	allocatePopulateLock(size);
 
@@ -73,12 +73,17 @@ LinuxDMABuffer::LinuxDMABuffer(LinuxAddressTranslator &addrTranslator, size_t si
 	}
 }
 
-LinuxDMABuffer::~LinuxDMABuffer()
+PinnedMemory::PinnedMemory(PinnedMemory&& other) : m_addrTranslator(other.m_addrTranslator)
+{
+	std::swap(m_buffer, other.m_buffer);
+}
+
+PinnedMemory::~PinnedMemory()
 {
 	unlockAndUnmap(m_buffer);
 }
 
-bool LinuxDMABuffer::isContinuous() const
+bool PinnedMemory::isContinuous() const
 {
 	PhysicalAddr startAddress = userToPhysical(m_buffer.data());
 	size_t numPages = (m_buffer.size() + m_addrTranslator.pageSize()-1) / m_addrTranslator.pageSize();
@@ -91,7 +96,7 @@ bool LinuxDMABuffer::isContinuous() const
 	return true;
 }
 
-std::vector<PhysicalAddr> LinuxDMABuffer::getScatterGatherList() const
+std::vector<PhysicalAddr> PinnedMemory::getScatterGatherList() const
 {
 	size_t numPages = (m_buffer.size() + m_addrTranslator.pageSize()-1) / m_addrTranslator.pageSize();
 
@@ -103,7 +108,7 @@ std::vector<PhysicalAddr> LinuxDMABuffer::getScatterGatherList() const
 	return list;
 }
 
-void LinuxDMABuffer::allocatePopulateLock(size_t size)
+void PinnedMemory::allocatePopulateLock(size_t size)
 {
 	//	MAP_HUGE_2MB, MAP_HUGE_1GB
 
@@ -114,14 +119,15 @@ void LinuxDMABuffer::allocatePopulateLock(size_t size)
 		m_buffer = std::span(addr, size);
 
 		// Force pages into existance by writing to them.
-		std::memset(m_buffer.data(), 0, m_buffer.size());
+		//std::memset(m_buffer.data(), 0, m_buffer.size());
+		std::ranges::fill(m_buffer, std::byte{0});
 
 		if (mlock(m_buffer.data(), m_buffer.size()) != 0)
 			throw std::runtime_error("Pinning memory failed!");
 	}
 }
 /*
-void LinuxDMABuffer::writeBackDCache() const
+void PinnedMemory::writeBackDCache() const
 {
 #if defined(__x86_64__) || defined(__i386__)
 	_mm_sfence();

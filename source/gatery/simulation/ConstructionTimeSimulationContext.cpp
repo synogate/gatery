@@ -249,6 +249,20 @@ void ConstructionTimeSimulationContext::onAssert(const hlim::BaseNode *src, std:
 {
 }
 
+bool ConstructionTimeSimulationContext::hasAuxData(std::string_view key) const
+{
+	HCL_ASSERT_HINT(false, "Query for aux data outside of simulation");
+}
+
+std::any& ConstructionTimeSimulationContext::registerAuxData(std::string_view key, std::any data)
+{
+	HCL_ASSERT_HINT(false, "Registration of aux data outside of simulation");
+}
+
+std::any& ConstructionTimeSimulationContext::getAuxData(std::string_view key)
+{
+	HCL_ASSERT_HINT(false, "Query for aux data outside of simulation");
+}
 
 
 }

@@ -1043,7 +1043,61 @@ BOOST_FIXTURE_TEST_CASE(SimFiber_PingPong, BoostUnitTestSimulationFixture)
 			}
 		});
 
-		addSimulationProcess([=]()->SimProcess{
+		addSimulationFiber([=]()->SimProcess{
+
+			sim::SimulationFiber::awaitCoroutine<size_t>([=]()->SimFunction<size_t> {
+				co_await WaitFor(Seconds(1,2)/clock.absoluteFrequency());
+				co_return 0;
+			});
+
+			while (true) {
+				sim::SimulationFiber::awaitCoroutine<size_t>([=]()->SimFunction<size_t> {
+					simu(B_in) = simu(A_out);
+
+					co_await WaitFor(Seconds(1)/clock.absoluteFrequency());
+					co_return 0;
+				});
+			}
+		});
+	}
+
+
+	design.postprocess();
+	runTicks(clock.getClk(), 10);
+}
+
+
+/*
+
+BOOST_FIXTURE_TEST_CASE(SimFromThread, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+
+	std::function<void()> threadBody;
+	{
+		auto A_in = pinIn(8_b);
+		auto A_out = pinOut(A_in);
+
+		auto B_in = pinIn(8_b);
+		auto B_out = pinOut(B_in);
+
+		threadBody = [=, this](){
+			unsigned i = 0;
+			while (i < 100) {
+				auto b = m_simulator->executeCoroutine<size_t>([=]()->SimFunction<size_t> {
+					simu(A_in) = i;
+					co_await WaitFor(Seconds(1)/clock.absoluteFrequency());
+					co_return (size_t) simu(B_out);
+				});
+				BOOST_TEST(b == i);
+				i++;
+			}
+		};
+
+		addSimulationProcess([=]()->SimProcess {
 
 			co_await WaitFor(Seconds(1,2)/clock.absoluteFrequency());
 
@@ -1057,6 +1111,14 @@ BOOST_FIXTURE_TEST_CASE(SimFiber_PingPong, BoostUnitTestSimulationFixture)
 
 
 	design.postprocess();
-	runTicks(clock.getClk(), 10);
+
+	m_simulator->compileProgram(design.getCircuit());
+	m_simulator->powerOn();
+
+	std::thread thread(threadBody);
+	thread.join();
+
 }
+
+*/
 

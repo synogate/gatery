@@ -141,7 +141,6 @@ void MemoryStorageDense::setAllUndefined()
 	m_memory.clearRange(sim::DefaultConfig::DEFINED, 0, m_memory.size());
 }
 
-
 MemoryStorageSparse::MemoryStorageSparse(std::uint64_t size, const Initialization &initialization) : m_size(size)
 {
 	if (initialization.background) {

@@ -21,8 +21,8 @@
  * Do not include the regular gatery headers since this is meant to compile stand-alone in driver/userspace application code. 
  */
 
-#include <cstdint>
-#include <cstddef>
+#include "../MemoryMapInterface.h"
+
 #include <span>
 
 /**
@@ -30,25 +30,34 @@
  * @{
  */
 
-namespace gtry::scl::driver {
 
-	typedef std::uint64_t PhysicalAddr;
+namespace gtry::scl::driver::lnx {
 
-	class LinuxAddressTranslator {
-		public:
-			LinuxAddressTranslator();
-			~LinuxAddressTranslator();
+class PCIDeviceFunction;
 
-			LinuxAddressTranslator(const LinuxAddressTranslator&) = delete;
-			void operator=(const LinuxAddressTranslator&) = delete;
+class UserSpaceMapped32BitEndpoint : public MemoryMapInterface {
+	public:
+		UserSpaceMapped32BitEndpoint(const PCIDeviceFunction &function, size_t size);
+		virtual ~UserSpaceMapped32BitEndpoint();
 
-			PhysicalAddr userToPhysical(void *usrSpaceAddr) const;
+		virtual uint8_t readU8(size_t addr) const override;
+		virtual void writeU8(size_t addr, uint8_t data) override;
 
-			inline size_t pageSize() const { return m_pageSize; }
-		protected:
-			int m_pageMapFd;
-			size_t m_pageSize;
-	};
+		virtual uint16_t readU16(size_t addr) const override;
+		virtual void writeU16(size_t addr, uint16_t data) override;
+
+		virtual uint32_t readU32(size_t addr) const override;
+		virtual void writeU32(size_t addr, uint32_t data) override;
+
+		virtual uint64_t readU64(size_t addr) const override;
+		virtual void writeU64(size_t addr, uint64_t data) override;
+
+		virtual void readBlock(void *dst, size_t addr, size_t size) const override;
+		virtual void writeBlock(const void *src, size_t addr, size_t size) override;
+	protected:
+		std::span<volatile uint32_t> m_mappedRegisters;
+};
+
 
 }
 

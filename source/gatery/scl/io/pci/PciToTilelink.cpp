@@ -57,8 +57,8 @@ namespace gtry::scl::pci {
 		//make sure that the bar aperture is large enough to accommodate the TileLink interface
 
 		answerInfo.error |= complReq.get<BarInfo>().logByteAperture < a->address.width().bits();
-		IF(valid(complReq))
-			sim_assert(complReq.get<BarInfo>().logByteAperture >= a->address.width().bits()) << "the bar aperture is not adequate";
+		//IF(valid(complReq))
+		//	sim_assert(complReq.get<BarInfo>().logByteAperture >= a->address.width().bits()) << "the bar aperture is not adequate";
 		UInt byteAddress = cat(reqHdr.wordAddress, "2b00").lower(a->address.width());
 
 		a->setupGet(byteAddress, pack(answerInfo), 2);

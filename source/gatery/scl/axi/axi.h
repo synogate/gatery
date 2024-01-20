@@ -107,6 +107,9 @@ namespace gtry::scl
 	UInt burstAddress(const UInt& beat, const UInt& startAddr, const UInt& size, const BVec& burst);
 	RvPacketStream<AxiAddress> axiAddBurst(RvStream<AxiAddress>&& req);
 
+	scl::Axi4 axiRegDecouple(scl::Axi4&& slave, const RegisterSettings& settings = {});
+	scl::Axi4 padWriteChannel(scl::Axi4& slave, BitWidth paddedW);
+
 	template<Signal T> RvPacketStream<AxiReadData> connectMemoryReadPort(Memory<T>& mem, RvStream<AxiAddress>&& req);
 	template<Signal T> RvStream<AxiWriteResponse> connectMemoryWritePort(Memory<T>& mem, RvStream<AxiAddress>&& req, RvPacketStream<AxiWriteData>&& data);
 }

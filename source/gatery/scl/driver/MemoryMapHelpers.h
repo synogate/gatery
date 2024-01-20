@@ -28,52 +28,7 @@
 #include <bit>
 
 #include <concepts>
-
-//#ifdef _WIN32
-//
-//namespace std {
-//	template<typename T>
-//	T countl_zero(T t) {
-//		T result = 0;
-//		consteval T msb = T{1} << (sizeof(T)*8-1);
-//		while (t & msb == 0) {
-//			t <<= 1;
-//			result++;
-//		}
-//		return result;
-//	}
-//	template<typename T>
-//	T countr_zero(T t) {
-//		T result = 0;
-//		while (t & 1 == 0) {
-//			t >>= 1;
-//			result++;
-//		}
-//		return result;
-//	}
-//
-//	template<typename T>
-//	T countl_one(T t) {
-//		T result = 0;
-//		consteval T msb = T{1} << (sizeof(T)*8-1);
-//		while (t & msb != 0) {
-//			t <<= 1;
-//			result++;
-//		}
-//		return result;
-//	}
-//	template<typename T>
-//	T countr_one(T t) {
-//		T result = 0;
-//		while (t & 1 != 0) {
-//			t >>= 1;
-//			result++;
-//		}
-//		return result;
-//	}
-//}
-//
-//#endif
+#include <bit>
 
 
 /**
@@ -154,9 +109,13 @@ enum class TileLinkDOpCode {
 	ReleaseAck = 6		// C
 };
 
+//#define CHECK_TILELINK_RESULTS
+
 template<IsStaticMemoryMapEntryHandle Addr>
 void writeToTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_t tilelinkStartAddr, std::span<const std::byte> byteData)
 {
+	if (byteData.empty()) return;
+
 	auto payload = streamLocation.template get<"a">().template get<"payload">();
 	size_t busWidth = payload.template get<"data">().width() / 8;
 
@@ -184,10 +143,12 @@ void writeToTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_t
 		// Consume away the acks
 		// todo: don't wait for it
 		readFromStream(interface_, streamLocation.template get<"d">(), [tilelinkStartAddr, busWidth, byteData, i](MemoryMapInterface &interface_, auto payload) {
+#ifdef CHECK_TILELINK_RESULTS
 			if (interface_.readUInt(payload.template get<"opcode">()) != (size_t) TileLinkDOpCode::AccessAck)
 				throw std::runtime_error((std::string("Expected a AccessAck but got ") + std::to_string(interface_.readUInt(payload.template get<"opcode">()))).c_str());
 			if (interface_.readUInt(payload.template get<"error">()) != 0)
 				throw std::runtime_error((boost::format("Writing to tilelink address 0x%x produced error %d") % (tilelinkStartAddr + i) % interface_.readUInt(payload.template get<"error">())).str().c_str());
+#endif
 		});
 	}
 }
@@ -202,6 +163,8 @@ void writeToTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_t
 template<IsStaticMemoryMapEntryHandle Addr>
 void readFromTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_t tilelinkStartAddr, std::span<std::byte> byteData)
 {
+	if (byteData.empty()) return;
+
 	auto payload = streamLocation.template get<"a">().template get<"payload">();
 	size_t busWidth = payload.template get<"data">().width() / 8;
 
@@ -225,11 +188,12 @@ void readFromTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_
 		});
 
 		readFromStream(interface_, streamLocation.template get<"d">(), [tilelinkStartAddr, busWidth, byteData, i](MemoryMapInterface &interface_, auto payload) {
+#ifdef CHECK_TILELINK_RESULTS
 			if (interface_.readUInt(payload.template get<"opcode">()) != (size_t) TileLinkDOpCode::AccessAckData)
 				throw std::runtime_error((std::string("Expected a AccessAckData but got ") + std::to_string(interface_.readUInt(payload.template get<"opcode">()))).c_str());
 			if (interface_.readUInt(payload.template get<"error">()) != 0)
 				throw std::runtime_error((boost::format("Reading from tilelink address 0x%x produced error %d") % (tilelinkStartAddr + i) % interface_.readUInt(payload.template get<"error">())).str().c_str());
-
+#endif
 			interface_.read(payload.template get<"data">().addr()/8, byteData.subspan(i, busWidth));
 		});
 	}
@@ -245,8 +209,6 @@ Data readFromTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_
 }
 
 
-
-
 template<IsStaticMemoryMapEntryHandle Addr>
 void clearTileLinkDChannel(MemoryMapInterface &interface_, Addr streamLocation)
 {
@@ -254,9 +216,6 @@ void clearTileLinkDChannel(MemoryMapInterface &interface_, Addr streamLocation)
 		interface_.writeUInt(streamLocation.template get<"d">().template get<"ready">(), 1);
 }
 
-
-
 }
-
 
 /**@}*/

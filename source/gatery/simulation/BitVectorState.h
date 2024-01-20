@@ -28,6 +28,8 @@
 #include <array>
 #include <cstdint>
 #include <string.h>
+#include <span>
+#include <random>
 
 namespace gtry::sim {
 
@@ -124,6 +126,9 @@ class BitVectorState
 
 		typename Config::BaseType *data(typename Config::Plane plane);
 		const typename Config::BaseType *data(typename Config::Plane plane) const;
+
+		std::span<std::byte> asWritableBytes(typename Config::Plane plane);
+		std::span<const std::byte> asBytes(typename Config::Plane plane) const;
 
 		BitVectorState<Config> extract(size_t start, size_t size) const;
 		void insert(const BitVectorState& state, size_t offset, size_t size = 0);
@@ -558,6 +563,16 @@ DefaultBitVectorState createDefaultBitVectorState(std::size_t numWords, std::siz
 
 DefaultBitVectorState createDefaultBitVectorState(std::size_t bitWidth, const void *data);
 DefaultBitVectorState createDefaultBitVectorState(std::size_t bitWidth, size_t value);
+DefaultBitVectorState createRandomDefaultBitVectorState(std::size_t bitWidth, std::mt19937 &rng);
+
+bool operator==(const DefaultBitVectorState &lhs, std::span<const std::byte> rhs);
+inline bool operator!=(const DefaultBitVectorState &lhs, std::span<const std::byte> rhs) { return !(lhs == rhs); }
+template<typename T> requires (std::is_trivially_copyable_v<T>)
+inline bool operator==(const DefaultBitVectorState &lhs, std::span<const T> rhs) { return lhs == std::as_bytes(rhs); }
+template<typename T> requires (std::is_trivially_copyable_v<T>)
+inline bool operator!=(const DefaultBitVectorState &lhs, std::span<const T> rhs) { return lhs != std::as_bytes(rhs); }
+
+void asData(const DefaultBitVectorState &src, std::span<std::byte> dst, std::span<const std::byte> undefinedFiller);
 
 template<class Config>
 void BitVectorState<Config>::resize(size_t size)
@@ -781,6 +796,19 @@ const typename Config::BaseType *BitVectorState<Config>::data(typename Config::P
 {
 	return m_values[plane].data();
 }
+
+template<class Config>
+std::span<std::byte> BitVectorState<Config>::asWritableBytes(typename Config::Plane plane)
+{
+	return std::span<std::byte>((std::byte*)m_values[plane].data(), (m_size + 7)/8);
+}
+
+template<class Config>
+std::span<const std::byte> BitVectorState<Config>::asBytes(typename Config::Plane plane) const
+{
+	return std::span<const std::byte>((const std::byte*)m_values[plane].data(), (m_size + 7)/8);
+}
+
 
 template<class Config>
 BitVectorState<Config> BitVectorState<Config>::extract(size_t start, size_t size) const

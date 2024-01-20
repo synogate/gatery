@@ -21,7 +21,9 @@
  * Do not include the regular gatery headers since this is meant to compile stand-alone in driver/userspace application code. 
  */
 
-#include "LinuxAddressTranslator.h"
+#include "AddressTranslator.h"
+
+#include "../memoryBuffer/MemoryBuffer.h"
 
 #include <cstddef>
 #include <span>
@@ -33,26 +35,34 @@
  */
 
 namespace gtry::scl::driver {
+	typedef std::uint64_t PhysicalAddr;
+}
 
-	class LinuxDMABuffer {
+namespace gtry::scl::driver::lnx {
+
+	class PinnedMemory {
 		public:
-			LinuxDMABuffer(LinuxAddressTranslator &addrTranslator, size_t size, bool continuous = false, size_t retries = 100);
-			~LinuxDMABuffer();
+			PinnedMemory(AddressTranslator &addrTranslator, size_t size, bool continuous = false, size_t retries = 100);
+			~PinnedMemory();
 
-			LinuxDMABuffer(const LinuxDMABuffer&) = delete;
-			void operator=(const LinuxDMABuffer&) = delete;
+			PinnedMemory(const PinnedMemory&) = delete;
+			PinnedMemory(PinnedMemory&& other);
+			void operator=(const PinnedMemory&) = delete;
 
 			bool isContinuous() const;
 			void writeBackDCache() const;
 
-			std::vector<PhysicalAddr> getScatterGatherList() const;
+			inline size_t size() const { return m_buffer.size(); }
+			inline size_t pageSize() const { return m_addrTranslator.pageSize(); }
 
 			std::span<std::byte> userSpaceBuffer() { return m_buffer; }
-
+			std::span<const std::byte> userSpaceBuffer() const { return m_buffer; }
 			inline PhysicalAddr userToPhysical(void *usrSpaceAddr) const { return m_addrTranslator.userToPhysical(usrSpaceAddr); }
+
+			std::vector<PhysicalAddr> getScatterGatherList() const;
 		protected:
 			std::span<std::byte> m_buffer;
-			LinuxAddressTranslator &m_addrTranslator;
+			AddressTranslator &m_addrTranslator;
 
 			void allocatePopulateLock(size_t size);
 	};

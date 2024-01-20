@@ -67,7 +67,8 @@ namespace gtry::scl
 	namespace driver {
 		struct MemoryMapEntry;
 	}
-	std::vector<driver::MemoryMapEntry> exportAddressSpaceDescription(const AddressSpaceDescription &desc);
+	using FlatAddressSpaceDescription = std::vector<driver::MemoryMapEntry>;
+	FlatAddressSpaceDescription exportAddressSpaceDescription(const AddressSpaceDescription &desc);
 	void format(std::ostream &stream, std::string_view name, std::span<const driver::MemoryMapEntry> memoryMap);
 	void writeGTKWaveFilterFile(std::ostream &stream, std::span<const driver::MemoryMapEntry> memoryMap);
 

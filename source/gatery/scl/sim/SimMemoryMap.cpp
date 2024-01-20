@@ -26,7 +26,7 @@
 
 namespace gtry::scl::driver {
 
-SimulationFiberMapped32BitTileLink::SimulationFiberMapped32BitTileLink(scl::TileLinkMasterModel &linkModel, Clock &clock) : m_linkModel(linkModel), m_clock(clock)
+SimulationFiberMapped32BitTileLink::SimulationFiberMapped32BitTileLink(scl::TileLinkMasterModel &linkModel, const Clock &clock) : m_linkModel(linkModel), m_clock(clock)
 {
 }
 
@@ -114,7 +114,7 @@ void SimulationFiberMapped32BitTileLink::writeBlock(const void *src, size_t addr
 }
 
 
-SimulationMapped32BitTileLink::SimulationMapped32BitTileLink(scl::TileLinkMasterModel &linkModel, Clock &clock, sim::Simulator &simulator) : m_linkModel(linkModel), m_clock(clock), m_simulator(simulator)
+SimulationMapped32BitTileLink::SimulationMapped32BitTileLink(scl::TileLinkMasterModel &linkModel, const Clock &clock, sim::Simulator &simulator) : m_linkModel(linkModel), m_clock(clock), m_simulator(simulator)
 {
 }
 

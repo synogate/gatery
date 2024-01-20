@@ -38,9 +38,10 @@ namespace gtry::sim {
 	{
 		m_current = m_overshadowed;
 	}
-
+/*
 	double SimulationContext::nowNs()
 	{
 		return hlim::toNanoseconds(m_current->getSimulator()->getCurrentSimulationTime());
 	}
+*/
 }

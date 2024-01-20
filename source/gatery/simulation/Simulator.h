@@ -37,6 +37,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <any>
 
 #include "../utils/CoroutineWrapper.h"
 
@@ -176,6 +177,10 @@ class Simulator
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitClock &waitClock, utils::RestrictTo<RunTimeSimulationContext>) = 0;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitChange &waitChange, utils::RestrictTo<RunTimeSimulationContext>) = 0;
 		virtual void simulationProcessSuspending(std::coroutine_handle<> handle, WaitStable &waitStable, utils::RestrictTo<RunTimeSimulationContext>) = 0;
+
+		virtual bool hasAuxData(std::string_view key) const = 0;
+		virtual std::any& registerAuxData(std::string_view key, std::any data) = 0;
+		virtual std::any& getAuxData(std::string_view key) = 0;
 
 		void onDebugMessage(const hlim::BaseNode *src, std::string msg) { m_callbackDispatcher.onDebugMessage(src, std::move(msg)); }
 		void onWarning(const hlim::BaseNode *src, std::string msg) { m_callbackDispatcher.onWarning(src, std::move(msg)); }

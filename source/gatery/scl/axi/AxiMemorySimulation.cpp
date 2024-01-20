@@ -30,144 +30,160 @@ namespace gtry::scl
 		if(cfg.wordStride.bits() == 0)
 			cfg.wordStride = cfg.axiCfg.dataW + cfg.axiCfg.wUserW;
 
-		if(!cfg.storage)
-			cfg.storage = std::make_shared<hlim::MemoryStorageDense>((cfg.wordStride + cfg.axiCfg.wUserW).bits() * cfg.axiCfg.wordAddrW().count());
-		
 		const uint64_t uniqueId = (*axi->ar)->addr.node()->getId();
 		pinIn(*axi, "simu_aximem_" + std::to_string(uniqueId), { .simulationOnlyPin = true });
 
+		std::string key = GroupScope::get()->instancePath() + '/' + cfg.memoryRegistrationKey;
+
 		Clock clock = ClockScope::getClk();
-		DesignScope::get()->getCircuit().addSimulationProcess([axi, cfg, clock]() -> SimProcess {
-			simu(valid(axi->r)) = '0';
-			simu(ready(*axi->ar)) = '1';
+		DesignScope::get()->getCircuit().addSimulationProcess([axi, cfg, clock, key]() -> SimProcess {
 
-			size_t slot_next = 0;
-			size_t slot_current = 0;
-			while (true)
-			{
-				co_await performTransferWait(*axi->ar, clock);
+			BitWidth width;
+			if (cfg.memorySize)
+				width = *cfg.memorySize;
+			else
+				width = cfg.wordStride * cfg.axiCfg.wordAddrW().count();
+			
+			auto &storage = emplaceSimData<hlim::MemoryStorageSparse>(key, width.bits(), cfg.initialization);
 
-				fork([axi, cfg, clock, slot_next, &slot_current]() -> SimProcess {
-					AxiAddress& ar = **axi->ar;
-					uint64_t wordOffset = simu(ar.addr).value() / cfg.axiCfg.alignedDataW().bytes();
-					//uint64_t size = simu(ar.size).value();
-					uint64_t burst = simu(ar.burst).value();
-					uint64_t len = simu(ar.len).value() + 1;
-					uint64_t id = simu(ar.id).value();
+			auto axiCfg = cfg.axiCfg;
+			auto wordStride = cfg.wordStride;
+			auto readLatency = cfg.readLatency;
 
-					for (size_t i = 0; i < cfg.readLatency; ++i)
-						co_await OnClk(clock);
+			fork([axi, clock, &storage, wordStride, axiCfg, readLatency]() -> SimProcess {
+				simu(valid(axi->r)) = '0';
+				simu(ready(*axi->ar)) = '1';
 
-					while(slot_next != slot_current)
-						co_await OnClk(clock);
-
-					for (size_t i = 0; i < len; ++i)
-					{
-						simu(valid(axi->r)) = '1';
-						simu(eop(axi->r)) = i + 1 == len;
-						simu(axi->r->id) = id;
-						simu(axi->r->resp) = (size_t)AxiResponseCode::OKAY;
-
-						size_t bitOffset = wordOffset * cfg.wordStride.bits();
-						simu(axi->r->data) = cfg.storage->read(bitOffset, cfg.axiCfg.dataW.bits());
-						simu(axi->r->user) = cfg.storage->read(bitOffset + cfg.axiCfg.dataW.bits(), cfg.axiCfg.rUserW.bits());
-
-						co_await performTransferWait(axi->r, clock);
-						
-						if (burst == (size_t)AxiBurstType::INCR)
-							wordOffset++;
-					}
-
-					simu(valid(axi->r)) = '0';
-					simu(eop(axi->r)).invalidate();
-					simu(axi->r->id).invalidate();
-					simu(axi->r->resp).invalidate();
-					simu(axi->r->data).invalidate();
-					simu(axi->r->user).invalidate();
-
-					slot_current++;
-				});
-
-				slot_next++;
-				while (slot_next - slot_current > 8)
+				size_t slot_next = 0;
+				size_t slot_current = 0;
+				while (true)
 				{
-					simu(ready(*axi->ar)) = '0';
-					co_await OnClk(clock);
-					simu(ready(*axi->ar)) = '1';
-				}
-			}
-		});
+					co_await performTransferWait(*axi->ar, clock);
 
-		DesignScope::get()->getCircuit().addSimulationProcess([axi, cfg, clock]() -> SimProcess {
-			simu(valid(axi->b)) = '0';
-			simu(ready(*axi->aw)) = '1';
-			simu(ready(*axi->w)) = '0';
+					fork([axi, clock, slot_next, &slot_current, &storage, wordStride, axiCfg, readLatency]() -> SimProcess {
+						AxiAddress& ar = **axi->ar;
+						uint64_t wordOffset = simu(ar.addr).value() / axiCfg.alignedDataW().bytes();
+						//uint64_t size = simu(ar.size).value();
+						uint64_t burst = simu(ar.burst).value();
+						uint64_t len = simu(ar.len).value() + 1;
+						uint64_t id = simu(ar.id).value();
 
-			size_t slot_next = 0;
-			size_t slot_current = 0;
-			size_t slot_current_ack = 0;
-			while (true)
-			{
-				co_await performTransferWait(*axi->aw, clock);
+						for (size_t i = 0; i < readLatency; ++i)
+							co_await OnClk(clock);
 
-				fork([axi, cfg, clock, slot_next, &slot_current, &slot_current_ack]() -> SimProcess {
-					AxiAddress& ar = **axi->aw;
-					uint64_t wordOffset = simu(ar.addr).value() / cfg.axiCfg.alignedDataW().bytes();
-					//uint64_t size = simu(ar.size).value();
-					uint64_t burst = simu(ar.burst).value();
-					uint64_t len = simu(ar.len).value() + 1;
-					uint64_t id = simu(ar.id).value();
+						while(slot_next != slot_current)
+							co_await OnClk(clock);
 
-					while (slot_next != slot_current)
-						co_await OnClk(clock);
-
-					simu(ready(*axi->w)) = '1';
-
-					BitWidth wordSize = cfg.axiCfg.dataW + cfg.axiCfg.wUserW;
-					for (size_t i = 0; i < len; ++i)
-					{
-						co_await performTransferWait(*axi->w, clock);
-
-						sim::DefaultBitVectorState data = simu((*axi->w)->data);
-						sim::DefaultBitVectorState user = simu((*axi->w)->user);
-						sim::DefaultBitVectorState strb = simu((*axi->w)->strb);
-						sim::DefaultBitVectorState mask;
-						mask.resize(data.size());
-						for (size_t i = 0; i < strb.size(); ++i)
+						for (size_t i = 0; i < len; ++i)
 						{
-							size_t symbolSize = data.size() / strb.size();
-							mask.setRange(sim::DefaultConfig::VALUE, i * symbolSize, symbolSize, strb.get(sim::DefaultConfig::VALUE, i));
-							mask.setRange(sim::DefaultConfig::DEFINED, i * symbolSize, symbolSize, strb.get(sim::DefaultConfig::DEFINED, i));
+							simu(valid(axi->r)) = '1';
+							simu(eop(axi->r)) = i + 1 == len;
+							simu(axi->r->id) = id;
+							simu(axi->r->resp) = (size_t)AxiResponseCode::OKAY;
+
+							size_t bitOffset = wordOffset * wordStride.bits();
+							simu(axi->r->data) = storage.read(bitOffset, axiCfg.dataW.bits());
+							simu(axi->r->user) = storage.read(bitOffset + axiCfg.dataW.bits(), axiCfg.rUserW.bits());
+
+							co_await performTransferWait(axi->r, clock);
+							
+							if (burst == (size_t)AxiBurstType::INCR)
+								wordOffset++;
 						}
-						cfg.storage->write(wordOffset * wordSize.bits(), data, false, mask);
-						cfg.storage->write(wordOffset * wordSize.bits() + data.size(), user, false, {});
 
-						if (burst == (size_t)AxiBurstType::INCR)
-							wordOffset++;	
-					}
-					simu(ready(*axi->w)) = '0';
-					slot_current++;
+						simu(valid(axi->r)) = '0';
+						simu(eop(axi->r)).invalidate();
+						simu(axi->r->id).invalidate();
+						simu(axi->r->resp).invalidate();
+						simu(axi->r->data).invalidate();
+						simu(axi->r->user).invalidate();
 
-					while (slot_next != slot_current_ack)
+						slot_current++;
+					});
+
+					slot_next++;
+					while (slot_next - slot_current > 8)
+					{
+						simu(ready(*axi->ar)) = '0';
 						co_await OnClk(clock);
-
-					simu(axi->b->id) = id;
-					simu(axi->b->resp) = (size_t)AxiResponseCode::OKAY;
-					co_await performTransfer(axi->b, clock);
-					simu(axi->b->id).invalidate();
-					simu(axi->b->resp).invalidate();
-					slot_current_ack++;
-				});
-
-				slot_next++;
-				while (slot_next - slot_current > 8)
-				{
-					simu(ready(*axi->aw)) = '0';
-					co_await OnClk(clock);
-					simu(ready(*axi->aw)) = '1';
+						simu(ready(*axi->ar)) = '1';
+					}
 				}
-			}
 			});
+
+			fork([axi, clock, &storage, wordStride, axiCfg]() -> SimProcess {
+				simu(valid(axi->b)) = '0';
+				simu(ready(*axi->aw)) = '1';
+				simu(ready(*axi->w)) = '0';
+
+				size_t slot_next = 0;
+				size_t slot_current = 0;
+				size_t slot_current_ack = 0;
+				while (true)
+				{
+					co_await performTransferWait(*axi->aw, clock);
+
+					fork([axi, clock, slot_next, &slot_current, &slot_current_ack, &storage, wordStride, axiCfg]() -> SimProcess {
+						AxiAddress& ar = **axi->aw;
+						uint64_t wordOffset = simu(ar.addr).value() / axiCfg.alignedDataW().bytes();
+						//uint64_t size = simu(ar.size).value();
+						uint64_t burst = simu(ar.burst).value();
+						uint64_t len = simu(ar.len).value() + 1;
+						uint64_t id = simu(ar.id).value();
+
+						while (slot_next != slot_current)
+							co_await OnClk(clock);
+
+						simu(ready(*axi->w)) = '1';
+
+						BitWidth wordSize = axiCfg.dataW + axiCfg.wUserW;
+						for (size_t i = 0; i < len; ++i)
+						{
+							co_await performTransferWait(*axi->w, clock);
+
+							sim::DefaultBitVectorState data = simu((*axi->w)->data);
+							sim::DefaultBitVectorState user = simu((*axi->w)->user);
+							sim::DefaultBitVectorState strb = simu((*axi->w)->strb);
+							sim::DefaultBitVectorState mask;
+							mask.resize(data.size());
+							for (size_t i = 0; i < strb.size(); ++i)
+							{
+								size_t symbolSize = data.size() / strb.size();
+								mask.setRange(sim::DefaultConfig::VALUE, i * symbolSize, symbolSize, strb.get(sim::DefaultConfig::VALUE, i));
+								mask.setRange(sim::DefaultConfig::DEFINED, i * symbolSize, symbolSize, strb.get(sim::DefaultConfig::DEFINED, i));
+							}
+							storage.write(wordOffset * wordSize.bits(), data, false, mask);
+							storage.write(wordOffset * wordSize.bits() + data.size(), user, false, {});
+
+							if (burst == (size_t)AxiBurstType::INCR)
+								wordOffset++;	
+						}
+						simu(ready(*axi->w)) = '0';
+						slot_current++;
+
+						while (slot_next != slot_current_ack)
+							co_await OnClk(clock);
+
+						simu(axi->b->id) = id;
+						simu(axi->b->resp) = (size_t)AxiResponseCode::OKAY;
+						co_await performTransfer(axi->b, clock);
+						simu(axi->b->id).invalidate();
+						simu(axi->b->resp).invalidate();
+						slot_current_ack++;
+					});
+
+					slot_next++;
+					while (slot_next - slot_current > 8)
+					{
+						simu(ready(*axi->aw)) = '0';
+						co_await OnClk(clock);
+						simu(ready(*axi->aw)) = '1';
+					}
+				}
+			});
+
+			co_return;
+		});
 
 		setName(*axi, "axi");
 		return *axi;
