@@ -196,4 +196,99 @@ namespace gtry::scl::arch::xilinx
 		HCL_NAMED(acc);
 		return acc;
 	}
+
+	std::tuple<UInt, size_t> mul(const UInt& a, const UInt& b, BitWidth resultW, size_t resultOffset)
+	{
+		HCL_DESIGNCHECK(a.width() + b.width() >= resultW + resultOffset);
+		Area ent{ "scl_dsp_mul", true };
+
+		const size_t mulAWidth = 26;
+		const size_t mulBWidth = 17; // one bit less for unsigned multiplication
+
+		const size_t potentialAstepsA = (a.width().bits() + mulAWidth - 1) / mulAWidth;
+		const size_t potentialAstepsB = (b.width().bits() + mulAWidth - 1) / mulAWidth;
+		BVec A = (BVec)(potentialAstepsA < potentialAstepsB ? a : b);
+		BVec B = (BVec)(potentialAstepsA < potentialAstepsB ? b : a);
+		HCL_NAMED(A);
+		HCL_NAMED(B);
+
+		const size_t mulASteps = (A.width().bits() + mulAWidth - 1) / mulAWidth;
+		const size_t mulBSteps = (B.width().bits() + mulBWidth - 1) / mulBWidth;
+
+		UInt outPhys;
+		for (size_t iA = 0; iA < mulASteps; ++iA)
+		{
+			BVec PC;
+			BVec Ain = A;
+			BVec Bin = B;
+			BVec Bout = ConstBVec(0, a.width() + b.width());
+
+			for (size_t iB = 0; iB < mulBSteps; ++iB)
+			{
+				size_t aOfs = iA * mulAWidth;
+				size_t bOfs = iB * mulBWidth;
+				if (aOfs + bOfs >= resultOffset + resultW.bits())
+					break;
+
+				BitWidth aW = std::min(A.width() - aOfs, BitWidth(mulAWidth));
+				BitWidth bW = std::min(B.width() - bOfs, BitWidth(mulBWidth));
+
+				DSP48E2 dsp;
+				dsp.clock(ClockScope::getClk());
+				dsp.a() = (BVec)zext(Ain(aOfs, aW), 27_b);
+				dsp.b() = (BVec)zext(Bin(bOfs, bW), 18_b);
+
+				dsp.opMode(
+					DSP48E2::MuxW::zero,
+					DSP48E2::MuxX::m,
+					DSP48E2::MuxY::m,
+					iB == 0 ? DSP48E2::MuxZ::zero : DSP48E2::MuxZ::pcin17
+				);
+
+				if (iB != 0) dsp.in("PCIN", 48_b) = PC;
+				if (iB != mulBSteps - 1) PC = dsp.out("PCOUT", 48_b);
+
+				if(iB != 0)
+				{
+					// register moved into dsp slice
+					Ain = reg(Ain);
+					Bin = reg(Bin);
+					dsp.generic("AREG") = 2;
+					dsp.generic("BREG") = 2;
+				}
+				else
+				{
+					dsp.inMode()[0] = '1'; // select A1 register
+					dsp.inMode()[4] = '1'; // select B1 register
+				}
+
+				if(iB != 0)
+					Bout = reg(Bout);
+				BitWidth directOutW = iB != mulBSteps - 1 ? BitWidth{ mulBWidth } : BitWidth{ aW + bW };
+				if(directOutW.bits() + aOfs + bOfs > resultOffset)
+					Bout(aOfs + bOfs, directOutW) = dsp.p().lower(directOutW);
+			}
+
+			if(iA == 0)
+				outPhys = (UInt)Bout;
+			else
+				outPhys += (UInt)Bout;
+		}
+
+		size_t latency = mulBSteps + 2;
+		if (mulASteps > 1)
+		{
+			outPhys = reg(outPhys);
+			latency++;
+		}
+
+		// simulation
+		BitWidth immW = resultW + resultOffset;
+		UInt out = (resizeTo(a, immW) * resizeTo(b, immW)).upper(resultW);
+		for (size_t i = 0; i < latency; ++i) out = reg(out);
+
+		out.exportOverride(outPhys(resultOffset, resultW));
+		HCL_NAMED(out);
+		return { out, latency };
+	}
 }

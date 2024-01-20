@@ -671,6 +671,74 @@ BOOST_FIXTURE_TEST_CASE(DSP48E2_double_clb_test, TestWithDefaultDevice<gtry::GHD
 	runTest({ 1,1'000'000 });
 }
 
+class DSP48E2_mul_fixture : public TestWithDefaultDevice<gtry::GHDLTestFixture>
+{
+protected:
+	void test(gtry::BitWidth aW, gtry::BitWidth bW, gtry::BitWidth resultW, size_t resultOffset)
+	{
+		using namespace gtry;
+		Clock clock({ .absoluteFrequency = 100'000'000, .name = "clk" });
+		ClockScope clkScp(clock);
+
+		UInt a = pinIn(aW).setName("a");
+		UInt b = pinIn(bW).setName("b");
+
+		auto [c, latency] = scl::arch::xilinx::mul(a, b, resultW, resultOffset);
+		pinOut(c, "c");
+
+		UInt e = pinIn(c.width()).setName("e");
+
+		std::queue<uint64_t> expected;
+
+		addSimulationProcess([&]()->SimProcess {
+			std::mt19937_64 rng{ std::random_device{}() };
+
+			for (size_t i = 0; i < 64; ++i)
+			{
+				uint64_t aVal = rng() & a.width().mask();
+				simu(a) = aVal;
+				uint64_t bVal = rng() & b.width().mask();
+				simu(b) = bVal;
+				expected.push((aVal * bVal >> resultOffset) & resultW.mask());
+				co_await OnClk(clock);
+			}
+		});
+
+		addSimulationProcess([&]()->SimProcess {
+			for(size_t i = 0; i < latency; ++i)
+				co_await OnClk(clock);
+			while (!expected.empty())
+			{
+				simu(e) = expected.front();
+				co_await OnClk(clock);
+				BOOST_TEST(simu(c) == expected.front());
+				expected.pop();
+			}
+			BOOST_TEST(simu(c) != 0);
+			stopTest();
+		});
+
+		runTest({ 2, 1'000'000 });
+	}
+};
+
+BOOST_FIXTURE_TEST_CASE(DSP48E2_mul_symetric_full_test, DSP48E2_mul_fixture)
+{
+	using namespace gtry;
+	test(32_b, 32_b, 64_b, 0);
+}
+
+BOOST_FIXTURE_TEST_CASE(DSP48E2_mul_asymetric_full_test, DSP48E2_mul_fixture)
+{
+	using namespace gtry;
+	test(26_b, 38_b, 64_b, 0);
+}
+
+BOOST_FIXTURE_TEST_CASE(DSP48E2_mul_asymetric_partial_test, DSP48E2_mul_fixture)
+{
+	using namespace gtry;
+	test(26_b, 38_b, 16_b, 20);
+}
 
 BOOST_FIXTURE_TEST_CASE(test_bidir_pin_extnode, gtry::GHDLTestFixture)
 {
