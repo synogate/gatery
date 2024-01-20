@@ -43,7 +43,7 @@ namespace gtry {
 	template<Signal T>
 	T simOverrideDownstream(T&& in, T&& simulationSignal)
 	{
-		T ret;
+		T ret = constructFrom(in);
 		downstream(ret) = simOverride(copy(downstream(in)), downstream(simulationSignal));
 		upstream(in) = upstream(ret);
 		upstream(simulationSignal) = upstream(ret);
@@ -54,7 +54,9 @@ namespace gtry {
 	template<Signal T>
 	std::tuple<T, T> simOverrideUpstream(T&& in)
 	{
-		T ret, simulationSignal;
+		T ret = constructFrom(in);
+		T simulationSignal = constructFrom(in);
+
 		downstream(ret) = downstream(in);
 		downstream(simulationSignal) = downstream(in);
 		upstream(in) = simOverride(copy(upstream(ret)), upstream(simulationSignal));

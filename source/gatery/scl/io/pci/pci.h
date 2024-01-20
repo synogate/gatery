@@ -192,7 +192,7 @@ namespace gtry::scl::pci
 	};
 
 	struct RequesterInterface {
-		TlpPacketStream<EmptyBits> request;
+		Reverse<TlpPacketStream<EmptyBits>> request;
 		TlpPacketStream<EmptyBits> completion;
 	};
 

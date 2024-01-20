@@ -522,8 +522,8 @@ gtry::scl::TileLinkUL gtry::scl::riscv::RV32I::memTLink(bool byte, bool halfword
 	IF(issueRequest & !m_discardResult)
 	{
 		// we do not support unaligned access (out of spec)
-		sim_assert(mem.a->address.lower(2_b) == 0 | mem.a->size != 2);
-		sim_assert(mem.a->address.lower(1_b) == 0 | mem.a->size != 1);
+		sim_assert(mem.a->address.lower(2_b) == 0 | mem.a->size != 2) << __FILE__ << " " << __LINE__;
+		sim_assert(mem.a->address.lower(1_b) == 0 | mem.a->size != 1) << __FILE__ << " " << __LINE__;
 	}
 
 	setName(mem, "dmem");

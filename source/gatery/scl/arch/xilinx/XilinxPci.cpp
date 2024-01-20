@@ -182,7 +182,7 @@ namespace gtry::scl::pci::xilinx {
 		eop(ret) = eop(in);
 
 		//empty to full words conversion:
-		sim_assert(emptyBits(in).lower(5_b) == 0); // the granularity of this empty signal cannot be less than 32 bits (expect the lsb's to be completely synthesized away)
+		sim_assert(emptyBits(in).lower(5_b) == 0) << __FILE__ << " " << __LINE__; // the granularity of this empty signal cannot be less than 32 bits (expect the lsb's to be completely synthesized away)
 		UInt emptyWords = emptyBits(in).upper(-5_b);
 		BVec throwAway = (BVec) cat('0', uintToThermometric(emptyWords));
 		dwordEnable(ret) = swapEndian(~throwAway, 1_b); 
@@ -214,7 +214,8 @@ namespace gtry::scl::pci::xilinx {
 		eop(ret) = eop(in);
 
 		//dwordEnable to empty conversion:
-		sim_assert(emptyBits(in).lower(5_b) == 0); // the granularity of this empty signal cannot be less than 32 bits (expect the lsb's to be completely synthesized away)
+		IF (valid(in) & eop(in))
+			sim_assert(emptyBits(in).lower(5_b) == 0) << __FILE__ << " " << __LINE__; // the granularity of this empty signal cannot be less than 32 bits (expect the lsb's to be completely synthesized away)
 		UInt emptyWords = emptyBits(in).upper(-5_b);
 		BVec throwAway = (BVec) cat('0', uintToThermometric(emptyWords));
 		dwordEnable(ret) = swapEndian(~throwAway, 1_b); 
@@ -262,14 +263,14 @@ namespace gtry::scl::pci::xilinx {
 		tap(completion);
 
 		RequesterInterface ret;
-		*ret.request = completion->width();
-		emptyBits(ret.request) = BitWidth::count(ret.request->width().bits());
+		**ret.request = completion->width();
+		emptyBits(*ret.request) = BitWidth::count((*ret.request)->width().bits());
 
 		*ret.completion = completion->width();
 		emptyBits(ret.completion) = BitWidth::count(ret.completion->width().bits());
 
-		TlpPacketStream<EmptyBits> temp = constructFrom(ret.request);
-		temp <<= ret.request;
+		TlpPacketStream<EmptyBits> temp = constructFrom(*ret.request);
+		temp <<= *ret.request;
 		request = requesterRequestVendorUnlocking(move(temp));
 
 		setName(request, "axi_st_requester_completion");

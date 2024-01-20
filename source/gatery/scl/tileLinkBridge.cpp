@@ -109,7 +109,7 @@ namespace gtry::scl {
 		HCL_NAMED(readResStalled);
 
 		if (avmm.readDataValid)
-			sim_assert(!valid(readDataFifo) | valid(readResStalled));
+			sim_assert(!valid(readDataFifo) | valid(readResStalled)) << __FILE__ << " " << __LINE__;
 		else
 			HCL_DESIGNCHECK(avmm.readLatency > 1);
 

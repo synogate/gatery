@@ -169,7 +169,7 @@ namespace gtry::scl
 		HCL_NAMED(burstReq);
 		ready(burstReq) = ready(out) & valid(data);
 		ready(data) = ready(out) & valid(burstReq);
-		sim_assert(!valid(burstReq) | eop(burstReq) == eop(data));
+		sim_assert(!valid(burstReq) | eop(burstReq) == eop(data)) << __FILE__ << " " << __LINE__;
 
 		T unpackedData = constructFrom(mem.defaultValue());
 		unpack(data->data.lower(width(unpackedData)), unpackedData);

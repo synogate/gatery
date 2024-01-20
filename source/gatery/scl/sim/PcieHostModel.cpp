@@ -82,11 +82,11 @@ namespace gtry::scl::sim {
 		pinIn(*m_rc, "host_rc", {.simulationOnlyPin = true});
 
 		scl::pci::RequesterInterface reqInt{
-			.request = constructFrom(*m_rr),
+			.request = { constructFrom(*m_rr) },
 			.completion = constructFrom(*m_rc),
 		};
 
-		*m_rr <<= reqInt.request;
+		*m_rr <<= *reqInt.request;
 		reqInt.completion <<= *m_rc;
 		
 		return reqInt;

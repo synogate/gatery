@@ -164,10 +164,10 @@ namespace gtry::scl::pci {
 
 		result.completion <<= simOverrideDownstream<TlpPacketStream<EmptyBits>>(move(hardware.completion), move(simulation.completion));
 
-		auto [requestToHardware, requestToSimulation] = simOverrideUpstream<TlpPacketStream<EmptyBits>>(move(result.request));
+		auto [requestToHardware, requestToSimulation] = simOverrideUpstream<TlpPacketStream<EmptyBits>>(move(*result.request));
 
-		hardware.request <<= requestToHardware;
-		simulation.request <<= requestToSimulation;
+		*hardware.request <<= requestToHardware;
+		*simulation.request <<= requestToSimulation;
 
 		return result;
 	}
