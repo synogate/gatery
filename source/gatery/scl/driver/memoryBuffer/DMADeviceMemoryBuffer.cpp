@@ -79,6 +79,8 @@ void DMADeviceMemoryBuffer::unlock()
 		if (remaining > 0)
 			m_factory.dmaController().uploadContinuousChunk(m_uploadBuffer->physicalPageStart(numFullPages), m_deviceAddr + pageSize * numFullPages, remaining);
 	}
+
+	m_uploadBuffer.reset(nullptr);
 }
 
 void DMADeviceMemoryBuffer::write(std::span<const std::byte> data)
