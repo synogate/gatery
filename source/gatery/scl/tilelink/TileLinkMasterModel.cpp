@@ -26,7 +26,7 @@ namespace gtry::scl
 	void TileLinkMasterModel::init(std::string_view prefix, BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth)
 	{
 		tileLinkInit(m_link, addrWidth, dataWidth, sizeWidth, sourceWidth);
-		pinIn(m_link, std::string{ prefix });
+		pinIn(m_link, std::string{ prefix }, { .simulationOnlyPin = true });
 
 		Clock clk = ClockScope::getClk();
 
