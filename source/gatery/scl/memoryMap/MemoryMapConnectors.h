@@ -91,7 +91,11 @@ namespace gtry::scl
 						if (isReverse)
 							memoryMap.readable(member, lastName, memberAnnotation);
 						else
-							selectionHandle.joinWith(memoryMap.writeable(member, lastName, memberAnnotation));
+						{
+							HCL_DESIGNCHECK_HINT(!std::is_const_v<T>, "cannot mapIn const signal");
+							if constexpr (!std::is_const_v<T>)
+								selectionHandle.joinWith(memoryMap.writeable(member, lastName, memberAnnotation));
+						}
 					}
 				memberCounter.back()++;
 			}
