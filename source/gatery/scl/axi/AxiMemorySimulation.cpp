@@ -22,6 +22,20 @@
 
 namespace gtry::scl
 {
+	void axiMemorySimulationCreateMemory(AxiMemorySimulationConfig cfg)
+	{
+		DesignScope::get()->getCircuit().addSimulationProcess([cfg]() -> SimProcess {
+			BitWidth width;
+			if (cfg.memorySize)
+				width = *cfg.memorySize;
+			else
+				width = cfg.wordStride * cfg.axiCfg.wordAddrW().count();
+			
+			emplaceSimData<hlim::MemoryStorageSparse>(cfg.memoryRegistrationKey, width.bits(), cfg.initialization);
+			co_return;
+		});
+	}
+
 	Axi4& axiMemorySimulation(AxiMemorySimulationConfig cfg)
 	{
 		Area ent{ "scl_axiMemorySimulation", true };
@@ -33,18 +47,10 @@ namespace gtry::scl
 		const uint64_t uniqueId = (*axi->ar)->addr.node()->getId();
 		pinIn(*axi, "simu_aximem_" + std::to_string(uniqueId), { .simulationOnlyPin = true });
 
-		std::string key = GroupScope::get()->instancePath() + '/' + cfg.memoryRegistrationKey;
-
 		Clock clock = ClockScope::getClk();
-		DesignScope::get()->getCircuit().addSimulationProcess([axi, cfg, clock, key]() -> SimProcess {
+		DesignScope::get()->getCircuit().addSimulationProcess([axi, cfg, clock]() -> SimProcess {
 
-			BitWidth width;
-			if (cfg.memorySize)
-				width = *cfg.memorySize;
-			else
-				width = cfg.wordStride * cfg.axiCfg.wordAddrW().count();
-			
-			auto &storage = emplaceSimData<hlim::MemoryStorageSparse>(key, width.bits(), cfg.initialization);
+			auto &storage = getSimData<hlim::MemoryStorageSparse>(cfg.memoryRegistrationKey);
 
 			auto axiCfg = cfg.axiCfg;
 			auto wordStride = cfg.wordStride;
@@ -189,7 +195,7 @@ namespace gtry::scl
 		return *axi;
 	}
 
-	Axi4 axiMemorySimulationOverride(AxiMemorySimulationConfig cfg, Axi4&& axi)
+	Axi4 axiMemorySimulationOverride( AxiMemorySimulationConfig cfg, Axi4&& axi)
 	{
 		cfg.axiCfg = axi.config();
 		Axi4& simAxi = axiMemorySimulation(cfg);

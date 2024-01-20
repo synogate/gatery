@@ -18,6 +18,7 @@
 #pragma once
 
 #include <gatery/frontend/ExternalModule.h>
+#include <gatery/scl/axi/AxiMemorySimulation.h>
 
 #include "../../axi/axi.h"
 
@@ -37,10 +38,9 @@ namespace gtry::scl::arch::xilinx
 		Bit catastrophicTemperature(size_t stackIndex);
 		UInt temperature(size_t stackIndex);
 		Bit abpComplete(size_t stackIndex);
-
 	protected:
 		std::optional<Clock> m_controllerClock;
 		Bit m_controllerResetLow;
-		
+		AxiMemorySimulationConfig m_memoryConfig;
 	};
 }

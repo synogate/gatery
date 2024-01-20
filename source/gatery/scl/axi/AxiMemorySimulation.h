@@ -34,6 +34,7 @@ namespace gtry::scl
 		std::string memoryRegistrationKey = "axiMemory";
 	};
 
+	void axiMemorySimulationCreateMemory(AxiMemorySimulationConfig cfg);
 	Axi4& axiMemorySimulation(AxiMemorySimulationConfig cfg);
 	Axi4 axiMemorySimulationOverride(AxiMemorySimulationConfig cfg, Axi4&& axi);
 }

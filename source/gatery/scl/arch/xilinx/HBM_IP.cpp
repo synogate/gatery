@@ -27,6 +27,8 @@ namespace gtry::scl::arch::xilinx
 	HBM_IP::HBM_IP(std::string_view ipName) :
 		ExternalModule(ipName, "xil_defaultlib")
 	{
+		m_memoryConfig.memoryRegistrationKey = GroupScope::get()->instancePath() + '/' + std::string(ipName) + "/hbm_memory";
+		axiMemorySimulationCreateMemory(m_memoryConfig);
 	}
 
 	void HBM_IP::clockAPB(const Clock& clk, size_t stackIndex)
@@ -127,9 +129,7 @@ namespace gtry::scl::arch::xilinx
 		axi.b->resp = out(prefix + "BRESP", 2_b);
 		axi.b->id = out(prefix + "BID", 6_b);
 
-		return axiMemorySimulationOverride({
-			.memorySize = BitWidth{ addrW.count() * 8 },
-		}, move(axi));
+		return axiMemorySimulationOverride(m_memoryConfig, move(axi));
 	}
 
 	Bit HBM_IP::catastrophicTemperature(size_t stackIndex)
