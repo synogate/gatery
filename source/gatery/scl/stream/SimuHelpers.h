@@ -35,6 +35,7 @@ namespace gtry::scl::strm
 		SimPacket() = default;
 		SimPacket(gtry::sim::DefaultBitVectorState payload) : payload(std::move(payload)) {}
 		SimPacket(std::span<const uint8_t> data) { *this = data; }
+		SimPacket(std::span<const std::byte> data) { *this = data; }
 		SimPacket(uint64_t payload, BitWidth payloadW) {
 			HCL_DESIGNCHECK_HINT(BitWidth::last(payload) <= payloadW, "The selected payload width would result in data truncation. Design not allowed" );
 			size_t numberOfBytesInPayload = payloadW.numBeats(8_b);
@@ -45,6 +46,7 @@ namespace gtry::scl::strm
 			this->payload.resize(payloadW.bits());
 		}
 
+		SimPacket& operator =(std::span<const std::byte> data) { payload = gtry::sim::createDefaultBitVectorState(data.size() * 8, data.data()); return *this; }
 		SimPacket& operator =(std::span<const uint8_t> data) { payload = gtry::sim::createDefaultBitVectorState(data.size() * 8, data.data()); return *this; }
 		SimPacket& operator<<(const gtry::sim::DefaultBitVectorState& additionalData) { payload.append(additionalData); return *this; }
 
@@ -57,11 +59,16 @@ namespace gtry::scl::strm
 		char error() const { return m_error; }
 		std::uint64_t invalidBeats() const { return m_invalidBeats; }
 
+		std::span<std::byte> asBytes() {
+			HCL_DESIGNCHECK_HINT(payload.size() % 8 == 0, "Packet payload size is not a multiple of 8 bits!");
+			return std::span<std::byte>((std::byte*)payload.data(gtry::sim::DefaultConfig::VALUE), payload.size() / 8);
+		}
 		std::span<uint8_t> data() {
 			HCL_DESIGNCHECK_HINT(payload.size() % 8 == 0, "Packet payload size is not a multiple of 8 bits!");
 			return std::span<uint8_t>((uint8_t*)payload.data(gtry::sim::DefaultConfig::VALUE), payload.size() / 8);
 		}
 		operator std::span<uint8_t>() { return data(); }
+		operator std::span<std::byte>() { return asBytes(); }
 
 		bool operator == (const SimPacket& other) const { return payload == other.payload && m_txid == other.m_txid && m_error == other.m_error; }
 	protected:
