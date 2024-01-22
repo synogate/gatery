@@ -126,7 +126,7 @@ BOOST_FIXTURE_TEST_CASE(dma_pcieHost_to_axi_slave_test, BoostUnitTestSimulationF
 		BOOST_TEST(simu(report.failCount) == 0);
 		BOOST_TEST(simu(report.bitsPerBurst) == (1_KiB).bits()); 
 
-		auto &axiStorage = gtry::getSimData<hlim::MemoryStorageSparse>("/scl_axiMemorySimulation0/axiMemory");
+		auto &axiStorage = gtry::getSimData<hlim::MemoryStorageSparse>("axiMemory");
 
 		BOOST_TEST(axiStorage.read(destStartAddress * 8, 1024 * 8) == hostModel.memory().read(hostByteAddressStart * 8, 1024 * 8));
 		stopTest();
@@ -214,7 +214,7 @@ struct dma_pcieHost_to_axi_slave_with_driver : public BoostUnitTestSimulationFix
 				co_await OnClk(clk); // await reset
 
 				hostMemory = &host.simuHostMemory();
-				axiMemory = &gtry::getSimData<hlim::MemoryStorageSparse>("/scl_axiMemorySimulation0/axiMemory");
+				axiMemory = &gtry::getSimData<hlim::MemoryStorageSparse>("axiMemory");
 			});
 
 			driverCode(*driverInterface, *hostMemory, *axiMemory);
