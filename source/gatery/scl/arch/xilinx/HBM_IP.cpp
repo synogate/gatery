@@ -129,7 +129,7 @@ namespace gtry::scl::arch::xilinx
 		axi.b->resp = out(prefix + "BRESP", 2_b);
 		axi.b->id = out(prefix + "BID", 6_b);
 
-		return axiMemorySimulationOverride(m_memoryConfig, move(axi));
+		return axiMemorySimulationPortOverride(m_memoryConfig, move(axi));
 	}
 
 	Bit HBM_IP::catastrophicTemperature(size_t stackIndex)

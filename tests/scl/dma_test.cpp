@@ -87,7 +87,8 @@ BOOST_FIXTURE_TEST_CASE(dma_pcieHost_to_axi_slave_test, BoostUnitTestSimulationF
 		},
 		.memorySize = { BitWidth(8ull << 48) }, //48 byte-addressable bits of sparse memory space
 	};
-	scl::Axi4& slaveAxi = axiMemorySimulation(cfg);
+	axiMemorySimulationCreateMemory(cfg);
+	scl::Axi4& slaveAxi = axiMemorySimulationPort(cfg);
 
 	scl::AxiTransferReport report = scl::axiTransferAuditor(slaveAxi, BitWidth(depositCmd->bytesPerBurst*8));
 	pinOut(report, "axi_report");
@@ -185,7 +186,8 @@ struct dma_pcieHost_to_axi_slave_with_driver : public BoostUnitTestSimulationFix
 			},
 			.memorySize = { BitWidth(8ull << 48) }, //48 byte-addressable bits of sparse memory space
 		};
-		scl::Axi4& slaveAxi = axiMemorySimulation(cfg);
+		axiMemorySimulationCreateMemory(cfg);
+		scl::Axi4& slaveAxi = axiMemorySimulationPort(cfg);
 
 		dmaControl.axiReport = scl::axiTransferAuditor(slaveAxi, BitWidth(dmaControl.depositCmd->bytesPerBurst*8));
 

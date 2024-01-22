@@ -35,6 +35,6 @@ namespace gtry::scl
 	};
 
 	void axiMemorySimulationCreateMemory(AxiMemorySimulationConfig cfg);
-	Axi4& axiMemorySimulation(AxiMemorySimulationConfig cfg);
-	Axi4 axiMemorySimulationOverride(AxiMemorySimulationConfig cfg, Axi4&& axi);
+	Axi4& axiMemorySimulationPort(AxiMemorySimulationConfig cfg);
+	Axi4 axiMemorySimulationPortOverride(AxiMemorySimulationConfig cfg, Axi4&& axi);
 }

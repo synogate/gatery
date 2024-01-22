@@ -70,9 +70,12 @@ BOOST_FIXTURE_TEST_CASE(axi_memory_simulation_test, BoostUnitTestSimulationFixtu
 	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
-	scl::Axi4& axi = scl::axiMemorySimulation(scl::AxiMemorySimulationConfig{
+	scl::AxiMemorySimulationConfig memCfg{
 		.axiCfg = scl::AxiConfig{.addrW = 16_b, .dataW = 16_b, .wUserW = 2_b, .rUserW = 2_b }
-	});
+	};
+	axiMemorySimulationCreateMemory(memCfg);
+
+	scl::Axi4& axi = scl::axiMemorySimulationPort(memCfg);
 	pinOut(axi, "axi");
 
 	addSimulationProcess([&]()->SimProcess {

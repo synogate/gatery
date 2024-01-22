@@ -36,7 +36,7 @@ namespace gtry::scl
 		});
 	}
 
-	Axi4& axiMemorySimulation(AxiMemorySimulationConfig cfg)
+	Axi4& axiMemorySimulationPort(AxiMemorySimulationConfig cfg)
 	{
 		Area ent{ "scl_axiMemorySimulation", true };
 		std::shared_ptr axi = std::make_shared<Axi4>(Axi4::fromConfig(cfg.axiCfg));
@@ -206,10 +206,10 @@ namespace gtry::scl
 		return *axi;
 	}
 
-	Axi4 axiMemorySimulationOverride( AxiMemorySimulationConfig cfg, Axi4&& axi)
+	Axi4 axiMemorySimulationPortOverride( AxiMemorySimulationConfig cfg, Axi4&& axi)
 	{
 		cfg.axiCfg = axi.config();
-		Axi4& simAxi = axiMemorySimulation(cfg);
+		Axi4& simAxi = axiMemorySimulationPort(cfg);
 
 		Axi4 out = constructFrom(axi);
 		out <<= simAxi;
