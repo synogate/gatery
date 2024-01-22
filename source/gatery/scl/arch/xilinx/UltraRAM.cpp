@@ -95,7 +95,7 @@ std::array<TileLinkUL, 2> arch::xilinx::ultraRam(size_t numWords, UltraRamSettin
 	for (size_t i = 0; i < outSim.size(); ++i)
 	{
 		tileLinkInit(outSim[i], BitWidth::count(numWords) + 3_b, 64_b, 2_b, i ? cfg.bSourceW : cfg.aSourceW);
-		ready(*outSim[i].d) = '1';
+//		ready(*outSim[i].d) = '1'; // read(.a) is wired to read(.d) so setting this to '1' is breaking things
 		connect(simMem, outSim[i]);
 
 		for (size_t j = 0; j < *cfg.latency; ++j)
