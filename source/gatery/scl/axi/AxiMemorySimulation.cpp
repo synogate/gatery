@@ -56,7 +56,11 @@ namespace gtry::scl
 			auto wordStride = cfg.wordStride;
 			auto readLatency = cfg.readLatency;
 
-			fork([axi, clock, &storage, wordStride, axiCfg, readLatency]() -> SimProcess {
+			std::mt19937 rng(13579);
+			std::bernoulli_distribution memoryDelayed(0.01);
+			std::uniform_int_distribution<size_t> randomDelayAmount(1, 16);
+
+			fork([axi, clock, &storage, wordStride, axiCfg, readLatency, &rng, &randomDelayAmount, &memoryDelayed]() -> SimProcess {
 				simu(valid(axi->r)) = '0';
 				simu(ready(*axi->ar)) = '1';
 
@@ -66,7 +70,7 @@ namespace gtry::scl
 				{
 					co_await performTransferWait(*axi->ar, clock);
 
-					fork([axi, clock, slot_next, &slot_current, &storage, wordStride, axiCfg, readLatency]() -> SimProcess {
+					fork([axi, clock, slot_next, &slot_current, &storage, wordStride, axiCfg, readLatency, &rng, &randomDelayAmount, &memoryDelayed]() -> SimProcess {
 						AxiAddress& ar = **axi->ar;
 						uint64_t wordOffset = simu(ar.addr).value() / axiCfg.alignedDataW().bytes();
 						//uint64_t size = simu(ar.size).value();
@@ -79,6 +83,13 @@ namespace gtry::scl
 
 						while(slot_next != slot_current)
 							co_await OnClk(clock);
+
+						if (memoryDelayed(rng)) {
+							size_t amount = randomDelayAmount(rng);
+
+							for (size_t i = 0; i < amount; ++i)
+								co_await OnClk(clock);
+						}
 
 						for (size_t i = 0; i < len; ++i)
 						{
