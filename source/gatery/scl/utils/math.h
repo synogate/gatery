@@ -18,7 +18,36 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #pragma once
 #include <gatery/frontend.h>
 
-namespace gtry::scl::math {
-	UInt min(const UInt& a, const UInt& b);
-	UInt max(const UInt& a, const UInt& b);
+namespace gtry::scl {
+	template <Signal T> T min(const T& a, const T& b);
+	template <Signal T> T max(const T& a, const T& b);
+	UInt biggestPowerOfTwo(const UInt& input);
+
+	/**
+	 * @brief implements long division, returns +-max(u)int when you divide by 0; Also returns the same value when dividing 0 by 0;
+	 * @param numerator the number that will be divided
+	 * @param denominator the number by which you divide
+	 * @return quotient = floor(numerator/denominator)
+	*/
+	UInt longDivision(const UInt& numerator, const UInt& denominator, const size_t pipelineStages = 0);
+	SInt longDivision(const SInt& numerator, const UInt& denominator, const size_t pipelineStages = 0);
+}
+
+namespace gtry::scl {
+	template <Signal T>
+	T min(const T& a, const T& b){
+		BitWidth retW = std::min(a.width(), b.width());
+		T ret = retW;
+		ret = a;
+		IF(a > b) ret = b;
+		return ret;
+	}
+	template <Signal T>
+	T max(const T& a, const T& b) {
+		BitWidth retW = std::max(a.width(), b.width());
+		T ret = retW;
+		ret = a;
+		IF(a < b) ret = b;
+		return ret;
+	}
 }

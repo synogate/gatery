@@ -20,24 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 namespace gtry::scl{
 
-	template <Signal T>
-	T min(const T& a, const T& b){
-		BitWidth retW = std::min(a.width(), b.width());
-		T ret = retW;
-		ret = a;
-		IF(a > b) ret = b;
-		return ret;
-	}
-	template <Signal T>
-	T max(const T& a, const T& b) {
-		BitWidth retW = std::max(a.width(), b.width());
-		T ret = retW;
-		ret = a;
-		IF(a < b) ret = b;
-		return ret;
-	}
-
-	UInt biggestPowerOfTwo(UInt input) {
+	UInt biggestPowerOfTwo(const UInt& input) {
 		UInt result = ConstUInt(0, input.width());
 		for (size_t i = 0; i < input.width().bits(); i++){
 			UInt candidate = 1 << i;
@@ -46,4 +29,58 @@ namespace gtry::scl{
 		}
 		return result;
 	}
+
+	UInt longDivision(const UInt& numerator, const UInt& denominator, const size_t pipelineStages) {
+		const BitWidth numW = numerator.width();
+		const BitWidth denomW = denominator.width();
+
+		//rounded division of (numerator.width().bits() / (pipelineStages + 1)
+		const size_t stepsPerStage = (numW.bits() + (pipelineStages + 1) / 2) / (pipelineStages + 1);
+		size_t nextPipelineStage = numW.bits() - stepsPerStage;
+
+		UInt quotient = ConstUInt(numW);
+		UInt remainder = cat(ConstUInt(0, denomW), numerator);
+		for (size_t i = numW.bits(); i > 0; i--) {
+			UInt& workingSlice = remainder(i - 1, denomW + 1_b);
+			quotient[i-1] = workingSlice >= zext(denominator);
+			IF(quotient[i-1])
+				workingSlice -= zext(denominator);
+			if (i == nextPipelineStage) {
+				workingSlice = pipestage(workingSlice);
+				nextPipelineStage -= stepsPerStage;
+			}
+		}
+		return quotient;
+	}
+
+	SInt longDivision(const SInt& numerator, const UInt& denominator, const size_t pipelineStages)
+	{
+		//To Sign Magnitude
+		UInt numMagnitude = (UInt)zext(numerator, BitExtend{ 1 });
+		IF(numerator.sign())
+			numMagnitude = zext(UInt(~numerator), BitExtend{ 1 }) + 1;
+		HCL_NAMED(numMagnitude);
+
+		//Compute full result of division
+		UInt resultMagnitude = longDivision(numMagnitude, denominator, pipelineStages);
+		HCL_NAMED(resultMagnitude);
+
+		//Back to signed int. There's an exception when going from max uint in magnitude to signed max uint, the negative must be done by hand.
+		SInt resultSigned = (SInt)zext(resultMagnitude.lower(-2_b), BitExtend{1});
+		IF(numerator.sign()) {
+			resultSigned = (SInt)(~resultMagnitude.lower(-1_b) + 1);
+			IF(resultMagnitude == resultMagnitude.width().mask()) {
+				resultSigned = 0;
+				resultSigned.msb() = '1';
+			}
+		}
+
+		HCL_NAMED(resultSigned);
+		return resultSigned;
+	}
+
+	
+
+
+
 }
