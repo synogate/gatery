@@ -176,8 +176,6 @@ namespace gtry::scl::arch::xilinx
 
 		dsp[0].a() = (BVec)sext(a1, 27_b);
 		dsp[0].b() = (BVec)sext(b1, 18_b);
-		dsp[0].inMode()[0] = '1'; // select A1 register
-		dsp[0].inMode()[4] = '1'; // select B1 register
 		dsp[0].opMode(DSP48E2::MuxW::zero, DSP48E2::MuxX::m, DSP48E2::MuxY::m, DSP48E2::MuxZ::zero);
 
 		dsp[1].generic("AREG") = 2;
@@ -255,11 +253,6 @@ namespace gtry::scl::arch::xilinx
 					Bin = reg(Bin);
 					dsp.generic("AREG") = 2;
 					dsp.generic("BREG") = 2;
-				}
-				else
-				{
-					dsp.inMode()[0] = '1'; // select A1 register
-					dsp.inMode()[4] = '1'; // select B1 register
 				}
 
 				if(iB != 0)
