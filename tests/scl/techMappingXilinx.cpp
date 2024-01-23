@@ -734,6 +734,12 @@ BOOST_FIXTURE_TEST_CASE(DSP48E2_mul_asymetric_full_test, DSP48E2_mul_fixture)
 	test(26_b, 38_b, 64_b, 0);
 }
 
+BOOST_FIXTURE_TEST_CASE(DSP48E2_mul_symetric_partial_test, DSP48E2_mul_fixture)
+{
+	using namespace gtry;
+	test(48_b + 13_b, 48_b + 13_b, 48_b, 13);
+}
+
 BOOST_FIXTURE_TEST_CASE(DSP48E2_mul_asymetric_partial_test, DSP48E2_mul_fixture)
 {
 	using namespace gtry;

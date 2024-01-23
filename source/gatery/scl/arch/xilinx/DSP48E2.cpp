@@ -226,7 +226,11 @@ namespace gtry::scl::arch::xilinx
 				size_t aOfs = iA * mulAWidth;
 				size_t bOfs = iB * mulBWidth;
 				if (aOfs + bOfs >= resultOffset + resultW.bits())
-					break;
+				{
+					// no DSP needed but the result needs to be delayed as if we had used a DSP
+					Bout = reg(Bout);
+					continue;
+				}
 
 				BitWidth aW = std::min(A.width() - aOfs, BitWidth(mulAWidth));
 				BitWidth bW = std::min(B.width() - bOfs, BitWidth(mulBWidth));
