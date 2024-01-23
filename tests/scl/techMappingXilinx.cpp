@@ -452,7 +452,7 @@ BOOST_FIXTURE_TEST_CASE(ultraRamHelper, TestWithDefaultDevice<gtry::GHDLTestFixt
 	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
-	std::array ram = gtry::scl::arch::xilinx::ultraRam(61440, { .name = "testRam", .aSourceW = 1_b, .bSourceW = 1_b });
+	std::array ram = gtry::scl::arch::xilinx::ultraRam(4096*8, { .name = "testRam", .aSourceW = 1_b, .bSourceW = 1_b });
 
 	std::array<scl::TileLinkMasterModel, 2> m;
 	for (size_t i = 0; i < m.size(); ++i)
@@ -485,6 +485,16 @@ BOOST_FIXTURE_TEST_CASE(ultraRamHelper, TestWithDefaultDevice<gtry::GHDLTestFixt
 			BOOST_TEST(val == 0x1234);
 		}
 
+		co_await OnClk(clock);
+		co_await OnClk(clock);
+		co_await OnClk(clock);
+		co_await OnClk(clock);
+		co_await OnClk(clock);
+		co_await OnClk(clock);
+		co_await OnClk(clock);
+		co_await OnClk(clock);
+		co_await OnClk(clock);
+		co_await OnClk(clock);
 		co_await OnClk(clock);
 		stopTest();
 	});
@@ -616,6 +626,82 @@ BOOST_FIXTURE_TEST_CASE(mulAccumulate2, TestWithDefaultDevice<gtry::GHDLTestFixt
 	});
 
 	runTest({ 1,1'000'000 });
+}
+
+BOOST_FIXTURE_TEST_CASE(mulAccumulate_fuzz, TestWithDefaultDevice<gtry::GHDLTestFixture>)
+{
+	using namespace gtry;
+	Clock clock(ClockConfig{ .absoluteFrequency = 100'000'000, .resetName = "reset", .triggerEvent = ClockConfig::TriggerEvent::RISING, .resetActive = ClockConfig::ResetActive::HIGH });
+	ClockScope clkScp(clock);
+
+	SInt a1 = (SInt)pinIn(27_b).setName("a1");
+	SInt b1 = (SInt)pinIn(18_b).setName("b1");
+	SInt a2 = (SInt)pinIn(27_b).setName("a2");
+	SInt b2 = (SInt)pinIn(18_b).setName("b2");
+	Bit restart = pinIn().setName("restart");
+	Bit valid = pinIn().setName("valid");
+
+	SInt p = scl::arch::xilinx::mulAccumulate(a1, b1, a2, b2, restart, valid);
+	pinOut(p, "p");
+
+	struct FuzzData {
+		std::int64_t a1, a2, b1, b2;
+		bool restart;
+	};
+
+	std::mt19937 rng;
+	std::uniform_int_distribution<int> rngBig(-(1 << 26), (1 << 26)-1);
+	std::uniform_int_distribution<int> rngSmall(-(1 << 17), (1 << 17)-1);
+	std::bernoulli_distribution res(0.7f);
+
+	std::vector<FuzzData> fuzzData;
+	for (size_t i = 0; i < 100; i++)
+		fuzzData.push_back(FuzzData{
+			.a1 = rngBig(rng),
+			.a2 = rngBig(rng),
+			.b1 = rngSmall(rng),
+			.b2 = rngSmall(rng),
+			.restart = res(rng) || i == 0
+		});
+
+	addSimulationProcess([&]()->SimProcess {
+		simu(a1) = 0;
+		simu(b1) = 0;
+		simu(a2) = 0;
+		simu(b2) = 0;
+		simu(restart) = '1';
+		simu(valid) = '1';
+		co_await OnClk(clock);
+
+		for (const auto &data : fuzzData) {
+			simu(a1) = data.a1;
+			simu(b1) = data.b1;
+			simu(a2) = data.a2;
+			simu(b2) = data.b2;
+			simu(restart) = data.restart;
+			simu(valid) = '1';
+			co_await OnClk(clock);
+		}
+		simu(valid) = '0';
+	});
+
+	addSimulationProcess([&]()->SimProcess {
+		for(size_t i = 0; i < 6; ++i)
+			co_await OnClk(clock);
+
+		std::int64_t expected = 0;
+		for (const auto &data : fuzzData) {
+			if (data.restart)
+				expected = 0;
+			expected += data.a1 * data.b1 + data.a2 * data.b2;
+			BOOST_TEST(simu(p) == expected);
+			co_await OnClk(clock);
+		}
+		
+		stopTest();
+	});
+
+	runTest({ 500,100'000'000 });
 }
 
 BOOST_FIXTURE_TEST_CASE(DSP48E2_double_clb_test, TestWithDefaultDevice<gtry::GHDLTestFixture>)
