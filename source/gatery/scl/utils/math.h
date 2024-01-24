@@ -29,8 +29,8 @@ namespace gtry::scl {
 	 * @param denominator the number by which you divide
 	 * @return quotient = floor(numerator/denominator)
 	*/
-	UInt longDivision(const UInt& numerator, const UInt& denominator, const size_t pipelineStages = 0);
-	SInt longDivision(const SInt& numerator, const UInt& denominator, const size_t pipelineStages = 0);
+	UInt longDivision(const UInt& numerator, const UInt& denominator, const bool pipeline = true);
+	SInt longDivision(const SInt& numerator, const UInt& denominator, const bool pipeline = true);
 }
 
 namespace gtry::scl {

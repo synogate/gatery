@@ -37,7 +37,7 @@ BOOST_FIXTURE_TEST_CASE(long_division_uint_div_uint_test, gtry::BoostUnitTestSim
 	UInt denominator = 4_b;
 	pinIn(denominator, "denominator");
 
-	UInt quotient = longDivision(numerator, denominator);
+	UInt quotient = longDivision(numerator, denominator, false);
 	pinOut(quotient, "quotient");
 
 	addSimulationProcess([&, this]()->SimProcess {
@@ -69,8 +69,7 @@ BOOST_FIXTURE_TEST_CASE(long_division_uint_div_uint_test, gtry::BoostUnitTestSim
 }
 
 BOOST_FIXTURE_TEST_CASE(long_division_export, gtry::BoostUnitTestSimulationFixture) {
-
-	Clock clk = Clock({ .absoluteFrequency = 50'000'000 });
+	Clock clk = Clock({ .absoluteFrequency = 400'000'000 });
 	ClockScope clkScope(clk);
 
 	UInt numerator = 48_b;
@@ -78,12 +77,14 @@ BOOST_FIXTURE_TEST_CASE(long_division_export, gtry::BoostUnitTestSimulationFixtu
 	UInt denominator = 48_b;
 	pinIn(denominator, "denominator");
 
-	UInt quotient = longDivision(reg(numerator), reg(denominator));
+	pipeinputgroup(numerator, denominator);
+	UInt quotient = longDivision(reg(numerator), reg(denominator), true);
+
 	pinOut(reg(quotient), "quotient");
 
-	if(false) outputVHDL("long_division_export", false);
-	
 	design.postprocess();
+
+	if(true) outputVHDL("long_division_export", true);
 }
 
 BOOST_FIXTURE_TEST_CASE(long_division_sint_div_uint_test, gtry::BoostUnitTestSimulationFixture) {
@@ -96,7 +97,7 @@ BOOST_FIXTURE_TEST_CASE(long_division_sint_div_uint_test, gtry::BoostUnitTestSim
 	UInt denominator = 8_b; //to make use of cpp's 8bit support
 	pinIn(denominator, "denominator");
 
-	SInt quotient = longDivision(numerator, denominator);
+	SInt quotient = longDivision(numerator, denominator, false);
 	pinOut(quotient, "quotient");
 
 	addSimulationProcess([&, this]()->SimProcess {

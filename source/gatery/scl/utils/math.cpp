@@ -30,30 +30,23 @@ namespace gtry::scl{
 		return result;
 	}
 
-	UInt longDivision(const UInt& numerator, const UInt& denominator, const size_t pipelineStages) {
+	UInt longDivision(const UInt& numerator, const UInt& denominator, const bool pipeline) {
 		const BitWidth numW = numerator.width();
 		const BitWidth denomW = denominator.width();
-
-		//rounded division of (numerator.width().bits() / (pipelineStages + 1)
-		const size_t stepsPerStage = (numW.bits() + (pipelineStages + 1) / 2) / (pipelineStages + 1);
-		size_t nextPipelineStage = numW.bits() - stepsPerStage;
 
 		UInt quotient = ConstUInt(numW);
 		UInt remainder = cat(ConstUInt(0, denomW), numerator);
 		for (size_t i = numW.bits(); i > 0; i--) {
 			UInt& workingSlice = remainder(i - 1, denomW + 1_b);
+			if (pipeline) workingSlice = pipestage(workingSlice);
 			quotient[i-1] = workingSlice >= zext(denominator);
 			IF(quotient[i-1])
 				workingSlice -= zext(denominator);
-			if (i == nextPipelineStage) {
-				workingSlice = pipestage(workingSlice);
-				nextPipelineStage -= stepsPerStage;
-			}
 		}
 		return quotient;
 	}
 
-	SInt longDivision(const SInt& numerator, const UInt& denominator, const size_t pipelineStages)
+	SInt longDivision(const SInt& numerator, const UInt& denominator, const bool pipeline)
 	{
 		//To Sign Magnitude
 		UInt numMagnitude = (UInt)zext(numerator, BitExtend{ 1 });
@@ -62,7 +55,7 @@ namespace gtry::scl{
 		HCL_NAMED(numMagnitude);
 
 		//Compute full result of division
-		UInt resultMagnitude = longDivision(numMagnitude, denominator, pipelineStages);
+		UInt resultMagnitude = longDivision(numMagnitude, denominator, pipeline);
 		HCL_NAMED(resultMagnitude);
 
 		//Back to signed int. There's an exception when going from max uint in magnitude to signed max uint, the negative must be done by hand.
