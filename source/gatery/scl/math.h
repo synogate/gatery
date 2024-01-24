@@ -29,6 +29,7 @@ namespace gtry::scl {
 	 * @param denominator the number by which you divide
 	 * @param stepsPerPipelineReg the amount of division steps per pipeline register.
 	 *		  One step consists of one comparison and one subtraction of full input width.
+	 *		  setting stepsPerPipelineReg = 0 yields NO pipeline registers.
 	 * @return quotient = floor(numerator/denominator)
 	*/
 	UInt longDivision(const UInt& numerator, const UInt& denominator, size_t stepsPerPipelineReg = 0);
