@@ -56,13 +56,14 @@ namespace gtry::scl
 			auto wordStride = cfg.wordStride;
 			auto readLatency = cfg.readLatency;
 
-			std::mt19937 rng(13579);
-			std::bernoulli_distribution memoryDelayed(0.01);
-			std::uniform_int_distribution<size_t> randomDelayAmount(1, 16);
 
-			fork([axi, clock, &storage, wordStride, axiCfg, readLatency, &rng, &randomDelayAmount, &memoryDelayed]() -> SimProcess {
+			fork([axi, clock, &storage, wordStride, axiCfg, readLatency]() -> SimProcess {
 				simu(valid(axi->r)) = '0';
 				simu(ready(*axi->ar)) = '1';
+
+				std::mt19937 rng(13579);
+				std::bernoulli_distribution memoryDelayed(0.01);
+				std::uniform_int_distribution<size_t> randomDelayAmount(1, 16);
 
 				size_t slot_next = 0;
 				size_t slot_current = 0;
