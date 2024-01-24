@@ -15,11 +15,28 @@ You should have received a copy of the GNU Lesser General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include <gatery/pch.h>
-#include "math.h"
+#pragma once
+#include <gatery/frontend.h>
 
-namespace gtry::scl{
+namespace gtry::scl {
+	template <Signal T> T min(const T& a, const T& b);
+	template <Signal T> T max(const T& a, const T& b);
+	UInt biggestPowerOfTwo(const UInt& input);
 
+	/**
+	 * @brief implements long division, division by 0 is undefined
+	 * @param numerator the number that will be divided
+	 * @param denominator the number by which you divide
+	 * @param stepsPerPipelineReg the amount of division steps per pipeline register.
+	 *		  One step consists of one comparison and one subtraction of full input width.
+	 *		  setting stepsPerPipelineReg = 0 yields NO pipeline registers.
+	 * @return quotient = floor(numerator/denominator)
+	*/
+	UInt longDivision(const UInt& numerator, const UInt& denominator, size_t stepsPerPipelineReg = 0);
+	SInt longDivision(const SInt& numerator, const UInt& denominator, size_t stepsPerPipelineReg = 0);
+}
+
+namespace gtry::scl {
 	template <Signal T>
 	T min(const T& a, const T& b){
 		BitWidth retW = std::min(a.width(), b.width());
@@ -35,15 +52,5 @@ namespace gtry::scl{
 		ret = a;
 		IF(a < b) ret = b;
 		return ret;
-	}
-
-	UInt biggestPowerOfTwo(UInt input) {
-		UInt result = ConstUInt(0, input.width());
-		for (size_t i = 0; i < input.width().bits(); i++){
-			UInt candidate = 1 << i;
-			IF(input.at(i) == '1')
-				result = zext(candidate);
-		}
-		return result;
 	}
 }

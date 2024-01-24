@@ -18,7 +18,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include <gatery/pch.h>
 #include "PciToTileLink.h"
-#include <gatery/scl/utils/math.h>
 #include <gatery/scl/utils/Thermometric.h>
 #include <gatery/scl/utils/BitCount.h>
 #include <gatery/scl/utils/OneHot.h>
