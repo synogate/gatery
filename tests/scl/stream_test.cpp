@@ -2203,3 +2203,80 @@ BOOST_FIXTURE_TEST_CASE(stream_demux_test, BoostUnitTestSimulationFixture)
 
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
+
+BOOST_FIXTURE_TEST_CASE(credit_aggregator_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	scl::RvStream<UInt> in0{ .data = 4_b };
+	pinIn(in0, "in0");
+
+	scl::RvStream<UInt> in1{ .data = 4_b };
+	pinIn(in1, "in1");
+
+	auto in0_credit = scl::strm::creditStream(move(in0)); HCL_NAMED(in0_credit);
+	auto in1_credit = scl::strm::creditStream(move(in1)); HCL_NAMED(in1_credit);
+
+	scl::strm::CreditAggregator agg;
+	scl::VStream<UInt> out0 = agg.aggregate(move(in0_credit));
+	scl::VStream<UInt> out1 = agg.aggregate(move(in1_credit));
+
+	scl::strm::Credit creditDispenser = agg.generate();
+	pinOut(creditDispenser, "out");
+
+
+	std::mt19937 mt(9384);
+
+	addSimulationProcess([&, this]() -> SimProcess {
+		simu(*creditDispenser.increment) = '0';
+		for (size_t i = 0; i < 100;)
+		{
+			co_await OnClk(clk);
+			simu(*creditDispenser.increment) = mt() & 1? '1' : '0';
+		}
+		simu(*creditDispenser.increment) = '0';
+	});
+
+
+	addSimulationProcess([&, this]() -> SimProcess {
+		for (size_t i = 0;; i++)
+			if (mt() & 1)
+				co_await scl::strm::sendBeat(in0, i, clk);
+			else
+				co_await OnClk(clk);
+		});
+
+	addSimulationProcess([&, this]() -> SimProcess {
+		for (size_t i = 0;; i++)
+			if (mt() & 2)
+				co_await scl::strm::sendBeat(in1, i, clk);
+			else
+				co_await OnClk(clk);
+		});
+
+
+
+
+	//addSimulationProcess([&, this]() -> SimProcess {
+	//	fork(scl::strm::readyDriverRNG(out, clk, 80));
+	//
+	//	for (size_t i = 0; i < 24; ++i)
+	//	{
+	//		co_await scl::strm::performTransferWait(out, clk);
+	//		BOOST_TEST(simu(*out) == i);
+	//	}
+	//	stopTest();
+	//	});
+
+	design.postprocess();
+	//if (false) {
+	//	m_vhdlExport.emplace("export/stream_credit_fifo.vhd");
+	//	m_vhdlExport->targetSynthesisTool(new gtry::XilinxVivado());
+	//	(*m_vhdlExport)(design.getCircuit());
+	//}
+	if (true) recordVCD("dut.vcd");
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+

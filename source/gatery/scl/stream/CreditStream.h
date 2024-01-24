@@ -50,7 +50,7 @@ namespace gtry::scl::strm
 		const Bit& incCredit = *out.template get<Credit>().increment;
 
 		IF(transfer(in) & !incCredit)
-			change |= '1';
+			change |= '1'; //effectively makes change = -1
 
 		IF(!transfer(in) & incCredit)
 			change = 1;
@@ -169,6 +169,75 @@ namespace gtry::scl::strm
 		return move(in) | creditStream(maxCredits, maxCredits) | delayAutoPipeline(maxDelay) | creditStreamToRvStream();
 	}
 
+	class CreditAggregator {
+	public:
+		//~CreditAggregator(){ HCL_DESIGNCHECK_HINT(m_hasGenerate, "generate function was never called"); }
+
+		struct CreditInfo {
+			const Bit valid;
+			size_t initialCredit;
+			size_t maxCredit;
+		};
+
+		template<StreamSignal T> requires (T::template has<Credit>())
+		auto aggregate(T&& in) {
+			HCL_DESIGNCHECK(!m_hasGenerate);
+			m_inputs.emplace_back(CreditInfo{valid(in), in.template get<Credit>().initialCredit, in.template get<Credit>().maxCredit});
+			return creditStreamToVStream(move(in), m_sendIncrementUpstream);
+		}
+
+		Bit generate() {
+			m_hasGenerate = true;
+
+
+			Credit ret{ 
+				{},
+				std::numeric_limits<size_t>::max(),
+				std::numeric_limits<size_t>::max(),
+			};
+
+			Bit canSendIncrementUpstream = '1';
+
+			size_t i = 0;
+			for (auto& input : m_inputs) {
+				ret.maxCredit = std::min(ret.maxCredit, input.maxCredit);
+				ret.initialCredit = std::min(ret.initialCredit, input.initialCredit);
+
+				UInt counter = BitWidth::count(input.maxCredit);
+				counter = reg(counter, input.initialCredit);
+				setName(counter, "counter" + std::to_string(i));
+
+				canSendIncrementUpstream &= (counter != 0);
+
+				Bit increment =  input.valid;
+				Bit decrement = *ret.increment;
+
+				UInt change = ConstUInt(0, counter.width());
+				IF(decrement & !increment)
+					change |= '1'; //effectively makes change = -1
+
+				IF(increment & !decrement)
+					change = 1;
+				setName(change, "change" + std::to_string(i++));
+				counter += change;
+			}
+			HCL_NAMED(canSendIncrementUpstream);
+			m_sendIncrementUpstream = canSendIncrementUpstream;
+
+			return ret;
+		}
+
+	private:
+		bool m_hasGenerate = false;
+		Bit m_sendIncrementUpstream;
+		Vector<CreditInfo> m_inputs;
+	};
+
+
+
+
+
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::Credit, increment, initialCredit, maxCredit);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::CreditAggregator::CreditInfo, valid, initialCredit, maxCredit);
