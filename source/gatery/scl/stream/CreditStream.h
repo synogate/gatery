@@ -180,37 +180,26 @@ namespace gtry::scl::strm
 		};
 
 		template<StreamSignal T> requires (T::template has<Credit>())
-		auto aggregate(T&& in) {
+		void aggregate(T& in) {
 			HCL_DESIGNCHECK(!m_hasGenerate);
 			m_inputs.emplace_back(CreditInfo{valid(in), in.template get<Credit>().initialCredit, in.template get<Credit>().maxCredit});
-			return creditStreamToVStream(move(in), m_sendIncrementUpstream);
 		}
 
 		Bit generate() {
 			m_hasGenerate = true;
 
-
-			Credit ret{ 
-				{},
-				std::numeric_limits<size_t>::max(),
-				std::numeric_limits<size_t>::max(),
-			};
-
-			Bit canSendIncrementUpstream = '1';
-
+			Bit allCountersNonZero = '1';
+			Bit emitCredit;
 			size_t i = 0;
 			for (auto& input : m_inputs) {
-				ret.maxCredit = std::min(ret.maxCredit, input.maxCredit);
-				ret.initialCredit = std::min(ret.initialCredit, input.initialCredit);
-
 				UInt counter = BitWidth::count(input.maxCredit);
 				counter = reg(counter, input.initialCredit);
 				setName(counter, "counter" + std::to_string(i));
 
-				canSendIncrementUpstream &= (counter != 0);
+				allCountersNonZero &= (counter != 0);
 
-				Bit increment =  input.valid;
-				Bit decrement = *ret.increment;
+				Bit increment = input.valid;
+				Bit decrement = emitCredit;
 
 				UInt change = ConstUInt(0, counter.width());
 				IF(decrement & !increment)
@@ -221,15 +210,13 @@ namespace gtry::scl::strm
 				setName(change, "change" + std::to_string(i++));
 				counter += change;
 			}
-			HCL_NAMED(canSendIncrementUpstream);
-			m_sendIncrementUpstream = canSendIncrementUpstream;
 
-			return ret;
+			emitCredit = allCountersNonZero;
+			return emitCredit;
 		}
 
 	private:
 		bool m_hasGenerate = false;
-		Bit m_sendIncrementUpstream;
 		Vector<CreditInfo> m_inputs;
 	};
 

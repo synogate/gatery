@@ -2219,23 +2219,19 @@ BOOST_FIXTURE_TEST_CASE(credit_aggregator_test, BoostUnitTestSimulationFixture)
 	auto in1_credit = scl::strm::creditStream(move(in1)); HCL_NAMED(in1_credit);
 
 	scl::strm::CreditAggregator agg;
-	scl::VStream<UInt> out0 = agg.aggregate(move(in0_credit));
-	scl::VStream<UInt> out1 = agg.aggregate(move(in1_credit));
+	agg.aggregate(in0_credit);
+	agg.aggregate(in1_credit);
 
-	scl::strm::Credit creditDispenser = agg.generate();
-	pinOut(creditDispenser, "out");
+	Bit creditEmitted = agg.generate();
+	pinOut(creditEmitted, "out");
 
+	pinOut(in0_credit, "in0_credit");
+	pinOut(in1_credit, "in1_credit");
 
 	std::mt19937 mt(9384);
 
 	addSimulationProcess([&, this]() -> SimProcess {
-		simu(*creditDispenser.increment) = '0';
-		for (size_t i = 0; i < 100;)
-		{
-			co_await OnClk(clk);
-			simu(*creditDispenser.increment) = mt() & 1? '1' : '0';
-		}
-		simu(*creditDispenser.increment) = '0';
+
 	});
 
 
