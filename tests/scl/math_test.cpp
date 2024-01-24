@@ -84,7 +84,7 @@ BOOST_FIXTURE_TEST_CASE(long_division_export, gtry::BoostUnitTestSimulationFixtu
 
 	design.postprocess();
 
-	if(true) outputVHDL("long_division_export", true);
+	if(false) outputVHDL("long_division_export", true);
 }
 
 BOOST_FIXTURE_TEST_CASE(long_division_sint_div_uint_test, gtry::BoostUnitTestSimulationFixture) {
