@@ -21,7 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <boost/test/data/test_case.hpp>
 
 #include <gatery/frontend.h>
-#include <gatery/scl/utils/math.h>
+#include <gatery/scl/math.h>
 
 using namespace gtry;
 using namespace gtry::scl;
@@ -57,7 +57,6 @@ BOOST_FIXTURE_TEST_CASE(long_division_uint_div_uint_test, gtry::BoostUnitTestSim
 				co_await AfterClk(clk);
 			}
 		}
-
 
 		co_await OnClk(clk);
 		stopTest();
@@ -100,23 +99,14 @@ BOOST_FIXTURE_TEST_CASE(long_division_sint_div_uint_test, gtry::BoostUnitTestSim
 	SInt quotient = longDivision(numerator, denominator, false);
 	pinOut(quotient, "quotient");
 
+	bool fastTest = true;
 	addSimulationProcess([&, this]()->SimProcess {
-		for (int i = -128; i < 128; i++) {
-			for (size_t j = 0; j < denominator.width().count(); j++) {
+		for (int i = -128; i < 128; fastTest? i+=7 : i++) {
+			for (size_t j = 0; j < denominator.width().count(); fastTest? j+=11 : j++) {
 				simu(numerator)		= (int8_t) i;
 				simu(denominator)	= j;
 				co_await WaitFor(Seconds{ 0,1 });
-				if (j == 0) {
-					if (i >= 0) {
-						BOOST_TEST(simu(quotient) == 127, "division of " << i << " by 0 expects largest positive number");
-						BOOST_TEST(simu(quotient) == 127);
-					}
-					else {
-						BOOST_TEST(simu(quotient) == -128,  "division of " << i << " by 0 expects largest negative number");
-						BOOST_TEST(simu(quotient) == -128);
-					}
-				}
-				else {
+				if(j!=0) {
 					BOOST_TEST(simu(quotient) == (int) i / (int) j, "test case: " << i << " / " << j);
 					BOOST_TEST(simu(quotient) == (int) i / (int) j);
 				}

@@ -24,13 +24,15 @@ namespace gtry::scl {
 	UInt biggestPowerOfTwo(const UInt& input);
 
 	/**
-	 * @brief implements long division, returns +-max(u)int when you divide by 0; Also returns the same value when dividing 0 by 0;
+	 * @brief implements long division, division by 0 is undefined
 	 * @param numerator the number that will be divided
 	 * @param denominator the number by which you divide
+	 * @param stepsPerPipelineReg the amount of division steps per pipeline register.
+	 *		  One step consists of one comparison and one subtraction of full input width.
 	 * @return quotient = floor(numerator/denominator)
 	*/
-	UInt longDivision(const UInt& numerator, const UInt& denominator, const bool pipeline = true);
-	SInt longDivision(const SInt& numerator, const UInt& denominator, const bool pipeline = true);
+	UInt longDivision(const UInt& numerator, const UInt& denominator, size_t stepsPerPipelineReg = 0);
+	SInt longDivision(const SInt& numerator, const UInt& denominator, size_t stepsPerPipelineReg = 0);
 }
 
 namespace gtry::scl {
