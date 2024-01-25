@@ -2204,75 +2204,85 @@ BOOST_FIXTURE_TEST_CASE(stream_demux_test, BoostUnitTestSimulationFixture)
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
 
-BOOST_FIXTURE_TEST_CASE(credit_aggregator_test, BoostUnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(credit_broadcaster_test, BoostUnitTestSimulationFixture)
 {
 	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScope(clk);
 
 	scl::RvStream<UInt> in0{ .data = 4_b };
-	pinIn(in0, "in0");
+	auto in0WithCredits = scl::strm::creditStream(move(in0)); HCL_NAMED(in0WithCredits);
+	pinIn(in0WithCredits, "in0WithCredits");
+	Bit& in0_credits = *in0WithCredits.template get<scl::strm::Credit>().increment;
 
-	scl::RvStream<UInt> in1{ .data = 4_b };
-	pinIn(in1, "in1");
+	scl::StreamBroadcaster caster(move(in0WithCredits));
 
-	auto in0_credit = scl::strm::creditStream(move(in0)); HCL_NAMED(in0_credit);
-	auto in1_credit = scl::strm::creditStream(move(in1)); HCL_NAMED(in1_credit);
+	auto out0WithCredits = caster.bcastTo();
+	pinOut(out0WithCredits, "out0WithCredits");
+	auto out1WithCredits = caster.bcastTo();
+	pinOut(out1WithCredits, "out1WithCredits");
 
-	scl::strm::CreditAggregator agg;
-	agg.aggregate(in0_credit);
-	agg.aggregate(in1_credit);
-
-	Bit creditEmitted = agg.generate();
-	pinOut(creditEmitted, "out");
-
-	pinOut(in0_credit, "in0_credit");
-	pinOut(in1_credit, "in1_credit");
+	Bit& out0_credits = *out0WithCredits.template get<scl::strm::Credit>().increment;
+	Bit& out1_credits = *out1WithCredits.template get<scl::strm::Credit>().increment;
 
 	std::mt19937 mt(9384);
-
-	addSimulationProcess([&, this]() -> SimProcess {
-
+	//check that the downstream signals are being properly forward broadcasted to all sinks
+	addSimulationProcess([&, this]() -> SimProcess {	
+		while (true) {
+			bool sentSomething = mt() & 1;
+			size_t randomData = mt();
+			simu(valid(in0WithCredits)) = sentSomething? '1':'0';
+			if (sentSomething)
+				simu(*in0WithCredits) = randomData;
+			co_await WaitFor(Seconds{ 0,1 });
+			BOOST_TEST(simu(valid(out0WithCredits)) ==  (sentSomething? '1':'0'));
+			BOOST_TEST(simu(valid(out1WithCredits)) ==  (sentSomething? '1':'0'));
+			if(sentSomething)
+				BOOST_TEST(simu(*out1WithCredits) == (randomData & 0xF));
+			co_await AfterClk(clk);
+		}
 	});
 
-
+	//out0 will be granted 32 of credits immediately, then no more credits anymore
+	const size_t testCredits = 32;
 	addSimulationProcess([&, this]() -> SimProcess {
-		for (size_t i = 0;; i++)
-			if (mt() & 1)
-				co_await scl::strm::sendBeat(in0, i, clk);
-			else
-				co_await OnClk(clk);
-		});
+		simu(out0_credits) = '1';
+		for (size_t i = 0; i < testCredits; i++)
+			co_await OnClk(clk);
+		simu(out0_credits) = '0';
+	});
 
+	//out1 will grant 64 credits with randomly sized gaps
 	addSimulationProcess([&, this]() -> SimProcess {
-		for (size_t i = 0;; i++)
-			if (mt() & 2)
-				co_await scl::strm::sendBeat(in1, i, clk);
-			else
+		simu(out1_credits) = '0';
+		for (size_t i = 0; i < 64; i++) {
+			for (size_t j = 0; j < (mt() & 7); j++)
 				co_await OnClk(clk);
+			simu(out1_credits) = '1';
+			co_await OnClk(clk);
+			simu(out1_credits) = '0';
+		}
+	});
+	
+	addSimulationProcess([&, this]() -> SimProcess {
+		size_t receivedCredits = 0;
+		while (receivedCredits < testCredits) {
+			if (simu(in0_credits) == '1') {
+				receivedCredits++;
+			}
+			co_await OnClk(clk);
+		}
+		for (size_t i = 0; i < 64; i++)
+		{
+			BOOST_TEST(simu(in0_credits) == '0');
+			co_await OnClk(clk);
+		}
+		stopTest();
 		});
-
-
-
-
-	//addSimulationProcess([&, this]() -> SimProcess {
-	//	fork(scl::strm::readyDriverRNG(out, clk, 80));
-	//
-	//	for (size_t i = 0; i < 24; ++i)
-	//	{
-	//		co_await scl::strm::performTransferWait(out, clk);
-	//		BOOST_TEST(simu(*out) == i);
-	//	}
-	//	stopTest();
-	//	});
 
 	design.postprocess();
-	//if (false) {
-	//	m_vhdlExport.emplace("export/stream_credit_fifo.vhd");
-	//	m_vhdlExport->targetSynthesisTool(new gtry::XilinxVivado());
-	//	(*m_vhdlExport)(design.getCircuit());
-	//}
-	if (true) recordVCD("dut.vcd");
-	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+
+	if (false) recordVCD("dut.vcd");
+	BOOST_TEST(!runHitsTimeout({ 10, 1'000'000 }));
 }
 
 

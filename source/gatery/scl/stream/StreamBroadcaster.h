@@ -23,6 +23,7 @@
 #include "../utils/OneHot.h"
 #include "../views.h"
 #include "../Counter.h"
+#include "CreditStream.h" //temporary
 
 #include <memory>
 
@@ -35,7 +36,9 @@ namespace gtry::scl
 	 * misses a transmission.
 	 */
 	template<StreamSignal StreamT> requires ( 
-				StreamT::template has<Ready>() == StreamT::template has<Valid>())
+				StreamT::template has<Ready>() == StreamT::template has<Valid>() ||
+				StreamT::template has<scl::strm::Credit>() == StreamT::template has<Valid>()
+		)
 	class StreamBroadcaster
 	{
 		public:
@@ -45,7 +48,12 @@ namespace gtry::scl
 				m_helper = std::make_shared<Helper>();
 				m_helper->source = constructFrom(stream);
 				m_helper->source <<= stream;
-				ready(m_helper->source) = '1';
+				if constexpr (StreamT::template has<Ready>())
+					ready(m_helper->source) = '1';
+				if constexpr (StreamT::template has<scl::strm::Credit>()) {
+					auto& sourceCredit = m_helper->source.template get<scl::strm::Credit>();
+					*sourceCredit.increment = '1';
+				}
 			}
 
 			void broadcastTo(StreamT &sink) {
@@ -66,6 +74,27 @@ namespace gtry::scl
 					valid(sink) = sinkCtrl.valid;
 					sinkCtrl.valid = valid(m_helper->source) & othersReady;
 					sinkCtrl.ready = ready(sink);
+				}
+
+				if constexpr (StreamT::template has<scl::strm::Credit>()) {
+
+					UInt counter = BitWidth::count(m_helper->source.template get<scl::strm::Credit>().maxCredit);
+					counter = reg(counter, 0);
+
+					auto& sourceCredit = m_helper->source.template get<scl::strm::Credit>();
+					IF(counter == 0)
+						*sourceCredit.increment = '0';
+					
+					Bit increment = *sink.template get<scl::strm::Credit>().increment;
+					Bit decrement = final(*sourceCredit.increment);
+					
+					UInt change = ConstUInt(0, counter.width());
+					IF(decrement & !increment)
+						change |= '1'; //effectively makes change = -1
+					
+					IF(increment & !decrement)
+						change = 1;
+					counter += change;
 				}
 			}
 

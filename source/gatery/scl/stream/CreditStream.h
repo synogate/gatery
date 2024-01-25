@@ -168,63 +168,6 @@ namespace gtry::scl::strm
 		const size_t maxCredits = (maxDelay + 1) * 2;
 		return move(in) | creditStream(maxCredits, maxCredits) | delayAutoPipeline(maxDelay) | creditStreamToRvStream();
 	}
-
-	class CreditAggregator {
-	public:
-		//~CreditAggregator(){ HCL_DESIGNCHECK_HINT(m_hasGenerate, "generate function was never called"); }
-
-		struct CreditInfo {
-			const Bit valid;
-			size_t initialCredit;
-			size_t maxCredit;
-		};
-
-		template<StreamSignal T> requires (T::template has<Credit>())
-		void aggregate(T& in) {
-			HCL_DESIGNCHECK(!m_hasGenerate);
-			m_inputs.emplace_back(CreditInfo{valid(in), in.template get<Credit>().initialCredit, in.template get<Credit>().maxCredit});
-		}
-
-		Bit generate() {
-			m_hasGenerate = true;
-
-			Bit allCountersNonZero = '1';
-			Bit emitCredit;
-			size_t i = 0;
-			for (auto& input : m_inputs) {
-				UInt counter = BitWidth::count(input.maxCredit);
-				counter = reg(counter, input.initialCredit);
-				setName(counter, "counter" + std::to_string(i));
-
-				allCountersNonZero &= (counter != 0);
-
-				Bit increment = input.valid;
-				Bit decrement = emitCredit;
-
-				UInt change = ConstUInt(0, counter.width());
-				IF(decrement & !increment)
-					change |= '1'; //effectively makes change = -1
-
-				IF(increment & !decrement)
-					change = 1;
-				setName(change, "change" + std::to_string(i++));
-				counter += change;
-			}
-
-			emitCredit = allCountersNonZero;
-			return emitCredit;
-		}
-
-	private:
-		bool m_hasGenerate = false;
-		Vector<CreditInfo> m_inputs;
-	};
-
-
-
-
-
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::Credit, increment, initialCredit, maxCredit);
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::CreditAggregator::CreditInfo, valid, initialCredit, maxCredit);
