@@ -50,7 +50,7 @@ namespace gtry::scl::strm
 		const Bit& incCredit = *out.template get<Credit>().increment;
 
 		IF(transfer(in) & !incCredit)
-			change |= '1';
+			change |= '1'; //effectively makes change = -1
 
 		IF(!transfer(in) & incCredit)
 			change = 1;
@@ -168,7 +168,6 @@ namespace gtry::scl::strm
 		const size_t maxCredits = (maxDelay + 1) * 2;
 		return move(in) | creditStream(maxCredits, maxCredits) | delayAutoPipeline(maxDelay) | creditStreamToRvStream();
 	}
-
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::Credit, increment, initialCredit, maxCredit);

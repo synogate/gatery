@@ -2203,3 +2203,85 @@ BOOST_FIXTURE_TEST_CASE(stream_demux_test, BoostUnitTestSimulationFixture)
 
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
+
+BOOST_FIXTURE_TEST_CASE(credit_broadcaster_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	scl::RvStream<UInt> in0{ .data = 4_b };
+	auto in0WithCredits = scl::strm::creditStream(move(in0)); HCL_NAMED(in0WithCredits);
+	pinIn(in0WithCredits, "in0WithCredits");
+	Bit& in0_credits = *in0WithCredits.template get<scl::strm::Credit>().increment;
+
+	scl::StreamBroadcaster caster(move(in0WithCredits));
+
+	auto out0WithCredits = caster.bcastTo();
+	pinOut(out0WithCredits, "out0WithCredits");
+	auto out1WithCredits = caster.bcastTo();
+	pinOut(out1WithCredits, "out1WithCredits");
+
+	Bit& out0_credits = *out0WithCredits.template get<scl::strm::Credit>().increment;
+	Bit& out1_credits = *out1WithCredits.template get<scl::strm::Credit>().increment;
+
+	std::mt19937 mt(9384);
+	//check that the downstream signals are being properly forward broadcasted to all sinks
+	addSimulationProcess([&, this]() -> SimProcess {	
+		while (true) {
+			bool sentSomething = mt() & 1;
+			size_t randomData = mt();
+			simu(valid(in0WithCredits)) = sentSomething? '1':'0';
+			if (sentSomething)
+				simu(*in0WithCredits) = randomData;
+			co_await WaitFor(Seconds{ 0,1 });
+			BOOST_TEST(simu(valid(out0WithCredits)) ==  (sentSomething? '1':'0'));
+			BOOST_TEST(simu(valid(out1WithCredits)) ==  (sentSomething? '1':'0'));
+			if(sentSomething)
+				BOOST_TEST(simu(*out1WithCredits) == (randomData & 0xF));
+			co_await AfterClk(clk);
+		}
+	});
+
+	//out0 will be granted 32 of credits immediately, then no more credits anymore
+	const size_t testCredits = 32;
+	addSimulationProcess([&, this]() -> SimProcess {
+		simu(out0_credits) = '1';
+		for (size_t i = 0; i < testCredits; i++)
+			co_await OnClk(clk);
+		simu(out0_credits) = '0';
+	});
+
+	//out1 will grant 64 credits with randomly sized gaps
+	addSimulationProcess([&, this]() -> SimProcess {
+		simu(out1_credits) = '0';
+		for (size_t i = 0; i < 64; i++) {
+			for (size_t j = 0; j < (mt() & 7); j++)
+				co_await OnClk(clk);
+			simu(out1_credits) = '1';
+			co_await OnClk(clk);
+			simu(out1_credits) = '0';
+		}
+	});
+	
+	//check that we got exactly 32 credits
+	addSimulationProcess([&, this]() -> SimProcess {
+		size_t receivedCredits = 0;
+		while (receivedCredits < testCredits) {
+			if (simu(in0_credits) == '1') {
+				receivedCredits++;
+			}
+			co_await OnClk(clk);
+		}
+		for (size_t i = 0; i < 64; i++)
+		{
+			BOOST_TEST(simu(in0_credits) == '0');
+			co_await OnClk(clk);
+		}
+		stopTest();
+		});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 10, 1'000'000 }));
+}
+
+
