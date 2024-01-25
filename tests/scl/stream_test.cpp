@@ -2263,6 +2263,7 @@ BOOST_FIXTURE_TEST_CASE(credit_broadcaster_test, BoostUnitTestSimulationFixture)
 		}
 	});
 	
+	//check that we got exactly 32 credits
 	addSimulationProcess([&, this]() -> SimProcess {
 		size_t receivedCredits = 0;
 		while (receivedCredits < testCredits) {
@@ -2280,8 +2281,6 @@ BOOST_FIXTURE_TEST_CASE(credit_broadcaster_test, BoostUnitTestSimulationFixture)
 		});
 
 	design.postprocess();
-
-	if (false) recordVCD("dut.vcd");
 	BOOST_TEST(!runHitsTimeout({ 10, 1'000'000 }));
 }
 

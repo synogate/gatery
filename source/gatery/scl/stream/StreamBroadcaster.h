@@ -35,10 +35,7 @@ namespace gtry::scl
 	 * @details If the sinks have backpressure, the source is correctly backpressured so that no sink
 	 * misses a transmission.
 	 */
-	template<StreamSignal StreamT> requires ( 
-				StreamT::template has<Ready>() == StreamT::template has<Valid>() ||
-				StreamT::template has<scl::strm::Credit>() == StreamT::template has<Valid>()
-		)
+	template<StreamSignal StreamT>
 	class StreamBroadcaster
 	{
 		public:
@@ -78,7 +75,7 @@ namespace gtry::scl
 
 				if constexpr (StreamT::template has<scl::strm::Credit>()) {
 
-					UInt counter = BitWidth::count(m_helper->source.template get<scl::strm::Credit>().maxCredit);
+					UInt counter = BitWidth::last(m_helper->source.template get<scl::strm::Credit>().maxCredit);
 					counter = reg(counter, 0);
 
 					auto& sourceCredit = m_helper->source.template get<scl::strm::Credit>();
