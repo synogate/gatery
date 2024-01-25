@@ -19,7 +19,6 @@
 #include "TileLinkStreamFetch.h"
 #include <gatery/scl/utils/OneHot.h>
 #include <gatery/scl/utils/BitCount.h>
-#include <gatery/scl/utils/math.h>
 
 namespace gtry::scl
 {
