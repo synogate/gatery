@@ -44,7 +44,7 @@ namespace gtry::scl
 		//	m_out.emplace(constructFrom(blueprint));
 		//}
 
-		void attach(T& stream, uint32_t sortKey = 1u << 31)
+		StreamArbiter& attach(T& stream, uint32_t sortKey = 1u << 31)
 		{
 			HCL_DESIGNCHECK_HINT(!m_generated, "Already generated.")
 
@@ -58,15 +58,16 @@ namespace gtry::scl
 				m_out.emplace();
 				downstream(*m_out) = constructFrom(copy(downstream(stream)));
 			}
+			return *this;
 		}
 
-		void attach(T&& stream, uint32_t sortKey = 1u << 31) { attach(stream, sortKey); }
+		StreamArbiter& attach(T&& stream, uint32_t sortKey = 1u << 31) { attach(stream, sortKey); return *this; }
 
-		void name(std::string name) { m_instName = name; }
+		StreamArbiter& name(std::string name) { m_instName = name; return *this; }
 
 		T& out() { return *m_out; }
 
-		virtual void generate()
+		virtual StreamArbiter& generate()
 		{
 			auto area = Area{ "scl_StreamArbiter", true };
 			if(!m_instName.empty())
@@ -108,6 +109,8 @@ namespace gtry::scl
 					*m_out <<= s.stream;
 			}
 			HCL_NAMED(m_out);
+
+			return *this;
 		}
 
 		const UInt& selectedInput() const { 
