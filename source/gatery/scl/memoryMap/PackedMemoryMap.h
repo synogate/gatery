@@ -80,6 +80,8 @@ namespace gtry::scl
 			/// Access for bus master adaptors
 			const Scope &getTree() const { return m_scope; }
 			Scope &getTree() { return m_scope; }
+
+			RegisteredBaseSignal& findSignal(std::vector<std::string_view> path);
 		protected:
 			Area m_area;
 			bool m_alreadyPacked = false;
@@ -89,8 +91,10 @@ namespace gtry::scl
 			void packRegisters(BitWidth registerWidth, Scope &scope);
 
 			RegisteredBaseSignal *findSignal(Scope &scope, std::string_view name);
+			std::string listRegisteredSignals(Scope& scope, std::string prefix);
 	};
 
+	void pinSimu(PackedMemoryMap::Scope& mmap, std::string prefix = "mmap");
 /**@}*/
 
 }

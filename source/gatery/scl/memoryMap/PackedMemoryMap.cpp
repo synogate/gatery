@@ -209,5 +209,64 @@ PackedMemoryMap::RegisteredBaseSignal *PackedMemoryMap::findSignal(Scope &scope,
 	return nullptr;
 }
 
+	std::string PackedMemoryMap::listRegisteredSignals(Scope& scope, std::string prefix)
+	{
+		std::string ret;
 
+		for (auto& signal : scope.registeredSignals)
+			ret += prefix + '.' + signal.name + '\n';
+
+		for (auto& subscope : scope.subScopes)
+			ret += listRegisteredSignals(subscope, prefix + '.' + subscope.name);
+
+		return ret;
+	}
+
+	PackedMemoryMap::RegisteredBaseSignal& PackedMemoryMap::findSignal(std::vector<std::string_view> path)
+	{
+		Scope* scope = &m_scope;
+
+		HCL_ASSERT(path.size());
+		auto it = path.begin();
+		for (size_t i = 0; i < path.size() - 1; ++i, ++it)
+		{
+			for (Scope& subscope : scope->subScopes)
+			{
+				if (subscope.name == *it)
+				{
+					scope = &subscope;
+					goto next;
+				}
+			}
+			throw std::runtime_error{"Could not find subscope " + std::string{ *it } + ".\n " + listRegisteredSignals(*scope, "") };
+		next:;
+		}
+
+		for (RegisteredBaseSignal& signal : scope->registeredSignals)
+		{
+			if (signal.name == *it)
+				return signal;
+		}
+		throw std::runtime_error{"Could not find signal " + std::string{ *it } + ".\n " + listRegisteredSignals(*scope, "") };
+	}
+
+	void pinSimu(PackedMemoryMap::Scope& mmap, std::string prefix)
+	{
+		for (PackedMemoryMap::RegisteredBaseSignal& signal : mmap.registeredSignals)
+		{
+			if(signal.writeSignal)
+				pinIn(*signal.writeSignal, prefix + '_' + signal.name, PinNodeParameter{ .simulationOnlyPin = true });
+			else if(signal.readSignal)
+				pinOut(*signal.readSignal, prefix + '_' + signal.name, PinNodeParameter{ .simulationOnlyPin = true });
+
+			if (signal.writeSignal && signal.name == "valid")
+				DesignScope::get()->getCircuit().addSimulationProcess([signalPort = *signal.writeSignal]() -> SimProcess {
+					simu(signalPort) = 0;
+					co_return;
+				});
+		}
+
+		for (PackedMemoryMap::Scope& subscope : mmap.subScopes)
+			pinSimu(subscope, prefix + '_' + subscope.name);
+	}
 }
