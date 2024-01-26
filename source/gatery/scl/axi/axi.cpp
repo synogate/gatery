@@ -158,7 +158,7 @@ namespace gtry::scl
 		(*master.ar)->addr.resetNode();
 		(*master.ar)->addr = addressW;
 
-		HCL_DESIGNCHECK_HINT(addressW <= (*slave.aw)->addr.width(), "you are trying to extend the address space instead of constraining it");
+		HCL_DESIGNCHECK_HINT(addressW <= (*slave.ar)->addr.width(), "you are trying to extend the address space instead of constraining it");
 
 		*slave.ar <<= master.ar->transform(
 			[&](const scl::AxiAddress& aa) {
