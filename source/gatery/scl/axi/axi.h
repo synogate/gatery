@@ -110,12 +110,11 @@ namespace gtry::scl
 	scl::Axi4 axiRegDecouple(scl::Axi4&& slave, const RegisterSettings& settings = {});
 	scl::Axi4 padWriteChannel(scl::Axi4& slave, BitWidth paddedW);
 
-	enum class AxiChannel{
-		READ,
-		WRITE,
-		BOTH
+	enum AxiChannel{
+		AC_READ  = 1,
+		AC_WRITE = 2,
 	};
-	scl::Axi4 constrainAddressSpace(scl::Axi4&& slave, BitWidth addressW, const UInt& addressOffset, AxiChannel channel = AxiChannel::BOTH);
+	scl::Axi4 constrainAddressSpace(scl::Axi4&& slave, BitWidth addressW, const UInt& addressOffset, size_t channel = AC_READ | AC_WRITE);
 
 	template<Signal T> RvPacketStream<AxiReadData> connectMemoryReadPort(Memory<T>& mem, RvStream<AxiAddress>&& req);
 	template<Signal T> RvStream<AxiWriteResponse> connectMemoryWritePort(Memory<T>& mem, RvStream<AxiAddress>&& req, RvPacketStream<AxiWriteData>&& data);

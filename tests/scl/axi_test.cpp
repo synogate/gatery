@@ -272,7 +272,7 @@ BOOST_FIXTURE_TEST_CASE(axi_constrain_read_address, BoostUnitTestSimulationFixtu
 	};
 	axiMemorySimulationCreateMemory(memCfg);
 	scl::Axi4 slave = move(scl::axiMemorySimulationPort(memCfg));
-	scl::Axi4 constrainedRead = scl::constrainAddressSpace(move(slave), 7_b, 0, scl::AxiChannel::READ);
+	scl::Axi4 constrainedRead = scl::constrainAddressSpace(move(slave), 7_b, 0, scl::AC_READ);
 	pinOut(constrainedRead, "master");
 
 	addSimulationProcess([&, this]()->SimProcess {
@@ -310,7 +310,7 @@ BOOST_FIXTURE_TEST_CASE(axi_constrain_write_address, BoostUnitTestSimulationFixt
 	};
 	axiMemorySimulationCreateMemory(memCfg);
 	scl::Axi4 slave = move(scl::axiMemorySimulationPort(memCfg));
-	scl::Axi4 constrainedWrite = scl::constrainAddressSpace(move(slave), 7_b, 0, scl::AxiChannel::WRITE);
+	scl::Axi4 constrainedWrite = scl::constrainAddressSpace(move(slave), 7_b, 0, scl::AC_WRITE);
 	pinOut(constrainedWrite, "master");
 
 	addSimulationProcess([&, this]()->SimProcess {
