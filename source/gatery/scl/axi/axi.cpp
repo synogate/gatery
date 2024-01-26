@@ -145,18 +145,6 @@ namespace gtry::scl
 				ret.addr.resetNode();
 				ret.addr = zext(cat(partition, aa.addr), slave.config().addrW);
 				return ret;
-				//return scl::AxiAddress{
-				//	.id = aa.id,
-				//	.addr = zext(cat(partition,aa.addr)),
-				//	.len = aa.len,
-				//	.size = aa.size,
-				//	.burst = aa.burst,
-				//	.cache = aa.cache,
-				//	.prot = aa.prot,
-				//	.qos = aa.qos,
-				//	.region = aa.region,
-				//	.user = aa.user,
-				//};
 			});
 		*slave.w <<= *master.w;
 		*slave.ar <<= *master.ar;
@@ -166,6 +154,24 @@ namespace gtry::scl
 		return master;
 	}
 	scl::Axi4 constrainReadAddressSpace(scl::Axi4&& slave, BitWidth addressW, const UInt& partition) {
+		scl::Axi4 master = constructFrom(slave);
+		(*master.ar)->addr.resetNode();
+		(*master.ar)->addr = addressW;
 
+		HCL_DESIGNCHECK_HINT(addressW <= (*slave.aw)->addr.width(), "you are trying to extend the address space instead of constraining it");
+
+		*slave.ar <<= master.ar->transform(
+			[&](const scl::AxiAddress& aa) {
+				scl::AxiAddress ret = aa;
+				ret.addr.resetNode();
+				ret.addr = zext(cat(partition, aa.addr), slave.config().addrW);
+				return ret;
+			});
+		*slave.w <<= *master.w;
+		*slave.aw <<= *master.aw;
+
+		master.r <<= slave.r;
+		master.b <<= slave.b;
+		return master;
 	}
 }
