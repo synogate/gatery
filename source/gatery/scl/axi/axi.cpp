@@ -48,6 +48,7 @@ namespace gtry::scl
 
 	AxiConfig Axi4::config() const
 	{
+		HCL_DESIGNCHECK_HINT((*ar)->addr.width() == (*aw)->addr.width(), "you have a non-standard axi interface. It can not be reproduced through a config");
 		return {
 			.addrW = (*ar)->addr.width(),
 			.dataW = (*w)->data.width(),
