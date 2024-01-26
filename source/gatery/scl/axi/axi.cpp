@@ -177,9 +177,9 @@ namespace gtry::scl
 	}
 	scl::Axi4 constrainAddressSpace(scl::Axi4&& slave, BitWidth addressW, const UInt& addressOffset, AxiChannel channels)
 	{
-		scl::Axi4 temp;
+		scl::Axi4 temp = move(slave);
 		if(channels == AxiChannel::READ || channels == AxiChannel::BOTH)
-			temp = constrainReadAddressSpace(move(slave), addressW, addressOffset);
+			temp = constrainReadAddressSpace(move(temp), addressW, addressOffset);
 		if(channels == AxiChannel::WRITE || channels == AxiChannel::BOTH)
 			temp = constrainWriteAddressSpace(move(temp), addressW, addressOffset);
 		return temp;

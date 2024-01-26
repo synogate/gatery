@@ -257,3 +257,85 @@ BOOST_FIXTURE_TEST_CASE(axi_dma_test, BoostUnitTestSimulationFixture)
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
+
+BOOST_FIXTURE_TEST_CASE(axi_constrain_read_address, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+
+	scl::AxiConfig cfg = { .addrW = 8_b, .dataW = 8_b };
+
+	scl::AxiMemorySimulationConfig memCfg =
+	{
+		.axiCfg = cfg,
+		.wordStride = 0_b,
+	};
+	axiMemorySimulationCreateMemory(memCfg);
+	scl::Axi4 slave = move(scl::axiMemorySimulationPort(memCfg));
+	scl::Axi4 constrainedRead = scl::constrainAddressSpace(move(slave), 7_b, 0, scl::AxiChannel::READ);
+	pinOut(constrainedRead, "master");
+
+	addSimulationProcess([&, this]()->SimProcess {
+		scl::simInit(constrainedRead);
+		//fill the entire memory with predictable numbers
+		for (size_t i = 0; i < 256; i++)
+			co_await scl::simPut(constrainedRead, i, 0, i, clk);
+
+		//read from the entire memory and see that we only read from half of it
+		for (size_t i = 0; i < 256; i++){
+			auto [data, defined, err] = co_await scl::simGet(constrainedRead, i, 0, clk);
+			BOOST_TEST(data == (i & 0x7F));
+			BOOST_TEST(defined == 0xFF);
+			BOOST_TEST(err == false);
+		}
+		stopTest();
+		});
+	
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 100, 1'000'000 }));
+} 
+
+BOOST_FIXTURE_TEST_CASE(axi_constrain_write_address, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+
+	scl::AxiConfig cfg = { .addrW = 8_b, .dataW = 8_b };
+
+	scl::AxiMemorySimulationConfig memCfg =
+	{
+		.axiCfg = cfg,
+		.wordStride = 0_b,
+	};
+	axiMemorySimulationCreateMemory(memCfg);
+	scl::Axi4 slave = move(scl::axiMemorySimulationPort(memCfg));
+	scl::Axi4 constrainedWrite = scl::constrainAddressSpace(move(slave), 7_b, 0, scl::AxiChannel::WRITE);
+	pinOut(constrainedWrite, "master");
+
+	addSimulationProcess([&, this]()->SimProcess {
+		scl::simInit(constrainedWrite);
+		//fill half the memory with predictable numbers (remember, it is constrained to 128 addresses)
+		for (size_t i = 0; i < 256; i++)
+			co_await scl::simPut(constrainedWrite, i, 0, i, clk);
+
+		//read from the entire memory and see that only the first half is written to, and with numbers from 128 to 255
+		for (size_t i = 0; i < 256; i++){
+			auto [data, defined, err] = co_await scl::simGet(constrainedWrite, i, 0, clk);
+			if (i < 128) {
+				BOOST_TEST(data == (i + 128));
+				BOOST_TEST(defined == 0xFF);
+			}
+			else
+				BOOST_TEST(defined == 0x00);
+			BOOST_TEST(err == false);
+		}
+		stopTest();
+		});
+
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 100, 1'000'000 }));
+} 
+
+

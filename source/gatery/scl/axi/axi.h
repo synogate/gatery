@@ -110,9 +110,6 @@ namespace gtry::scl
 	scl::Axi4 axiRegDecouple(scl::Axi4&& slave, const RegisterSettings& settings = {});
 	scl::Axi4 padWriteChannel(scl::Axi4& slave, BitWidth paddedW);
 
-	scl::Axi4 constrainWriteAddressSpace(scl::Axi4&& slave, BitWidth addressW, const UInt& addressOffset);
-	scl::Axi4 constrainReadAddressSpace(scl::Axi4&& slave, BitWidth addressW, const UInt& addressOffset);
-
 	enum class AxiChannel{
 		READ,
 		WRITE,
