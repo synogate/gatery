@@ -133,7 +133,7 @@ namespace gtry::scl
 		return master;
 	}
 
-	scl::Axi4 constrainWriteAddressSpace(scl::Axi4&& slave, BitWidth addressW, const UInt& partition){
+	static scl::Axi4 constrainWriteAddressSpace(scl::Axi4&& slave, BitWidth addressW, const UInt& addressOffset){
 		scl::Axi4 master = constructFrom(slave);
 		(*master.aw)->addr.resetNode();
 		(*master.aw)->addr = addressW;
@@ -144,7 +144,7 @@ namespace gtry::scl
 			[&](const scl::AxiAddress& aa) {
 				scl::AxiAddress ret = aa;
 				ret.addr.resetNode();
-				ret.addr = zext(cat(partition, aa.addr), slave.config().addrW);
+				ret.addr = zext(cat(addressOffset, aa.addr),(*slave.aw)->addr.width());
 				return ret;
 			});
 		*slave.w <<= *master.w;
@@ -154,7 +154,7 @@ namespace gtry::scl
 		master.b <<= slave.b;
 		return master;
 	}
-	scl::Axi4 constrainReadAddressSpace(scl::Axi4&& slave, BitWidth addressW, const UInt& partition) {
+	static scl::Axi4 constrainReadAddressSpace(scl::Axi4&& slave, BitWidth addressW, const UInt& addressOffset) {
 		scl::Axi4 master = constructFrom(slave);
 		(*master.ar)->addr.resetNode();
 		(*master.ar)->addr = addressW;
@@ -165,7 +165,7 @@ namespace gtry::scl
 			[&](const scl::AxiAddress& aa) {
 				scl::AxiAddress ret = aa;
 				ret.addr.resetNode();
-				ret.addr = zext(cat(partition, aa.addr), slave.config().addrW);
+				ret.addr = zext(cat(addressOffset, aa.addr), (*slave.ar)->addr.width());
 				return ret;
 			});
 		*slave.w <<= *master.w;
@@ -174,5 +174,14 @@ namespace gtry::scl
 		master.r <<= slave.r;
 		master.b <<= slave.b;
 		return master;
+	}
+	scl::Axi4 constrainAddressSpace(scl::Axi4&& slave, BitWidth addressW, const UInt& addressOffset, AxiChannel channels)
+	{
+		scl::Axi4 temp;
+		if(channels == AxiChannel::READ || channels == AxiChannel::BOTH)
+			temp = constrainReadAddressSpace(move(slave), addressW, addressOffset);
+		if(channels == AxiChannel::WRITE || channels == AxiChannel::BOTH)
+			temp = constrainWriteAddressSpace(move(temp), addressW, addressOffset);
+		return temp;
 	}
 }
