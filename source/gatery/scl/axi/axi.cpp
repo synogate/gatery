@@ -48,6 +48,7 @@ namespace gtry::scl
 
 	AxiConfig Axi4::config() const
 	{
+		HCL_DESIGNCHECK_HINT((*ar)->addr.width() == (*aw)->addr.width(), "you have a non-standard axi interface. It can not be reproduced through a config");
 		return {
 			.addrW = (*ar)->addr.width(),
 			.dataW = (*w)->data.width(),
@@ -128,6 +129,46 @@ namespace gtry::scl
 			});
 
 		master.b <<= slave.b;
+
+		return master;
+	}
+
+	scl::Axi4 constrainAddressSpace(scl::Axi4&& slave, BitWidth addressW, const UInt& addressOffset, size_t channels)
+	{
+		scl::Axi4 master = constructFrom(slave);
+		master.r <<= slave.r;
+		master.b <<= slave.b;
+		*slave.w <<= *master.w;
+
+		if (channels & AC_WRITE) {
+			(*master.aw)->addr.resetNode();
+			(*master.aw)->addr = addressW;
+			HCL_DESIGNCHECK_HINT(addressW <= (*slave.aw)->addr.width(), "you are trying to extend the address space instead of constraining it");
+			*slave.aw <<= master.aw->transform(
+				[&](const scl::AxiAddress& aa) {
+					scl::AxiAddress ret = aa;
+					ret.addr.resetNode();
+					ret.addr = zext(cat(addressOffset, aa.addr), (*slave.aw)->addr.width());
+					return ret;
+				});
+		}
+		else
+			*slave.aw <<= *master.aw;
+
+		if (channels & AC_READ) {
+			(*master.ar)->addr.resetNode();
+			(*master.ar)->addr = addressW;
+			HCL_DESIGNCHECK_HINT(addressW <= (*slave.ar)->addr.width(), "you are trying to extend the address space instead of constraining it");
+			*slave.ar <<= master.ar->transform(
+				[&](const scl::AxiAddress& aa) {
+					scl::AxiAddress ret = aa;
+					ret.addr.resetNode();
+					ret.addr = zext(cat(addressOffset, aa.addr), (*slave.ar)->addr.width());
+					return ret;
+				});
+		}
+		else
+			*slave.ar <<= *master.ar;
 
 		return master;
 	}
