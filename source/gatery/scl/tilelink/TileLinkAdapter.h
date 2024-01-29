@@ -23,6 +23,8 @@
 
 namespace gtry::scl
 {
+	scl::TileLinkUL tileLinkHalfWidth(scl::TileLinkUL&& slave);
+
 	scl::TileLinkUB tileLinkDoubleWidth(scl::TileLinkUB& slave);
 	inline scl::TileLinkUB tileLinkDoubleWidth(scl::TileLinkUB&& slave) { return tileLinkDoubleWidth(slave); }
 

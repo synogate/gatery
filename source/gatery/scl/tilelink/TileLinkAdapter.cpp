@@ -22,6 +22,56 @@
 
 namespace gtry::scl
 {
+	scl::TileLinkUL tileLinkHalfWidth(scl::TileLinkUL&& slave)
+	{
+		Area ent{ "scl_tileLinkHalfWidth", true };
+		HCL_DESIGNCHECK_HINT(slave.a->source.width() >= 1_b, "tileLinkHalfWidth requires 1 source bit.");
+
+		scl::TileLinkUL master = tileLinkInit<scl::TileLinkUL>(
+			slave.a->address.width(),
+			slave.a->data.width() / 2,
+			slave.a->source.width() - 1_b
+		);
+
+		// request
+		{
+			size_t partSelBit = utils::Log2C(master.a->data.width().bytes());
+			UInt partSel = master.a->address(partSelBit, 1_b);
+			HCL_NAMED(partSel);
+
+			ready(master.a) = ready(slave.a);
+			valid(slave.a) = valid(master.a);
+			slave.a->opcode = master.a->opcode;
+			slave.a->param = master.a->param;
+			slave.a->size = zext(master.a->size);
+			slave.a->source = cat(partSel, master.a->source);
+			slave.a->address = master.a->address;
+			slave.a->data = (BVec)pack(master.a->data, master.a->data);
+			slave.a->mask = 0;
+			slave.a->mask.part(2, partSel) = master.a->mask;
+		}
+		
+		// response
+		{
+			TileLinkChannelD& slaveD = *slave.d;
+			TileLinkChannelD& masterD = *master.d;
+			UInt partSelD = slaveD->source.upper(1_b);
+			HCL_NAMED(partSelD);
+
+			ready(slaveD) = ready(masterD);
+			valid(masterD) = valid(slaveD);
+			masterD->opcode = slaveD->opcode;
+			masterD->param = slaveD->param;
+			masterD->size = slaveD->size;
+			masterD->source = slaveD->source.lower(-1_b);
+			masterD->sink = slaveD->sink;
+			masterD->data = slaveD->data.part(2, partSelD);
+			masterD->error = slaveD->error;
+		}
+
+		return master;
+	}
+
 	scl::TileLinkUB tileLinkDoubleWidth(scl::TileLinkUB& slave)
 	{
 		Area ent{ "scl_tileLinkDoubleWidth", true };
