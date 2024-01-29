@@ -69,7 +69,7 @@ uint32_t SimulationFiberMapped32BitTileLink::readU32(size_t addr) const
 void SimulationFiberMapped32BitTileLink::writeU32(size_t addr, uint32_t data)
 {
 	sim::SimulationFiber::awaitCoroutine<uint32_t>([&]()->sim::SimulationFunction<uint32_t> {
-		co_await m_linkModel.put(addr, 2, data, m_clock);
+		fork(m_linkModel.put(addr, 2, data, m_clock));
 		co_return 0;
 	});
 }
