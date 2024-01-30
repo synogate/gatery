@@ -74,6 +74,10 @@ namespace gtry::scl::driver {
 			virtual std::unique_ptr<MemoryBuffer> allocate(uint64_t bytes) override;
 
 			inline auto allocateDerived(uint64_t bytes) { return allocateDerivedImpl<DeviceMemoryBuffer>(bytes); }
+			inline auto aliasDerived(PhysicalAddr deviceAddr, uint64_t bytes) {
+				auto buf = alias(deviceAddr, bytes);
+				return std::unique_ptr<DeviceMemoryBuffer>(static_cast<DeviceMemoryBuffer*>(buf.release()));
+			}
 		protected:
 			DeviceMemoryAllocator &m_allocator;
 			virtual std::unique_ptr<MemoryBuffer> createBuffer(PhysicalAddr deviceAddr, uint64_t bytes) = 0;
