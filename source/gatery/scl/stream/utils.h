@@ -695,7 +695,7 @@ namespace gtry::scl::strm
 		scl::Counter ctr{ numPacketsToCombine };
 
 		StreamT out = move(in);
-		eop(out) = ctr.isLast();
+		eop(out) &= ctr.isLast();
 		IF(transfer(out))
 			ctr.inc();
 		return out;
