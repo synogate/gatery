@@ -234,6 +234,12 @@ namespace gtry::scl::strm
 	template<StreamSignal StreamT>
 	Vector<StreamT> serialPushParallelPopBuffer(StreamT&& in, size_t numberOfElements);
 
+	/**
+	 * @brief Hides eop of numPacketsToCombine - 1 packets to combine numPacketsToCombine packets into one.
+	 * @param numPacketsToCombine number of packets to combine to one. Do not change during packets.
+	*/
+	template<StreamSignal StreamT>
+	StreamT combinePackets(StreamT&& in, UInt numPacketsToCombine);
 }
 
 namespace gtry::scl::strm
@@ -681,5 +687,17 @@ namespace gtry::scl::strm
 		}
 		ready(shiftStreams.back()) = '0';
 		return popStreams;
+	}
+
+	template<StreamSignal StreamT>
+	StreamT combinePackets(StreamT&& in, UInt numPacketsToCombine)
+	{
+		scl::Counter ctr{ numPacketsToCombine };
+
+		StreamT out = move(in);
+		eop(out) = ctr.isLast();
+		IF(transfer(out))
+			ctr.inc();
+		return out;
 	}
 }
