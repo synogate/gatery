@@ -22,9 +22,14 @@
 
 namespace gtry::scl
 {
-	RvStream<AxiAddress> axiGenerateAddressFromCommand(RvStream<AxiToStreamCmd>&& cmd, const AxiConfig& config)
+	RvStream<AxiAddress> axiGenerateAddressFromCommand(RvStream<AxiToStreamCmd>&& cmdIn, const AxiConfig& config)
 	{
 		Area ent{ "scl_axiGenerateAddressFromCommand", true };
+
+		// improve timing by first calculating the last address
+		struct LastAddress { UInt addr; };
+		scl::Stream cmd = cmdIn.add(LastAddress{ cmdIn->endAddress - cmdIn->bytesPerBurst })
+			| scl::strm::regDownstream();
 
 		RvStream<AxiAddress> out;
 		out->addr = config.addrW;
@@ -61,16 +66,20 @@ namespace gtry::scl
 				state = TRANSFER;
 		}
 
+		ready(cmd) = '0';
+		IF(state.combinatorial() == TRANSFER)
+		{
+			IF(transfer(out) & address == cmd.template get<LastAddress>().addr)
+			{
+				ready(cmd) = '1';
+				state = IDLE;
+			}
+		}
+
 		out->addr = zext(address);
 		IF(transfer(out))
 			address += cmd->bytesPerBurst;
 
-		ready(cmd) = '0';
-		IF(state.combinatorial() == TRANSFER & address == cmd->endAddress)
-		{
-			ready(cmd) = '1';
-			state = IDLE;
-		}
 		address = reg(address);
 
 		HCL_NAMED(out);
