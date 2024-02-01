@@ -26,11 +26,13 @@ namespace gtry::scl
 	class TileLinkFifo
 	{
 	public:
+		TileLinkFifo();
+
 		template<TileLinkSignal TLink> TileLinkFifo& connectSlave(TLink& link, size_t depthMin = 0);
 		template<TileLinkSignal TLink> TLink connectMaster();
 
 	private:
-		Area m_area = { "scl_TileLinkFifo" };
+		Area m_area = { "scl_TileLinkFifo", true };
 		Fifo<TileLinkA> m_a;
 		Fifo<TileLinkD> m_d;
 
@@ -44,6 +46,11 @@ namespace gtry::scl
 
 namespace gtry::scl
 {
+	inline TileLinkFifo::TileLinkFifo()
+	{
+		m_area.leave();
+	}
+
 	template<TileLinkSignal TLink>
 	TileLinkFifo& TileLinkFifo::connectSlave(TLink& link, size_t depthMin)
 	{
