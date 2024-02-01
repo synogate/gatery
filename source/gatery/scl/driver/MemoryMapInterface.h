@@ -38,8 +38,11 @@ class MemoryMapInterface {
 	public:
 		virtual ~MemoryMapInterface() = default;
 
-		inline uint64_t readUInt(MemoryMapEntryHandle addr) const;
-		inline void writeUInt(MemoryMapEntryHandle addr, uint64_t data);
+		template<IsStaticMemoryMapEntryHandle Addr>
+		inline uint64_t readUInt(Addr addr) const;
+
+		template<IsStaticMemoryMapEntryHandle Addr>
+		inline void writeUInt(Addr addr, uint64_t data);
 
 		virtual uint8_t readU8(size_t addr) const { uint8_t v; readBlock(&v, addr, sizeof(v)); return v; }
 		virtual void writeU8(size_t addr, uint8_t data) { writeBlock(&data, addr, sizeof(data)); }
@@ -73,7 +76,8 @@ class MemoryMapInterface {
 
 };
 
-uint64_t MemoryMapInterface::readUInt(MemoryMapEntryHandle addr) const
+template<IsStaticMemoryMapEntryHandle Addr>
+uint64_t MemoryMapInterface::readUInt(Addr addr) const
 {
 	if (sizeof(size_t) < addr.width()/8)
 		throw std::runtime_error("Field too large!");
@@ -84,7 +88,8 @@ uint64_t MemoryMapInterface::readUInt(MemoryMapEntryHandle addr) const
 	return ~0ull;
 }
 
-void MemoryMapInterface::writeUInt(MemoryMapEntryHandle addr, uint64_t data)
+template<IsStaticMemoryMapEntryHandle Addr>
+void MemoryMapInterface::writeUInt(Addr addr, uint64_t data)
 {
 	if (sizeof(size_t) < addr.width()/8)
 		throw std::runtime_error("Field too large!");

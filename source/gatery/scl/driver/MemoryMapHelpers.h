@@ -45,9 +45,10 @@ concept PayloadCallback = requires (T t, MemoryMapInterface &interface_, Dynamic
 };
 
 template<typename Payload, IsStaticMemoryMapEntryHandle Addr> requires (std::is_trivially_copyable_v<Payload> && !PayloadCallback<Payload>)
-void writeToStream(MemoryMapInterface &interface_, Addr streamLocation, const Payload &payload)
+void writeToStream(MemoryMapInterface &interface_, Addr streamLocation, const Payload &payload, bool assumeNoBackpressure = false)
 {
-	while (interface_.readUInt(streamLocation.template get<"valid">())) ;
+	if (!assumeNoBackpressure)
+		while (interface_.readUInt(streamLocation.template get<"valid">())) ;
 
 	interface_.write(streamLocation.template get<"payload">().addr()/8, payload);
 
@@ -55,9 +56,10 @@ void writeToStream(MemoryMapInterface &interface_, Addr streamLocation, const Pa
 }
 
 template<IsStaticMemoryMapEntryHandle Addr, PayloadCallback PayloadWriter>
-void writeToStream(MemoryMapInterface &interface_, Addr streamLocation, PayloadWriter payloadWriter)
+void writeToStream(MemoryMapInterface &interface_, Addr streamLocation, PayloadWriter payloadWriter, bool assumeNoBackpressure = false)
 {
-	while (interface_.readUInt(streamLocation.template get<"valid">())) ;
+	if (!assumeNoBackpressure)
+		while (interface_.readUInt(streamLocation.template get<"valid">())) ;
 
 	payloadWriter(interface_, streamLocation.template get<"payload">());
 
@@ -66,9 +68,10 @@ void writeToStream(MemoryMapInterface &interface_, Addr streamLocation, PayloadW
 
 
 template<typename Payload, IsStaticMemoryMapEntryHandle Addr> requires (std::is_trivially_copyable_v<Payload> && !PayloadCallback<Payload>)
-Payload readFromStream(MemoryMapInterface &interface_, Addr streamLocation)
+Payload readFromStream(MemoryMapInterface &interface_, Addr streamLocation, bool assumeValid = false)
 {
-	while (!interface_.readUInt(streamLocation.template get<"valid">())) ;
+	if (!assumeValid)
+		while (!interface_.readUInt(streamLocation.template get<"valid">())) ;
 
 	Payload payload = interface_.read<Payload>(streamLocation.template get<"payload">().addr()/8);
 
@@ -78,9 +81,10 @@ Payload readFromStream(MemoryMapInterface &interface_, Addr streamLocation)
 }
 
 template<IsStaticMemoryMapEntryHandle Addr, PayloadCallback PayloadReader>
-void readFromStream(MemoryMapInterface &interface_, Addr streamLocation, PayloadReader payloadReader)
+void readFromStream(MemoryMapInterface &interface_, Addr streamLocation, PayloadReader payloadReader, bool assumeValid = false)
 {
-	while (!interface_.readUInt(streamLocation.template get<"valid">())) ;
+	if (!assumeValid)
+		while (!interface_.readUInt(streamLocation.template get<"valid">())) ;
 
 	payloadReader(interface_, streamLocation.template get<"payload">());
 
@@ -112,7 +116,7 @@ enum class TileLinkDOpCode {
 //#define CHECK_TILELINK_RESULTS
 
 template<IsStaticMemoryMapEntryHandle Addr>
-void writeToTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_t tilelinkStartAddr, std::span<const std::byte> byteData)
+void writeToTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_t tilelinkStartAddr, std::span<const std::byte> byteData, bool assumeNoBackpressure = false)
 {
 	if (byteData.empty()) return;
 
@@ -138,7 +142,7 @@ void writeToTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_t
 		writeToStream(interface_, streamLocation.template get<"a">(), [tilelinkStartAddr, busWidth, byteData, i](MemoryMapInterface &interface_, auto payload) {
 			interface_.writeUInt(payload.template get<"address">(), tilelinkStartAddr + i);
 			interface_.write(payload.template get<"data">().addr()/8, byteData.subspan(i, busWidth));
-		});
+		}, assumeNoBackpressure);
 
 		// Consume away the acks
 		// todo: don't wait for it
@@ -154,14 +158,14 @@ void writeToTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_t
 }
 
 template<IsStaticMemoryMapEntryHandle Addr, typename Data> requires (std::is_trivially_copyable_v<Data>)
-void writeToTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_t tilelinkStartAddr, const Data &data)
+void writeToTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_t tilelinkStartAddr, const Data &data, bool assumeNoBackpressure = false)
 {
 	auto byteData = std::as_bytes(std::span{data});
-	writeToTileLink(interface_, streamLocation, tilelinkStartAddr, byteData);
+	writeToTileLink(interface_, streamLocation, tilelinkStartAddr, byteData, assumeNoBackpressure);
 }
 
 template<IsStaticMemoryMapEntryHandle Addr>
-void readFromTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_t tilelinkStartAddr, std::span<std::byte> byteData)
+void readFromTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_t tilelinkStartAddr, std::span<std::byte> byteData, bool assumeNoBackpressure = false)
 {
 	if (byteData.empty()) return;
 
@@ -185,7 +189,7 @@ void readFromTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_
 	for (size_t i = 0; i < byteData.size(); i += busWidth) {
 		writeToStream(interface_, streamLocation.template get<"a">(), [tilelinkStartAddr, busWidth, byteData, i](MemoryMapInterface &interface_, auto payload) {
 			interface_.writeUInt(payload.template get<"address">(), tilelinkStartAddr + i);
-		});
+		}, assumeNoBackpressure);
 
 		readFromStream(interface_, streamLocation.template get<"d">(), [tilelinkStartAddr, busWidth, byteData, i](MemoryMapInterface &interface_, auto payload) {
 #ifdef CHECK_TILELINK_RESULTS
@@ -200,11 +204,11 @@ void readFromTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_
 }
 
 template<IsStaticMemoryMapEntryHandle Addr, typename Data> requires (std::is_trivially_copyable_v<Data>)
-Data readFromTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_t tilelinkStartAddr)
+Data readFromTileLink(MemoryMapInterface &interface_, Addr streamLocation, size_t tilelinkStartAddr, bool assumeNoBackpressure = false)
 {
 	Data result;
 	auto byteData = std::as_writable_bytes(std::span{result});
-	readFromTileLink(interface_, streamLocation, tilelinkStartAddr, byteData);
+	readFromTileLink(interface_, streamLocation, tilelinkStartAddr, byteData, assumeNoBackpressure);
 	return result;
 }
 
