@@ -112,7 +112,8 @@ namespace gtry::scl::pci
 	struct Attributes {
 		Bit noSnoop;
 		Bit relaxedOrdering;	
-		Bit idBasedOrdering; 		
+		Bit idBasedOrdering; 	
+		static Attributes createDefault(){ return { '0','0','0' }; }
 	};
 
 	struct HeaderCommon

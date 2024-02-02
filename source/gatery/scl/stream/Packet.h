@@ -35,7 +35,7 @@ namespace gtry::scl::strm
 	template<StreamSignal T> 
 	auto addEopDeferred(T& source, Bit insert);
 
-	auto addPacketSignalsFromCount(StreamSignal auto& source, UInt size);
+	auto addPacketSignalsFromCount(StreamSignal auto&& source, const UInt& size);
 
 	template<Signal Payload, Signal ... Meta>
 	RvPacketStream<Payload, Meta...> addReadyAndFailOnBackpressure(const VPacketStream<Payload, Meta...>& source);
@@ -58,6 +58,7 @@ namespace gtry::scl::strm
 	UInt streamBeatBitLength(const Stream<Payload, Meta...>& in);
 
 	/**
+	* /!\ this module illegally has a combinatorial path between its output ready and output downstream signals. A regDownstream can be placed after it to remediate.
 	* @brief inserts a stream into a packet stream with bit offset precision.
 	* @param base stream into which data can be inserted
 	* @param insert data stream to insert into main packet stream
@@ -164,7 +165,7 @@ namespace gtry::scl::strm
 		return out;
 	}
 
-	auto addPacketSignalsFromCount(StreamSignal auto& source, UInt size)
+	auto addPacketSignalsFromCount(StreamSignal auto&& source, const UInt& size)
 	{
 		auto scope = Area{ "scl_addPacketSignalsFromSize" }.enter();
 
@@ -546,6 +547,7 @@ namespace gtry::scl::strm
 	auto widthExtend(StreamT&& source, const BitWidth& width)
 	{
 		HCL_DESIGNCHECK(source->width() <= width);
+		HCL_DESIGNCHECK_HINT((width.bits() % source->width().bits()) == 0, "currently, non-exact-multiple-extends are not supported");
 		const size_t ratio = width / source->width();
 		auto scope = Area{ "scl_extendWidth" }.enter();
 
@@ -677,6 +679,7 @@ namespace gtry::scl::strm
 		auto scope = Area{ "scl_reduceWidth" }.enter();
 
 		HCL_DESIGNCHECK(source->width() >= width);
+		HCL_DESIGNCHECK_HINT((source->width().bits() % width.bits() ) == 0, "currently, non-exact-multiple-reduces are not supported");
 		const size_t ratio = source->width() / width;
 
 		Counter counter{ ratio };
