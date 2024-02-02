@@ -234,6 +234,11 @@ namespace gtry::scl::strm
 	template<StreamSignal StreamT>
 	Vector<StreamT> serialPushParallelPopBuffer(StreamT&& in, size_t numberOfElements);
 
+	/**
+	 * @brief creates a VStream with the payload and valid bits you give it
+	*/
+	template<StreamSignal StreamT>
+	StreamT createVStream(const typename StreamT::Payload& payload, const Bit& validBit) { StreamT ret(payload); valid(ret) = validBit; return ret; }
 }
 
 namespace gtry::scl::strm
