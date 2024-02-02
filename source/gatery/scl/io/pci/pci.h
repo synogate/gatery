@@ -120,6 +120,7 @@ namespace gtry::scl::pci
 	{
 		BVec rawDw0();
 		void fromRawDw0(BVec rawDw0);
+		static HeaderCommon makeDefault(TlpOpcode opcode, const UInt& length);
 
 		Bit poisoned;					
 		Bit digest;
@@ -170,6 +171,7 @@ namespace gtry::scl::pci
 	struct RequestHeader
 	{
 		static RequestHeader fromRaw(BVec rawHeader);
+		static RequestHeader makeWriteDefault(const UInt& wordAddress, const UInt& length, const BVec& tag);
 		operator BVec();
 
 		HeaderCommon common;
@@ -180,6 +182,7 @@ namespace gtry::scl::pci
 		BVec firstDWByteEnable = 4_b;
 		UInt wordAddress = 62_b;
 		BVec processingHint = 2_b;
+
 	};
 
 	struct BarInfo {
