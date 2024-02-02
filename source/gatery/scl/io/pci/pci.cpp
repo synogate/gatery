@@ -22,6 +22,22 @@
 
 namespace gtry::scl::pci {
 
+	HeaderCommon HeaderCommon::makeDefault(TlpOpcode opcode, const UInt& length)
+	{
+		HeaderCommon ret;
+
+		ret.poisoned = '0';
+		ret.digest = '0';
+		ret.processingHintPresence = '0';
+		ret.attributes = pci::Attributes::createDefault();
+		ret.addressType = (size_t) pci::AddressType::defaultOption;
+		ret.trafficClass = (size_t) pci::TrafficClass::defaultOption;
+		ret.opcode(opcode);
+		ret.length = zext(length);
+
+		return ret;
+	}
+
 	 void HeaderCommon::fromRawDw0(BVec rawDw0)
 	{
 		HCL_DESIGNCHECK(rawDw0.width() == 32_b);
@@ -61,6 +77,23 @@ namespace gtry::scl::pci {
 		bytes[3] = (BVec) length.lower(8_b);
 
 		return dw0;
+	}
+
+	RequestHeader RequestHeader::makeWriteDefault(const UInt& wordAddress, const UInt& length, const BVec& tag)
+	{
+		RequestHeader ret;
+
+		ret.common = HeaderCommon::makeDefault(TlpOpcode::memoryWriteRequest64bit, length);
+		ret.firstDWByteEnable = 0xF;
+		ret.lastDWByteEnable = 0xF;
+
+		ret.processingHint = (size_t) pci::ProcessingHint::defaultOption;
+		ret.requesterId = 0;
+		ret.tag = tag;
+
+		HCL_DESIGNCHECK(wordAddress.width() <= 62_b);
+		ret.wordAddress = zext(wordAddress);
+		return ret;
 	}
 
 	RequestHeader RequestHeader::fromRaw(BVec rawHeader)
