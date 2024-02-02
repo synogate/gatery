@@ -366,7 +366,7 @@ namespace gtry::scl
 		m_pushFull = reg(put.msb() != get.msb() & put(0, -1_b) == get(0, -1_b), '0');
 		HCL_NAMED(m_pushFull);
 
-		registerEvent("full", m_pushFull);
+		//registerEvent("full", m_pushFull);
 
 		return put;
 	}
@@ -389,7 +389,7 @@ namespace gtry::scl
 		m_popEmpty = reg(put.msb() == get.msb() & put(0, -1_b) == get(0, -1_b), '1');
 		HCL_NAMED(m_popEmpty);
 
-		registerEvent("empty", m_popEmpty);
+		//registerEvent("empty", m_popEmpty);
 
 		return get;
 	}
