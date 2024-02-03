@@ -61,6 +61,8 @@ class MemoryMapInterface {
 
 		inline void readBlock(size_t addr, std::span<uint8_t> dst) const { readBlock(dst.data(), addr, dst.size()); }
 		inline void writeBlock(size_t addr, std::span<const uint8_t> src) { writeBlock(src.data(), addr, src.size()); }
+		inline void readBlock(size_t addr, std::span<std::byte> dst) const { readBlock(dst.data(), addr, dst.size()); }
+		inline void writeBlock(size_t addr, std::span<const std::byte> src) { writeBlock(src.data(), addr, src.size()); }
 
 		template<typename T> requires (std::is_trivially_copyable_v<T>)
 		inline T read(size_t addr) const { T result; readBlock(&result, addr, sizeof(result)); return result; }
