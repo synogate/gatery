@@ -35,7 +35,7 @@ void SigHandle::operator=(std::uint64_t v)
 	DefaultBitVectorState state;
 	state.resize(width);
 	state.setRange(DefaultConfig::DEFINED, 0, width);
-	state.setRange(DefaultConfig::VALUE, 0, width);
+	state.clearRange(DefaultConfig::VALUE, 0, width);
 	if (width)
 		state.data(DefaultConfig::VALUE)[0] = v;
 
