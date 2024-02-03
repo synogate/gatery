@@ -701,7 +701,7 @@ namespace gtry::scl::strm
 
 		StreamT out = move(in);
 		eop(out) &= ctr.isLast();
-		IF(transfer(out))
+		IF(transfer(out) & eop(out))
 			ctr.inc();
 		return out;
 	}
