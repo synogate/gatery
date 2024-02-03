@@ -37,6 +37,9 @@ namespace gtry::sim
 		};
 
 		VCDWriter(std::string filename);
+		~VCDWriter();
+
+		bool commit();
 
 		explicit operator bool () const { return (bool)m_File; }
 
@@ -53,7 +56,11 @@ namespace gtry::sim
 		void writeTime(size_t time);
 
 	protected:
+		void openFile(bool createEmpty);
+
 		std::ofstream m_File;
+		std::string m_FileName;
 		bool m_EndDefinitions = false;
+		void* m_Transaction = nullptr;
 	};
 }

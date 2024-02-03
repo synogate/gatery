@@ -298,6 +298,14 @@ namespace gtry::sim
 			m_VCD.writeBitState(it->second, true, inReset);
 	}
 
+	void VCDSink::onCommitState()
+	{
+		WaveformRecorder::onCommitState();
+
+		if (m_commitCounter++ % 128 == 0)
+			m_VCD.commit();
+	}
+
 	void VCDSink::setupGtkWaveProjFileSignals()
 	{
 		if (m_includeDebugMessages)

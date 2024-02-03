@@ -40,6 +40,7 @@ class VCDSink : public WaveformRecorder
 		virtual void onAssert(const hlim::BaseNode *src, std::string msg) override;
 		virtual void onClock(const hlim::Clock *clock, bool risingEdge) override;
 		virtual void onReset(const hlim::Clock *clock, bool inReset) override;
+		virtual void onCommitState() override;
 
 		/// @brief Add a pseudo-signal to the VCD file which contains debug messages as strings
 		VCDSink &includeDebugMessages() { m_includeDebugMessages = true; return *this; }
@@ -62,6 +63,7 @@ class VCDSink : public WaveformRecorder
 		bool m_includeDebugMessages = true;
 		bool m_includeWarnings = true;
 		bool m_includeAsserts = true;
+		size_t m_commitCounter = 0;
 
 		std::string m_debugMessageID;
 		std::string m_warningsID;

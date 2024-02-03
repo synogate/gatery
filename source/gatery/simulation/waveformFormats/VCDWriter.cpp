@@ -21,16 +21,20 @@
 
 #include <chrono>
 
-gtry::sim::VCDWriter::VCDWriter(std::string filename) 
+#ifdef _WIN32
+#include <ktmw32.h>
+#pragma comment(lib, "KtmW32.lib")
+
+#define USE_TRANSACTION
+#endif
+
+gtry::sim::VCDWriter::VCDWriter(std::string filename) :
+	m_FileName(filename)
 {
 	auto parentPath = std::filesystem::path(filename).parent_path();
 	if (!parentPath.empty())
 		std::filesystem::create_directories(parentPath);
-
-	m_File.open(filename.c_str(), std::ofstream::binary);
-
-	if(!m_File)
-		throw std::runtime_error("Could not open vcd file for writing! " + filename);
+	openFile(true);
 
 	auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 
@@ -45,6 +49,29 @@ gtry::sim::VCDWriter::VCDWriter(std::string filename)
 		<< "$date\n" << std::put_time(&now_tb, "%Y-%m-%d %X") << "\n$end\n"
 		<< "$version\nGatery simulation output\n$end\n"
 		<< "$timescale\n1ps\n$end\n";
+}
+
+gtry::sim::VCDWriter::~VCDWriter()
+{
+#ifdef USE_TRANSACTION
+	m_File.close();
+	if (CommitTransaction(m_Transaction) == FALSE)
+		std::cerr << "transaction failed\n";
+	CloseHandle(m_Transaction);
+#endif
+}
+
+bool gtry::sim::VCDWriter::commit()
+{
+#ifdef USE_TRANSACTION
+	m_File.close();
+	if (CommitTransaction(m_Transaction) == FALSE)
+		std::cerr << "transaction failed\n";
+	CloseHandle(m_Transaction);
+
+	openFile(false);
+#endif
+	return true;
 }
 
 gtry::sim::VCDWriter::Scope gtry::sim::VCDWriter::beginModule(std::string_view name)
@@ -174,4 +201,27 @@ void gtry::sim::VCDWriter::writeTime(size_t time)
 {
 	assert(m_EndDefinitions);
 	m_File << '#' << time << '\n';
+}
+
+void gtry::sim::VCDWriter::openFile(bool createEmpty)
+{
+#ifdef USE_TRANSACTION
+	m_Transaction = CreateTransaction(NULL, NULL, TRANSACTION_DO_NOT_PROMOTE, 0, 0, 0, NULL);
+
+	DWORD mode = createEmpty ? CREATE_ALWAYS : OPEN_EXISTING;
+	USHORT transactionReadMode = 0xFFFF;
+	HANDLE file_handle = CreateFileTransactedA(m_FileName.c_str(), FILE_APPEND_DATA, FILE_SHARE_READ, NULL, mode, FILE_ATTRIBUTE_NORMAL, NULL, 
+		m_Transaction, &transactionReadMode, NULL);
+	if (file_handle == INVALID_HANDLE_VALUE)
+		throw std::runtime_error("Could not open vcd file for writing! " + m_FileName);
+
+	int file_descriptor = _open_osfhandle((intptr_t)file_handle, 0);
+	FILE* file = _fdopen(file_descriptor, "a");
+	m_File = std::ofstream{ file };
+#else
+	m_File.open(m_FileName.c_str(), std::ofstream::binary);
+
+	if (!m_File)
+		throw std::runtime_error("Could not open vcd file for writing! " + m_FileName);
+#endif
 }
