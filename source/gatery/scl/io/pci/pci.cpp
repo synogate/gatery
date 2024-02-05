@@ -89,7 +89,7 @@ namespace gtry::scl::pci {
 
 		ret.processingHint = (size_t) pci::ProcessingHint::defaultOption;
 		ret.requesterId = 0;
-		ret.tag = tag;
+		ret.tag = zext(tag);
 
 		HCL_DESIGNCHECK(wordAddress.width() <= 62_b);
 		ret.wordAddress = zext(wordAddress);
