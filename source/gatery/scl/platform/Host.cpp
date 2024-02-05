@@ -28,10 +28,10 @@ namespace gtry::scl
 {
 
 
-scl::pci::RequesterInterface Host::addHostMemory()
+scl::pci::RequesterInterface Host::addHostMemory(BitWidth tlpStreamW)
 {
 	instantiateHostMemory();
-	return m_exposedHostMemory->requesterInterface(512_b); //4 bits are enough to hold the number 10, which is the required logByteSize for 1kiB burst transfer
+	return m_exposedHostMemory->requesterInterface(tlpStreamW); //4 bits are enough to hold the number 10, which is the required logByteSize for 1kiB burst transfer
 }
 
 hlim::MemoryStorage &Host::simuHostMemory()

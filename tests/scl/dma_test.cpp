@@ -191,7 +191,8 @@ struct dma_pcieHost_to_axi_slave_with_driver : public BoostUnitTestSimulationFix
 
 		dmaControl.axiReport = scl::axiTransferAuditor(slaveAxi, BitWidth(dmaControl.depositCmd->bytesPerBurst*8));
 
-		scl::TileLinkUB slaveTL = host.addHostMemory();
+
+		scl::TileLinkUB slaveTL = scl::pci::makePciMasterCheapBurst(host.addHostMemory(512_b), 4_b, 48_b); //4 bits are enough to hold the number 10, which is the required logByteSize for 1kiB burst transfer
 		scl::tileLinkToAxiDMA(move(dmaControl.fetchCmd), move(dmaControl.depositCmd), move(slaveTL), slaveAxi);
 
 
