@@ -51,13 +51,15 @@ void UnitTestSimulationFixture::runTicks(const hlim::Clock* clock, unsigned numT
 }
 
 
-void UnitTestSimulationFixture::recordVCD(const std::string& filename)
+void UnitTestSimulationFixture::recordVCD(const std::string& filename, bool includeMemories)
 {
 	m_vcdSink.emplace(design.getCircuit(), *m_simulator, filename.c_str());
 	m_vcdSink->addAllPins();
 	m_vcdSink->addAllNamedSignals();
 	m_vcdSink->addAllTaps();
-	//m_vcdSink->addAllMemories();
+
+	if(includeMemories)
+		m_vcdSink->addAllMemories();
 }
 
 void UnitTestSimulationFixture::outputVHDL(const std::string& filename, bool includeTest)
