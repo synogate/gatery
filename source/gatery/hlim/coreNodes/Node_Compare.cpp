@@ -33,6 +33,22 @@ Node_Compare::Node_Compare(Op op) : Node(2, 1), m_op(op)
 	setOutputConnectionType(0, conType);
 }
 
+bool Node_Compare::outputIsConstant(size_t) const
+{
+	auto leftDriver = getDriver(0);
+	auto rightDriver = getDriver(1);
+
+	if (leftDriver.node== nullptr || rightDriver.node == nullptr)
+		return false;
+
+	const auto &leftType = hlim::getOutputConnectionType(leftDriver);
+	const auto &rightType = hlim::getOutputConnectionType(rightDriver);
+	HCL_ASSERT_HINT(leftType.type == rightType.type, "Comparing signals with different interpretations not yet implemented!");
+
+	// Special handling for zero-width inputs
+	return leftType.width == 0 && rightType.width == 0;
+}
+
 void Node_Compare::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
 	auto leftDriver = getDriver(0);

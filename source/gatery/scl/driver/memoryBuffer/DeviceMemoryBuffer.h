@@ -48,7 +48,7 @@ namespace gtry::scl::driver {
 				m_nextAlloc = res + bytes;
 				return res;
 			}
-			virtual void reserve(PhysicalAddr deviceAddr, uint64_t bytes) override { m_nextAlloc = std::max(m_nextAlloc, deviceAddr + bytes); }
+			virtual void reserve(PhysicalAddr deviceAddr, uint64_t bytes) override {  } //m_nextAlloc = std::max(m_nextAlloc, deviceAddr + bytes); }
 			virtual void free(PhysicalAddr deviceAddr, uint64_t bytes) override { }
 		protected:
 			std::uint64_t m_nextAlloc = 0;

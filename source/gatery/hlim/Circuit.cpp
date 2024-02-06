@@ -953,12 +953,28 @@ void Circuit::propagateConstants(Subnet &subnet)
 	std::vector<NodePort> openList;
 	// std::set<NodePort> closedList;
 
-	// Start walking the graph from the const nodes
-	for (auto n : subnet) {
-		if (Node_Constant *constNode = dynamic_cast<Node_Constant*>(n)) {
-			openList.push_back({.node = constNode, .port = 0});
-		}
-	}
+	// Start walking the graph from nodes with constant output
+	std::vector<BaseNode*> newNodes;
+	for (auto n : subnet)
+		for (size_t port = 0; port < n->getNumOutputPorts(); port++)
+			if (n->outputIsConstant(port)) {
+				if (dynamic_cast<Node_Constant*>(n))
+					openList.push_back({.node = n, .port = port});
+				else {
+					auto value = evaluateStatically(*this, {.node = n, .port = port});
+					auto *newConstant = createNode<Node_Constant>(value, n->getOutputConnectionType(port));
+					newNodes.push_back(newConstant);
+					newConstant->moveToGroup(n->getGroup());
+					auto driven = n->getDirectlyDriven(port);
+					for (auto &d : driven)
+						d.node->rewireInput(d.port, {.node = newConstant, .port = 0});
+
+					openList.push_back({.node = newConstant, .port = port});
+				}
+			}
+
+	for (auto &n : newNodes)
+		subnet.add(n);
 
 	while (!openList.empty()) {
 		NodePort constPort = openList.back();
