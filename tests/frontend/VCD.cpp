@@ -34,15 +34,12 @@ template<class BaseFixture>
 class VCDTestFixture : public BaseFixture
 {
 	public:
-
 		VCDTestFixture();
-		~VCDTestFixture();
-
 
 		bool VCDContains(const std::regex &regex);
 		bool GTKWaveProjectFileContains(const std::regex &regex);
 	protected:
-		std::filesystem::path m_cwd;
+		std::filesystem::path m_testDir;
 
 		void prepRun() override;
 };
@@ -61,35 +58,27 @@ class IgnoreTapMessages : public BaseFixture
 template<class BaseFixture>
 VCDTestFixture<BaseFixture>::VCDTestFixture()
 {
-	m_cwd = std::filesystem::current_path();
+	const auto& testCase = boost::unit_test::framework::current_test_case();
+	std::filesystem::path testCaseFile{ std::string{ testCase.p_file_name.begin(), testCase.p_file_name.end() } };
+	m_testDir = std::filesystem::path{ "tmp" } / testCaseFile.stem() / testCase.p_name.get();
 
-	std::filesystem::path tmpDir("tmp/");
 	std::error_code ignored;
-	std::filesystem::remove_all(tmpDir, ignored);
-	std::filesystem::create_directories(tmpDir);
-    std::filesystem::current_path(tmpDir);
-}
-
-
-template<class BaseFixture>
-VCDTestFixture<BaseFixture>::~VCDTestFixture()
-{
-	std::filesystem::current_path(m_cwd);
-	//std::filesystem::remove_all("tmp/");
+	std::filesystem::remove_all(m_testDir, ignored);
+	std::filesystem::create_directories(m_testDir);
 }
 
 template<class BaseFixture>
 void VCDTestFixture<BaseFixture>::prepRun()
 {
 	BaseFixture::prepRun();
-	BaseFixture::recordVCD("test.vcd");
+	BaseFixture::recordVCD((m_testDir / "test.vcd").string(), true);
 }
 
 template<class BaseFixture>
 bool VCDTestFixture<BaseFixture>::VCDContains(const std::regex &regex)
 {
 	BaseFixture::m_vcdSink.reset();
-	std::fstream file("test.vcd", std::fstream::in);
+	std::fstream file((m_testDir / "test.vcd").string(), std::fstream::in);
 	BOOST_TEST((bool) file);
 	std::stringstream buffer;
 	buffer << file.rdbuf();
@@ -101,7 +90,7 @@ template<class BaseFixture>
 bool VCDTestFixture<BaseFixture>::GTKWaveProjectFileContains(const std::regex &regex)
 {
 	BaseFixture::m_vcdSink.reset();
-	std::fstream file("test.vcd.gtkw", std::fstream::in);
+	std::fstream file((m_testDir / "test.vcd.gtkw").string(), std::fstream::in);
 	BOOST_TEST((bool) file);
 	std::stringstream buffer;
 	buffer << file.rdbuf();

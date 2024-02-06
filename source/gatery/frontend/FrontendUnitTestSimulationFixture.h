@@ -46,7 +46,7 @@ namespace gtry {
 			void runTicks(const hlim::Clock* clock, unsigned numTicks);
 
 			/// Enables recording of a waveform for a subsequent simulation run
-			void recordVCD(const std::string& filename);
+			void recordVCD(const std::string& filename, bool includeMemories = false);
 			/// Exports as VHDL and (optionally) writes a vhdl testbench of the subsequent simulation run
 			void outputVHDL(const std::string& filename, bool includeTest = true);
 
