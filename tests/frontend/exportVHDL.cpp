@@ -52,6 +52,27 @@ BOOST_FIXTURE_TEST_CASE(unconnectedInputs, gtry::GHDLTestFixture)
 	testCompilation();
 }
 
+BOOST_FIXTURE_TEST_CASE(zeroBitEqualsZeroBits, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+    {
+        UInt a = pinIn(0_b);
+        UInt b = 0_b;
+        Bit comparison = a == b;
+        pinOut(comparison).setName("out");
+	}
+    {
+        UInt a = 0_b;
+        UInt b = 0_b;
+        Bit comparison = a == b;
+        pinOut(comparison).setName("out2");
+	}
+    
+	testCompilation();
+}
+
+
 
 BOOST_FIXTURE_TEST_CASE(loopyInputs, gtry::GHDLTestFixture)
 {

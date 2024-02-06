@@ -47,6 +47,8 @@ namespace gtry::hlim {
 		virtual void estimateSignalDelay(SignalDelay &sigDelay) override;
 
 		virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit) override;
+
+		virtual bool outputIsConstant(size_t port) const override { return true; }
 	protected:
 		sim::DefaultBitVectorState m_Value;
 	};
