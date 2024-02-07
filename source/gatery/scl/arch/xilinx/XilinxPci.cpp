@@ -203,7 +203,8 @@ namespace gtry::scl::pci::xilinx {
 
 		Axi4PacketStream<RQUser> ret(in->width());
 		dwordEnable(ret) = ret->width() / 32;
-		ret.set(RQUser{ ret->width() == 512_b ? 137_b : 62_b}); //no logic here, just documentation
+		ret.set(RQUser{ ConstBVec(ret->width() == 512_b ? 137_b : 62_b) }); //no logic here, just documentation
+		ret.template get<RQUser>().raw.lower(16_b) = 0xFFFF;
 
 		*ret = *in;
 		IF(sop(in))
