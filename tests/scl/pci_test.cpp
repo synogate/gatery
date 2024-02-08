@@ -661,7 +661,6 @@ BOOST_FIXTURE_TEST_CASE(dispatcher_test, BoostUnitTestSimulationFixture) {
 	std::mt19937 rng(0xBADC0DE);
 	std::vector<scl::sim::TlpInstruction> instTo0;
 	std::vector<scl::sim::TlpInstruction> instTo1;
-	bool doneSending = false;
 
 	size_t packetsReceivedBy0 = 0;
 	size_t packetsReceivedBy1 = 0;
@@ -692,7 +691,6 @@ BOOST_FIXTURE_TEST_CASE(dispatcher_test, BoostUnitTestSimulationFixture) {
 			rand >>= 1;
 			co_await scl::strm::sendPacket(in, scl::strm::SimPacket(inst), clk);
 		}
-		doneSending = true;
 		while ((packetsReceivedBy0 + packetsReceivedBy1) < numberOfPackets)
 			co_await OnClk(clk);
 		BOOST_TEST(packetsReceivedBy0 == instTo0.size());
