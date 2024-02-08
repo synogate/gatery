@@ -97,7 +97,7 @@ namespace gtry::scl::driver {
 			TaskGroup *group = std::get<1>(task);
 			if (group != nullptr) {
 				std::unique_lock lock(group->m_mutex);
-				if (++group->m_numTasksDone == group->m_numTasks);
+				if (++group->m_numTasksDone == group->m_numTasks)
 					group->m_wakeAwaiter.notify_one();
 			}
 		}
