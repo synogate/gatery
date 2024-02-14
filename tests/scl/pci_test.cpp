@@ -531,7 +531,7 @@ BOOST_FIXTURE_TEST_CASE(pci_requester_512bit_cheapBurst_test_rng_backpressure, B
 	host.defaultHandlers();
 	addSimulationProcess([&, this]()->SimProcess { return host.completeRequests(clk, 0, 50); });
 
-	scl::TileLinkUB master = makePciMasterCheapBurst(host.requesterInterface(512_b), 4_b);
+	scl::TileLinkUB master = makePciMasterCheapBurst(host.requesterInterface(512_b), {}, 4_b);
 
 	pinIn(master, "link");
 
@@ -589,7 +589,7 @@ BOOST_FIXTURE_TEST_CASE(pci_requester_512bit_cheapBurst_chopped_test, BoostUnitT
 	host.updateHandler(TlpOpcode::memoryReadRequest64bit, std::make_unique<scl::sim::CompleterInChunks>(64, 5));
 	addSimulationProcess([&, this]()->SimProcess { return host.completeRequests(clk, 0, 50); });
 
-	scl::TileLinkUB master = makePciMasterCheapBurst(host.requesterInterface(512_b), 4_b);
+	scl::TileLinkUB master = makePciMasterCheapBurst(host.requesterInterface(512_b), {}, 4_b);
 
 	pinIn(master, "link");
 
