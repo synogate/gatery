@@ -368,7 +368,7 @@ namespace gtry::scl::pci {
 		return ret;
 	}
 
-	TileLinkUB makePciMasterCheapBurst(RequesterInterface&& reqInt, std::optional<BitWidth> sizeW, BitWidth addressW) {
+	TileLinkUB makePciMasterCheapBurst(RequesterInterface&& reqInt, std::optional<BVec> tag, std::optional<BitWidth> sizeW, BitWidth addressW) {
 		Area area{ "makePciMasterCheapBurst", true };
 
 		TileLinkUB ret = tileLinkInit<TileLinkUB>(addressW, (*reqInt.request)->width(), 0_b, sizeW);
@@ -376,7 +376,20 @@ namespace gtry::scl::pci {
 		TileLinkChannelA a = constructFrom(ret.a);
 		a <<= ret.a;
 
-		*reqInt.request <<= tileLinkAToRequesterRequest(move(a));
+
+		auto rr = tileLinkAToRequesterRequest(move(a));
+		if (tag)
+			rr = move(rr.transform([&](const BVec& in) {
+				BVec ret = in;
+				IF(valid(rr) & sop(rr)) {
+					auto hdr = RequestHeader::fromRaw(ret.lower(128_b));
+					hdr.tag = zext(*tag);
+					ret.lower(128_b) = hdr;
+				}
+				return ret;
+			}));
+	
+		*reqInt.request <<= rr;
 		*ret.d = requesterCompletionToTileLinkDCheapBurst(move(reqInt.completion), sizeW);
 
 		HCL_NAMED(ret);
