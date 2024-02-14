@@ -18,8 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 
-#include <gatery/scl/tilelink/tilelink.h>
-
+#include <gatery/scl/stream/Stream.h>
 
 namespace gtry::scl::pci
 {
@@ -200,6 +199,17 @@ namespace gtry::scl::pci
 		TlpPacketStream<EmptyBits> completion;
 	};
 
+	//template<Signal... Meta>
+	//TlpPacketStream<Meta...> requestHeaderPatcher(TlpPacketStream<Meta...>&& in, std::function<RequestHeader(const RequestHeader&)> modification) 
+	//{
+	//	HCL_DESIGNCHECK_HINT(in->width() >= 128_b, "current design needs full header in one starting beat");
+	//	return in.transform([&](const BVec& tlp) {
+	//		auto ret = tlp;
+	//		IF(valid(in) & sop(in))
+	//			ret.lower(128_b) = modification(RequestHeader::fromRaw(ret.lower(128_b)));
+	//	});
+	//}
+	//
 	RequesterInterface simOverrideReqInt(RequesterInterface &&hardware, RequesterInterface &&simulation);
 }
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::CompleterInterface, request, completion);
