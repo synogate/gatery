@@ -49,16 +49,19 @@ namespace gtry::scl
 		Reverse<TileLinkUL> toMaster = { tileLinkInit<TileLinkUL>(addrWidth, dataW, sourceW) };
 		HCL_NAMED(toMaster);
 
-		TileLinkChannelD d;
-		*d = tileLinkDefaultResponse(*toMaster->a);
-		valid(d) = valid(toMaster->a);
-		d->error = '1';
+		TileLinkChannelD d0;
+		*d0 = tileLinkDefaultResponse(*toMaster->a);
+		valid(d0) = valid(toMaster->a);
 
 		Bit anyWriteHappening = transfer(toMaster->a) & toMaster->a->isPut();
 		HCL_NAMED(anyWriteHappening);
 
 		UInt wordAddress = toMaster->a->address.upper(-BitWidth::count(dataW.bytes()));
 		HCL_NAMED(wordAddress);
+
+
+		BVec readData = ConstBVec(0, d0->data.width());
+		d0->error = '1';
 
 		std::function<void(PackedMemoryMap::Scope& scope)> processRegs;
 		processRegs = [&](PackedMemoryMap::Scope& scope) {
@@ -68,12 +71,20 @@ namespace gtry::scl
 
 				Bit selected = wordAddress == r.description.offsetInBits / dataW;
 				setName(selected, r.description.name.get() + "_selected");
-				IF (selected) {
-					d->error = '0';
 
-					if (r.readSignal)
-						d->data = zext(*r.readSignal);
-					
+				if (r.readSignal)
+				{
+					readData |= reg(mux(
+						selected, { 
+							ConstBVec(0, d0->data.width()), 
+							zext(*r.readSignal, d0->data.width()) 
+						}
+					));
+				}
+
+				IF (selected) {
+					d0->error = '0';
+
 					if (r.writeSignal) {
 						IF (anyWriteHappening) {
 							for (auto byte : utils::Range((r.writeSignal->size()+7)/8)) {
@@ -96,6 +107,8 @@ namespace gtry::scl
 		};
 		processRegs(tree);
 
+		TileLinkChannelD d = regDownstream(move(d0));
+		d->data = readData;
 		setName(d, "response");
 
 		ready(toMaster->a) = ready(d);

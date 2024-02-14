@@ -100,14 +100,14 @@ namespace gtry::scl::strm
 	using gtry::reg;
 
 	template<StreamSignal T> requires (T::template has<Credit>())
-	T reg(T&& in)
+	T reg(T&& in, const RegisterSettings& settings = {})
 	{
 		T out = constructFrom(in);
 		valid(in).resetValue('0');
 		out.template get<Credit>().increment->resetValue('0');
 
-		downstream(out) = reg(copy(downstream(in)));
-		upstream(in) = reg(copy(upstream(out)));
+		downstream(out) = reg(copy(downstream(in)), settings);
+		upstream(in) = reg(copy(upstream(out)), settings);
 		return out;
 	}
 

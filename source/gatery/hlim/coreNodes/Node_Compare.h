@@ -52,6 +52,8 @@ class Node_Compare : public Node<Node_Compare>
 		virtual void estimateSignalDelay(SignalDelay &sigDelay) override;
 
 		virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit) override;
+
+		virtual bool outputIsConstant(size_t port) const override;
 	protected:
 		Op m_op;
 };

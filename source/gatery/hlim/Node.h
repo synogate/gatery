@@ -115,6 +115,7 @@ class BaseNode : public NodeIO
 		bool isOrphaned() const;
 		virtual bool hasSideEffects() const;
 		virtual bool isCombinatorial(size_t port) const;
+		virtual bool outputIsConstant(size_t port) const { return false; }
 
 		/// Returns true if the node has no side effects and given its configuration and inputs, the node is not actually needed.
 		virtual bool isNoOp() const { return false; }
