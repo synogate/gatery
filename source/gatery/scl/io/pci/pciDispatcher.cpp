@@ -22,10 +22,11 @@ namespace gtry::scl::pci {
 
 	scl::StreamDemux<TlpPacketStream<EmptyBits>> pciDispatcher(TlpPacketStream<EmptyBits>&& requesterCompletion)
 	{
+		Area area{ "scl_pci_dispatcher", true };
 		HCL_DESIGNCHECK_HINT(requesterCompletion->width() >= 96_b, "one beat must contain header");
 		CompletionHeader hdr = CompletionHeader::fromRaw(requesterCompletion->lower(96_b));
-		BVec activeTag = capture(hdr.tag, valid(requesterCompletion) & sop(requesterCompletion));
-
+		BVec activeTag = capture(hdr.tag, ConstBVec(0, hdr.tag.width()), valid(requesterCompletion) & sop(requesterCompletion));
+		HCL_NAMED(activeTag);
 		scl::StreamDemux<TlpPacketStream<EmptyBits>> ret(move(requesterCompletion));
 		ret.selector((UInt) activeTag);
 
