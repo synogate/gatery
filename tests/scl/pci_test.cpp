@@ -29,6 +29,7 @@
 #include <gatery/scl/io/pci/PciToTileLink.h> 
 #include <gatery/scl/tilelink/TileLinkMasterModel.h>
 #include <gatery/scl/sim/PcieHostModel.h>
+#include <gatery/scl/io/pci/pciDispatcher.h>
 
 using namespace boost::unit_test;
 using namespace gtry;
@@ -530,7 +531,7 @@ BOOST_FIXTURE_TEST_CASE(pci_requester_512bit_cheapBurst_test_rng_backpressure, B
 	host.defaultHandlers();
 	addSimulationProcess([&, this]()->SimProcess { return host.completeRequests(clk, 0, 50); });
 
-	scl::TileLinkUB master = makePciMasterCheapBurst(host.requesterInterface(512_b), 4_b);
+	scl::TileLinkUB master = makePciMasterCheapBurst(host.requesterInterface(512_b), {}, 4_b);
 
 	pinIn(master, "link");
 
@@ -588,7 +589,7 @@ BOOST_FIXTURE_TEST_CASE(pci_requester_512bit_cheapBurst_chopped_test, BoostUnitT
 	host.updateHandler(TlpOpcode::memoryReadRequest64bit, std::make_unique<scl::sim::CompleterInChunks>(64, 5));
 	addSimulationProcess([&, this]()->SimProcess { return host.completeRequests(clk, 0, 50); });
 
-	scl::TileLinkUB master = makePciMasterCheapBurst(host.requesterInterface(512_b), 4_b);
+	scl::TileLinkUB master = makePciMasterCheapBurst(host.requesterInterface(512_b), {}, 4_b);
 
 	pinIn(master, "link");
 
@@ -632,5 +633,98 @@ BOOST_FIXTURE_TEST_CASE(pci_requester_512bit_cheapBurst_chopped_test, BoostUnitT
 	//design.visualize("dut");
 
 	BOOST_TEST(!runHitsTimeout({ 5, 1'000'000 }));
+}
+
+
+
+
+BOOST_FIXTURE_TEST_CASE(dispatcher_test, BoostUnitTestSimulationFixture) {
+	using namespace scl::pci;
+	const Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+
+	BitWidth tlpStreamW = 128_b;
+	size_t numberOfPackets = 128;
+
+	TlpPacketStream<scl::EmptyBits> in(tlpStreamW);
+	emptyBits(in) = BitWidth::count(in->width().bits());
+	pinIn(in, "in");
+
+	scl::StreamDemux disp = pciDispatcher(move(in));
+
+	auto out0 = disp.out(0);
+	pinOut(out0, "out0");
+	auto out1 = disp.out(1);
+	pinOut(out1, "out1");
+
+
+	std::mt19937 rng(0xBADC0DE);
+	std::vector<scl::sim::TlpInstruction> instTo0;
+	std::vector<scl::sim::TlpInstruction> instTo1;
+
+	size_t packetsReceivedBy0 = 0;
+	size_t packetsReceivedBy1 = 0;
+	//send completion packets through in
+	addSimulationProcess([&]()->SimProcess {
+		uint32_t rand;
+		for (size_t i = 0; i < numberOfPackets; i++){
+			if(i % 32 == 0) rand = rng();
+
+			scl::sim::TlpInstruction inst;
+			inst.opcode = TlpOpcode::completionWithData;
+			inst.length = 10;
+			inst.completerID = 0;
+			inst.lowerByteAddress = 0;
+			inst.byteCount = 0;
+			inst.payload.emplace();
+			for (size_t i = 0; i < inst.length; i++)
+				inst.payload->emplace_back(rng());
+			
+			if (rand & 1) {
+				inst.tag = 1;
+				instTo1.emplace_back(inst);
+			}
+			else {
+				inst.tag = 0;
+				instTo0.emplace_back(inst);
+			}
+			rand >>= 1;
+			co_await scl::strm::sendPacket(in, scl::strm::SimPacket(inst), clk);
+		}
+		while ((packetsReceivedBy0 + packetsReceivedBy1) < numberOfPackets)
+			co_await OnClk(clk);
+		BOOST_TEST(packetsReceivedBy0 == instTo0.size());
+		BOOST_TEST(packetsReceivedBy1 == instTo1.size());
+		co_await OnClk(clk);
+		co_await OnClk(clk);
+		co_await OnClk(clk);
+		stopTest();
+	});
+
+	//receive packets through out0
+	addSimulationProcess([&]()->SimProcess {
+		fork(scl::strm::readyDriverRNG(out0, clk, 50));
+		while (true) {
+			scl::strm::SimPacket packet = co_await scl::strm::receivePacket(out0, clk);
+			auto reconstructedTlp = scl::sim::TlpInstruction::createFrom(packet.payload);
+			BOOST_TEST(reconstructedTlp == instTo0[packetsReceivedBy0]);
+			packetsReceivedBy0++;
+		}
+	});
+
+	//receive packets through out1
+	addSimulationProcess([&]()->SimProcess {
+		fork(scl::strm::readyDriverRNG(out1, clk, 50));
+		while (true) {
+			auto packet = co_await scl::strm::receivePacket(out1, clk);
+			auto reconstructedTlp = scl::sim::TlpInstruction::createFrom(packet.payload);
+			BOOST_TEST(reconstructedTlp == instTo1[packetsReceivedBy1]);
+			packetsReceivedBy1++;
+		}
+	});
+
+	design.postprocess();
+
+	BOOST_TEST(!runHitsTimeout({ 100, 1'000'000 }));
 }
 

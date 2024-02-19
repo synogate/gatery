@@ -18,6 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #pragma once
 
 #include <gatery/scl/io/pci/pci.h>
+#include <gatery/scl/tilelink/tilelink.h>
 
 namespace gtry::scl::pci {
 
@@ -42,5 +43,5 @@ namespace gtry::scl::pci {
 	TileLinkChannelD requesterCompletionToTileLinkDCheapBurst(TlpPacketStream<EmptyBits>&& rc, std::optional<BitWidth> sizeW = {});
 	TileLinkUL makePciMaster(RequesterInterface&& reqInt, BitWidth byteAddressW, BitWidth dataW, BitWidth tagW);
 	TileLinkUL makePciMasterFullW(RequesterInterface&& reqInt);
-	TileLinkUB makePciMasterCheapBurst(RequesterInterface&& reqInt, std::optional<BitWidth> sizeW = {}, BitWidth addressW = 64_b);
+	TileLinkUB makePciMasterCheapBurst(RequesterInterface&& reqInt, std::optional<BVec> tag = {}, std::optional<BitWidth> sizeW = {}, BitWidth addressW = 64_b);
 }

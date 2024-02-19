@@ -28,9 +28,9 @@ namespace gtry::scl
 	{
 	public:
 		StreamDemux(T&& in) : m_in(move(in)) { init(); }
-		StreamDemux(T&& in, const UInt& selector) : m_selector(selector), m_in(move(in)) { init(); }
+		StreamDemux(T&& in, const UInt& selector) : m_selector(selector), m_in(move(in)) { init(); HCL_NAMED(m_selector); }
 
-		StreamDemux& selector(const UInt& selector) { m_selector = selector; return *this; }
+		StreamDemux& selector(const UInt& selector) { m_selector = selector; auto ent = m_area.enter(); HCL_NAMED(m_selector); return *this; }
 
 		T out(size_t index)
 		{
@@ -67,6 +67,7 @@ namespace gtry::scl
 		{
 			ready(m_in) = '1'; // default is to consume everything pointing at unconnected outputs
 			HCL_NAMED(m_in);
+
 			m_area.leave();
 		}
 

@@ -59,4 +59,14 @@ namespace gtry::scl
 			value = in;
 		return value;
 	}
+
+	template<Signal T>
+	T capture(const T& in, const T& resetValue, Bit condition)
+	{
+		T value = constructFrom(in);
+		value = reg(value, resetValue);
+		IF(condition)
+			value = in;
+		return value;
+	}
 }

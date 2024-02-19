@@ -18,8 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 
-#include <gatery/scl/tilelink/tilelink.h>
-
+#include <gatery/scl/stream/Stream.h>
 
 namespace gtry::scl::pci
 {
