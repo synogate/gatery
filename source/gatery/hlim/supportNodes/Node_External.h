@@ -21,6 +21,8 @@
 
 #include <gatery/simulation/BitVectorState.h>
 
+#include <gatery/utils/ClangSpaceshipOptional.h>
+
 #include <vector>
 #include <string>
 #include <map>
@@ -48,6 +50,9 @@ class GenericParameter {
 		//};
 
 		GenericParameter &operator=(int v) { m_storage = v; m_flavor = DecimalFlavor::INTEGER; return *this; }
+#ifdef __APPLE__
+		GenericParameter &operator=(std::uint64_t v) { HCL_DESIGNCHECK_HINT(v <= std::numeric_limits<int>::max(), "Value too large!"); m_storage = (int) v; m_flavor = DecimalFlavor::NATURAL; return *this; }
+#endif
 		GenericParameter &operator=(size_t v) { HCL_DESIGNCHECK_HINT(v <= std::numeric_limits<int>::max(), "Value too large!"); m_storage = (int) v; m_flavor = DecimalFlavor::NATURAL; return *this; }
 		GenericParameter &operator=(double v) { m_storage = v; return *this; }
 		GenericParameter &operator=(std::string v) { m_storage = std::move(v); return *this; }
@@ -106,7 +111,6 @@ class GenericParameter {
 		std::variant<DecimalFlavor, BitFlavor> m_flavor;
 		std::variant<int, double, bool, char, std::string, sim::DefaultBitVectorState> m_storage;
 };
-
 
 class Node_External : public Node<Node_External>
 {

@@ -159,7 +159,7 @@ public:
 		avmm.readLatency = 5;
 		attachMem(avmm, avmm.address.width());
 
-		std::string pinName = "avmm" + '_';
+		std::string pinName = "avmm_";
 		gtry::pinOut(avmm.address).setName(pinName + "address");
 		if (avmm.read) gtry::pinOut(*avmm.read).setName(pinName + "read");
 		if (avmm.write) gtry::pinOut(*avmm.write).setName(pinName + "write");

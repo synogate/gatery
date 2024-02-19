@@ -68,23 +68,27 @@ namespace gtry::scl::strm
 		PayloadT data;
 		std::tuple<Meta...> _sig;
 	};
+	// TODO: resolve which of these is corret
 
+	#ifdef __clang__
+	#define GTRY_STREAM_ASSIGNABLE Assignable<StreamAssignabilityTestHelper<PayloadT, Meta...>>
+	#define GTRY_STREAM_BIDIR BidirStreamSignal<StreamAssignabilityTestHelper<PayloadT, Meta...>>
+	#else
+	#define GTRY_STREAM_ASSIGNABLE Assignable<Self>
+	#define GTRY_STREAM_BIDIR BidirStreamSignal<Self>
+	#endif
+/*
 #ifdef __clang__
 	#define GTRY_STRM_CLANG_RETURN_CONSTEXPR_GUARD if constexpr (!Assignable<AssignabilityTestType>) return Self{}; else
 #else
 	#define GTRY_STRM_CLANG_RETURN_CONSTEXPR_GUARD
 #endif
-
+*/
 	template<Signal PayloadT, Signal... Meta>
 	struct Stream
 	{
 		using Payload = PayloadT;
 		using Self = Stream<PayloadT, Meta...>;
-#ifdef __clang__
-		using AssignabilityTestType = StreamAssignabilityTestHelper<PayloadT, Meta...>; // Clang does not like querying things like assignability on an incomplete type (i.e. while still building the type).
-#else		
-		using AssignabilityTestType = Self;
-#endif
 
 		Payload data;
 		std::tuple<Meta...> _sig;
@@ -99,46 +103,39 @@ namespace gtry::scl::strm
 		static constexpr bool has();
 
 		template<Signal T> inline auto add(T&& signal);
-		template<Signal T> inline auto add(T&& signal) const requires (Assignable<AssignabilityTestType>);
+		template<Signal T> inline auto add(T&& signal) const requires (GTRY_STREAM_ASSIGNABLE);
 
 		template<Signal T> constexpr T& get() { return std::get<T>(_sig); }
 		template<Signal T> constexpr const T& get() const { return std::get<T>(_sig); }
 		template<Signal T> constexpr void set(T&& signal) { get<T>() = std::forward<T>(signal); }
 
 		auto transform(std::invocable<Payload> auto&& fun);
-#ifdef __clang__
-		template<typename unused = void>
-		auto transform(std::invocable<Payload> auto&& fun) const requires (Assignable<AssignabilityTestType>);
-#else		
-		auto transform(std::invocable<Payload> auto&& fun) const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>);
-#endif
+		auto transform(std::invocable<Payload> auto&& fun) const requires(!GTRY_STREAM_BIDIR);
 
 		template<StreamSignal T> T reduceTo();
-		template<StreamSignal T> T reduceTo() const requires(Assignable<AssignabilityTestType>);
+		template<StreamSignal T> T reduceTo() const requires(GTRY_STREAM_ASSIGNABLE);
 
 		template<StreamSignal T> explicit operator T ();
-		template<StreamSignal T> explicit operator T () const requires(Assignable<AssignabilityTestType>);
+		template<StreamSignal T> explicit operator T () const requires(GTRY_STREAM_ASSIGNABLE);
 
 		/**
-		 * @brief removes the MetaSignal T from the stream. Does not affect the payload
+		* @brief removes the MetaSignal T from the stream. Does not affect the payload
 		*/
 		template<Signal T> auto remove();
-		template<Signal T> auto remove() const requires(Assignable<AssignabilityTestType>);
+		template<Signal T> auto remove() const requires(GTRY_STREAM_ASSIGNABLE);
 		auto removeUpstream() { return remove<Ready>(); }
-		auto removeUpstream() const requires(Assignable<AssignabilityTestType>) { 
-			GTRY_STRM_CLANG_RETURN_CONSTEXPR_GUARD
-			return *this;
-		}
+		auto removeUpstream() const requires(GTRY_STREAM_ASSIGNABLE) { return this->data; }
 		auto removeFlowControl() { return remove<Ready>().template remove<Valid>().template remove<Sop>(); }
-		auto removeFlowControl() const requires(Assignable<AssignabilityTestType>) { 
-			GTRY_STRM_CLANG_RETURN_CONSTEXPR_GUARD
-			return remove<Valid>().template remove<Sop>(); 
-		}
+		auto removeFlowControl() const requires(GTRY_STREAM_ASSIGNABLE) { return remove<Valid>().template remove<Sop>(); }
 	};
 }
 
 namespace gtry::scl::strm
 {
+	// adding deduction guide for clang compatibility
+	template<typename PayloadT, typename... Meta>
+	Stream(PayloadT, std::tuple<Meta...>) -> Stream<PayloadT, Meta...>;
+
 	template<Signal PayloadT, Signal ...Meta>
 	template<Signal T>
 	inline constexpr bool Stream<PayloadT, Meta...>::has()
@@ -203,7 +200,7 @@ namespace gtry::scl::strm
 
 	template<Signal PayloadT, Signal ...Meta>
 	template<Signal T>
-	inline auto Stream<PayloadT, Meta...>::add(T&& signal) const requires (Assignable<AssignabilityTestType>)
+	inline auto Stream<PayloadT, Meta...>::add(T&& signal) const requires (GTRY_STREAM_ASSIGNABLE)
 	{
 		if constexpr (has<T>())
 		{
@@ -235,12 +232,7 @@ namespace gtry::scl::strm
 	}
 
 	template<Signal PayloadT, Signal ...Meta>
-#ifdef __clang__
-	template<typename unused>
-	inline auto Stream<PayloadT, Meta...>::transform(std::invocable<Payload> auto&& fun) const requires (Assignable<AssignabilityTestType>)
-#else
-	inline auto Stream<PayloadT, Meta...>::transform(std::invocable<Payload> auto&& fun) const requires(!BidirStreamSignal<Stream<PayloadT, Meta...>>)
-#endif
+	inline auto Stream<PayloadT, Meta...>::transform(std::invocable<Payload> auto&& fun) const requires(!GTRY_STREAM_BIDIR)
 	{
 		auto&& result = std::invoke(fun, data);
 		Stream<std::remove_cvref_t<decltype(result)>, Meta...> ret;
@@ -274,7 +266,7 @@ namespace gtry::scl::strm
 
 	template<Signal PayloadT, Signal ...Meta>
 	template<StreamSignal T>
-	inline T Stream<PayloadT, Meta...>::reduceTo() const requires(Assignable<AssignabilityTestType>)
+	inline T Stream<PayloadT, Meta...>::reduceTo() const requires(GTRY_STREAM_ASSIGNABLE)
 	{
 		T ret{ data };
 		std::apply([&](auto&... meta) {
@@ -304,7 +296,7 @@ namespace gtry::scl::strm
 
 	template<Signal PayloadT, Signal ...Meta>
 	template<StreamSignal T> 
-	Stream<PayloadT, Meta...>::operator T () const requires(Assignable<AssignabilityTestType>)
+	Stream<PayloadT, Meta...>::operator T () const requires(GTRY_STREAM_ASSIGNABLE)
 	{
 		T ret{ data };
 
@@ -392,13 +384,14 @@ namespace gtry::scl::strm
 
 	template<Signal PayloadT, Signal ...Meta>
 	template<Signal T>
-	inline auto Stream<PayloadT, Meta...>::remove() const requires(Assignable<AssignabilityTestType>)
+	inline auto Stream<PayloadT, Meta...>::remove() const requires(GTRY_STREAM_ASSIGNABLE)
 	{
 		auto metaRefs = internal::remove_from_tuple<T>(_sig);
 
 		return std::apply([&](auto&... meta) {
 			return Stream<PayloadT, std::remove_cvref_t<decltype(meta)>...>{
-				this->data, metaRefs
+				// this cast is necessary for clang compatibility
+				this->data, (std::tuple<std::remove_cvref_t<decltype(meta)>...>)metaRefs
 			};
 		}, metaRefs);
 	}

@@ -73,8 +73,9 @@ namespace gtry
 	 * That is, the actual recursion is implemented in VisitCompound so that the Visitors can focus on the 
 	 * member operations.
 	 */
+	// made ElementarySignal a reference because using an abstract class as a parameter didn't work
 	template<typename T>
-	concept CompoundVisitor = requires(T v, std::string_view name, const int i, ElementarySignal a, std::array<int, 5> container, std::tuple<int, int> myStruct) {
+	concept CompoundVisitor = requires(T v, std::string_view name, const int i, ElementarySignal& a, std::array<int, 5> container, std::tuple<int, int> myStruct) {
 		{ v.enterPackStruct(myStruct) } -> std::convertible_to<bool>;
 		{ v.enterPackContainer(container) } -> std::convertible_to<bool>;
 		v.leavePack();
@@ -85,19 +86,19 @@ namespace gtry
 	};
 	
 	template<typename T>
-	concept CompoundUnaryVisitor = CompoundVisitor<T> && requires(T v, ElementarySignal a, int i) {
+	concept CompoundUnaryVisitor = CompoundVisitor<T> && requires(T v, ElementarySignal& a, int i) {
 		v(i);
 		v(a);
 	};
 
 	template<typename T>
-	concept CompoundBinaryVisitor = CompoundVisitor<T> && requires(T v, const ElementarySignal a, const int i) {
+	concept CompoundBinaryVisitor = CompoundVisitor<T> && requires(T v, const ElementarySignal& a, const int i) {
 		v(i, i);
 		v(a, a);
 	};
 
 	template<typename T>
-	concept CompoundAssignmentVisitor = CompoundVisitor<T> && requires(T v, const ElementarySignal a, ElementarySignal b, int i, const int j) {
+	concept CompoundAssignmentVisitor = CompoundVisitor<T> && requires(T v, const ElementarySignal& a, ElementarySignal& b, int i, const int j) {
 		v(i, j);
 		v(b, a);
 	};

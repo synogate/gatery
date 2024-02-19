@@ -27,6 +27,7 @@ namespace hlim {
 	class Subnet;
 	class BaseNode;
 	class NodeGroup;
+	class Circuit;
 }
 
 namespace dbg {
@@ -84,6 +85,7 @@ class LogMessage
 enum class State {
 	DESIGN,
 	POSTPROCESS,
+	POSTPROCESSINGDONE,
 	SIMULATION
 };
 
@@ -101,13 +103,14 @@ class DebugInterface
 		virtual void stopInDebugger() { }
 		virtual void log(LogMessage msg) { }
 		virtual void operate() { }
-		virtual void changeState(State state) { m_state = state; }
+		virtual void changeState(State state, hlim::Circuit* circuit) { m_state = state; }
 
 		virtual void createVisualization(const std::string &id, const std::string &title) { }
 		virtual void updateVisualization(const std::string &id, const std::string &imageData) { }
 
 		virtual size_t createAreaVisualization(unsigned width, unsigned height) { return 0; }
 		virtual void updateAreaVisualization(size_t id, const std::string content) { }
+
 	protected:
 		State m_state = State::DESIGN;
 };
@@ -116,10 +119,11 @@ void awaitDebugger();
 void pushGraph();
 void stopInDebugger();
 void operate();
-void changeState(State state);
+void changeState(State state, hlim::Circuit* circuit);
 size_t createAreaVisualization(unsigned width, unsigned height);
 void updateAreaVisualization(size_t id, const std::string content);
 void log(const LogMessage &msg);
+
 
 void vis();
 

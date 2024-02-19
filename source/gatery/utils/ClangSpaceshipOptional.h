@@ -18,40 +18,19 @@
 #pragma once
 
 
-// Apparently no longer needed, but keeping around in case it is needed for webassembly clang
-/*
-#ifdef __clang__
-#include <experimental/coroutine>
-
-namespace std {
-	using namespace experimental;
-}
-
-#else
-*/
-
-//#include <coroutine>
-
-/*
-#endif
-*/
+#include <optional>
 
 
 #ifdef __clang__
-#define __cpp_impl_coroutine true
-#define __cpp_lib_coroutine true
-#endif
-
-#include <coroutine>
-
-/*
-#ifdef __clang__
-namespace std::experimental {
-	using std::coroutine_traits;
-	using std::coroutine_handle;
-	using std::suspend_always;
-	using std::suspend_never;
+template <typename T>
+auto operator<=>(const std::optional<T> &lhs, const std::optional<T> &rhs) {
+	bool leftExists = (bool) lhs;
+	bool rightExists = (bool) rhs;
+	if (auto __c = _VSTD::__synth_three_way(leftExists, rightExists); __c != 0)
+		return __c;
+	if (leftExists && rightExists)
+		return _VSTD::__synth_three_way(*lhs, *rhs);
+	return _VSTD::__synth_three_way(0, 0);
 }
 #endif
- */
 

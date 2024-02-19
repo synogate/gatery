@@ -58,7 +58,7 @@ namespace gtry::hlim
 		}
 
 		m_properties["name"] = fullName;
-		m_name = move(fullName);
+		m_name = std::move(fullName);
 
 		if (auto config = this->config("partition"))
 			if (config.as<bool>())

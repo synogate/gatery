@@ -179,9 +179,26 @@ DefaultBitVectorState parseBitVector(std::string_view value)
 			ret.set(sim::DefaultConfig::VALUE, i, (num & (1ull << i)) != false);
 	};
 
+	auto parseString = [&](auto& ctx) {
+		std::string_view str = _attr(ctx);
+		uint64_t width = str.length() * 8;
+
+		if (ret.size() == 0)
+			ret.resize(width);
+		HCL_DESIGNCHECK_HINT(ret.size() >= width, "string UInt constant width is to small for its value");
+
+		ret.setRange(sim::DefaultConfig::DEFINED, 0, width, true);
+		for (size_t i = 0; i < width; ++i) {
+			char c = str[i/8];
+			bool bit = c & (1 << (i % 8));
+			ret.set(sim::DefaultConfig::VALUE, i, bit);
+		}
+	};
+
 	try {
 		parse(value.begin(), value.end(),
 			(-uint_)[parseWidth] > (
+				(char_('s') > (*char_)[parseString]) |
 				(char_('x') > (*char_("0-9a-fA-FxX"))[std::bind(parseHex, 4, std::placeholders::_1)]) |
 				(char_('o') > (*char_("0-7xX"))[std::bind(parseHex, 3, std::placeholders::_1)]) |
 				(char_('b') > (*char_("0-1xX"))[std::bind(parseHex, 1, std::placeholders::_1)]) |
@@ -191,7 +208,7 @@ DefaultBitVectorState parseBitVector(std::string_view value)
 	}
 	catch (const expectation_failure<std::string_view::iterator>&)
 	{
-		HCL_DESIGNCHECK_HINT(false, "parsing of UInt literal failed (32xF, b0, ...)");
+		HCL_DESIGNCHECK_HINT(false, std::string("parsing of UInt literal failed (32xF, b0, ...), got: ") + std::string(value));
 	}
 
 	return ret;

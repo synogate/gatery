@@ -82,10 +82,12 @@ void gtry::scl::riscv::ElfLoader::splitTextAndRoData()
 				continue;
 
 			if (sec.offset >= seg.offset && sec.offset < seg.offset + seg.size.bytes())
+			{
 				if ((sec.flags & 4)) // executable sections
 					executable.push_back(sec);
 				else
 					data.push_back(sec);
+			}
 		}
 
 

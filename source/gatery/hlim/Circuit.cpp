@@ -63,6 +63,8 @@
 
 #include "Subnet.h"
 
+#include "gatery/debug/reporting/ReportInterface.h"
+
 
 #include <set>
 #include <vector>
@@ -157,11 +159,12 @@ void Circuit::copySubnet(const utils::StableSet<NodePort> &subnetInputs,
 
 		for (auto i : utils::Range(oldNode->getClocks().size())) {
 			auto *oldClock = oldNode->getClocks()[i];
-			if (oldClock != nullptr)
+			if (oldClock != nullptr) {
 				if (copyClocks)
 					newNode->attachClock(lazyCreateClockNetwork(oldClock), i);
 				else
 					newNode->attachClock(oldClock, i);
+			}
 		}
 	}
 }
@@ -1384,7 +1387,7 @@ void Circuit::optimizeSubnet(Subnet &subnet)
 
 void Circuit::postprocess(const PostProcessor &postProcessor)
 {
-	dbg::changeState(dbg::State::POSTPROCESS);
+	dbg::changeState(dbg::State::POSTPROCESS, this);
 	postProcessor.run(*this);
 
 	detectUnguardedCDCCrossings(*this, ConstSubnet::all(*this), [this](const BaseNode *affectedNode) {
@@ -1404,6 +1407,8 @@ void Circuit::postprocess(const PostProcessor &postProcessor)
 			<< affectedNode->getStackTrace();
 		HCL_DESIGNCHECK_HINT(false, msg.str());
 	});
+
+	dbg::changeState(dbg::State::POSTPROCESSINGDONE, this);
 
 }
 

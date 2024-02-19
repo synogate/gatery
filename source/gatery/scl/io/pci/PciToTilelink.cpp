@@ -123,8 +123,9 @@ namespace gtry::scl::pci {
 		HCL_NAMED(tl);
 
 		HCL_DESIGNCHECK_HINT(tl.a->source.width() == width(TlpAnswerInfo{}), "the source width is not adequate");
-	
-		TlpPacketStream complReq = completerRequestToTileLinkA(tl.a, tlpW);
+
+		// changed TlPacketStream to auto because clang doens't have alias template argument deduction
+		auto complReq = completerRequestToTileLinkA(tl.a, tlpW);
 		HCL_NAMED(complReq);
 		
 		TlpPacketStream<EmptyBits> complCompl = tileLinkDToCompleterCompletion(move(*tl.d), tlpW);

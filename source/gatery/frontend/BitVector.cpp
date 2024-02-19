@@ -265,8 +265,8 @@ namespace gtry {
 		auto it = m_dynamicBitAlias.find(idx.readPort());
 		if (it != m_dynamicBitAlias.end())	
 			return it->second;
-
-		auto slice = std::make_shared<BitVectorSliceDynamic>(idx, std::min(size() - 1, idx.width().last()), 1, 1_b, m_range);
+		// cast size_t to uint64_t because clang interprets size_t differently than gcc
+		auto slice = std::make_shared<BitVectorSliceDynamic>(idx, std::min((uint64_t)size() - 1, idx.width().last()), 1, 1_b, m_range);
 
 		auto it2 = m_dynamicBitAlias.try_emplace(idx.readPort(), 
 			m_node, slice, m_initialScopeId

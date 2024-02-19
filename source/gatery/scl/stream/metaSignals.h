@@ -39,14 +39,14 @@ namespace gtry::scl::strm {
 	* @param stream to test
 	* @return transfer occurring
 	*/
-	template<StreamSignal T> Bit transfer(const T& stream) { return valid(stream) & ready(stream); }
+	template<StreamSignal StreamT> Bit transfer(const StreamT& stream) { return valid(stream) & ready(stream); }
 
 	/**
 	* @brief High when sink can accept incoming data.
 	* @param stream to test
 	* @return sink ready
 	*/
-	template<StreamSignal T> const Bit ready(const T& stream) { return '1'; }
+	template<StreamSignal StreamT> const Bit ready(const StreamT& stream) { return '1'; }
 
 	/**
 	* @brief High when source has data to send.
@@ -66,10 +66,10 @@ namespace gtry::scl::strm {
 		Reverse<Bit> ready;
 	};
 
-	template<StreamSignal T> requires (T::template has<Ready>())
-		Bit& ready(T& stream) { return *stream.template get<Ready>().ready; }
-	template<StreamSignal T> requires (T::template has<Ready>())
-		const Bit& ready(const T& stream) { return *stream.template get<Ready>().ready; }
+	template<StreamSignal StreamT> requires (StreamT::template has<Ready>())
+		Bit& ready(StreamT& stream) { return *stream.template get<Ready>().ready; }
+	template<StreamSignal StreamT> requires (StreamT::template has<Ready>())
+		const Bit& ready(const StreamT& stream) { return *stream.template get<Ready>().ready; }
 
 
 	struct Valid
@@ -78,20 +78,20 @@ namespace gtry::scl::strm {
 		Bit valid = Bit{ SignalReadPort{}, false };
 	};
 
-	template<StreamSignal T> requires (T::template has<Valid>())
-		Bit& valid(T& stream) { return stream.template get<Valid>().valid; }
-	template<StreamSignal T> requires (T::template has<Valid>())
-		const Bit& valid(const T& stream) { return stream.template get<Valid>().valid; }
+	template<StreamSignal StreamT> requires (StreamT::template has<Valid>())
+		Bit& valid(StreamT& stream) { return stream.template get<Valid>().valid; }
+	template<StreamSignal StreamT> requires (StreamT::template has<Valid>())
+		const Bit& valid(const StreamT& stream) { return stream.template get<Valid>().valid; }
 
 
 	struct ByteEnable
 	{
 		BVec byteEnable;
 	};
-	template<StreamSignal T> requires (T::template has<ByteEnable>())
-		BVec& byteEnable(T& stream) { return stream.template get<ByteEnable>().byteEnable; }
-	template<StreamSignal T> requires (T::template has<ByteEnable>())
-		const BVec& byteEnable(const T& stream) { return stream.template get<ByteEnable>().byteEnable; }
+	template<StreamSignal StreamT> requires (StreamT::template has<ByteEnable>())
+		BVec& byteEnable(StreamT& stream) { return stream.template get<ByteEnable>().byteEnable; }
+	template<StreamSignal StreamT> requires (StreamT::template has<ByteEnable>())
+		const BVec& byteEnable(const StreamT& stream) { return stream.template get<ByteEnable>().byteEnable; }
 
 	struct DwordEnable
 	{
@@ -107,10 +107,10 @@ namespace gtry::scl::strm {
 		Bit error;
 	};
 
-	template<StreamSignal T> requires (T::template has<Error>())
-		Bit& error(T& stream) { return stream.template get<Error>().error; }
-	template<StreamSignal T> requires (T::template has<Error>())
-		const Bit& error(const T& stream) { return stream.template get<Error>().error; }
+	template<StreamSignal StreamT> requires (StreamT::template has<Error>())
+		Bit& error(StreamT& stream) { return stream.template get<Error>().error; }
+	template<StreamSignal StreamT> requires (StreamT::template has<Error>())
+		const Bit& error(const StreamT& stream) { return stream.template get<Error>().error; }
 
 
 	struct TxId
@@ -118,22 +118,22 @@ namespace gtry::scl::strm {
 		UInt txid;
 	};
 
-	template<StreamSignal T> requires (T::template has<TxId>())
-		UInt& txid(T& stream) { return stream.template get<TxId>().txid; }
-	template<StreamSignal T> requires (T::template has<TxId>())
-		const UInt& txid(const T& stream) { return stream.template get<TxId>().txid; }
+	template<StreamSignal StreamT> requires (StreamT::template has<TxId>())
+		UInt& txid(StreamT& stream) { return stream.template get<TxId>().txid; }
+	template<StreamSignal StreamT> requires (StreamT::template has<TxId>())
+		const UInt& txid(const StreamT& stream) { return stream.template get<TxId>().txid; }
 
 	struct Eop
 	{
 		Bit eop;
 	};
 
-	template<StreamSignal T> requires (T::template has<Eop>())
-		Bit& eop(T& stream) { return stream.template get<Eop>().eop; }
-	template<StreamSignal T> requires (T::template has<Eop>())
-		const Bit& eop(const T& stream) { return stream.template get<Eop>().eop; }
-	template<StreamSignal T> requires (T::template has<Valid>() and T::template has<Eop>())
-		const Bit sop(const T& signal) { return !flag(transfer(signal), transfer(signal) & eop(signal)); }
+	template<StreamSignal StreamT> requires (StreamT::template has<Eop>())
+		Bit& eop(StreamT& stream) { return stream.template get<Eop>().eop; }
+	template<StreamSignal StreamT> requires (StreamT::template has<Eop>())
+		const Bit& eop(const StreamT& stream) { return stream.template get<Eop>().eop; }
+	template<StreamSignal StreamT> requires (StreamT::template has<Valid>() and StreamT::template has<Eop>())
+		const Bit sop(const StreamT& signal) { return !flag(transfer(signal), transfer(signal) & eop(signal)); }
 
 
 	struct Sop
@@ -142,12 +142,12 @@ namespace gtry::scl::strm {
 		Bit sop = Bit{ SignalReadPort{}, false };
 	};
 
-	template<StreamSignal T> requires (T::template has<Sop>())
-		Bit& sop(T& stream) { return stream.template get<Sop>().sop; }
-	template<StreamSignal T> requires (T::template has<Sop>())
-		const Bit& sop(const T& stream) { return stream.template get<Sop>().sop; }
-	template<StreamSignal T> requires (!T::template has<Valid>() and T::template has<Sop>() and T::template has<Eop>())
-		const Bit valid(const T& signal) { return flag(sop(signal) & ready(signal), eop(signal) & ready(signal)) | sop(signal); }
+	template<StreamSignal StreamT> requires (StreamT::template has<Sop>())
+		Bit& sop(StreamT& stream) { return stream.template get<Sop>().sop; }
+	template<StreamSignal StreamT> requires (StreamT::template has<Sop>())
+		const Bit& sop(const StreamT& stream) { return stream.template get<Sop>().sop; }
+	template<StreamSignal StreamT> requires (!StreamT::template has<Valid>() and StreamT::template has<Sop>() and StreamT::template has<Eop>())
+		const Bit valid(const StreamT& signal) { return flag(sop(signal) & ready(signal), eop(signal) & ready(signal)) | sop(signal); }
 
 
 	struct Empty
@@ -155,10 +155,10 @@ namespace gtry::scl::strm {
 		UInt empty; // number of empty symbols in this beat
 	};
 
-	template<StreamSignal T> requires (T::template has<Empty>())
-		UInt& empty(T& s) { return s.template get<Empty>().empty; }
-	template<StreamSignal T> requires (T::template has<Empty>())
-		const UInt& empty(const T& s) { return s.template get<Empty>().empty; }
+	template<StreamSignal StreamT> requires (StreamT::template has<Empty>())
+		UInt& empty(StreamT& stream) { return stream.template get<Empty>().empty; }
+	template<StreamSignal StreamT> requires (StreamT::template has<Empty>())
+		const UInt& empty(const StreamT& stream) { return stream.template get<Empty>().empty; }
 
 
 	// for internal use only, we should introduce a symbol width and remove this
@@ -167,8 +167,8 @@ namespace gtry::scl::strm {
 		UInt emptyBits;
 	};
 
-	template<StreamSignal Ts>
-	const UInt emptyBits(const Ts& in) { return ConstUInt(0, BitWidth::count(in->width().bits())); }
+	template<StreamSignal StreamT>
+	const UInt emptyBits(const StreamT& in) { return ConstUInt(0, BitWidth::count(in->width().bits())); }
 
 	template<StreamSignal StreamT> requires (not StreamT::template has<EmptyBits>() and StreamT::template has<Empty>())
 	const UInt emptyBits(const StreamT& in) { return cat(empty(in), "b000"); }
@@ -179,33 +179,33 @@ namespace gtry::scl::strm {
 	template<StreamSignal StreamT> requires (StreamT::template has<EmptyBits>())
 	const UInt& emptyBits(const StreamT& in) { return in.template get<EmptyBits>().emptyBits; }
 
-	template<StreamSignal T> 
-	auto simuReady(const T &stream) {
-		if constexpr (T::template has<Ready>())
+	template<StreamSignal StreamT> 
+	auto simuReady(const StreamT &stream) {
+		if constexpr (StreamT::template has<Ready>())
 			return simu(ready(stream));
 		else
 			return '1';
 	}
 
-	template<StreamSignal T> 
-	auto simuValid(const T &stream) {
-		if constexpr (T::template has<Valid>())
+	template<StreamSignal StreamT> 
+	auto simuValid(const StreamT &stream) {
+		if constexpr (StreamT::template has<Valid>())
 			return simu(valid(stream));
 		else
 			return '1';
 	}
 
-	template<StreamSignal T>
-	auto simuSop(const T& stream) {
-		if constexpr (T::template has<Sop>())
+	template<StreamSignal StreamT>
+	auto simuSop(const StreamT& stream) {
+		if constexpr (StreamT::template has<Sop>())
 			return simu(sop(stream));
 		else
 			return '1';
 	}
 
-	template<StreamSignal T>
-	auto simuEop(const T& stream) {
-		if constexpr (T::template has<Eop>())
+	template<StreamSignal StreamT>
+	auto simuEop(const StreamT& stream) {
+		if constexpr (StreamT::template has<Eop>())
 			return simu(eop(stream));
 		else
 			return '1';

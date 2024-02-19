@@ -1,0 +1,117 @@
+body {
+	background-color: red;
+}
+
+footer {
+	background-color: #E4E5E7;
+	height: 200px;
+}
+
+h1 {
+	color: #006075;
+}
+
+.title {
+	color: #006075;
+}
+
+.entityTitle {
+	color: #006075;
+}
+
+.content-wrapper {
+	padding: 50px;
+}
+
+.navbar {
+	background-color: #00b3db;
+}
+
+.node-info {
+	color: #00b3db;
+	text-align: left;
+}
+
+.accordion {
+	width: 600px;
+}
+
+.custom-button {
+	background-color: transparent;
+	border: none;
+	color: inherit;
+	box-shadow: none;
+	outline: none;
+	padding: 0;
+	margin: 0;
+}
+
+.custom-link {
+	color: #00b3db;
+	text-decoration: none;
+}
+
+.custom-link-2 {
+	color:#006075;
+}
+
+.message-col {
+	text-align: left;
+}
+
+.custom-padded {
+	padding-top: 20px;
+}
+
+.custom-btn {
+	background-color: transparent;
+	border: none;
+	color: inherit;
+	padding: 0;
+	font: inherit;
+	cursor: pointer;
+	text-align: inherit;
+}
+
+.custom-btn:hover {
+	background-color: #00b3db;
+}
+
+.custom-btn-wide {
+	background-color: transparent;
+	border: none;
+	color: inherit;
+	padding: 0;
+	font: inherit;
+	cursor: pointer;
+	text-align: inherit;
+	width: 370px;
+}
+
+.dropdown-menu {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.custom-container {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	width: 100%;
+}
+
+.custom-container .child-div {
+	flex: 1;
+}
+
+.child-div {
+	width: 30%;
+	height: 400px;
+	padding: 20px;
+	text-align: center;
+}
+
+
+.card {
+	background-color: transparent;
+}

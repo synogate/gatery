@@ -231,7 +231,11 @@ namespace gtry::scl
 			size_t i = 0;
 			for (const auto& s : in)
 			{
+#ifdef __clang__
+				IF(reg(final(counter) == i & valid(s.get()), '0'))
+#else
 				IF(reg(final(counter) == i & valid(s), '0'))
+#endif
 				{
 					IF(counter == in.size() - 1)
 						counter = 0;
@@ -240,7 +244,6 @@ namespace gtry::scl
 				}
 				i++;
 			}
-
 			return counter;
 		}
 	};

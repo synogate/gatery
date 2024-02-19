@@ -680,10 +680,11 @@ struct FieldExtractionTest : public BoostUnitTestSimulationFixture
 		addSimulationProcess([&, this]()->SimProcess {
 		
 			if constexpr (StreamType::template has<scl::Ready>())
-				if(backpressureRNG)
-					fork([&,this]()->SimProcess {
+			{
+				if (backpressureRNG)
+					fork([&, this]() -> SimProcess {
 						std::mt19937 gen(1234567890);
-						std::uniform_int_distribution<size_t> distrib(0,99);
+						std::uniform_int_distribution<size_t> distrib(0, 99);
 						while (true) {
 							simu(ready(out)) = distrib(gen) < readyProbabilityPercent;
 							co_await OnClk(packetTestclk);
@@ -691,7 +692,7 @@ struct FieldExtractionTest : public BoostUnitTestSimulationFixture
 					});
 				else
 					simu(ready(out)) = '1';
-					
+			}
 			
 
 			fork([&,this]()->SimProcess {

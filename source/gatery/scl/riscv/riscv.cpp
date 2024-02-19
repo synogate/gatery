@@ -42,92 +42,92 @@ void gtry::scl::riscv::Instruction::decode(const UInt& inst)
 	// for waveform debugging
 	name = 0;
 	IF(opcode == "b01101")
-		name = 'LUI';
+		name = "32sLUI";
 	IF(opcode == "b00101")
-		name = 'AUIP';
+		name = "32sAUIP";
 	IF(opcode == "b11011")
-		name = 'JAL';
+		name = "32sJAL";
 	IF(opcode == "b11001" & func3 == 0)
-		name = 'JALR';
+		name = "32sJALR";
 	IF(opcode == "b11000" & func3 == 0)
-		name = 'BEQ';
+		name = "32sBEQ";
 	IF(opcode == "b11000" & func3 == 1)
-		name = 'BNE';
+		name = "32sBNE";
 	IF(opcode == "b11000" & func3 == 4)
-		name = 'BLT';
+		name = "32sBLT";
 	IF(opcode == "b11000" & func3 == 5)
-		name = 'BGE';
+		name = "32sBGE";
 	IF(opcode == "b11000" & func3 == 6)
-		name = 'BLTU';
+		name = "32sBLTU";
 	IF(opcode == "b11000" & func3 == 7)
-		name = 'BGEU';
+		name = "32sBGEU";
 
 	IF(opcode == "b00000" & func3 == 0)
-		name = 'LB';
+		name = "32sLB";
 	IF(opcode == "b00000" & func3 == 1)
-		name = 'LH';
+		name = "32sLH";
 	IF(opcode == "b00000" & func3 == 2)
-		name = 'LW';
+		name = "32sLW";
 	IF(opcode == "b00000" & func3 == 4)
-		name = 'LBU';
+		name = "32sLBU";
 	IF(opcode == "b00000" & func3 == 5)
-		name = 'LHU';
+		name = "32sLHU";
 
 	IF(opcode == "b01000" & func3 == 0)
-		name = 'SB';
+		name = "32sSB";
 	IF(opcode == "b01000" & func3 == 1)
-		name = 'SH';
+		name = "32sSH";
 	IF(opcode == "b01000" & func3 == 2)
-		name = 'SW';
+		name = "32sSW";
 
 	IF(opcode == "b00100" & func3 == 0)
-		name = 'ADDI';
+		name = "32sADDI";
 	IF(opcode == "b00100" & func3 == 1)
-		name = 'SLLI';
+		name = "32sSLLI";
 	IF(opcode == "b00100" & func3 == 2)
-		name = 'SLTI';
+		name = "32sSLTI";
 	IF(opcode == "b00100" & func3 == 3)
-		name = 'SLTU';
+		name = "32sSLTU";
 	IF(opcode == "b00100" & func3 == 4)
-		name = 'XORI';
+		name = "32sXORI";
 	IF(opcode == "b00100" & func3 == 5)
-		name = 'SRLI';
+		name = "32sSRLI";
 	IF(opcode == "b00100" & func3 == 5 & func7[5])
-		name = 'SRAI';
+		name = "32sSRAI";
 	IF(opcode == "b00100" & func3 == 6)
-		name = 'ORI';
+		name = "32sORI";
 	IF(opcode == "b00100" & func3 == 7)
-		name = 'ANDI';
+		name = "32sANDI";
 	IF(opcode == "b00100" & rd == 0)
-		name = 'NOOP';
+		name = "32sNOOP";
 
 	IF(opcode == "b01100" & func3 == 0)
-		name = 'ADD';
+		name = "32sADD";
 	IF(opcode == "b01100" & func3 == 0 & func7[5])
-		name = 'SUB';
+		name = "32sSUB";
 	IF(opcode == "b01100" & func3 == 1)
-		name = 'SLL';
+		name = "32sSLL";
 	IF(opcode == "b01100" & func3 == 2)
-		name = 'SLT';
+		name = "32sSLT";
 	IF(opcode == "b01100" & func3 == 3)
-		name = 'SLTU';
+		name = "32sSLTU";
 	IF(opcode == "b01100" & func3 == 4)
-		name = 'XOR';
+		name = "32sXOR";
 	IF(opcode == "b01100" & func3 == 5)
-		name = 'SRL';
+		name = "32sSRL";
 	IF(opcode == "b01100" & func3 == 5 & func7[5])
-		name = 'SRA';
+		name = "32sSRA";
 	IF(opcode == "b01100" & func3 == 6)
-		name = 'ORI';
+		name = "32sORI";
 	IF(opcode == "b01100" & func3 == 7)
-		name = 'AND';
+		name = "32sAND";
 	IF(opcode == "b01100" & rd == 0)
-		name = 'NOOP';
+		name = "32sNOOP";
 
 	IF(opcode == "b00011")
-		name = 'FENC';
+		name = "32sFENC";
 	IF(opcode == "b11100")
-		name = 'ESYS';
+		name = "32sESYS";
 }
 
 gtry::scl::riscv::RV32I::RV32I(BitWidth instructionAddrWidth, BitWidth dataAddrWidth) :
