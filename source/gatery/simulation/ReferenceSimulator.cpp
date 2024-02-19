@@ -37,8 +37,6 @@
 #include "../hlim/NodeVisitor.h"
 #include "../hlim/supportNodes/Node_ExportOverride.h"
 #include "../hlim/Subnet.h"
-#include "../debug/reporting/ReportInterface.h"
-
 
 #include <gatery/export/DotExport.h>
 
@@ -335,6 +333,7 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 			{
 				hlim::ConstSubnet looping = hlim::ConstSubnet::all(circuit).filterLoopNodesOnly();
 				//loopSubnet.dilate(true, true);
+#if 0
                 dbg::ReportInterface RI;
 
                 // get the current path and append target path
@@ -346,6 +345,11 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
                 exp.runGraphViz(pwd.remove_filename() /= "loop_only.svg");
 
                 RI.svgToText(pwd.remove_filename() /= "loop_only.svg");
+#else
+				DotExport exp("loop_only.dot");
+				exp(circuit, looping);
+				exp.runGraphViz("loop_only.svg");
+#endif
 			}
 			//{
 			//	hlim::Subnet all;
