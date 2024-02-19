@@ -133,7 +133,7 @@ void GTKWaveProjectFile::writeEnumFilterFiles()
 		std::ofstream f{ filename };
 		for (auto&& val : e.second)
 			f << val.first << ' ' << val.second << '\n';
-		m_translationFilterFiles.emplace_back(move(filename));
+		m_translationFilterFiles.emplace_back(std::move(filename));
 	}
 }
 

@@ -42,7 +42,7 @@ BOOST_FIXTURE_TEST_CASE(async_ROM, BoostUnitTestSimulationFixture)
 		e = rng() % 16;
 
 	Memory<UInt> rom(contents.size(), 4_b);
-	rom.fillPowerOnState(createDefaultBitVectorState(16, 4, [&contents](std::size_t i, std::size_t *words){
+	rom.fillPowerOnState(createDefaultBitVectorState(16, 4, [&contents](std::size_t i, std::uint64_t *words){
 		words[DefaultConfig::VALUE] = contents[i];
 		words[DefaultConfig::DEFINED] = ~0ull;
 	}));
@@ -87,7 +87,7 @@ BOOST_FIXTURE_TEST_CASE(sync_ROM, BoostUnitTestSimulationFixture)
 		e = rng() % 16;
 
 	Memory<UInt> rom(contents.size(), 4_b);
-	rom.fillPowerOnState(createDefaultBitVectorState(16, 4, [&contents](std::size_t i, std::size_t *words){
+	rom.fillPowerOnState(createDefaultBitVectorState(16, 4, [&contents](std::size_t i, std::uint64_t *words){
 		words[DefaultConfig::VALUE] = contents[i];
 		words[DefaultConfig::DEFINED] = ~0ull;
 	}));

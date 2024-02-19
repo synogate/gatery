@@ -52,10 +52,10 @@ namespace gtry::scl {
 		response.data = 0_b;
 
 		size_t maxReadRequestsInFlight = avmm.maximumPendingReadTransactions == 0 ? 32 : avmm.maximumPendingReadTransactions;
-		maxReadRequestsInFlight = std::min(ret.a->source.width().count(), maxReadRequestsInFlight);
+		maxReadRequestsInFlight = std::min<std::size_t>(ret.a->source.width().count(), maxReadRequestsInFlight);
 	
 		size_t maxWriteRequestsInFlight = avmm.maximumPendingWriteTransactions == 0 ? 32 : avmm.maximumPendingWriteTransactions;
-		maxWriteRequestsInFlight = std::min(ret.a->source.width().count(), maxWriteRequestsInFlight);
+		maxWriteRequestsInFlight = std::min<std::size_t>(ret.a->source.width().count(), maxWriteRequestsInFlight);
 
 		scl::Fifo<TileLinkD> writeRequestFifo{ maxWriteRequestsInFlight , response };
 		HCL_NAMED(writeRequestFifo);

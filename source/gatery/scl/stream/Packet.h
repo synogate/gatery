@@ -689,11 +689,12 @@ namespace gtry::scl::strm
 			.ratio = ratio,
 		};
 
+		// removed naming of members to avoid issues with aggregate initialization
 		auto ret = Stream{
-			.data = reduceStreamPayload(*source, source, params),
-			._sig = std::apply([&](auto& ...meta) {
+			reduceStreamPayload(*source, source, params),
+			std::apply([&](auto& ...meta) {
 				return std::tuple{ reduceStreamMeta(meta, source, params)... };
-				}, source._sig)
+			}, source._sig)
 		};
 
 		params.outEop = eop(ret);
@@ -810,7 +811,7 @@ namespace gtry::scl::strm
 			.shift = shift,
 		};
 
-		auto ret = scl::Stream{
+		auto ret = StreamT{
 			.data = shiftRightPayload(*source, source, params),
 			._sig = std::apply([&](auto& ...meta) {
 				return std::tuple{ shiftRightMeta(meta, source, params)... };

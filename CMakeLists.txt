@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 3.20.4)
 
+project(mac)
+
 enable_testing()
 
 # LIST(APPEND CMAKE_MODULE_PATH cmake/)
@@ -37,6 +39,11 @@ target_include_directories(gatery SYSTEM PUBLIC
     ${YAML_CPP_INCLUDE_DIRS}
 )
 
+target_link_directories(gatery PUBLIC
+    ${Boost_LIBRARY_DIR}
+    ${YAML_CPP_LIBRARY_DIR}
+)
+
 target_link_libraries(gatery PUBLIC
     ${Boost_LIBRARIES}
     ${YAML_CPP_LIBRARIES}
@@ -48,15 +55,23 @@ target_compile_definitions(gatery PUBLIC NOMINMAX)
 target_compile_definitions(gatery PUBLIC WIN32_LEAN_AND_MEAN)
 target_compile_definitions(gatery PUBLIC _HAS_DEPRECATED_IS_LITERAL_TYPE=1)
 
+if (APPLE)
+    target_compile_definitions(gatery PUBLIC _GNU_SOURCE)
+    target_compile_options(gatery PUBLIC -Wunqualified-std-cast-call)
+#    target_link_libraries(gatery PUBLIC -lstdc++20)
+endif()
+
 if(WIN32)
     target_compile_definitions(gatery PUBLIC -DBOOST_STACKTRACE_USE_WINDBG)
     # Boost docu: Uses COM to show debug info. May require linking with ole32 and dbgeng.
 else()
-    target_compile_definitions(gatery PUBLIC -DBOOST_STACKTRACE_USE_BACKTRACE)
-    target_link_libraries(gatery PUBLIC -ldl -lbacktrace)
-    #target_compile_definitions(gatery PUBLIC -DBOOST_STACKTRACE_USE_ADDR2LINE)
-    #target_link_libraries(gatery PUBLIC -ldl)
-    target_compile_options(gatery PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-fcoroutines>)
+    #target_compile_definitions(hcl PUBLIC -DBOOST_STACKTRACE_USE_BACKTRACE)
+    #target_link_libraries(hcl PUBLIC -ldl -lbacktrace)
+    target_compile_definitions(gatery PUBLIC -DBOOST_STACKTRACE_USE_ADDR2LINE)
+    target_link_libraries(gatery PUBLIC -ldl)
+    if(NOT APPLE)
+        target_compile_options(gatery PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-fcoroutines>)
+    endif ()
 endif()
 
 

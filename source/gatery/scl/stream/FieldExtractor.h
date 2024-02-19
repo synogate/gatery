@@ -52,10 +52,8 @@ namespace gtry::scl
 		)
 	inline void extractFields(Stream<gtry::Vector<BVec>, MetaOutput...> &output, Stream<BVec, MetaInput...> &packetStream, const std::span<Field> fields)
 	{
-		Area area("fieldExtractor", true);
-
 		using PacketStream = Stream<BVec, MetaInput...>;
-		using Output = Stream<gtry::Vector<BVec>, MetaOutput...>;
+		using OutputStream = Stream<gtry::Vector<BVec>, MetaOutput...>;
 
 		BitWidth beatWidth = packetStream->width();
 
@@ -100,7 +98,7 @@ namespace gtry::scl
 		// We can receive data if either:
 		// - We have not yet fully ingested to current packet (i.e. for discarding the payload)
 		// - The output has been transferred and we are ready for the next packet
-		if constexpr (packetStream.template has<Ready>())
+		if constexpr (PacketStream::template has<Ready>())
 			ready(packetStream) = !packetFullyIngested | outputTransfered;
 
 		IF (transfer(packetStream)) {
@@ -143,7 +141,7 @@ namespace gtry::scl
 		}
 
 		// Potentially forward additional fields
-		if constexpr (Output::template has<TxId>() && PacketStream::template has<TxId>())
+		if constexpr (OutputStream::template has<TxId>() && PacketStream::template has<TxId>())
 			txid(output) = txidStore.combinatorial();
 
 

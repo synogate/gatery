@@ -226,7 +226,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceRead, BoostUnitTestSimulationFixture)
 {
 	using namespace gtry;
 
-	size_t v = 0b11001010; 
+	size_t v = 0b11001010;
 
 	UInt a = v;
 
@@ -235,7 +235,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceRead, BoostUnitTestSimulationFixture)
 	Bit b = a[index];
 
 	addSimulationProcess([=, this]()->SimProcess {
-	
+
 		for (auto i : gtry::utils::Range(8)) {
 			simu(index) = i;
 			co_await WaitFor({1,1000});
@@ -254,7 +254,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfSliceRead, BoostUnitTestSimulationFixtu
 {
 	using namespace gtry;
 
-	size_t v = 0b11001010; 
+	size_t v = 0b11001010;
 
 	UInt a = v;
 
@@ -285,7 +285,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceWrite, BoostUnitTestSimulationFixture)
 	using namespace gtry;
 
 	size_t a_ = 0xC3;
-	size_t v = 0b11001010; 
+	size_t v = 0b11001010;
 
 	UInt a = a_;
 	Bit b = pinIn();
@@ -316,7 +316,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfSliceWrite, BoostUnitTestSimulationFixt
 	using namespace gtry;
 
 	size_t a_ = 0xC3;
-	size_t v = 0b11001010; 
+	size_t v = 0b11001010;
 
 	UInt a = a_;
 	Bit b = pinIn();
@@ -356,7 +356,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceConstReduction, BoostUnitTestSimulationFi
 	}
 
 	design.postprocess();
-	
+
 	auto rewire = dynamic_cast<hlim::Node_Rewire*>(b.node()->getNonSignalDriver(0).node);
 	// Ensure that the dynamic multiplexer gets folded by the postprocessing into a rewire node ...
 	BOOST_REQUIRE(rewire != nullptr);
@@ -371,7 +371,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceRead, BoostUnitTestSimulationFixture)
 {
 	using namespace gtry;
 
-	size_t v = 0b11001010; 
+	size_t v = 0b11001010;
 
 	UInt a = v;
 
@@ -380,7 +380,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceRead, BoostUnitTestSimulationFixture)
 	UInt b = a(index, 2_b);
 
 	addSimulationProcess([=, this]()->SimProcess {
-	
+
 		for (auto i : gtry::utils::Range(7)) {
 			simu(index) = i;
 			co_await WaitFor({1,1000000});
@@ -480,7 +480,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceOfDynamicSliceRead, BoostUnitTestSimulat
 	HCL_NAMED(b);
 
 	addSimulationProcess([=, this]()->SimProcess {
-	
+
 		for (auto i : gtry::utils::Range(index1.width().count())) {
 			for (auto j : gtry::utils::Range(index2.width().count())) {
 				simu(index1) = i;
@@ -610,7 +610,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceWithStaticBitSliceRead, BoostUnitTestSim
 {
 	using namespace gtry;
 
-	size_t v = 0b11001010; 
+	size_t v = 0b11001010;
 
 	UInt a = v;
 	HCL_NAMED(a);
@@ -622,7 +622,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceWithStaticBitSliceRead, BoostUnitTestSim
 	HCL_NAMED(b);
 
 	addSimulationProcess([=, this]()->SimProcess {
-	
+
 		for (auto i : gtry::utils::Range(7)) {
 			simu(index) = i;
 			co_await WaitFor({1,1000000});
@@ -687,7 +687,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBitSliceOfDynamicSliceWrite, BoostUnitTestSimulat
 	using namespace gtry;
 
 	size_t a_ = 0xC3;
-	size_t v = 0b11001010; 
+	size_t v = 0b11001010;
 
 	UInt a = a_;
 	Bit b = pinIn();
@@ -728,7 +728,7 @@ BOOST_FIXTURE_TEST_CASE(DynamicBVecSliceWrite, BoostUnitTestSimulationFixture)
 	using namespace gtry;
 
 	size_t a_ = 0xC3;
-	size_t v = 0b11001010; 
+	size_t v = 0b11001010;
 
 	UInt a = a_;
 	UInt b = pinIn(3_b);

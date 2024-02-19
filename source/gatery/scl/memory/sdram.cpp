@@ -243,13 +243,11 @@ Controller::CommandStream Controller::translateCommand(const BankState& state, c
 	{
 		cmd->code = CommandCode::Precharge;
 		cmd->address[10] = '0';
-	}
-	ELSE IF(!state.rowActive)
+	} ELSE IF(!state.rowActive)
 	{
 		cmd->code = CommandCode::Activate;
 		cmd->address = zext((BVec)request->address(m_mapping.row));
-	}
-	ELSE
+	} ELSE
 	{
 		IF(request->opcode == (size_t)request->Get)
 			cmd->code = CommandCode::Read;

@@ -63,12 +63,13 @@ namespace gtry::scl
 			// select round constant
 			TVec k = 0xCA62C1D6;
 
-			IF(round < 20)
-				k = 0x5A827999;
-			ELSE IF(round < 40)
-				k = 0x6ED9EBA1;
-			ELSE IF(round < 60)
-				k = 0x8F1BBCDC;
+			IF(round < 20) {
+                k = 0x5A827999;
+            } ELSE IF(round < 40) {
+                k = 0x6ED9EBA1;
+            } ELSE IF(round < 60) {
+                k = 0x8F1BBCDC;
+            }
 
 			HCL_NAMED(k);
 

@@ -92,7 +92,7 @@ Node_Pin *findOutputPin(NodePort output)
 	// Second: From there on explore all nodes driven directly or via signal nodes.
 	for (auto nh : driver.node->exploreOutput(driver.port)) {
 		Node_Pin* res;
-		if (res = dynamic_cast<Node_Pin*>(nh.node()))
+		if ((res = dynamic_cast<Node_Pin*>(nh.node())))
 			return res;
 		else
 			if (!nh.isSignal())

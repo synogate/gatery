@@ -348,3 +348,4 @@ BOOST_DATA_TEST_CASE(TinyCuckooDriverFuzzTest, data::xrange(0, 3), tableShift)
 
 	tiny_cuckoo_destroy(ctx);
 }
+

@@ -28,8 +28,10 @@ namespace gtry::scl
 	public:
 		AvalonMMSlave(BitWidth addrWidth, BitWidth dataWidth);
 
-		virtual void ro(const BVec& value, RegDesc desc);
-		virtual Bit rw(BVec& value, RegDesc desc);
+		virtual void ro(const UInt& value, RegDesc desc) override;
+		virtual void ro(const Bit& value, RegDesc desc) override;
+		virtual Bit rw(UInt& value, RegDesc desc) override;
+		virtual Bit rw(Bit& value, RegDesc desc) override;
 
 		virtual void enterScope(std::string scope) override;
 		virtual void leaveScope() override;

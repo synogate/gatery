@@ -111,8 +111,12 @@ std::vector<PhysicalAddr> PinnedMemory::getScatterGatherList() const
 void PinnedMemory::allocatePopulateLock(size_t size)
 {
 	//	MAP_HUGE_2MB, MAP_HUGE_1GB
-
-	std::byte *addr = (std::byte *) mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_SYNC, 0, 0);
+	// Checking for MAP_SYNC availability, since it might not available on all systems.
+	std::byte *addr = (std::byte *) mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS
+	#ifdef MAP_SYNC
+	| MAP_SYNC
+	#endif
+	, 0, 0);
 	if (addr == nullptr)
 		throw std::runtime_error("Failed to allocate!");
 	else {
