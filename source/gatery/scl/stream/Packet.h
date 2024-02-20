@@ -726,7 +726,6 @@ namespace gtry::scl::strm
 		Bit anticipateEnd;
 		Bit outTransfer;
 		Bit outEop;
-		Bit canConsumeBeat;
 	};
 
 	template<BitVectorSignal T>
@@ -805,6 +804,8 @@ namespace gtry::scl::strm
 	auto streamShiftRight(StreamT&& source, UInt shift)
 	{
 		auto scope = Area{ "scl_streamShiftRight" }.enter();
+
+		shift = reg(shift); 
 
 		ShiftRightMetaParams params{
 			.shift = shift,

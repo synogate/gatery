@@ -31,6 +31,7 @@
 #include <gatery/debug/websocks/WebSocksInterface.h>
 #include <gatery/scl/sim/SimulationSequencer.h>
 #include <gatery/scl/stream/SimuHelpers.h>
+#include <gatery/scl/flag.h>
 
 using namespace boost::unit_test;
 using namespace gtry;
@@ -1535,6 +1536,85 @@ BOOST_FIXTURE_TEST_CASE(stream_shiftRight_test_anticipated_end_chaos_light, stre
 	backpressureReadyPercentage = 50;
 	BOOST_TEST(hasAnticipatedEnd());
 	execute();
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_shiftRight_dynamic, BoostUnitTestSimulationFixture)
+{
+	std::mt19937_64 mt(std::random_device{}());
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	BitWidth packetSize = 60_b;
+	BitWidth streamW = 16_b;
+	size_t backpressureReadyPercentage = 100;
+
+	UInt shift = 3_b;
+	pinIn(shift, "shift");
+
+	scl::RvPacketStream<BVec, scl::EmptyBits> in{ streamW };
+	emptyBits(in) = 4_b;
+	pinIn(in, "in");
+
+	UInt shiftStable = scl::capture(shift, valid(in) & sop(in));
+
+	auto out = streamShiftRight(move(in), shiftStable);
+	pinOut(out, "out");
+
+	uint64_t payload = mt() & packetSize.mask();
+	scl::strm::SimPacket inputPacket(payload, packetSize);
+
+	size_t iterations = 4;
+
+	addSimulationProcess(
+		[&, this]()->SimProcess {
+				return scl::strm::readyDriverRNG(out, clk, backpressureReadyPercentage);
+		}
+	);
+
+	
+	addSimulationProcess([&, this]()->SimProcess {
+		size_t shiftAmt = 1;
+		for (size_t i = 0; i < iterations; i++)
+		{
+			simu(shift) = shiftAmt++;
+			co_await scl::strm::sendPacket(in, inputPacket, clk);
+		}
+		
+		simu(shift) = shiftAmt--;
+		for (size_t i = 0; i < iterations; i++)
+		{
+			simu(shift) = shiftAmt--;
+			co_await scl::strm::sendPacket(in, inputPacket, clk);
+		}
+	});	
+
+	addSimulationProcess(
+		[&, this]()->SimProcess {
+			size_t shiftAmt = 1;
+			for (size_t i = 0; i < iterations; i++)
+			{
+				scl::strm::SimPacket outputPacket = co_await scl::strm::receivePacket(out, clk);
+				BOOST_TEST(outputPacket.payload == scl::strm::SimPacket(payload >> shiftAmt, packetSize - shiftAmt).payload /*, "going up shift by " + std::to_string(shiftAmt) + " broken"*/);
+				shiftAmt++;
+			}
+			shiftAmt--;
+			for (size_t i = 0; i < iterations; i++)
+			{
+				scl::strm::SimPacket outputPacket = co_await scl::strm::receivePacket(out, clk);
+				BOOST_TEST(outputPacket.payload == scl::strm::SimPacket(payload >> shiftAmt, packetSize - shiftAmt).payload, "going down shift by " + std::to_string(shiftAmt) + " broken");
+				shiftAmt--;
+			}
+			co_await OnClk(clk);
+			co_await OnClk(clk);
+			co_await OnClk(clk);
+			stopTest();
+		}
+	);
+
+	if(true) recordVCD("stream_shiftRight.vcd");
+	design.postprocess();
+	//design.visualize("stream_shiftRight");
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
 }
 BOOST_FIXTURE_TEST_CASE(streamInsert_test, BoostUnitTestSimulationFixture)
 {
