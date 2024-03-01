@@ -40,14 +40,15 @@ void inferClockDomains(Circuit &circuit, utils::UnstableMap<hlim::NodePort, Sign
 	utils::UnstableMap<NodePort, std::vector<NodePort>> undetermined;
 
 
-	auto assignToCD = [&](const NodePort &np, SignalClockDomain cd, std::vector<NodePort> &nodePortsToRetry){
+	auto assignToCD = [&](const NodePort &np, SignalClockDomain cd, utils::StableSet<NodePort> &nodePortsToRetry){
 		if (domains.contains(np)) return;
 		domains[np] = cd;
 
 		auto it = undetermined.find(np);
 		if (it != undetermined.end())
 			for (auto n : it->second)
-				nodePortsToRetry.push_back(n);
+				nodePortsToRetry.insert(n);
+				//nodePortsToRetry.push_back(n);
 	};
 
 	auto attemptResolve = [&](const NodePort &nodePort) {
@@ -55,12 +56,17 @@ void inferClockDomains(Circuit &circuit, utils::UnstableMap<hlim::NodePort, Sign
 		// Only do this the first time
 		bool insertIntoUndetermined = true;
 
-		std::vector<NodePort> nodePortsToRetry;
-		nodePortsToRetry.push_back(nodePort);
+		//std::vector<NodePort> nodePortsToRetry;
+		//nodePortsToRetry.push_back(nodePort);
+		utils::StableSet<NodePort> nodePortsToRetry;
+		nodePortsToRetry.insert(nodePort);
 
 		while (!nodePortsToRetry.empty()) {
-			auto np = nodePortsToRetry.back();
-			nodePortsToRetry.pop_back();
+			// auto np = nodePortsToRetry.back();
+			// nodePortsToRetry.pop_back();
+
+			auto np = *nodePortsToRetry.begin();
+			nodePortsToRetry.erase(nodePortsToRetry.begin());
 
 			auto ocr = np.node->getOutputClockRelation(np.port);
 			if (ocr.isConst())
