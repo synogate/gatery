@@ -846,7 +846,7 @@ namespace gtry::scl::strm
 
 		//replacing undefines with zeros during the partial-beat
 		BitWidth tailW = shiftedTail->width();
-		auto tempTail = (decltype(*tail)) ConstUInt(0, 2 * tailW);
+		auto tempTail = (decltype(*tail)) (BVec) ConstUInt(0, 2 * tailW);
 		tempTail(tailShiftAmt, tailW) |= '1';
 		IF(valid(shiftedTail) & sop(shiftedTail))
 			*shiftedTail &= tempTail.lower(tailW);
@@ -854,7 +854,7 @@ namespace gtry::scl::strm
 
 		//adapting head stream to be or-able with tail stream (setting empty bits to 0 during the partial beat)
 		BitWidth headW = head->width();
-		auto temp = (decltype(*head))ConstUInt(0, 2 * headW);
+		auto temp = (decltype(*head)) (BVec) ConstUInt(0, 2 * headW);
 		temp.lower(headW) = *head;
 		temp(headW.bits() - zext(emptyBits(head)), headW) = 0;
 		IF(valid(head) & eop(head))
