@@ -19,25 +19,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #pragma once
 
 #include <gatery/frontend.h>
-#include <gatery/scl/io/pci/pci.h>
+#include <gatery/scl/arch/intel/IntelPci.h>
 
 using namespace gtry;
 using namespace gtry::scl;
 using namespace gtry::scl::pci;
 
 namespace gtry::scl::arch::intel {
-
-	struct Header {
-		BVec header = 128_b;
-	};
-
-	struct Prefix {
-		BVec prefix = 32_b;
-	};
-
-	struct BarRange {
-		BVec encoding;
-	};
 
 	class PTile : public ExternalModule
 	{
@@ -82,8 +70,8 @@ namespace gtry::scl::arch::intel {
 
 		PTile(std::string_view name, Settings cfg);
 
-		RvPacketStream<BVec, scl::Empty, Header, Prefix, BarRange> rx();
-		PTile& tx(scl::strm::RvPacketStream<BVec, scl::Error, Header, Prefix>&& stream);
+		RvPacketStream<BVec, scl::EmptyBits, PTileHeader, PTilePrefix, PTileBarRange> rx();
+		PTile& tx(scl::strm::RvPacketStream<BVec, scl::Error, PTileHeader, PTilePrefix>&& stream);
 
 		const Clock& userClock() { return m_usrClk; }
 		void connectNInitDone(Bit ninit_done) { in("ninit_done", PinConfig{ .type = PinType::VL }) = ninit_done; }
@@ -121,71 +109,4 @@ namespace gtry::scl::arch::intel {
 		};
 	};
 
-	TlpPacketStream<EmptyBits, BarRange> ptileRxVendorUnlocking(scl::strm::RvPacketStream<BVec, scl::Error, Header, Prefix, BarRange>&& rx);
-	
-	template<Signal... MetaT>
-	scl::strm::RvPacketStream<BVec, scl::Error, Header, Prefix>&& ptileTxVendorUnlocking(TlpPacketStream<MetaT...>&& tx);
-
-	//class PciInterfaceSeparator {
-	//public:
-	//	PciInterfaceSeparator();
-	//
-	//	template<Signal... MetaInT>
-	//	PciInterfaceSeparator& attachRx(TlpPacketStream<MetaInT...>&& rx);
-	//	
-	//	template<Signal... MetaOutT>
-	//	TlpPacketStream<MetaOutT...> getTx();
-	//
-	//	RequesterInterface& requesterInterface() { HCL_DESIGNCHECK(m_requesterInterface); return *m_requesterInterface; }
-	//	CompleterInterface& completerInterface() { HCL_DESIGNCHECK(m_completerInterface); return *m_completerInterface; }
-	//	
-	//private:
-	//	std::optional<RequesterInterface> m_requesterInterface;
-	//	std::optional<CompleterInterface> m_completerInterface;
-	//};
 }
-
-namespace gtry::scl::arch::intel {
-	//template<Signal... MetaInT>
-	//TlpPacketStream<EmptyBits, BarRange> rxVendorUnlocking(TlpPacketStream<MetaInT...>&& rx) {
-	//	BitWidth rxW = rx->width();
-	//	StreamBroadcaster rxCaster(move(rx));
-	//	
-	//	// Extract header into separate stream. this stream is a one beat, 128 bit packetStream.
-	//	// clipboard: .transform([](const intel::Header& hdr)->BVec { return hdr.header; })
-	//	Stream hdr = strm::extractMeta<intel::Header>(rxCaster.bcastTo());
-	//	valid(hdr) &= sop(hdr); //must only be consumed once
-	//	eop(hdr) = '1';
-	//
-	//	emptyBits(hdr) = 0; //4dw
-	//	IF(pci::HeaderCommon::fromRawDw0(hdr->header.lower(32_b)).is3dw())
-	//		emptyBits(hdr) = 32;
-	//	
-	//	//insert the header into the data stream
-	//	return strm::insert(
-	//		rxCaster.bcastTo(),
-	//		strm::widthExtend(move(hdr), rxW),
-	//		strm::createVStream<RvStream>(0, '1')
-	//	)
-	//		.reduceTo<TlpPacketStream<EmptyBits, BarRange>>() 
-	//		| strm::regDownstream();
-	//}
-	//template<Signal... MetaInT>
-	//auto txVendorUnlocking(TlpPacketStream<MetaInT...>&& tx) {
-	//	HCL_DESIGNCHECK_HINT(tx->width() >= 128_b, "the width needs to be larger than 4DW for this implementation");
-	//
-	//	//add header as metaSignal
-	//	BVec rawHdr = capture(tx->lower(128_b), valid(tx) & sop(tx));
-	//	tx.add(Header{ rawHdr });
-	//
-	//	//remove header from front of TLP
-	//	UInt headerSizeInBits = 128;
-	//	IF(pci::HeaderCommon::fromRawDw0(rawHdr.lower(32_b)).is3dw())
-	//		UInt headerSizeInBits = 96;
-	//	tx = strm::streamShiftRight(move(tx), headerSizeInBits);
-	//
-	//}
-}
-
-
-

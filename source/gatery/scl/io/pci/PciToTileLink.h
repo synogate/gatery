@@ -18,6 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #pragma once
 
 #include <gatery/scl/io/pci/pci.h>
+#include <gatery/scl/tilelink/tilelink.h>
 
 namespace gtry::scl::pci {
 

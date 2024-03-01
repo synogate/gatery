@@ -33,7 +33,7 @@ namespace gtry::scl::arch::intel {
 
 
 
-	PTile& PTile::tx(RvPacketStream<BVec, scl::Error, Header, Prefix>&& stream)
+	PTile& PTile::tx(RvPacketStream<BVec, scl::Error, PTileHeader, PTilePrefix>&& stream)
 	{
 		ClockScope clk{ m_usrClk };
 
@@ -42,8 +42,8 @@ namespace gtry::scl::arch::intel {
 		//in("tx_data_i"	, 128 * m_cfg.busIndexVariable_w).word(interfaceNumber, 128 * m_cfg.busIndexVariable_w / m_cfg.numberOfInterfaces) = *stream;
 		in("p0_tx_st_data_i", m_cfg.dataBusW) = *stream;
 
-		in("p0_tx_st_hdr_i", 128_b) = (BVec) pack(stream.get<Header>());
-		in("p0_tx_st_tlp_prfx_i", 32_b) = stream.get<Prefix>().prefix;
+		in("p0_tx_st_hdr_i", 128_b) = (BVec) pack(stream.get<PTileHeader>());
+		in("p0_tx_st_tlp_prfx_i", 32_b) = stream.get<PTilePrefix>().prefix;
 		;
 		in("p0_tx_st_valid_i", 1_b).lsb() = valid(stream);
 		in("p0_tx_st_sop_i", 1_b).lsb() = sop(stream);
@@ -60,23 +60,23 @@ namespace gtry::scl::arch::intel {
 		return *this;
 	}
 
-	RvPacketStream<BVec, Empty,  Header,  Prefix, BarRange> PTile::rx()
+	RvPacketStream<BVec, EmptyBits, PTileHeader,  PTilePrefix, PTileBarRange> PTile::rx()
 	{
 		ClockScope clkScope{ m_usrClk };
-		RvPacketStream<BVec, Empty,  Header,  Prefix, BarRange> rx;
+		RvPacketStream<BVec, EmptyBits,  PTileHeader,  PTilePrefix, PTileBarRange> rx;
 
 		const PinConfig pinCfg{ .type = PinType::STD_LOGIC };
 
 		*rx = out("p0_rx_st_data_o", m_cfg.dataBusW);
-		unpack(out("p0_rx_st_hdr_o", 128_b), rx.get<Header>());
-		unpack(out("p0_rx_st_tlp_prfx_o", 32_b), rx.get<Prefix>());
-		rx.get<BarRange>() = BarRange{ out("p0_rx_st_bar_range_o", 3_b) };
+		unpack(out("p0_rx_st_hdr_o", 128_b), rx.get<PTileHeader>());
+		unpack(out("p0_rx_st_tlp_prfx_o", 32_b), rx.get<PTilePrefix>());
+		rx.get<PTileBarRange>() = PTileBarRange{ out("p0_rx_st_bar_range_o", 3_b) };
 
-		//p0_rx_st_tlp_abort_o
+		//p0_rx_st_tlp_abort_o : does not apply to non-bypass tlp mode
 		//p0_rx_par_err_o
 
 		valid(rx) = out("p0_rx_st_valid_o", 1_b).lsb();
-		empty(rx) = (UInt) out("p0_rx_st_empty_o", BitWidth::count(m_cfg.dataBusW.bits() / 32));
+		emptyBits(rx) = (UInt)cat(out("p0_rx_st_empty_o", BitWidth::count(m_cfg.dataBusW.bits() / 32)), UInt{"5d0"});
 		/*sop(rx) =*/ out("p0_rx_st_sop_o", 1_b).lsb();
 		eop(rx)	=	out("p0_rx_st_eop_o", 1_b).lsb();
 

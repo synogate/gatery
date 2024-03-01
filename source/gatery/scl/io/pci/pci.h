@@ -18,7 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 
-#include <gatery/scl/tilelink/tilelink.h>
+#include <gatery/scl/stream/Stream.h>
 
 
 namespace gtry::scl::pci
@@ -119,10 +119,10 @@ namespace gtry::scl::pci
 	struct HeaderCommon
 	{
 		BVec rawDw0();
-		void fromRawDw0(BVec rawDw0);
+		static HeaderCommon fromRawDw0(BVec rawDw0);
 		static HeaderCommon makeDefault(TlpOpcode opcode, const UInt& length);
 
-		Bit poisoned;					
+		Bit poisoned;
 		Bit digest;
 		
 		Bit processingHintPresence;	
@@ -208,6 +208,3 @@ BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::RequesterInterface, request, completion)
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::HeaderCommon, poisoned, digest, processingHintPresence, attributes, addressType, trafficClass, fmt, type, length);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::RequestHeader, common, requesterId, tag, lastDWByteEnable, firstDWByteEnable, wordAddress, processingHint);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::CompletionHeader, common, requesterId, tag, completerId, byteCount, byteCountModifier, lowerByteAddress, completionStatus);
-
-
-
