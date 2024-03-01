@@ -87,6 +87,11 @@ namespace gtry::scl::strm
 	template<PacketStreamSignal StreamT> requires std::is_base_of_v<BaseBitVector, typename StreamT::Payload>
 	StreamT matchWidth(StreamT&& in, BitWidth desiredWidth);
 
+	/**
+	* @brief append the tail stream to the head stream, as long as the tail is immediately available
+	*/
+	template<StreamSignal StreamT> requires (StreamT::template has<scl::Eop>() && StreamT::template has<scl::EmptyBits>())
+	StreamT appendStream(StreamT&& head, StreamT&& tail);
 }
 
 namespace gtry::scl::strm
@@ -884,6 +889,99 @@ namespace gtry::scl::strm
 
 		HCL_NAMED(ret);
 		return ret.template remove<ShiftRightSteadyShift>();
+	}
+
+
+	template<StreamSignal StreamT> requires (StreamT::template has<scl::Eop>() && StreamT::template has<scl::EmptyBits>())
+	StreamT appendStream(StreamT&& head, StreamT&& tail) {
+		Area area{ "scl_stream_append", true };
+		HCL_DESIGNCHECK_HINT(head->width() == tail->width(), "the BitWidths do not match");
+
+		//adapting tail stream to be or-able with head stream (masking undefineds and shifting)
+		Bit captureShiftAmt = transfer(head) & eop(head); HCL_NAMED(captureShiftAmt);
+		UInt tailShiftAmt = capture((head->width().bits() - zext(emptyBits(head))).lower(-1_b), captureShiftAmt); HCL_NAMED(tailShiftAmt);
+		StreamT shiftedTail = strm::streamShiftLeft(tail, tailShiftAmt); //inserts undefines
+
+		//replacing undefines with zeros during the partial-beat
+		BitWidth tailW = shiftedTail->width();
+		auto tempTail = (decltype(*tail)) ConstUInt(0, 2 * tailW);
+		tempTail(tailShiftAmt, tailW) |= '1';
+		IF(valid(shiftedTail) & sop(shiftedTail))
+			*shiftedTail &= tempTail.lower(tailW);
+		setName(shiftedTail, "orable_tail");
+
+		//adapting head stream to be or-able with tail stream (setting empty bits to 0 during the partial beat)
+		BitWidth headW = head->width();
+		auto temp = (decltype(*head))ConstUInt(0, 2 * headW);
+		temp.lower(headW) = *head;
+		temp(headW.bits() - zext(emptyBits(head)), headW) = 0;
+		IF(valid(head) & eop(head))
+			*head = temp.lower(headW);
+		setName(head, "orable_head");
+
+		//the head state deals with sending the head and the first portion 
+		//of the tail that fits inside the beat which contains the head's eop
+		enum class AppendStreamState{
+			head,
+			tail
+		};
+
+		Reg<Enum<AppendStreamState>> state{ AppendStreamState::head };
+		state.setName("state");
+
+		//next state logic:
+		state = state.current();
+		IF(state.current() == AppendStreamState::head) {
+			IF(transfer(head) & eop(head) & valid(shiftedTail)) { //maybe valid is transfer here
+				state = AppendStreamState::tail;
+				IF(ready(shiftedTail) & eop(shiftedTail))
+					state = AppendStreamState::head;
+			}
+		}
+		IF(state.current() == AppendStreamState::tail) {
+			IF(transfer(shiftedTail) & eop(shiftedTail)) {
+				state = AppendStreamState::head;
+			}
+		}
+		auto ret = constructFrom(head);
+
+		//return stream logic: I want to replace this logic with the independent logic trick we make for other functions
+		*ret = (decltype(*ret)) ConstUInt(ret->width());
+		ready(head) = '0';
+		ready(shiftedTail) = '0';
+		valid(ret) = '0';
+		eop(ret) = '0';
+		emptyBits(ret) = ConstUInt(emptyBits(ret).width());
+		IF(state.current() == AppendStreamState::head) {
+			*ret = *head;
+			valid(ret) = valid(head);
+			ready(head) = ready(ret);
+			IF(valid(head) & eop(head)) {
+				eop(ret) = '1';
+				emptyBits(ret) = emptyBits(head);
+				IF(transfer(head) & valid(shiftedTail)) {
+					eop(ret) = '0';
+					IF(emptyBits(head) != 0){
+						ready(shiftedTail) = '1';
+						*ret |= *shiftedTail;
+						eop(ret) = '0';
+						emptyBits(ret) = ConstUInt(emptyBits(ret).width());
+						IF(eop(shiftedTail)) {
+							emptyBits(ret) = emptyBits(shiftedTail); // because the tail has already been shifted to perfectly fit the head
+							eop(ret) = '1';
+						}
+					}
+				}
+			}
+		}
+		IF(state.current() == AppendStreamState::tail) {
+			*ret = *shiftedTail;
+			valid(ret) = valid(shiftedTail);
+			ready(shiftedTail) = ready(ret);
+			eop(ret) = eop(shiftedTail);
+			emptyBits(ret) = emptyBits(shiftedTail);
+		}
+		return ret;
 	}
 }
 
