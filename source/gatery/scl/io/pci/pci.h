@@ -118,10 +118,10 @@ namespace gtry::scl::pci
 	struct HeaderCommon
 	{
 		BVec rawDw0();
-		void fromRawDw0(BVec rawDw0);
+		static HeaderCommon fromRawDw0(BVec rawDw0);
 		static HeaderCommon makeDefault(TlpOpcode opcode, const UInt& length);
 
-		Bit poisoned;					
+		Bit poisoned;
 		Bit digest;
 		
 		Bit processingHintPresence;	
