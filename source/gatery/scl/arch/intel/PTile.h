@@ -68,13 +68,15 @@ namespace gtry::scl::arch::intel {
 			BVec func;
 		};
 
-		PTile(std::string_view name, Settings cfg);
+		PTile(Settings cfg, std::string_view name = "ptile");
 
 		RvPacketStream<BVec, scl::EmptyBits, PTileHeader, PTilePrefix, PTileBarRange> rx();
 		PTile& tx(scl::strm::RvPacketStream<BVec, scl::Error, PTileHeader, PTilePrefix>&& stream);
 
 		const Clock& userClock() { return m_usrClk; }
 		void connectNInitDone(Bit ninit_done) { in("ninit_done", PinConfig{ .type = PinType::VL }) = ninit_done; }
+
+		Settings settings() const { return m_cfg; }
 
 	private:
 		Settings m_cfg;

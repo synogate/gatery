@@ -15,7 +15,7 @@ implied warranty of MERCHANTABILITY.
 using namespace gtry;
 using namespace gtry::scl;
 namespace gtry::scl::arch::intel {
-	PTile::PTile(std::string_view name, Settings cfg):
+	PTile::PTile(Settings cfg, std::string_view name):
 		ExternalModule(name, name),
 		m_usrClk(clockOut("coreclkout_hip", "p0_pin_perst_n", ClockConfig{
 		.absoluteFrequency = hlim::ClockRational{ cfg.userClkFrequency, 1 },
