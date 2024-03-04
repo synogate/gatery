@@ -18,9 +18,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #pragma once
 #include <gatery/scl/io/pci/pci.h>
 
-using namespace gtry::scl::pci;
 
 namespace gtry::scl::arch::intel {
+	using namespace gtry::scl::pci;
 
 	/**
 	 * @brief Big Endian representation of the header, using the pci-sig tlp encoding
@@ -46,8 +46,7 @@ namespace gtry::scl::arch::intel {
 
 	TlpPacketStream<EmptyBits, PTileBarRange> ptileRxVendorUnlocking(scl::strm::RvPacketStream<BVec, scl::EmptyBits, PTileHeader, PTilePrefix, PTileBarRange>&& rx);
 
-	template<Signal... MetaT>
-	scl::strm::RvPacketStream<BVec, scl::Error, PTileHeader, PTilePrefix>&& ptileTxVendorUnlocking(TlpPacketStream<MetaT...>&& tx);
+	scl::strm::RvPacketStream<BVec, scl::Error, PTileHeader, PTilePrefix> ptileTxVendorUnlocking(TlpPacketStream<EmptyBits>&& tx);
 
 	//shoudl really not be intel specific, maybe pci.h
 	//class PciInterfaceSeparator {

@@ -31,7 +31,9 @@ namespace gtry::scl::arch::intel {
 		//we must construct it from scratch
 		TlpPacketStream<EmptyBits, PTileBarRange> hdr(rxW);
 		*hdr = zext(capture(swapEndian(rx.template get<PTileHeader>().header), valid(rx) & sop(rx)));
-		valid(hdr) = flagInstantSet(valid(rx) & sop(rx), ready(hdr), '0');
+
+		Bit hasAlreadyCapturedHdr = flag(valid(rx) & sop(rx), transfer(rx) & eop(rx), '0');//these two lines seem like overkill, there must be an easier logic
+		valid(hdr) = flagInstantSet(valid(rx) & sop(rx) & !hasAlreadyCapturedHdr, ready(hdr), '0');
 		eop(hdr) = '1';
 		emptyBits(hdr) = rxW.bits() - 128; //4DW
 		IF(valid(hdr) & HeaderCommon::fromRawDw0(hdr->lower(32_b)).is3dw())
@@ -42,9 +44,11 @@ namespace gtry::scl::arch::intel {
 			.template remove<PTilePrefix>()
 			.template remove<PTileHeader>();
 			
-		//must mask dataStrm if the header claims there is no data
-		IF(valid(hdr) & !HeaderCommon::fromRawDw0(hdr->lower(32_b)).hasData())
+		//must mask dataStrm if the header claims there is no data and signal ready upstream
+		IF(transfer(hdr) & !HeaderCommon::fromRawDw0(hdr->lower(32_b)).hasData()) {
 			valid(dataStrm) &= '0';
+			ready(rx) = '1';
+		}
 
 		HCL_NAMED(hdr);
 		HCL_NAMED(dataStrm);
@@ -57,24 +61,29 @@ namespace gtry::scl::arch::intel {
 			| strm::regDownstream();
 	}
 	 
-	// 
-	// 
-	//template<Signal... MetaInT>
-	//auto txVendorUnlocking(TlpPacketStream<MetaInT...>&& tx) {
-	//	Area area{ "ptile_tx_vendor_unlocking", true };
-	//	HCL_DESIGNCHECK_HINT(tx->width() >= 128_b, "the width needs to be larger than 4DW for this implementation");
-	//
-	//	//add header as metaSignal
-	//	BVec rawHdr = capture(tx->lower(128_b), valid(tx) & sop(tx));
-	//	tx.add(PTileHeader{ swapEndian(rawHdr) });
-	//
-	//	//remove header from front of TLP
-	//	UInt headerSizeInBits = 128;
-	//	IF(pci::HeaderCommon::fromRawDw0(rawHdr.lower(32_b)).is3dw())
-	//		UInt headerSizeInBits = 96;
-	//	tx = strm::streamShiftRight(move(tx), headerSizeInBits);
-	//
-	//}
+
+	scl::strm::RvPacketStream<BVec, scl::Error, PTileHeader, PTilePrefix> ptileTxVendorUnlocking(TlpPacketStream<EmptyBits>&& tx){
+		Area area{ "ptile_tx_vendor_unlocking", true };
+		HCL_DESIGNCHECK_HINT(tx->width() >= 128_b, "the width needs to be larger than 4DW for this implementation");
+		auto localTx = move(tx);
+		//add header as metaSignal
+		BVec rawHdr = capture(localTx->lower(128_b), valid(localTx) & sop(localTx));
+		PTileHeader ptileHeader = PTileHeader{ swapEndian(rawHdr) }; //why does it not add the damn metasignal ?
+		localTx.add(move(ptileHeader));
+
+		//remove header from front of TLP
+		UInt headerSizeInBits = 128;
+		IF(pci::HeaderCommon::fromRawDw0(rawHdr.lower(32_b)).is3dw())
+			UInt headerSizeInBits = 96;
+		
+
+		//auto ret = strm::streamShiftRight(move(localTx), headerSizeInBits)
+		auto ret = move(localTx)
+			.add(Error{ '0' })
+			.add(PTilePrefix{ BVec{"32d0"} });
+
+		return ret;
+	}
 }
 
 
