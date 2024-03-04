@@ -797,10 +797,10 @@ namespace gtry::scl::strm
 
 
 
-	template<Signal T>
-	T shiftRightMeta(T& in, auto& inStream, const ShiftRightMetaParams& param)
+	template<Signal SigT>
+	SigT shiftRightMeta(SigT& in, auto& inStream, const ShiftRightMetaParams& param)
 	{
-		T ret = move(in);
+		SigT ret = reg(in);
 		//something something
 		return ret;
 	}
@@ -898,6 +898,7 @@ namespace gtry::scl::strm
 			*ret = *head;
 			valid(ret) = valid(head);
 			ready(head) = ready(ret);
+			eop(ret) = '0';
 			IF(valid(head) & eop(head)) {
 				eop(ret) = '1';
 				emptyBits(ret) = emptyBits(head);
@@ -923,6 +924,7 @@ namespace gtry::scl::strm
 			eop(ret) = eop(shiftedTail);
 			emptyBits(ret) = emptyBits(shiftedTail);
 		}
+		HCL_NAMED(ret);
 		return ret;
 	}
 }
