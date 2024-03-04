@@ -1088,11 +1088,6 @@ std::optional<BackwardRetimingPlan> determineAreaToBeRetimedBackward(Circuit &ci
 #ifdef DEBUG_OUTPUT
 	auto writeSubnet = [&]{
 		{
-			DotExport exp("all.dot");
-			exp(circuit, ConstSubnet::all(circuit));
-			exp.runGraphViz("all.svg");	
-		}
-		{
 			DotExport exp("areaToBeRetimed.dot");
 			exp(circuit, retimingPlan.areaToBeRetimed.asConst());
 			exp.runGraphViz("areaToBeRetimed.svg");	
@@ -1107,17 +1102,22 @@ std::optional<BackwardRetimingPlan> determineAreaToBeRetimedBackward(Circuit &ci
 			exp(circuit, net);
 			exp.runGraphViz("retiming_registers.svg");
 		}
+		{
+			Subnet subnet = retimingPlan.areaToBeRetimed;
+			//subnet.dilate(false, true);
+			//subnet.dilate(false, true);
+			subnet.dilate(false, true);
+			subnet.dilate(true, true);
 
-
-		Subnet subnet = retimingPlan.areaToBeRetimed;
-		//subnet.dilate(false, true);
-		//subnet.dilate(false, true);
-		subnet.dilate(false, true);
-		subnet.dilate(true, true);
-
-		DotExport exp("retiming_area.dot");
-		exp(circuit, subnet.asConst());
-		exp.runGraphViz("retiming_area.svg");
+			DotExport exp("retiming_area.dot");
+			exp(circuit, subnet.asConst());
+			exp.runGraphViz("retiming_area.svg");
+		}
+		{
+			DotExport exp("all.dot");
+			exp(circuit, ConstSubnet::all(circuit));
+			exp.runGraphViz("all.svg");	
+		}
 	};
 #endif
 
