@@ -103,7 +103,7 @@ namespace gtry::scl::pci {
 		HCL_DESIGNCHECK_HINT(rawHeader.width() == 128_b, "A request header should have 4 DW");
 		RequestHeader ret;
 
-		ret.common.fromRawDw0(rawHeader.part(4, 0));
+		ret.common = HeaderCommon::fromRawDw0(rawHeader.part(4, 0));
 
 		auto dw = rawHeader.parts(4);
 		auto dw1Bytes = dw[1].parts(4);
@@ -146,7 +146,7 @@ namespace gtry::scl::pci {
 		HCL_DESIGNCHECK_HINT(rawHeader.width() == 96_b, "A completion header should have 3 DW");
 
 		CompletionHeader ret;
-		ret.common.fromRawDw0(rawHeader.part(3, 0));
+		ret.common = HeaderCommon::fromRawDw0(rawHeader.part(3, 0));
 
 		auto dw = rawHeader.parts(3);
 		auto dw1Bytes = dw[1].parts(4);

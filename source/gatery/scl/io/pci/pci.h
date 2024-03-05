@@ -154,7 +154,7 @@ namespace gtry::scl::pci
 
 	struct CompletionHeader
 	{
-		static CompletionHeader fromRaw(BVec rawHeader);
+		[[nodiscard]] static CompletionHeader fromRaw(BVec rawHeader);
 		operator BVec();
 
 		HeaderCommon common;
@@ -170,7 +170,7 @@ namespace gtry::scl::pci
 
 	struct RequestHeader
 	{
-		static RequestHeader fromRaw(BVec rawHeader);
+		[[nodiscard]] static RequestHeader fromRaw(BVec rawHeader);
 		static RequestHeader makeWriteDefault(const UInt& wordAddress, const UInt& length, const BVec& tag);
 		operator BVec();
 
