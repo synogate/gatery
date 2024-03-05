@@ -46,7 +46,7 @@ namespace gtry::scl::arch::intel {
 
 	TlpPacketStream<EmptyBits, PTileBarRange> ptileRxVendorUnlocking(scl::strm::RvPacketStream<BVec, scl::EmptyBits, PTileHeader, PTilePrefix, PTileBarRange>&& rx);
 
-	scl::strm::RvPacketStream<BVec, scl::Error, PTileHeader, PTilePrefix> ptileTxVendorUnlocking(TlpPacketStream<EmptyBits>&& tx);
+	scl::strm::RvPacketStream<BVec, EmptyBits, scl::Error, PTileHeader, PTilePrefix> ptileTxVendorUnlocking(TlpPacketStream<EmptyBits>&& tx);
 
 	//shoudl really not be intel specific, maybe pci.h
 	//class PciInterfaceSeparator {

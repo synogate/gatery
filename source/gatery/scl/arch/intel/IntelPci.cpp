@@ -62,27 +62,26 @@ namespace gtry::scl::arch::intel {
 	}
 	 
 
-	scl::strm::RvPacketStream<BVec, scl::Error, PTileHeader, PTilePrefix> ptileTxVendorUnlocking(TlpPacketStream<EmptyBits>&& tx){
+	scl::strm::RvPacketStream<BVec, EmptyBits, scl::Error, PTileHeader, PTilePrefix> ptileTxVendorUnlocking(TlpPacketStream<EmptyBits>&& tx){
 		Area area{ "ptile_tx_vendor_unlocking", true };
 		HCL_DESIGNCHECK_HINT(tx->width() >= 128_b, "the width needs to be larger than 4DW for this implementation");
-		auto localTx = move(tx);
+		setName(tx, "tlp_tx");
 		//add header as metaSignal
-		BVec rawHdr = capture(localTx->lower(128_b), valid(localTx) & sop(localTx));
-		PTileHeader ptileHeader = PTileHeader{ swapEndian(rawHdr) }; //why does it not add the damn metasignal ?
-		localTx.add(move(ptileHeader));
-
+		BVec rawHdr = capture(tx->lower(128_b), valid(tx) & sop(tx));
+		IF(pci::HeaderCommon::fromRawDw0(rawHdr.lower(32_b)).is3dw())
+			rawHdr.upper(32_b) = 0;
+		
+		TlpPacketStream<EmptyBits, PTileHeader> localTx = move(tx).add(PTileHeader{ swapEndian(rawHdr) });
+		
 		//remove header from front of TLP
 		UInt headerSizeInBits = 128;
 		IF(pci::HeaderCommon::fromRawDw0(rawHdr.lower(32_b)).is3dw())
-			UInt headerSizeInBits = 96;
-		
+			headerSizeInBits = 96;
 
-		//auto ret = strm::streamShiftRight(move(localTx), headerSizeInBits)
-		auto ret = move(localTx)
+		return strm::streamShiftRight(move(localTx), headerSizeInBits)
 			.add(Error{ '0' })
-			.add(PTilePrefix{ BVec{"32d0"} });
-
-		return ret;
+			.add(PTilePrefix{ BVec{"32d0"} })
+			.template reduceTo<scl::strm::RvPacketStream<BVec, EmptyBits, scl::Error, PTileHeader, PTilePrefix>>();
 	}
 }
 
