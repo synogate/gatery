@@ -1633,7 +1633,6 @@ struct stream_shiftRight_better_fixture : BoostUnitTestSimulationFixture
 	size_t waitBetweenPackets = 5;
 	std::function<size_t()> getPacketSize = [](){ return 64; };
 	std::function<size_t()> getShiftAmt = [](){ return 4; };
-
 	std::optional<uint8_t> backpressureReadyPercentage;
 
 	//bool hasAnticipatedEnd() { return (packetSize.value % streamW.value) <= streamShift; }
@@ -1682,7 +1681,7 @@ struct stream_shiftRight_better_fixture : BoostUnitTestSimulationFixture
 			}
 		);
 
-		//send shift amount on sop of data, then invalidate
+		//send shift on sop of data, then invalidate
 		addSimulationProcess(
 			[&, this]()->SimProcess {
 				for (const auto& testCase: testCases){
@@ -1691,7 +1690,6 @@ struct stream_shiftRight_better_fixture : BoostUnitTestSimulationFixture
 						co_await performTransferWait(in, clk);
 						simu(shiftAmt).invalidate();
 					} while (!(simuValid(in) == '1' && simuReady(in) == '1' && simuEop(in) == '1'));
-					
 				}
 			}
 		);
@@ -1722,6 +1720,15 @@ struct stream_shiftRight_better_fixture : BoostUnitTestSimulationFixture
 };
 
 BOOST_FIXTURE_TEST_CASE(stream_shift_right_better_poc, stream_shiftRight_better_fixture) {
+	//streamW = 16_b;
+	//numPackets = 1;
+	//waitBetweenPackets = 5;
+	//getPacketSize = [](){ return 64; };
+	//getShiftAmt = [](){ return 4; };
+	//backpressureReadyPercentage = 50;
+
+	waitBetweenPackets = 3;
+	numPackets = 2;
 	execute();
 }
 BOOST_FIXTURE_TEST_CASE(streamInsert_test, BoostUnitTestSimulationFixture)
