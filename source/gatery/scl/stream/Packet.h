@@ -48,9 +48,10 @@ namespace gtry::scl::strm
 
 	/**
 	* @brief applies a shift on a packetStream's data. Also computes new EmptyBits signal. As a side-effect, it can also be used to get rid of packet headers.
+	* the shift must be asserted during the sop of the packet
 	*/
 	template<scl::strm::PacketStreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
-	auto streamShiftRight(StreamT&& source, UInt shift);
+	auto streamShiftRight(StreamT&& source, const UInt& shift);
 
 	UInt streamPacketBeatCounter(const StreamSignal auto& in, BitWidth counterW);
 
@@ -806,14 +807,16 @@ namespace gtry::scl::strm
 	}
 
 	template<scl::strm::PacketStreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
-	auto streamShiftRight(StreamT&& source, UInt shift)
+	auto streamShiftRight(StreamT&& source, const UInt& shift)
 	{
 		auto scope = Area{ "scl_streamShiftRight" }.enter();
 
-		shift = reg(shift); 
+		HCL_NAMED(shift);
+
+		auto localShift = reg(shift);
 
 		ShiftRightMetaParams params{
-			.shift = shift,
+			.shift = localShift,
 		};
 
 		auto ret = scl::Stream{
@@ -824,7 +827,7 @@ namespace gtry::scl::strm
 		};
 
 		UInt fullBits = source->width().bits() - zext(emptyBits(source));
-		params.anticipateEnd = scl::flagInstantSet(valid(source) & eop(source) & (zext(shift) >= fullBits), transfer(ret) & eop(ret), '0');
+		params.anticipateEnd = scl::flagInstantSet(valid(source) & eop(source) & (zext(localShift) >= fullBits), transfer(ret) & eop(ret), '0');
 		setName(params.anticipateEnd, "anticipateEnd");
 		params.outTransfer = transfer(ret);
 		params.outEop = eop(ret);
