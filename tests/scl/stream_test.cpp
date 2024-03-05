@@ -1538,6 +1538,15 @@ BOOST_FIXTURE_TEST_CASE(stream_shiftRight_test_anticipated_end_chaos_light, stre
 	execute();
 }
 
+BOOST_FIXTURE_TEST_CASE(stream_shiftRight_test_one_beat_packet, stream_shiftRight_test)
+{
+	streamShift = 4;
+	packetSize = 12_b;
+	streamW = 16_b;
+	backpressureReadyPercentage = 50;
+	execute();
+}
+
 BOOST_FIXTURE_TEST_CASE(stream_shiftRight_dynamic, BoostUnitTestSimulationFixture)
 {
 	std::mt19937_64 mt(std::random_device{}());
@@ -1615,6 +1624,106 @@ BOOST_FIXTURE_TEST_CASE(stream_shiftRight_dynamic, BoostUnitTestSimulationFixtur
 	design.postprocess();
 	//design.visualize("stream_shiftRight");
 	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
+
+struct stream_shiftRight_better_fixture : BoostUnitTestSimulationFixture
+{
+	std::mt19937 rng;
+	BitWidth streamW = 16_b;
+	size_t numPackets = 1;
+	size_t waitBetweenPackets = 5;
+	std::function<size_t()> getPacketSize = [](){ return 64; };
+	std::function<size_t()> getShiftAmt = [](){ return 4; };
+
+	std::optional<uint8_t> backpressureReadyPercentage;
+
+	//bool hasAnticipatedEnd() { return (packetSize.value % streamW.value) <= streamShift; }
+
+	void execute() {
+		rng.seed(3080);
+		Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+		ClockScope clkScope(clk);
+
+		UInt shiftAmt = BitWidth::count(streamW.bits());
+		pinIn(shiftAmt, "shiftAmt");
+
+		scl::RvPacketStream<BVec, scl::EmptyBits> in{ streamW };
+		emptyBits(in) = BitWidth::count(streamW.bits());
+		pinIn(in, "in");
+
+		auto out = streamShiftRight(move(in), shiftAmt);
+		pinOut(out, "out");
+
+		std::vector<std::tuple<sim::DefaultBitVectorState, size_t>> testCases(numPackets);
+		for (auto& testCase : testCases) {
+			std::get<size_t>(testCase) = getShiftAmt();
+			auto& dbv = std::get<sim::DefaultBitVectorState>(testCase);
+			dbv = sim::createRandomDefaultBitVectorState(getPacketSize(), rng);
+			dbv.setRange(sim::DefaultConfig::DEFINED, 0, dbv.size()); //not necessary but nice for visual debugging
+		}
+
+		addSimulationProcess(
+			[&, this]()->SimProcess {
+				if(backpressureReadyPercentage)
+					return scl::strm::readyDriverRNG(out, clk, *backpressureReadyPercentage);
+				else
+					return scl::strm::readyDriver(out, clk);
+			}
+		);
+
+		//send data
+		addSimulationProcess(
+			[&, this]()->SimProcess {
+				for(const auto& testCase : testCases){
+					const auto& dbv = std::get<sim::DefaultBitVectorState>(testCase);
+					co_await scl::strm::sendPacket(in, scl::strm::SimPacket(dbv), clk);
+					for (size_t i = 0; i < waitBetweenPackets; i++)
+						co_await OnClk(clk);
+				}
+			}
+		);
+
+		//send shift amount on sop of data, then invalidate
+		addSimulationProcess(
+			[&, this]()->SimProcess {
+				for (const auto& testCase: testCases){
+					simu(shiftAmt) = std::get<size_t>(testCase);
+					do{
+						co_await performTransferWait(in, clk);
+						simu(shiftAmt).invalidate();
+					} while (!(simuValid(in) == '1' && simuReady(in) == '1' && simuEop(in) == '1'));
+					
+				}
+			}
+		);
+
+		//receive packets and check
+		addSimulationProcess(
+			[&, this]()->SimProcess {
+				for (const auto& testCase: testCases)
+				{
+					scl::strm::SimPacket outputPacket = co_await scl::strm::receivePacket(out, clk);
+					auto receivedDbv = outputPacket.payload;
+					const auto& sentDbv = std::get<sim::DefaultBitVectorState>(testCase);
+					const auto& shift = std::get<size_t>(testCase);
+					auto expectedDbv = sentDbv.extract(shift, sentDbv.size() - shift);
+					BOOST_TEST(receivedDbv == expectedDbv);
+				}
+				co_await OnClk(clk);
+				co_await OnClk(clk);
+				co_await OnClk(clk);
+				stopTest();
+			}
+		);
+
+		design.postprocess();
+		//design.visualize("stream_shiftRight");
+		BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+	}
+};
+
+BOOST_FIXTURE_TEST_CASE(stream_shift_right_better_poc, stream_shiftRight_better_fixture) {
+	execute();
 }
 BOOST_FIXTURE_TEST_CASE(streamInsert_test, BoostUnitTestSimulationFixture)
 {
