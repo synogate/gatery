@@ -205,7 +205,10 @@ BOOST_FIXTURE_TEST_CASE(ptile_rx_vendor_unlocking_only_write_requests, BoostUnit
 		for (size_t i = 0; i < nWrites; i++)
 		{
 			simu(ptileHeader) = writePackets[i].extract(0, 128);
-			co_await performPacketTransferWait(in, clk);
+			do { 
+				co_await performTransferWait(in, clk);
+				simu(ptileHeader).invalidate();
+			} while (!(simuReady(in) == '1' && simuValid(in) == '1' && simuEop(in) == '1'));
 		}
 		co_await OnClk(clk);
 	});
@@ -233,6 +236,7 @@ BOOST_FIXTURE_TEST_CASE(ptile_hail_mary_completer, BoostUnitTestSimulationFixtur
 	device->setupDevice("AGFB014R24B2E2V");
 	design.setTargetTechnology(std::move(device));
 	using namespace scl::arch::intel;
+	//using namespace scl::pci;
 
 	PTile ptileInstance(PTile::Presets::Gen3x16_256());
 	ptileInstance.connectNInitDone(IntelResetIP{}.ninit_done());
@@ -240,24 +244,90 @@ BOOST_FIXTURE_TEST_CASE(ptile_hail_mary_completer, BoostUnitTestSimulationFixtur
 	Clock clk = ptileInstance.userClock();
 	ClockScope clkScp(clk);
 
-	BitWidth addW = 4_b;
+	BitWidth addW = 8_b;
 	BitWidth dataW = 32_b;
 
 	Memory<BVec> mem(addW.count(), dataW);
+	mem.initZero();
 	TileLinkUL tl = tileLinkInit<TileLinkUL>(addW, dataW, pack(TlpAnswerInfo{}).width());
 	mem <<= tl;
 
 	CompleterInterface complInt = pci::makeTileLinkMaster(move(tl), ptileInstance.settings().dataBusW);
 
-	complInt.request = ptileRxVendorUnlocking(ptileInstance.rx())
+	RvPacketStream<BVec, EmptyBits, PTileHeader, PTilePrefix, PTileBarRange> rxSim(ptileInstance.settings().dataBusW);
+	emptyBits(rxSim) = BitWidth::count(rxSim->width().bits());
+	pinIn(rxSim, "rxSim", { .simulationOnlyPin = true });
+
+	BVec intelHeader = 128_b;
+	pinIn(intelHeader, "intel_header");
+	rxSim.get<PTileHeader>() = PTileHeader{ swapEndian(intelHeader) };
+
+	auto temp = ptileRxVendorUnlocking(simOverrideDownstream(ptileInstance.rx(), move(rxSim)))
 		.template remove<PTileBarRange>()
-		.add(BarInfo{ .id = ConstBVec(0, 3_b), .logByteAperture = ConstUInt(0, 6_b)});
-	auto something = ptileTxVendorUnlocking(move(complInt.completion));
-	ptileInstance.tx(move(something));
+		.add(BarInfo{ .id = ConstBVec(0, 3_b), .logByteAperture = ConstUInt(20, 6_b)});//log byte aperture should be set to ip value
+
+	HCL_NAMED(temp);
+	complInt.request <<= move(temp);
+
+	auto [txHard, txSim] = simOverrideUpstream(ptileTxVendorUnlocking(move(complInt.completion)));
+	ptileInstance.tx(move(txHard).template remove<EmptyBits>());
+	pinOut(txSim, "txSim", { .simulationOnlyPin = true });
+
+	scl::sim::TlpInstruction readInst;
+	readInst.opcode = TlpOpcode::memoryReadRequest64bit;
+	readInst.length = 1;
+	readInst.lastDWByteEnable = 0;
+	readInst.wordAddress = 5;
+
+	scl::sim::TlpInstruction writeInst;
+	writeInst.opcode = TlpOpcode::memoryWriteRequest64bit;
+	writeInst.length = 1;
+	writeInst.lastDWByteEnable = 0;
+	writeInst.wordAddress = 5;
+	writeInst.payload = std::vector<uint32_t>({ 42 });
+
+	addSimulationProcess([&, this]()->SimProcess { return strm::readyDriver(txSim, clk); });
+
+	//send read, write, read
+	addSimulationProcess([&, this]()->SimProcess {
+		simu(intelHeader) = readInst;
+		simu(valid(rxSim)) = '1';
+		simu(eop(rxSim)) = '1';
+		co_await strm::performPacketTransferWait(rxSim, clk);
+		simu(intelHeader).invalidate();
+		simuStreamInvalidate(rxSim);
+		for (size_t i = 0; i < 20; i++)
+			co_await OnClk(clk);
+
+		simu(intelHeader) = gtry::sim::DefaultBitVectorState(writeInst).extract(0, 128);
+		auto payload = gtry::sim::DefaultBitVectorState(writeInst).extract(128, 32);
+		payload.resize(ptileInstance.settings().dataBusW.bits());
+		simu(*rxSim) = payload;
+		simu(emptyBits(rxSim)) = ptileInstance.settings().dataBusW.bits() - 32;
+		simu(valid(rxSim)) = '1';
+		simu(eop(rxSim)) = '1';
+		co_await strm::performPacketTransferWait(rxSim, clk);
+		simu(intelHeader).invalidate();
+		simuStreamInvalidate(rxSim);
+		for (size_t i = 0; i < 20; i++)
+			co_await OnClk(clk);
+
+		simu(intelHeader) = readInst;
+		simu(valid(rxSim)) = '1';
+		simu(eop(rxSim)) = '1';
+		co_await strm::performPacketTransferWait(rxSim, clk);
+		simu(intelHeader).invalidate();
+		simuStreamInvalidate(rxSim);
+		for (size_t i = 0; i < 20; i++)
+			co_await OnClk(clk);
+
+		stopTest();
+		});
 
 	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 
-	if (false) {
+	if (true) {
 		m_vhdlExport.emplace("export/ptile/top.vhd");
 		m_vhdlExport->targetSynthesisTool(new gtry::IntelQuartus());
 		//m_vhdlExport->writeStandAloneProjectFile("export_thing.qsf");
@@ -268,3 +338,86 @@ BOOST_FIXTURE_TEST_CASE(ptile_hail_mary_completer, BoostUnitTestSimulationFixtur
 	}
 }
 
+
+BOOST_FIXTURE_TEST_CASE(ptile_tx_vendor_unlocking_completion_only, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+	using namespace scl::arch::intel;
+
+	BitWidth dataW = 256_b;
+	size_t nTlps = 10;
+
+	TlpPacketStream<EmptyBits> in(dataW);
+	emptyBits(in) = BitWidth::count(in->width().bits());
+	pinIn(in, "in");
+
+	scl::strm::RvPacketStream<BVec, EmptyBits, scl::Error, PTileHeader, PTilePrefix> out = ptileTxVendorUnlocking(move(in));
+	pinOut(out, "out");
+
+	BVec header = swapEndian(out.template get<PTileHeader>().header);
+	pinOut(header, "header");
+
+	addSimulationProcess([&, this]()->SimProcess { return strm::readyDriverRNG(out, clk, 50); });
+
+	std::mt19937_64	rng(21225);
+	auto makeCompletionTlp = [&rng]()->gtry::sim::DefaultBitVectorState{
+		scl::sim::TlpInstruction compReq;
+		compReq.opcode = TlpOpcode::completionWithData;
+		compReq.length = (rng() & 0x3) + 1;
+		compReq.payload.emplace(*compReq.length);
+		compReq.lowerByteAddress = 0x7F;
+		compReq.completerID = 0x4567;
+		compReq.completionStatus = CompletionStatus::successfulCompletion;
+		compReq.byteCountModifier = 0;
+		compReq.byteCount = 40;
+		for (size_t i = 0; i < *compReq.length; i++)
+			(*compReq.payload)[i] = (uint32_t)rng();
+		return compReq.asDefaultBitVectorState();
+		};
+
+	std::vector<gtry::sim::DefaultBitVectorState> completionPackets(nTlps);
+	for (auto& entry : completionPackets) {
+		entry = makeCompletionTlp();
+	}
+
+	//send tlp's
+	addSimulationProcess([&, this]()->SimProcess {
+		for (auto& tlp : completionPackets) {
+			co_await strm::sendPacket(in, strm::SimPacket(tlp), clk);
+			size_t wait = 5;//(rng() & 3);
+			for (size_t i = 0; i < wait; i++)
+				co_await OnClk(clk);
+		}
+	});
+
+	//receive and decode payload
+	addSimulationProcess([&, this]()->SimProcess {
+		for (auto& tlp : completionPackets) {
+			strm::SimPacket payloadReceived = co_await strm::receivePacket(out, clk);
+			BOOST_TEST(payloadReceived.payload == tlp.extract(96, tlp.size() - 96));
+		}
+		co_await OnClk(clk);
+		co_await OnClk(clk);
+		co_await OnClk(clk);
+		co_await OnClk(clk);
+		co_await OnClk(clk);
+		stopTest();
+		});
+
+	//receive and decode header
+	addSimulationProcess([&, this]()->SimProcess {
+		for (auto& tlp : completionPackets) {
+			do {
+				co_await OnClk(clk);
+			} while (!(simuValid(out) == '1' && simuReady(out) == '1' && simuSop(out) == '1'));
+			auto rawExtendedHeader = tlp.extract(0, 96);
+			rawExtendedHeader.resize(128);
+			rawExtendedHeader.setRange(gtry::sim::DefaultConfig::Plane::DEFINED, 96, 32);
+			BOOST_TEST(simu(header) == rawExtendedHeader);
+		}
+		});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
