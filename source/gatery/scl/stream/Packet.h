@@ -813,7 +813,7 @@ namespace gtry::scl::strm
 
 		HCL_NAMED(shift);
 
-		auto localShift = reg(shift);
+		auto localShift = reg(capture(shift, valid(source) & sop(source)));
 
 		ShiftRightMetaParams params{
 			.shift = localShift,
