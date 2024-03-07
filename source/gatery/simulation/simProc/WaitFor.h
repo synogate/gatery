@@ -19,7 +19,7 @@
 
 #include "../../hlim/ClockRational.h"
 
-#include "../../utils/CoroutineWrapper.h"
+#include "../../compat/CoroutineWrapper.h"
 
 namespace gtry::sim {
 

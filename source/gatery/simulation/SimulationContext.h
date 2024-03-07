@@ -20,7 +20,7 @@
 #include "../hlim/NodePort.h"
 #include "BitVectorState.h"
 
-#include "../utils/CoroutineWrapper.h"
+#include "../compat/CoroutineWrapper.h"
 
 #include <any>
 
