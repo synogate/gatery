@@ -36,7 +36,7 @@ test-linux-frontend:
   tags:
     - linux
   script:
-    - build/unittest_frontend
+    - build/tests/frontend/unittest_frontend
 
 test-linux-scl:
   stage: test
@@ -44,7 +44,7 @@ test-linux-scl:
   tags:
     - linux
   script:
-    - build/unittest_scl
+    - build/tests/scl/unittest_scl
 
 test-windows-frontend:
   stage: test
