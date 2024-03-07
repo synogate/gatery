@@ -38,8 +38,6 @@
 	To circumvent this, we provide a specialized code for std::array that circumvents the boost::pfr::structure_tie of the array:
 */ 
 
-#include <gatery/utils/Traits.h>
-
 #define detect_fields_count_dispatch detect_fields_count_dispatch___
 #define fields_count fields_count___
 
