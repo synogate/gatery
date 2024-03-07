@@ -9,12 +9,14 @@ linux-build:
   tags:
     - linux
   script:
-    - premake5 gmake2
-    - make -j20
+    - mkdir build/
+    - cd build
+    - cmake ..
+    - make -j 20
   artifacts:
     expire_in: 2 days
     paths:
-      - bin/
+      - build/
 
 windows-build:
   stage: build
@@ -34,7 +36,7 @@ test-linux-frontend:
   tags:
     - linux
   script:
-    - bin/linux-x86_64-Debug/gatery-frontend-test
+    - build/unittest_frontend
 
 test-linux-scl:
   stage: test
@@ -42,7 +44,7 @@ test-linux-scl:
   tags:
     - linux
   script:
-    - bin/linux-x86_64-Debug/gatery-scl-test
+    - build/unittest_scl
 
 test-windows-frontend:
   stage: test
