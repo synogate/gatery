@@ -65,3 +65,5 @@ namespace gtry::scl::sdram
 		Full,
 	};
 }
+
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::sdram::CommandBus, cke, csn, rasn, casn, wen, a, ba, dq, dqm);
