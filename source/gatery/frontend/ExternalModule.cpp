@@ -54,6 +54,16 @@ void ExternalModule::clockIn(std::string_view name, std::string_view resetName)
 
 void ExternalModule::clockIn(const Clock& clock, std::string_view name, std::string_view resetName)
 {
+	for (size_t i = 0; i < m_node.clockNames().size(); ++i)
+	{
+		if (m_node.clockNames()[i] == name)
+		{
+			HCL_DESIGNCHECK(resetName == m_node.resetNames()[i]);
+			m_node.attachClock(clock.getClk(), i);
+			return;
+		}
+	}
+
 	m_node.addClock(clock.getClk());
 	m_node.clockNames().emplace_back(name);
 	m_node.resetNames().emplace_back(resetName);
