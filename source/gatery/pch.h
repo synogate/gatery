@@ -16,6 +16,9 @@
 #define _STDFLOAT_ // boost "The contents of <stdfloat> are available only with C++23 or later."
 #endif
 
+#include "compat/CoroutineWrapper.h"
+#include "compat/boost_pfr.h"
+
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
@@ -33,11 +36,8 @@
 #include <boost/spirit/home/support/container.hpp>
 #include <boost/spirit/home/x3.hpp>
 #include <boost/stacktrace.hpp>
-#include <boost/pfr.hpp>
 #include <boost/process.hpp>
 #include <boost/optional.hpp>
-
-#include "utils/CoroutineWrapper.h"
 
 #include <external/magic_enum.hpp>
 

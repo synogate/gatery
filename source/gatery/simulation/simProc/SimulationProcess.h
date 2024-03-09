@@ -17,7 +17,7 @@
 */
 #pragma once
 
-#include "../../utils/CoroutineWrapper.h"
+#include "../../compat/CoroutineWrapper.h"
 #include "../../utils/Exceptions.h"
 #include "../../utils/Preprocessor.h"
 
