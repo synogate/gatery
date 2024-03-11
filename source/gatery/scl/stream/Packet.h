@@ -840,7 +840,7 @@ namespace gtry::scl::strm
 		UInt steadyShift = capture(shift, valid(source) & sop(source));
 		StreamBroadcaster sourceCaster(move(source).add(ShiftRightSteadyShift{ steadyShift }));
 
-		auto currentSource = sourceCaster.bcastTo() | strm::regReady() | strm::eraseBeat(0, 1);
+		auto currentSource = sourceCaster.bcastTo() | strm::eraseBeat(0, 1);
 		auto previousSource = sourceCaster.bcastTo() | strm::regReady() | strm::delay(1);
 
 		UInt fullBits = capture(currentSource->width().bits() - zext(emptyBits(currentSource)), valid(currentSource) & eop(currentSource)); HCL_NAMED(fullBits);
