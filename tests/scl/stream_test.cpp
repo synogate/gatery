@@ -1619,7 +1619,7 @@ BOOST_FIXTURE_TEST_CASE(stream_shiftRight_dynamic, BoostUnitTestSimulationFixtur
 		}
 	);
 
-	if(true) recordVCD("stream_shiftRight.vcd");
+	if(false) recordVCD("stream_shiftRight.vcd");
 	design.postprocess();
 	//design.visualize("stream_shiftRight");
 	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
@@ -1629,13 +1629,14 @@ struct stream_shiftRight_better_fixture : BoostUnitTestSimulationFixture
 {
 	std::mt19937 rng;
 	BitWidth streamW = 16_b;
-	size_t numPackets = 1;
+	size_t numPackets = 10;
 	size_t waitBetweenPackets = 5;
 	std::function<size_t()> getPacketSize = [](){ return 64; };
 	std::function<size_t()> getShiftAmt = [](){ return 4; };
-	std::optional<uint8_t> backpressureReadyPercentage;
+	std::function<uint64_t()> getInvalidMask = [](){ return 0; };
 
-	//bool hasAnticipatedEnd() { return (packetSize.value % streamW.value) <= streamShift; }
+	std::optional<uint8_t> backpressureReadyPercentage;
+	Seconds simuTime = { 50, 1'000'000 };
 
 	void execute() {
 		rng.seed(3080);
@@ -1656,7 +1657,10 @@ struct stream_shiftRight_better_fixture : BoostUnitTestSimulationFixture
 		for (auto& testCase : testCases) {
 			std::get<size_t>(testCase) = getShiftAmt();
 			auto& dbv = std::get<sim::DefaultBitVectorState>(testCase);
-			dbv = sim::createRandomDefaultBitVectorState(getPacketSize(), rng);
+			auto size = getPacketSize();
+			while(size <= std::get<size_t>(testCase))
+				size = getPacketSize(); // very inefficient
+			dbv = sim::createRandomDefaultBitVectorState(size, rng);
 			dbv.setRange(sim::DefaultConfig::DEFINED, 0, dbv.size()); //not necessary but nice for visual debugging
 		}
 
@@ -1674,7 +1678,17 @@ struct stream_shiftRight_better_fixture : BoostUnitTestSimulationFixture
 			[&, this]()->SimProcess {
 				for(const auto& testCase : testCases){
 					const auto& dbv = std::get<sim::DefaultBitVectorState>(testCase);
-					co_await scl::strm::sendPacket(in, scl::strm::SimPacket(dbv), clk);
+					size_t packetSize = dbv.size();
+					size_t shiftAmt = std::get<size_t>(testCase);
+					sim::SimulationContext::current()->onDebugMessage(nullptr, 
+						std::to_string(dbv.size()) + 
+						" >> " + 
+						std::to_string(std::get<size_t>(testCase)) + 
+						": " + 
+						std::to_string((streamW.bits() - (packetSize - shiftAmt) % streamW.bits())%streamW.bits()) +
+						" emptyBits"
+					);
+					co_await scl::strm::sendPacket(in, scl::strm::SimPacket(dbv).invalidBeats(getInvalidMask()), clk);
 					for (size_t i = 0; i < waitBetweenPackets; i++)
 						co_await OnClk(clk);
 				}
@@ -1705,6 +1719,9 @@ struct stream_shiftRight_better_fixture : BoostUnitTestSimulationFixture
 					const auto& shift = std::get<size_t>(testCase);
 					auto expectedDbv = sentDbv.extract(shift, sentDbv.size() - shift);
 					BOOST_TEST(receivedDbv == expectedDbv);
+					if (receivedDbv != expectedDbv) {
+						sim::SimulationContext::current()->onAssert(nullptr, "The packet finishing at this beat is wrong");
+					}
 				}
 				co_await OnClk(clk);
 				co_await OnClk(clk);
@@ -1714,23 +1731,105 @@ struct stream_shiftRight_better_fixture : BoostUnitTestSimulationFixture
 		);
 
 		design.postprocess();
-		//design.visualize("stream_shiftRight");
-		BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+		BOOST_TEST(!runHitsTimeout(simuTime));
 	}
 };
 
-BOOST_FIXTURE_TEST_CASE(stream_shift_right_better_poc, stream_shiftRight_better_fixture) {
+BOOST_FIXTURE_TEST_CASE(stream_shift_right_better_noargs, stream_shiftRight_better_fixture) {
 	//streamW = 16_b;
-	//numPackets = 1;
+	//numPackets = 10;
 	//waitBetweenPackets = 5;
 	//getPacketSize = [](){ return 64; };
 	//getShiftAmt = [](){ return 4; };
-	//backpressureReadyPercentage = 50;
-
-	waitBetweenPackets = 3;
-	numPackets = 2;
+	//backpressureReadyPercentage;
 	execute();
 }
+
+BOOST_FIXTURE_TEST_CASE(stream_shift_right_better_increasing, stream_shiftRight_better_fixture) {
+	//streamW = 16_b;
+	//numPackets = 10;
+	waitBetweenPackets = 0;
+	//getPacketSize = [](){ return 64; };
+	size_t currentShift = 0;
+	getShiftAmt = [&](){ return currentShift++; };
+	backpressureReadyPercentage = 50;
+	getInvalidMask = [&]() { return rng(); }; //0 to 15
+	execute();
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_shift_right_better_decreasing, stream_shiftRight_better_fixture) {
+	//streamW = 16_b;
+	//numPackets = 10;
+	waitBetweenPackets = 0;
+	//getPacketSize = [](){ return 64; };
+	size_t currentShift = 10;
+	getShiftAmt = [&](){ return currentShift--; };
+	backpressureReadyPercentage = 50;
+	getInvalidMask = [&]() { return rng(); }; //0 to 15
+	execute();
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_shift_right_better_random, stream_shiftRight_better_fixture) {
+	//streamW = 16_b;
+	numPackets = 1000;
+	waitBetweenPackets = 0;
+	getPacketSize = [&](){ return (rng() & 0x1F) + 1; };//1 to 64
+	getShiftAmt = [&]() { return rng() & 0xF; }; //0 to 15
+	getInvalidMask = [&]() { return rng(); };
+	backpressureReadyPercentage = 50;
+	simuTime = { 1000, 1'000'000 };
+	execute();
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_shift_right_better_rework_playground, stream_shiftRight_better_fixture) {
+	//streamW = 16_b;
+	numPackets = 10;
+	waitBetweenPackets = 0;
+	size_t offset = 0;
+	size_t packetSize = 12;
+	getPacketSize = [&]() { return 20; };//return (rng() & 0x3F) + 1; };//1 to 64
+	getShiftAmt = [&]() { return offset++; };// rng() & 0xF;}; //0 to 15
+
+	backpressureReadyPercentage = 50;
+	simuTime = { 1, 1'000'000 };
+	execute();
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_shift_right_better_one_beat, stream_shiftRight_better_fixture) {
+	//streamW = 16_b;
+	//numPackets = 10;
+	waitBetweenPackets = 0;
+	getPacketSize = [](){ return 12; };
+	getShiftAmt = [](){ return 4; };
+	backpressureReadyPercentage = 50;
+	getInvalidMask = [&]() { return rng(); }; //0 to 15
+	execute();
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_shift_right_better_shift_0, stream_shiftRight_better_fixture) {
+	//streamW = 16_b;
+	numPackets = 10;
+	waitBetweenPackets = 0;
+	size_t packetSize = 20;
+	getPacketSize = [&](){ return packetSize++; };
+	getShiftAmt = [](){ return 0; };
+	backpressureReadyPercentage = 50;
+	getInvalidMask = [&]() { return rng(); }; //0 to 15
+	execute();
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_shift_right_better_shift_0_and_one_beat, stream_shiftRight_better_fixture) {
+	//streamW = 16_b;
+	numPackets = 20;
+	waitBetweenPackets = 0;
+	size_t packetSize = 0;
+	getPacketSize = [&](){ return (packetSize++ % streamW.bits()) + 1; };
+	getShiftAmt = [](){ return 0; };
+	backpressureReadyPercentage = 50;
+	getInvalidMask = [&]() { return rng(); }; //0 to 15
+	execute();
+}
+
 BOOST_FIXTURE_TEST_CASE(streamInsert_test, BoostUnitTestSimulationFixture)
 {
 	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
