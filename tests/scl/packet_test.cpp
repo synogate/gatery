@@ -942,7 +942,6 @@ BOOST_FIXTURE_TEST_CASE(fieldExtractionFuzz_RsetPacketStreamWHighBackPressure, F
 	runTest();
 }
 
-
 struct AppendTestSimulationFixture : public BoostUnitTestSimulationFixture 
 {
 	BitWidth dataW = 8_b;
@@ -1061,7 +1060,7 @@ BOOST_FIXTURE_TEST_CASE(append_some_empty_tails, AppendTestSimulationFixture)
 BOOST_FIXTURE_TEST_CASE(append_chaos, AppendTestSimulationFixture)
 {
 	dataW = 8_b;
-	iterations = 50;
+	iterations = 1000;
 
 	headPacketSize = [&]() { return (rng() & 0x3F) + 1; };
 	tailPacketSize = [&]() { return (rng() & 0x1F); };
