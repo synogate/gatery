@@ -951,6 +951,8 @@ struct AppendTestSimulationFixture : public BoostUnitTestSimulationFixture
 	
 	std::function<size_t()> headPacketSize = []() { return 4; };
 	std::function<size_t()> tailPacketSize = []() { return 4; };
+	std::function<size_t()> getHeadInvalidBeats = []() { return 0; };
+	std::function<size_t()> getTailInvalidBeats = []() { return 0; };
 
 	void runTest() {
 		Clock clk({ .absoluteFrequency = 100'000'000 });
@@ -995,14 +997,14 @@ struct AppendTestSimulationFixture : public BoostUnitTestSimulationFixture
 
 		addSimulationProcess([&, this]()->SimProcess {
 			for (auto head : heads) {
-				co_await strm::sendPacket(headStrm, strm::SimPacket(head), clk);
+				co_await strm::sendPacket(headStrm, strm::SimPacket(head).invalidBeats(getHeadInvalidBeats()), clk);
 			}
 			});
 
 		addSimulationProcess([&, this]()->SimProcess {
 			
 			for (auto tail : tails) {
-				co_await strm::sendPacket(tailStrm, strm::SimPacket(tail), clk);
+				co_await strm::sendPacket(tailStrm, strm::SimPacket(tail).invalidBeats(getTailInvalidBeats()), clk);
 				if (tail.size() == 0) {
 					co_await performPacketTransferWait(headStrm, clk);
 				}
@@ -1039,6 +1041,8 @@ BOOST_FIXTURE_TEST_CASE(append_only_heads, AppendTestSimulationFixture)
 
 	headPacketSize = [&]() { return (rng() & 0x1F) + 1; };
 	tailPacketSize = []() { return 0; };
+	std::function<size_t()> getHeadInvalidBeats = [&]() { return rng(); };
+	//std::function<size_t()> getTailInvalidBeats = []() { return 0; };
 	runTest();
 }
 
@@ -1049,16 +1053,20 @@ BOOST_FIXTURE_TEST_CASE(append_some_empty_tails, AppendTestSimulationFixture)
 
 	headPacketSize = [&]() { return (rng() & 0x1F) + 1; };
 	tailPacketSize = [&]() { return (rng() & 0x1); };
+	std::function<size_t()> getHeadInvalidBeats = [&]() { return rng(); };
+	std::function<size_t()> getTailInvalidBeats = [&]() { return rng(); };
 	runTest();
 }
 
 BOOST_FIXTURE_TEST_CASE(append_chaos, AppendTestSimulationFixture)
 {
 	dataW = 8_b;
-	iterations = 100;
+	iterations = 50;
 
-	headPacketSize = [&]() { return (rng() & 0x1F) + 1; };
-	tailPacketSize = [&]() { return (rng() & 0xF); };
+	headPacketSize = [&]() { return (rng() & 0x3F) + 1; };
+	tailPacketSize = [&]() { return (rng() & 0x1F); };
+	std::function<size_t()> getHeadInvalidBeats = [&]() { return rng(); };
+	std::function<size_t()> getTailInvalidBeats = [&]() { return rng(); };
 	runTest();
 }
 
