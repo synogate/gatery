@@ -48,10 +48,10 @@ namespace gtry::scl::strm
 
 	/**
 	* @brief applies a shift on a packetStream's data. Also computes new EmptyBits signal. As a side-effect, it can also be used to get rid of packet headers.
-	* the shift must be asserted during the sop of the packet
+	* the shift is sampled on sop and valid of the packet
 	*/
 	template<scl::strm::PacketStreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
-	auto streamShiftRight(StreamT&& source, const UInt& shift);
+	StreamT streamShiftRight(StreamT&& source, const UInt& shift);
 
 	UInt streamPacketBeatCounter(const StreamSignal auto& in, BitWidth counterW);
 
@@ -727,115 +727,169 @@ namespace gtry::scl::strm
 			HCL_DESIGNCHECK_HINT(false, "something went terribly wrong if this failed");
 	}
 
+	enum class ShiftRightState{
+		normalOp,
+		transferPrevious,
+		consumePrevious
+	};
+
 	struct ShiftRightMetaParams {
+		Enum<ShiftRightState> state;
+		Bit mustAnticipateEnd;
+		Bit isSingleBeat;
+	};
+
+	struct ShiftRightSteadyShift {
 		UInt shift;
-		Bit anticipateEnd;
-		Bit outTransfer;
-		Bit outEop;
 	};
 
 	template<BitVectorSignal T>
-	T shiftRightPayload(T& in, auto& inStream, const ShiftRightMetaParams& param)
+	T shiftRightPayload(T& in, auto& inStream, auto& inStreamPrevious, const ShiftRightMetaParams& param)
 	{
-		T ret = constructFrom(in);
-
-		ENIF(transfer(inStream)) {
-			T doubleVec = (T) cat(in, reg(in));
-			ret = doubleVec(param.shift, in.width());
-		}
+		T doubleVec = (T) cat(*inStream, *inStreamPrevious);
+		T ret = doubleVec(inStreamPrevious.get<ShiftRightSteadyShift>().shift, in.width());
 
 		return ret;
 	}
 
-	scl::Valid shiftRightMeta(scl::Valid& in, auto& inStream, const ShiftRightMetaParams& param)
+
+	scl::Valid shiftRightMeta(scl::Valid& in, auto& inStream, auto& inStreamPrevious, const ShiftRightMetaParams& param)
 	{
-		scl::Valid ret;
-		ret.valid = in.valid;
+		scl::Valid ret = { valid(inStreamPrevious) & valid(inStream)};
 
-		Bit thereWasAnAnticipatedEnd = scl::flagInstantSet(param.anticipateEnd, param.outTransfer & param.outEop,'0');
-		HCL_NAMED(thereWasAnAnticipatedEnd);
-		Bit validHeldForAnExtraBeat = !thereWasAnAnticipatedEnd & scl::flagInstantSet(transfer(inStream) & eop(inStream), param.outTransfer & param.outEop, '0');
-		HCL_NAMED(validHeldForAnExtraBeat);
+		IF(param.isSingleBeat)
+			ret.valid = valid(inStreamPrevious);
 
-		IF(in.valid & sop(inStream)) {
-			ret.valid = '0';
-		}
-		ret.valid |= validHeldForAnExtraBeat;
-		return ret;
-	}
+		IF(param.state == ShiftRightState::transferPrevious) 
+			ret.valid = valid(inStreamPrevious);
 
-	scl::Eop shiftRightMeta(scl::Eop& in, auto& inStream, const ShiftRightMetaParams& param)
-	{
-		scl::Eop ret;
+		IF(param.state == ShiftRightState::consumePrevious) 
+			ret.valid = '0'; 
 
-		Bit anticipatedEop = in.eop;
-		Bit DelayedEop = reg(scl::flagInstantSet(in.eop, param.outTransfer, '0'), '0');
-
-		ret.eop = DelayedEop;
-		Bit delayedAnticipateEndSignal = reg(param.anticipateEnd);
-		IF(param.anticipateEnd | delayedAnticipateEndSignal)
-			ret.eop = anticipatedEop;
 
 		return ret;
 	}
 
-	scl::Ready shiftRightMeta(scl::Ready& in, auto& inStream, const ShiftRightMetaParams& param)
+	scl::Eop shiftRightMeta(scl::Eop& in, auto& inStream, auto& inStreamPrevious, const ShiftRightMetaParams& param)
+	{
+		scl::Eop ret = { eop(inStreamPrevious) };
+
+		IF(valid(inStream) & eop(inStream) & param.mustAnticipateEnd)
+			ret.eop = eop(inStream);
+
+		IF(param.state == ShiftRightState::transferPrevious)
+			ret.eop = eop(inStreamPrevious);
+
+		IF(param.state == ShiftRightState::consumePrevious)
+			ret.eop = '0'; 
+
+		return ret;
+	}
+
+	scl::Ready shiftRightMeta(scl::Ready& in, auto& inStream, auto& inStreamPrevious, const ShiftRightMetaParams& param)
 	{
 		scl::Ready ret;
-		Bit canConsumeBeat = valid(inStream) & sop(inStream);
-		*in.ready = *ret.ready | canConsumeBeat;
+
+		Bit bothValid = valid(inStream) & valid(inStreamPrevious);
+		ready(inStream)			= *ret.ready & bothValid;
+		ready(inStreamPrevious) = *ret.ready & bothValid;
+
+		IF(param.isSingleBeat) {
+			ready(inStream) = '0';
+			ready(inStreamPrevious) = *ret.ready;
+		}
+
+		IF(param.state == ShiftRightState::transferPrevious) {
+			ready(inStream) = '0';
+			ready(inStreamPrevious) = *ret.ready;
+		}
+
+		IF(param.state == ShiftRightState::consumePrevious) {
+			ready(inStream) = '0';
+			ready(inStreamPrevious) = '1';
+		}
+
 		return ret;
 	}
 
-	scl::EmptyBits shiftRightMeta(scl::EmptyBits& in, auto& inStream, const ShiftRightMetaParams& param)
+
+	scl::EmptyBits shiftRightMeta(scl::EmptyBits& in, auto& inStream, auto& inStreamPrevious, const ShiftRightMetaParams& param)
 	{
 		HCL_DESIGNCHECK_HINT(std::popcount(inStream->width().bits()) == 1, "only for streams with powers of 2 data bus widths");
 
-		scl::EmptyBits ret = { capture(in.emptyBits + zext(param.shift), valid(inStream) & eop(inStream)) };
+		scl::EmptyBits ret = { emptyBits(inStreamPrevious) + zext(inStreamPrevious.template get<ShiftRightSteadyShift>().shift) };
+
+		IF(valid(inStream) & eop(inStream) & param.mustAnticipateEnd)
+			ret = { emptyBits(inStream) + zext(inStream.template get<ShiftRightSteadyShift>().shift) };
+
+		IF(param.state == ShiftRightState::transferPrevious)
+			ret = { emptyBits(inStreamPrevious) + zext(inStreamPrevious.template get<ShiftRightSteadyShift>().shift) };
 
 		return ret;
 	}
 
 
-
 	template<Signal SigT>
-	SigT shiftRightMeta(SigT& in, auto& inStream, const ShiftRightMetaParams& param)
+	SigT shiftRightMeta(SigT& in, auto& inStream, auto& inStreamPrevious, const ShiftRightMetaParams& param)
 	{
-		SigT ret = reg(in);
-		//something something
+		SigT ret = inStreamPrevious.template get<SigT>();
 		return ret;
 	}
 
 	template<scl::strm::PacketStreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
-	auto streamShiftRight(StreamT&& source, const UInt& shift)
+	StreamT streamShiftRight(StreamT&& source, const UInt& shift)
 	{
 		auto scope = Area{ "scl_streamShiftRight" }.enter();
 
-		HCL_NAMED(shift);
+		UInt steadyShift = capture(shift, valid(source) & sop(source));
+		StreamBroadcaster sourceCaster(move(source).add(ShiftRightSteadyShift{ steadyShift }));
 
-		auto localShift = reg(capture(shift, valid(source) & sop(source)));
+		auto currentSource = sourceCaster.bcastTo() | strm::regReady() | strm::eraseBeat(0, 1);
+		auto previousSource = sourceCaster.bcastTo() | strm::regReady() | strm::delay(1);
+
+		UInt fullBits = capture(currentSource->width().bits() - zext(emptyBits(currentSource)), valid(currentSource) & eop(currentSource)); HCL_NAMED(fullBits);
+		Bit mustAnticipateEnd = zext(currentSource.template get<ShiftRightSteadyShift>().shift) >= fullBits; HCL_NAMED(mustAnticipateEnd);
+
+		Reg<Enum<ShiftRightState>> state{ ShiftRightState::normalOp };
+		state.setName("state");
+
+		//next state logic
+		state = state.current();
+		IF(state.current() == ShiftRightState::normalOp) {
+			IF(transfer(currentSource) & eop(currentSource) & mustAnticipateEnd)
+				state = ShiftRightState::consumePrevious;
+			IF(transfer(currentSource) & eop(currentSource) & !mustAnticipateEnd)
+				state = ShiftRightState::transferPrevious;
+		}
+		IF(state.current() == ShiftRightState::transferPrevious) {
+			IF(transfer(previousSource) & eop(previousSource))
+				state = ShiftRightState::normalOp;
+		}
+		IF(state.current() == ShiftRightState::consumePrevious) {
+			IF(transfer(previousSource) & eop(previousSource))
+				state = ShiftRightState::normalOp;
+		}
 
 		ShiftRightMetaParams params{
-			.shift = localShift,
+			.state = state.current(),
+			.mustAnticipateEnd = mustAnticipateEnd,
+			.isSingleBeat = valid(previousSource) & sop(previousSource) & eop(previousSource),
 		};
+
+		HCL_NAMED(params);
+		HCL_NAMED(currentSource);
+		HCL_NAMED(previousSource);
 
 		auto ret = scl::Stream{
-			.data = shiftRightPayload(*source, source, params),
+			.data = shiftRightPayload(*currentSource, currentSource, previousSource, params),
 			._sig = std::apply([&](auto& ...meta) {
-				return std::tuple{ shiftRightMeta(meta, source, params)... };
-				}, source._sig)
+				return std::tuple{ shiftRightMeta(meta, currentSource, previousSource, params)... };
+				}, currentSource._sig)
 		};
 
-		UInt fullBits = source->width().bits() - zext(emptyBits(source));
-		params.anticipateEnd = scl::flagInstantSet(valid(source) & eop(source) & (zext(localShift) >= fullBits), transfer(ret) & eop(ret), '0');
-		setName(params.anticipateEnd, "anticipateEnd");
-		params.outTransfer = transfer(ret);
-		params.outEop = eop(ret);
-
 		HCL_NAMED(ret);
-		return ret;
+		return ret.template remove<ShiftRightSteadyShift>();
 	}
-
 
 	template<StreamSignal StreamT> requires (StreamT::template has<scl::Eop>() && StreamT::template has<scl::EmptyBits>())
 	StreamT appendStream(StreamT&& head, StreamT&& tail) {
@@ -931,3 +985,6 @@ namespace gtry::scl::strm
 		return ret;
 	}
 }
+
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::ShiftRightMetaParams, state, mustAnticipateEnd, isSingleBeat);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::ShiftRightSteadyShift, shift);
