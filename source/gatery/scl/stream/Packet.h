@@ -743,7 +743,7 @@ namespace gtry::scl::strm
 	T shiftRightPayload(T& in, auto& inStream, auto& inStreamPrevious, const ShiftRightMetaParams& param)
 	{
 		T doubleVec = (T) cat(*inStream, *inStreamPrevious);
-		T ret = doubleVec(inStreamPrevious.get<ShiftRightSteadyShift>().shift, in.width());
+		T ret = doubleVec(inStreamPrevious.template get<ShiftRightSteadyShift>().shift, in.width());
 
 		return ret;
 	}
