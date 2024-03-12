@@ -43,6 +43,8 @@ bool isSingleBit(VHDLDataType dataType)
 		case VHDLDataType::UNSIGNED:
 		case VHDLDataType::VL_LOGIC_VECTOR:
 			return false;
+		default:
+			HCL_ASSERT_HINT(false, "Unhandled case");
 	}
 }
 
