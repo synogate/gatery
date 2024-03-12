@@ -50,7 +50,7 @@ namespace gtry::scl
 	class Fifo
 	{
 	public:
-		Fifo() : m_area("scl_fifo") { m_area.getNodeGroup()->createMetaInfo<FifoMeta>(); }
+		Fifo() : m_area("scl_fifo") { m_area.getNodeGroup()->template createMetaInfo<FifoMeta>(); }
 		Fifo(const Fifo&) = delete;
 		Fifo(Fifo&&) = default;
 		explicit Fifo(size_t minDepth, const TData& ref = TData{}) : Fifo() { setup(minDepth, std::move(ref)); }

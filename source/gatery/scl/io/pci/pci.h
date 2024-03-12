@@ -20,7 +20,6 @@
 
 #include <gatery/scl/stream/Stream.h>
 
-
 namespace gtry::scl::pci
 {
 	template <Signal ...Meta>

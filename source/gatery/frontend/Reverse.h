@@ -22,6 +22,10 @@
 
 namespace gtry
 {
+	namespace scl::strm {
+		struct Ready;
+	}
+
 	template<Signal T>
 	class Reverse
 	{
@@ -34,7 +38,10 @@ namespace gtry
 		Reverse(Reverse&& rhs);
 		
 		template<class TArg>
-		Reverse(TArg&& arg) : m_obj{ std::forward<TArg>(arg) } {}
+#ifdef __clang__
+		requires (!std::same_as<TArg, std::tuple<const scl::strm::Ready&>&>)
+#endif
+		Reverse(TArg&& arg) : m_obj{std::forward<TArg>(arg)} {}
 
 		Reverse& operator = (const Reverse&) = delete;
 		Reverse& operator = (Reverse&&);
@@ -229,5 +236,5 @@ namespace gtry
 
 	template<class Ta, class Tb>
 	requires (Connectable<Ta, Tb> and not BaseSignal<Ta>)
-	Ta& operator <<= (Ta&& lhs, Tb&& rhs) { connect(lhs, rhs); return lhs; }
+	void operator <<= (Ta&& lhs, Tb&& rhs) { connect(lhs, rhs); }
 }

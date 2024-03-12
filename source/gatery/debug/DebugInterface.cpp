@@ -18,6 +18,7 @@
 #include "gatery/pch.h"
 #include "DebugInterface.h"
 #include "websocks/WebSocksInterface.h"
+#include "gatery/debug/reporting/ReportInterface.h"
 
 namespace gtry::dbg {
 
@@ -53,9 +54,9 @@ void operate()
 	DebugInterface::instance->operate();
 }
 
-void changeState(State state)
+void changeState(State state, hlim::Circuit* circuit)
 {
-	DebugInterface::instance->changeState(state);
+	DebugInterface::instance->changeState(state, circuit);
 }
 
 size_t createAreaVisualization(unsigned width, unsigned height)

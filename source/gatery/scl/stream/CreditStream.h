@@ -87,7 +87,7 @@ namespace gtry::scl::strm
 		Credit& inCredit = in.template get<Credit>();
 
 		HCL_DESIGNCHECK_HINT(inCredit.initialCredit != 0, "Initial credit is 0. This will cause a deadlock.");
-		RvStream out = fifo(in.template remove<Credit>().add(Ready{}), inCredit.initialCredit);
+		auto out = fifo(in.template remove<Credit>().add(Ready{}), inCredit.initialCredit);
 		*inCredit.increment = transfer(out);
 		return out;
 	}

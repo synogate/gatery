@@ -21,6 +21,9 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
+#include <gatery/debug/websocks/WebSocksInterface.h>
+#include "gatery/debug/reporting/ReportInterface.h"
+
 using namespace boost::unit_test;
 
 using BoostUnitTestSimulationFixture = gtry::BoostUnitTestSimulationFixture;
@@ -1053,9 +1056,9 @@ BOOST_FIXTURE_TEST_CASE(MultiElseConditionalAssignment, BoostUnitTestSimulationF
 				} ELSE{
 					c = a - b;
 				}
-			} ELSE IF(a[1])
+			} ELSE IF(a[1]) {
 				c = a;
-			ELSE
+			} ELSE
 				c = b;
 
 			unsigned groundTruth;
@@ -1346,7 +1349,7 @@ BOOST_FIXTURE_TEST_CASE(SimpleStructCat, BoostUnitTestSimulationFixture)
 		.b = vec1[1],
 		.c = vec1[2],
 	};
-   
+
 	UInt ref2 = pack(vec2);
 	sim_assert(vec1 == ref2) << vec1 << " != " << ref2;
 	runEvalOnlyTest();

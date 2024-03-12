@@ -2433,7 +2433,7 @@ BOOST_FIXTURE_TEST_CASE(stream_credit_fifo, BoostUnitTestSimulationFixture)
 			co_await scl::strm::sendBeat(in, i, clk);
 	});
 
-	scl::RvStream out = delayAutoPipeline(move(in), 8);
+	auto out = delayAutoPipeline(move(in), 8);
 	pinOut(out, "out");
 
 	addSimulationProcess([&, this]() -> SimProcess {

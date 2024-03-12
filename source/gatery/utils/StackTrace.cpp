@@ -81,7 +81,7 @@ namespace gtry::utils
 			if (formatted.starts_with("`gtry::") && !formatted.starts_with("`gtry::scl::"))
 				continue;
 
-			result.emplace_back(move(formatted));
+			result.emplace_back(std::move(formatted));
 		}
 
 		while (!result.empty())

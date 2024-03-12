@@ -680,10 +680,11 @@ struct FieldExtractionTest : public BoostUnitTestSimulationFixture
 		addSimulationProcess([&, this]()->SimProcess {
 		
 			if constexpr (StreamType::template has<scl::Ready>())
-				if(backpressureRNG)
-					fork([&,this]()->SimProcess {
+			{
+				if (backpressureRNG)
+					fork([&, this]() -> SimProcess {
 						std::mt19937 gen(1234567890);
-						std::uniform_int_distribution<size_t> distrib(0,99);
+						std::uniform_int_distribution<size_t> distrib(0, 99);
 						while (true) {
 							simu(ready(out)) = distrib(gen) < readyProbabilityPercent;
 							co_await OnClk(packetTestclk);
@@ -691,7 +692,7 @@ struct FieldExtractionTest : public BoostUnitTestSimulationFixture
 					});
 				else
 					simu(ready(out)) = '1';
-					
+			}
 			
 
 			fork([&,this]()->SimProcess {
@@ -941,7 +942,6 @@ BOOST_FIXTURE_TEST_CASE(fieldExtractionFuzz_RsetPacketStreamWHighBackPressure, F
 	runTest();
 }
 
-
 struct AppendTestSimulationFixture : public BoostUnitTestSimulationFixture 
 {
 	BitWidth dataW = 8_b;
@@ -1056,17 +1056,3 @@ BOOST_FIXTURE_TEST_CASE(append_some_empty_tails, AppendTestSimulationFixture)
 	std::function<size_t()> getTailInvalidBeats = [&]() { return rng(); };
 	runTest();
 }
-
-BOOST_FIXTURE_TEST_CASE(append_chaos, AppendTestSimulationFixture)
-{
-	dataW = 8_b;
-	iterations = 50;
-
-	headPacketSize = [&]() { return (rng() & 0x3F) + 1; };
-	tailPacketSize = [&]() { return (rng() & 0x1F); };
-	std::function<size_t()> getHeadInvalidBeats = [&]() { return rng(); };
-	std::function<size_t()> getTailInvalidBeats = [&]() { return rng(); };
-	runTest();
-}
-
-

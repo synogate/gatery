@@ -223,7 +223,7 @@ namespace gtry::scl::strm
 		constexpr bool hasTxId	= StreamT::template has<scl::TxId>();
 		constexpr bool hasValid = StreamT::template has<scl::Valid>();
 		constexpr bool hasSop	= StreamT::template has<scl::Sop>();
-		constexpr bool hasEop = StreamT::template has<scl::Eop>();
+		constexpr bool hasEop   = StreamT::template has<scl::Eop>();
 
 		HCL_DESIGNCHECK_HINT(hasEop || numberOfBeats == 1, "Trying to send multi-beat data packets without an End of Packet Field");
 
@@ -312,7 +312,13 @@ namespace gtry::scl::strm
 
 	template<StreamSignal StreamT>
 	SimProcess readyDriver(const StreamT& stream, Clock clk, const uint64_t unreadyMask){
-		static_assert(stream.template has<Ready>(), "Attempting to use a ready driver on a stream which does not feature a ready field is probably a mistake.");
+
+#ifdef __APPLE__
+		if constexpr (!StreamT::template has<Ready>())
+			throw std::logic_error("Attempting to use a ready driver on a stream which does not feature a ready field is probably a mistake.");
+#else
+		static_assert(StreamT::template has<Ready>(), "Attempting to use a ready driver on a stream which does not feature a ready field is probably a mistake.");
+#endif
 
 		simuReady(stream) = '0';
 		while (simuSop(stream) != '1' || simuValid(stream) != '1') {

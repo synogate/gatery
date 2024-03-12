@@ -14,7 +14,7 @@
 	You should have received a copy of the GNU Lesser General Public
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
- */
+*/
 
 #include "gatery/pch.h"
 #include "WebSocksInterface.h"
@@ -121,7 +121,7 @@ std::string JsonSerializer::serializeAllGroups(const hlim::Circuit &circuit)
 			json << "\"parent\": " << group->getParent()->getId() << ", ";              
 
 		json << "    \"stack_trace\": ";		
-		serializeStackTrace(json, group->getStackTrace());
+		serializeStackTrace(json, group->getStackTrace(), false);
 		json << ",\n";
 
 
@@ -273,7 +273,7 @@ std::string JsonSerializer::serializeAllNodes(const hlim::Circuit &circuit)
 					<< "    \"group\": " << node->getGroup()->getId() << ",\n"
 					<< "    \"stack_trace\": ";
 			
-			serializeStackTrace(json, node->getStackTrace());
+			serializeStackTrace(json, node->getStackTrace(), false);
 			json << ",\n";
 
 			if (auto *mux = dynamic_cast<const hlim::Node_Multiplexer*>(node.get()))
@@ -354,20 +354,21 @@ std::string JsonSerializer::serializeAllNodes(const hlim::Circuit &circuit)
 	return json.str();
 }
 
-void JsonSerializer::serializeStackTrace(std::ostream &json, const utils::StackTrace &trace)
+void JsonSerializer::serializeStackTrace(std::ostream &json, const utils::StackTrace &trace, bool resolved)
 {
 	json << "[";
 	bool first = true;
 	for (const auto &frame : trace.getTrace()) {
 		if (!first) json << ",\n";
 		first = false;
-		//json << "{ \"addr\": " << (size_t)frame.address() << ", \"file\": \"" << frame.source_file() << "\", \"line\": " << frame.source_line() << "}";
-		//json << "{ \"addr\": " << (size_t)frame.address() << "}";
-		json << (size_t)frame.address();
+
+		if (resolved) {
+			json << "{ \"addr\": " << (size_t)frame.address() << ", \"file\": \"" << frame.source_file() << "\", \"line\": " << frame.source_line() << "}";
+		} else
+			json << (size_t)frame.address();
 	}
 	json << "]";
 }
-
 
 
 void WebSocksInterface::create(unsigned port)
@@ -407,9 +408,9 @@ void WebSocksInterface::log(LogMessage msg)
 	m_logMessages.push_back(s.serializeLogMessage(std::move(msg)));
 }
 
-void WebSocksInterface::changeState(State state)
+void WebSocksInterface::changeState(State state, hlim::Circuit* circuit)
 {
-	DebugInterface::changeState(state);
+	DebugInterface::changeState(state, circuit);
 
 	for (auto &session : m_sessions)
 		session.stateDirty = true;

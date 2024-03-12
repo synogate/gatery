@@ -81,29 +81,29 @@ void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubn
 	file << "digraph G {" << std::endl;
 
 	utils::StableMap<hlim::BaseNode*, unsigned> node2idx;
-  //  utils::UnstableMap<hlim::NodeGroup*, unsigned> nodeGroup2idx;
+//  utils::UnstableMap<hlim::NodeGroup*, unsigned> nodeGroup2idx;
 
 
 	auto styleNode = [](std::fstream &file, hlim::BaseNode *node) {
 		if (dynamic_cast<hlim::Node_Register*>(node))
-			file << " shape=\"box\" style=\"filled\" fillcolor=\"#a0a0ff\"";
+			file << R"( shape="box" style="filled" fillcolor="#a0a0ff")";
 		else if (dynamic_cast<hlim::Node_Constant*>(node))
-			file << " shape=\"ellipse\" style=\"filled\" fillcolor=\"#ffa0a0\"";
+			file << R"( shape="ellipse" style="filled" fillcolor="#ffa0a0")";
 		else if (dynamic_cast<hlim::Node_Multiplexer*>(node))
-			file << " shape=\"diamond\" style=\"filled\" fillcolor=\"#b0b0b0\"";
+			file << R"( shape="diamond" style="filled" fillcolor="#b0b0b0")";
 		else if (dynamic_cast<hlim::Node_Arithmetic*>(node))
-			file << " shape=\"box\" style=\"filled\" fillcolor=\"#a0ffa0\"";
+			file << R"( shape="box" style="filled" fillcolor="#a0ffa0")";
 		else if (dynamic_cast<hlim::Node_Logic*>(node))
-			file << " shape=\"box\" style=\"filled\" fillcolor=\"#ffffa0\"";
+			file << R"( shape="box" style="filled" fillcolor="#ffffa0")";
 		else if (dynamic_cast<hlim::Node_Compare*>(node))
-			file << " shape=\"box\" style=\"filled\" fillcolor=\"#ffd0a0\"";
+			file << R"( shape="box" style="filled" fillcolor="#ffd0a0")";
 		else if (dynamic_cast<hlim::Node_Pin*>(node))
 			file << " shape=\"house\"";
 		else if (dynamic_cast<hlim::Node_SignalTap*>(node))
 			file << " shape=\"cds\"";
 		else
 			if (node->hasRef())
-				file << " shape=\"box\" style=\"filled\" fillcolor=\"#eeeeee\"";
+				file << R"( shape="box" style="filled" fillcolor="#eeeeee")";
 			else
 				file << " shape=\"box\"";
 
@@ -117,7 +117,7 @@ void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubn
 		reccurWalkNodeGroup = [&](const hlim::NodeGroup *nodeGroup) {
 
 			file << "subgraph cluster_" << graphIdx << "{" << std::endl;
-		  //  nodeGroup2idx[nodeGroup] = graphIdx++;
+		//  nodeGroup2idx[nodeGroup] = graphIdx++;
 			graphIdx++;
 
 			file << " label=\"" << nodeGroup->getInstanceName() << "\";" << std::endl;
@@ -157,6 +157,7 @@ void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubn
 					if(clk)
 						file << ' ' << clk->getName();
 				file << "\"";
+				file << " id=\"" << node->getId() << "\"";
 				if (auto* reg = dynamic_cast<hlim::Node_Signal*>(node))
 				{
 					file << " tooltip=\"";
@@ -267,21 +268,24 @@ void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubn
 					file << "DEPENDENCY"; break;
 			}
 
-			if (auto* reg = dynamic_cast<hlim::Node_Register*>(node))
+			if (auto* reg = dynamic_cast<hlim::Node_Register*>(node)) {
 				if (port == hlim::Node_Register::Input::RESET_VALUE)
 					file << " (reset)";
 				else if (port == hlim::Node_Register::Input::ENABLE)
 					file << " (en)";
+			}
 
-			if (auto* reg = dynamic_cast<hlim::Node_Multiplexer*>(node))
+			if (auto* reg = dynamic_cast<hlim::Node_Multiplexer*>(node)) {
 				if (port == 0)
 					file << " (sel)";
 				else
 					file << " (" << (port - 1) << ")";
+			}
 
 			if (!auxLabel.empty())
 				file << " " << auxLabel;
-			file << "\"";
+			//file << "\"";
+			file << "\" id=\"" << node->getId() << "\"";
 
 			file << "];" << std::endl;
 		}

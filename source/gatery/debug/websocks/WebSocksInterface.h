@@ -44,7 +44,7 @@ class JsonSerializer
 		std::string serializeAllGroups(const hlim::Circuit &circuit);
 		std::string serializeAllNodes(const hlim::Circuit &circuit);
 	protected:
-		void serializeStackTrace(std::ostream &json, const utils::StackTrace &trace);
+		void serializeStackTrace(std::ostream &json, const utils::StackTrace &trace, bool resolved);
 };
 
 class WebSocksInterface : public DebugInterface
@@ -59,7 +59,7 @@ class WebSocksInterface : public DebugInterface
 		virtual void stopInDebugger() override;
 		virtual void log(LogMessage msg) override;
 		virtual void operate() override;
-		virtual void changeState(State state) override;
+		virtual void changeState(State state, hlim::Circuit* circuit) override;
 
 		virtual void createVisualization(const std::string &id, const std::string &title) override;
 		virtual void updateVisualization(const std::string &id, const std::string &imageData) override;

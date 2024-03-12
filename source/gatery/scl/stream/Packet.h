@@ -90,7 +90,7 @@ namespace gtry::scl::strm
 	/**
 	* @brief append the tail stream to the head stream, as long as the tail is immediately available
 	*/
-	template<StreamSignal StreamT> requires (StreamT::template has<scl::Eop>() && StreamT::template has<scl::EmptyBits>())
+	template<StreamSignal StreamT> requires (StreamT::template has<scl::Eop>() && StreamT::template has<scl::EmptyBits>() && std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
 	StreamT appendStream(StreamT&& head, StreamT&& tail);
 }
 
@@ -695,11 +695,12 @@ namespace gtry::scl::strm
 			.ratio = ratio,
 		};
 
+		// removed naming of members to avoid issues with aggregate initialization
 		auto ret = Stream{
-			.data = reduceStreamPayload(*source, source, params),
-			._sig = std::apply([&](auto& ...meta) {
+			reduceStreamPayload(*source, source, params),
+			std::apply([&](auto& ...meta) {
 				return std::tuple{ reduceStreamMeta(meta, source, params)... };
-				}, source._sig)
+			}, source._sig)
 		};
 
 		params.outEop = eop(ret);
@@ -982,6 +983,154 @@ namespace gtry::scl::strm
 			emptyBits(ret) = emptyBits(shiftedTail);
 		}
 		HCL_NAMED(ret);
+		return ret;
+	}
+
+	//the head state deals with sending the head and the first portion 
+	//of the tail that fits inside the beat which contains the head's eop
+	enum class AppendStreamState{
+		head,
+		tail
+	};
+
+	struct AppendStreamMetaParams {
+		Enum<AppendStreamState> currentState;
+		UInt tailShiftAmt;
+	};
+
+	template<BitVectorSignal SigT, StreamSignal StreamT>
+	SigT appendStreamPayload(SigT& in, StreamT& headStrm, StreamT& shiftedTailStrm, const AppendStreamMetaParams& param) {
+		//adapting head stream to be or-able with tail stream
+		// -replacing undefines with zeros during the partial-beat
+		BitWidth tailW = shiftedTailStrm->width();
+		auto tempTail = (typename StreamT::Payload) ConstUInt(0, 2 * tailW);
+		tempTail(param.tailShiftAmt, tailW) |= '1';
+		IF(valid(shiftedTailStrm) & sop(shiftedTailStrm))
+			*shiftedTailStrm &= tempTail.lower(tailW);
+		setName(*shiftedTailStrm, "orable_tail_payload");
+
+		// -setting empty bits to 0 during the partial beat
+		BitWidth headW = headStrm->width();
+		auto temp = (typename StreamT::Payload) ConstUInt(0, 2 * headW);
+		temp.lower(headW) = *headStrm;
+		temp(headW.bits() - zext(emptyBits(headStrm)), headW) = 0;
+		IF(valid(headStrm) & eop(headStrm))
+			*headStrm = temp.lower(headW);
+		setName(*headStrm, "orable_head_payload");
+
+		SigT ret = *headStrm;
+		IF(valid(headStrm) & eop(headStrm) & valid(shiftedTailStrm) & emptyBits(headStrm) != 0)
+			ret |= *shiftedTailStrm;
+
+		IF(param.currentState == AppendStreamState::tail)
+			ret = *shiftedTailStrm;
+		return ret;
+	}
+
+	scl::Eop appendStreamMeta(scl::Eop& in, auto& headStrm, auto& shiftedTailStrm,  const AppendStreamMetaParams& param)
+	{
+		scl::Eop ret = { '0' };
+		IF(eop(headStrm)) {
+			ret.eop = '1';
+			IF(valid(shiftedTailStrm)) {
+				ret.eop = '0';
+				IF(emptyBits(headStrm) != 0 & eop(shiftedTailStrm))
+					ret.eop = '1';
+			}
+		}
+		IF(param.currentState == AppendStreamState::tail)
+			ret.eop = eop(shiftedTailStrm);
+
+		return ret;
+	}
+
+	scl::Ready appendStreamMeta(scl::Ready& in, auto& headStrm, auto& shiftedTailStrm,  const AppendStreamMetaParams& param)
+	{
+		scl::Ready ret;
+
+		ready(shiftedTailStrm) = '0';
+		ready(headStrm) = *ret.ready;
+		IF(transfer(headStrm) & eop(headStrm) & emptyBits(headStrm) != 0)
+			ready(shiftedTailStrm) = '1';
+
+		IF(param.currentState == AppendStreamState::tail) {
+			ready(headStrm) = '0';
+			ready(shiftedTailStrm) = *ret.ready;
+		}
+
+		return ret;
+	}
+
+	scl::Valid appendStreamMeta(scl::Valid& in, auto& headStrm, auto& shiftedTailStrm,  const AppendStreamMetaParams& param)
+	{
+		scl::Valid ret = { valid(headStrm) };
+
+		IF(param.currentState == AppendStreamState::tail)
+			ret.valid = valid(shiftedTailStrm);
+
+		return ret;
+	}
+
+	scl::EmptyBits appendStreamMeta(scl::EmptyBits& in, auto& headStrm, auto& shiftedTailStrm,  const AppendStreamMetaParams& param)
+	{
+		scl::EmptyBits ret = { emptyBits(headStrm) };
+
+		IF(eop(headStrm) & eop(shiftedTailStrm))
+			ret.emptyBits = emptyBits(shiftedTailStrm); // because the tail has already been shifted to perfectly fit the head
+
+		IF(param.currentState == AppendStreamState::tail)
+			ret.emptyBits = emptyBits(shiftedTailStrm);
+
+		return ret;
+	}
+
+	template<Signal SigT>
+	SigT appendStreamMeta(SigT& in, auto& headStrm, auto& shiftedTailStrm,  const AppendStreamMetaParams& param)
+	{
+		SigT ret = headStrm.template get<SigT>();
+
+		return ret;
+	}
+
+
+	template<StreamSignal StreamT> requires (StreamT::template has<scl::Eop>() && StreamT::template has<scl::EmptyBits>() && std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
+	StreamT appendStream(StreamT&& head, StreamT&& tail) {
+		Area area{ "scl_stream_append", true };
+		HCL_DESIGNCHECK_HINT(head->width() == tail->width(), "the BitWidths do not match");
+
+		UInt tailShiftAmt = capture((head->width().bits() - zext(emptyBits(head))).lower(-1_b), transfer(head) & eop(head)); HCL_NAMED(tailShiftAmt);
+		StreamT shiftedTail = strm::streamShiftLeft(tail, tailShiftAmt);
+
+		Reg<Enum<AppendStreamState>> state{ AppendStreamState::head };
+		state.setName("state");
+
+		//next state logic:
+		state = state.current();
+		IF(state.current() == AppendStreamState::head) {
+			IF(transfer(head) & eop(head) & valid(shiftedTail)) {
+				state = AppendStreamState::tail;
+				IF(ready(shiftedTail) & eop(shiftedTail))
+					state = AppendStreamState::head;
+			}
+		}
+		IF(state.current() == AppendStreamState::tail) {
+			IF(transfer(shiftedTail) & eop(shiftedTail)) {
+				state = AppendStreamState::head;
+			}
+		}
+
+		AppendStreamMetaParams params{
+			.currentState = state.current(),
+			.tailShiftAmt = tailShiftAmt,
+		};
+
+		auto ret = scl::Stream{
+			.data = appendStreamPayload(*head, head, shiftedTail, params),
+			._sig = std::apply([&](auto& ... meta) {
+				return std::tuple{ appendStreamMeta(meta, head, shiftedTail, params)... };
+				}, head._sig)
+		};
+
 		return ret;
 	}
 }
