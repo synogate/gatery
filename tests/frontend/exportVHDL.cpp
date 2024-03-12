@@ -892,5 +892,21 @@ BOOST_FIXTURE_TEST_CASE(testReadingInputPins, gtry::GHDLTestFixture)
 }
 
 
+BOOST_FIXTURE_TEST_CASE(constantRewireCorrectlyFolds, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	UInt mask = 4_b;
+	{
+		Bit enable = pinIn().setName("input");
+		pinOut(enable & mask[0]).setName("output");
+	}
+	mask = oext(0); // must be here to place a referenced signal node between the unused constant node and the oext-rewire, preventing constant folding into the rewire
+	
+	testCompilation();
+	BOOST_TEST(exportContains(std::regex{"output <= input"}));
+}
+
+
 
 BOOST_AUTO_TEST_SUITE_END()

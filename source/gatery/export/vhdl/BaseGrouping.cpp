@@ -161,43 +161,24 @@ void BaseGrouping::verifySignalsDisjoint()
 void BaseGrouping::formatConstant(std::ostream &stream, const hlim::Node_Constant *constant, VHDLDataType targetType)
 {
 	const auto& conType = constant->getOutputConnectionType(0);
-		
-#if 1
-	switch (targetType) {
-	    case VHDLDataType::BOOL: {
-					HCL_ASSERT(conType.isBool());
-					const auto &v = constant->getValue();
-					//HCL_ASSERT(v.get(sim::DefaultConfig::DEFINED, 0));
-						if (v.get(sim::DefaultConfig::VALUE, 0) && v.get(sim::DefaultConfig::DEFINED, 0))
-						    stream << "true";
-					else
-						    stream << "false";
-				} break;
-	    case VHDLDataType::BIT:
-	    case VHDLDataType::STD_LOGIC:
-	    case VHDLDataType::STD_ULOGIC:
-					HCL_ASSERT(conType.isBool());
-					stream << '\'' << constant->getValue() << '\'';
-				break;
-	    case VHDLDataType::BIT_VECTOR:
-	    case VHDLDataType::STD_LOGIC_VECTOR:
-	    case VHDLDataType::STD_ULOGIC_VECTOR:
-	    case VHDLDataType::UNSIGNED:
-	    case VHDLDataType::VL_LOGIC:
-	    case VHDLDataType::VL_LOGIC_VECTOR:
-					stream << '"' << constant->getValue() << '"';
-				break;
-				}
-#else
+
 	if (targetType == VHDLDataType::BOOL) {
 		HCL_ASSERT(conType.isBool());
 		const auto &v = constant->getValue();
-		@@ -179,6 +205,7 @@ void BaseGrouping::formatConstant(std::ostream &stream, const hlim::Node_Constan
-			stream << constant->getValue();
-		stream << sep;
+		//HCL_ASSERT(v.get(sim::DefaultConfig::DEFINED, 0));
+		if (v.get(sim::DefaultConfig::VALUE, 0) && v.get(sim::DefaultConfig::DEFINED, 0))
+			stream << "true";
+		else
+			stream << "false";
+	} else {
+		if (isSingleBit(targetType)) {
+			HCL_ASSERT(conType.isBool());
+
+			stream << '\'' << constant->getValue() << '\'';
+		} else
+			stream << '"' << constant->getValue() << '"';
 	}
-#endif
-	}
+}
 
 
 void BaseGrouping::declareLocalSignals(std::ostream &stream, bool asVariables, unsigned indentation)

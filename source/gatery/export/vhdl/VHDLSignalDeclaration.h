@@ -38,6 +38,8 @@ enum class VHDLDataType {
 	VL_LOGIC_VECTOR,
 };
 
+bool isSingleBit(VHDLDataType dataType);
+
 VHDLDataType chooseDataTypeFromOutput(const hlim::NodePort &np);
 
 struct VHDLSignalDeclaration {
