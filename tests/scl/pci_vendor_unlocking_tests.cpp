@@ -250,7 +250,11 @@ BOOST_FIXTURE_TEST_CASE(ptile_hail_mary_completer, BoostUnitTestSimulationFixtur
 	Memory<BVec> mem(addW.count(), dataW);
 	mem.initZero();
 	TileLinkUL tl = tileLinkInit<TileLinkUL>(addW, dataW, pack(TlpAnswerInfo{}).width());
-	mem <<= tl;
+	{
+		Area area{ "sanityCheck", true };
+		mem <<= tl;
+		design.visualize("myArea", design.getCircuit().getRootNodeGroup()->findChild("sanityCheck"));
+	}
 
 	CompleterInterface complInt = pci::makeTileLinkMaster(move(tl), ptileInstance.settings().dataBusW);
 
@@ -259,8 +263,8 @@ BOOST_FIXTURE_TEST_CASE(ptile_hail_mary_completer, BoostUnitTestSimulationFixtur
 	pinIn(rxSim, "rxSim", { .simulationOnlyPin = true });
 
 	BVec intelHeader = 128_b;
-	pinIn(intelHeader, "intel_header");
-	rxSim.get<PTileHeader>() = PTileHeader{ swapEndian(intelHeader) };
+	pinIn(intelHeader, "intel_header", { .simulationOnlyPin = true });
+	rxSim.get<PTileHeader>() = simOverride(rxSim.get<PTileHeader>(), PTileHeader{ swapEndian(intelHeader) });
 
 	auto temp = ptileRxVendorUnlocking(simOverrideDownstream(ptileInstance.rx(), move(rxSim)))
 		.template remove<PTileBarRange>()
@@ -325,17 +329,19 @@ BOOST_FIXTURE_TEST_CASE(ptile_hail_mary_completer, BoostUnitTestSimulationFixtur
 		});
 
 	design.postprocess();
-	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+	design.visualize("myAreaOptimized", design.getCircuit().getRootNodeGroup()->findChild("sanityCheck"));
 
 	if (true) {
 		m_vhdlExport.emplace("export/ptile/top.vhd");
 		m_vhdlExport->targetSynthesisTool(new gtry::IntelQuartus());
-		//m_vhdlExport->writeStandAloneProjectFile("export_thing.qsf");
-		//m_vhdlExport->writeConstraintsFile("top_constraints.sdc");
-		//m_vhdlExport->writeClocksFile("top_clocks.sdc");
+		m_vhdlExport->writeStandAloneProjectFile("completer.qsf");
+		m_vhdlExport->writeConstraintsFile("completer_constraints.sdc");
+		m_vhdlExport->writeClocksFile("completer.sdc");
 		(*m_vhdlExport)(design.getCircuit());
 		//outputVHDL("dut.vhd");
 	}
+	else
+		BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
 
 
@@ -421,3 +427,28 @@ BOOST_FIXTURE_TEST_CASE(ptile_tx_vendor_unlocking_completion_only, BoostUnitTest
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
+
+//BOOST_FIXTURE_TEST_CASE(testReproCase, gtry::BoostUnitTestSimulationFixture)
+//{
+//	using namespace gtry;
+//
+//	{
+//		UInt data = pinIn(16_b).setName("data");
+//		UInt select = pinIn(4_b).setName("select");
+//		Bit enable = pinIn().setName("enable");
+//
+//		UInt mask = ConstUInt(0, 32_b);
+//		mask(select, 16_b) |= '1';
+//		UInt output = data;
+//		IF (enable)
+//			output &= mask.lower(16_b);
+//
+//		pinOut(output).setName("output");
+//	}
+//
+//	//design.visualize("before");
+//	//
+//	//testCompilation();
+//	//
+//	//design.visualize("after");
+//}

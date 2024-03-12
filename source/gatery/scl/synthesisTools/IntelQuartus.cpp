@@ -260,6 +260,9 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 		}
 		if (auto* portNode = dynamic_cast<hlim::Node_Pin*>(node.get()))
 		{
+			if (portNode->getPinNodeParameter().simulationOnlyPin)
+				continue;
+
 			std::string direction;
 			if (portNode->isBiDirectional())
 				direction = "inOut";

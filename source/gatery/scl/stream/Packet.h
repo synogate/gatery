@@ -906,10 +906,11 @@ namespace gtry::scl::strm
 
 	template<BitVectorSignal SigT, StreamSignal StreamT>
 	SigT appendStreamPayload(SigT& in, StreamT& headStrm, StreamT& shiftedTailStrm, const AppendStreamMetaParams& param) {
+		Area area{ "scl_appendStream_payload" , true};
 		//adapting head stream to be or-able with tail stream
 		// -replacing undefines with zeros during the partial-beat
 		BitWidth tailW = shiftedTailStrm->width();
-		auto tempTail = (typename StreamT::Payload) ConstUInt(0, 2 * tailW);
+		auto tempTail = (typename StreamT::Payload) ConstUInt(0, 2 * tailW); HCL_NAMED(tempTail);
 		tempTail(param.tailShiftAmt, tailW) |= '1';
 		IF(valid(shiftedTailStrm) & sop(shiftedTailStrm))
 			*shiftedTailStrm &= tempTail.lower(tailW);
@@ -917,11 +918,11 @@ namespace gtry::scl::strm
 
 		// -setting empty bits to 0 during the partial beat
 		BitWidth headW = headStrm->width();
-		auto temp = (typename StreamT::Payload) ConstUInt(0, 2 * headW);
-		temp.lower(headW) = *headStrm;
-		temp(headW.bits() - zext(emptyBits(headStrm)), headW) = 0;
+		auto tempHead = (typename StreamT::Payload) ConstUInt(0, 2 * headW); HCL_NAMED(tempHead);
+		tempHead.lower(headW) = *headStrm;
+		tempHead(headW.bits() - zext(emptyBits(headStrm)), headW) = 0;
 		IF(valid(headStrm) & eop(headStrm))
-			*headStrm = temp.lower(headW);
+			*headStrm = tempHead.lower(headW);
 		setName(*headStrm, "orable_head_payload");
 
 		SigT ret = *headStrm;
