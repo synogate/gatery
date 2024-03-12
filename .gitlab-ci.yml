@@ -36,7 +36,7 @@ test-linux-frontend:
   tags:
     - linux
   script:
-    - build/tests/frontend/unittest_frontend
+    - build/tests/frontend/unittest_frontend -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/
 
 test-linux-scl:
   stage: test
@@ -44,7 +44,7 @@ test-linux-scl:
   tags:
     - linux
   script:
-    - build/tests/scl/unittest_scl
+    - build/tests/scl/unittest_scl -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/
 
 test-windows-frontend:
   stage: test
