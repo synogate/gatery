@@ -24,7 +24,7 @@ windows-build:
     - windows
   script:
     - premake5 vs2022
-    - '& "${Env:ProgramFiles}\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\amd64\msbuild.exe" tests/gatery-frontend-test.vcxproj'
+    - '& "${Env:ProgramFiles}\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\amd64\msbuild.exe" gatery.sln'
   artifacts:
     expire_in: 2 days
     paths:
