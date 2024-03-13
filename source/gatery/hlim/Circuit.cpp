@@ -1446,6 +1446,7 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
 */
 
 	subnet = Subnet::all(circuit);
+	determineNegativeRegisterEnables(circuit, subnet);
 	resolveRetimingHints(circuit, subnet);
 	annihilateNegativeRegisters(circuit, subnet);
 	bypassRetimingBlockers(circuit, subnet);
@@ -1509,6 +1510,7 @@ void MinimalPostprocessing::generalOptimization(Circuit& circuit) const
 	circuit.cullUnusedNodes(subnet); // Dirty way of getting rid of default nodes
 
 	subnet = Subnet::all(circuit);
+	determineNegativeRegisterEnables(circuit, subnet);
 	resolveRetimingHints(circuit, subnet);
 	annihilateNegativeRegisters(circuit, subnet);
 	bypassRetimingBlockers(circuit, subnet);

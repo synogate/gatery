@@ -29,6 +29,12 @@ namespace gtry::hlim {
 class Node_NegativeRegister : public Node<Node_NegativeRegister>
 {
 	public:
+		enum class Inputs {
+			data,
+			expectedEnable,
+			count
+		};
+		
 		enum class Outputs {
 			data,
 			enable,
@@ -41,11 +47,13 @@ class Node_NegativeRegister : public Node<Node_NegativeRegister>
 
 		void setConnectionType(const ConnectionType &connectionType);
 
-		void connectInput(const NodePort &nodePort);
+		void input(const NodePort &nodePort);
+		void expectedEnable(const NodePort &nodePort);
+		NodePort expectedEnable() const { return getDriver((size_t) Inputs::expectedEnable); }
 		void disconnectInput();
 
-		NodePort getDataOutput() { return {.node = this, .port = (size_t) Outputs::data }; }
-		NodePort getEnableOutput() { return {.node = this, .port = (size_t) Outputs::enable }; }
+		NodePort dataOutput() { return {.node = this, .port = (size_t) Outputs::data }; }
+		NodePort enableOutput() { return {.node = this, .port = (size_t) Outputs::enable }; }
 
 		virtual bool hasSideEffects() const override { return false; }
 

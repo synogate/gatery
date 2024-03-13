@@ -151,9 +151,9 @@ namespace gtry {
 		pipeStage->connectInput(data);
 
 		auto* negReg = DesignScope::createNode<hlim::Node_NegativeRegister>();
-		negReg->connectInput({.node = pipeStage, .port = 0});
+		negReg->input({.node = pipeStage, .port = 0});
 
-		return { T{ SignalReadPort(negReg->getDataOutput(), data.expansionPolicy) }, Bit{ SignalReadPort(negReg->getEnableOutput()) } };
+		return { T{ SignalReadPort(negReg->dataOutput(), data.expansionPolicy) }, Bit{ SignalReadPort(negReg->enableOutput()) } };
 	}	
 
 	template<Signal T>

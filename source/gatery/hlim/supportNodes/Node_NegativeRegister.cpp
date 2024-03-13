@@ -26,7 +26,7 @@
 
 namespace gtry::hlim {
 
-Node_NegativeRegister::Node_NegativeRegister() : Node(1, (size_t) Outputs::count)
+Node_NegativeRegister::Node_NegativeRegister() : Node((size_t) Inputs::count, (size_t) Outputs::count)
 {
 	setOutputConnectionType((size_t) Outputs::enable, { .type = ConnectionType::BOOL, .width = 1 });
 }
@@ -37,7 +37,7 @@ void Node_NegativeRegister::setConnectionType(const ConnectionType &connectionTy
 	setOutputConnectionType((size_t) Outputs::data, connectionType);
 }
 
-void Node_NegativeRegister::connectInput(const NodePort &nodePort)
+void Node_NegativeRegister::input(const NodePort &nodePort)
 {
 	if (nodePort.node != nullptr) {
 		auto paramType = hlim::getOutputConnectionType(nodePort);
@@ -48,7 +48,12 @@ void Node_NegativeRegister::connectInput(const NodePort &nodePort)
 			setConnectionType(paramType);
 	}
 
-	NodeIO::connectInput(0, nodePort);
+	NodeIO::connectInput((size_t)Inputs::data, nodePort);
+}
+
+void Node_NegativeRegister::expectedEnable(const NodePort &nodePort)
+{
+	NodeIO::connectInput((size_t)Inputs::expectedEnable, nodePort);
 }
 
 void Node_NegativeRegister::disconnectInput()

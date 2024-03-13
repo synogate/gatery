@@ -39,6 +39,7 @@
 #include "supportNodes/Node_MemPort.h"
 #include "supportNodes/Node_RegSpawner.h"
 #include "supportNodes/Node_RetimingBlocker.h"
+#include "supportNodes/Node_NegativeRegister.h"
 #include "../utils/Enumerate.h"
 #include "../utils/Zip.h"
 
@@ -123,6 +124,13 @@ Conjunction suggestForwardRetimingEnableCondition(Circuit &circuit, Subnet &area
 					if (driver.node != nullptr)
 						openList.push_back(driver);
 				}
+			}
+		} else
+		if (auto *negReg = dynamic_cast<Node_NegativeRegister*>(nodePort.node)) {  // Negative registers need their expected enables to be handled as well
+			for (unsigned i : {(size_t)Node_NegativeRegister::Inputs::data}) {
+				auto driver = negReg->getDriver(i);
+				if (driver.node != nullptr)
+					openList.push_back(driver);
 			}
 		} else {
 			// Regular nodes just get added to the retiming area and their inputs are further explored
@@ -472,6 +480,51 @@ std::optional<ForwardRetimingPlan> determineAreaToBeRetimedForward(Circuit &circ
 				// No retiming into the enable condition is needed and the modification/splitting of the 
 				// enable condition is done when implementing the plan.
 			}
+		} else
+		if (auto *negReg = dynamic_cast<Node_NegativeRegister*>(nodePort.node)) {  // Negative Registers need special handling
+			Conjunction regEnable;
+
+			// We do need to check for enable condition compatibility
+			if (negReg->expectedEnable().node != nullptr) {
+				regEnable.parseInput({.node = negReg, .port = (size_t) Node_NegativeRegister::Inputs::expectedEnable});
+
+				if (!enableCondition.isSubsetOf(regEnable)) {
+					if (!failureIsError) return {};
+
+		#ifdef DEBUG_OUTPUT
+			writeSubnet();
+		#endif
+					std::stringstream error;
+
+					error 
+						<< "An error occurred attempting to retime forward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
+						<< "Node from:\n" << output.node->getStackTrace() << "\n";
+
+					error 
+						<< "The fanning-in signals are driven by a negative register " << nodePort.node->getName() << " (" << nodePort.node->getTypeName() << ", id " << nodePort.node->getId()
+						<< ") with an expected enable signal that is incompatible with the inferred register enable signal of the retiming operation.\n"
+						<< "Negative register from:\n" << nodePort.node->getStackTrace() << "\n";
+
+					HCL_ASSERT_HINT(false, error.str());					
+				}
+			}
+
+			retimingPlan.areaToBeRetimed.add(nodePort.node);
+
+			if (negReg->getDriver((size_t) Node_NegativeRegister::Inputs::data).node != nullptr)
+				openList.push_back(negReg->getDriver((size_t) Node_NegativeRegister::Inputs::data));
+
+/////////////////////////////////////// todo: Does something need to be done with the expected enable?
+/*
+			forwardPlanningHandleEnablePort(
+				{.node = negReg, .port = (size_t) Node_NegativeRegister::Inputs::expectedEnable},
+				std::move(regEnable),
+				enableCondition,
+				area,
+				retimingPlan,
+				openList);
+*/
+
 		} else if (auto *memPort = dynamic_cast<Node_MemPort*>(nodePort.node)) { // If it is a memory port attempt to retime entire memory
 			auto *memory = memPort->getMemory();
 			retimingPlan.areaToBeRetimed.add(memory);
