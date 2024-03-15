@@ -166,6 +166,8 @@ class Node_External : public Node<Node_External>
 
 		bool inputIsBidir(size_t idx) const { return (bool)m_inputPorts[idx].bidirPartner; }
 		bool outputIsBidir(size_t idx) const { return (bool)m_outputPorts[idx].bidirPartner; }
+
+		virtual bool inputIsEnable(size_t inputPort) const override;
 	protected:
 		bool m_isEntity = false;
 		bool m_requiresComponentDeclaration = false;
@@ -177,11 +179,14 @@ class Node_External : public Node<Node_External>
 		std::vector<std::string> m_resetNames;
 		std::vector<Port> m_inputPorts;
 		std::vector<Port> m_outputPorts;
+		std::set<size_t> m_inputIsEnable;
 
 		virtual void resizeInputs(size_t num) override;
 		virtual void resizeOutputs(size_t num) override;
 
 		virtual void copyBaseToClone(BaseNode *copy) const override;
+
+		void declareInputIsEnable(size_t inputPort);
 };
 
 }

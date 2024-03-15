@@ -1446,8 +1446,8 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeline_negativeRegister, BoostUnitTestSimulat
 		ExternalModule fluxCapacitor{ "FLUX_CAPACITOR", "UNISIM", "vcomponents" };
 		fluxCapacitor.in("a", a.width()) = (BVec) a_prev;
 		fluxCapacitor.in("b", b.width()) = (BVec) b_prev;
-		fluxCapacitor.in("enable_a") = enable_a;
-		fluxCapacitor.in("enable_b") = enable_b;
+		fluxCapacitor.in("enable_a", {.isEnableSignal = true }) = enable_a;
+		fluxCapacitor.in("enable_b", {.isEnableSignal = true }) = enable_b;
 		UInt exportOutput = (UInt) fluxCapacitor.out("O", a.width());
 
 		HCL_NAMED(exportOutput);
@@ -1529,9 +1529,9 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeline_multipleNegativeRegister, BoostUnitTes
 		ExternalModule fluxCapacitor{ "FLUX_CAPACITOR", "UNISIM", "vcomponents" };
 		fluxCapacitor.in("a", a.width()) = (BVec) a_prevPrev;
 		fluxCapacitor.in("b", b.width()) = (BVec) b_prev;
-		fluxCapacitor.in("enable_a") = enable_a;
-		fluxCapacitor.in("enable_a2") = enable_a2;
-		fluxCapacitor.in("enable_b") = enable_b;
+		fluxCapacitor.in("enable_a", {.isEnableSignal = true }) = enable_a;
+		fluxCapacitor.in("enable_a2", {.isEnableSignal = true }) = enable_a2;
+		fluxCapacitor.in("enable_b", {.isEnableSignal = true }) = enable_b;
 		UInt exportOutput = (UInt) fluxCapacitor.out("O", a.width());
 
 		HCL_NAMED(exportOutput);
@@ -1597,19 +1597,25 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeline_multipleNegativeRegister_in_ready_vali
 	Bit ready = pinIn().setName("ready");
 	Bit valid = pinIn().setName("valid");
 	UInt output = dontCare(UInt(32_b));
+
+	Bit retimingBlockedReady = retimingBlocker(ready);
 	{
 
 		UInt a = input1;
 		UInt b = input2;
+		Bit v = valid;
 
-		ENIF (ready)
-			pipeinputgroup(a, b);
+		ENIF (retimingBlockedReady)
+			pipeinputgroup(a, b, v);
 
 
-		IF (retimingBlocker(ready) & valid) {
+		IF (retimingBlockedReady & v) {
+
+			// Put some fixed registers here to retime over
+			a = reg(a);
+			b = reg(b);
 
 			output = a + b;
-
 
 			auto [a_prev, enable_a] = negativeReg(a);
 			auto [a_prevPrev, enable_a2] = negativeReg(a_prev);
@@ -1618,9 +1624,9 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeline_multipleNegativeRegister_in_ready_vali
 			ExternalModule fluxCapacitor{ "FLUX_CAPACITOR", "UNISIM", "vcomponents" };
 			fluxCapacitor.in("a", a.width()) = (BVec) a_prevPrev;
 			fluxCapacitor.in("b", b.width()) = (BVec) b_prev;
-			fluxCapacitor.in("enable_a") = enable_a;
-			fluxCapacitor.in("enable_a2") = enable_a2;
-			fluxCapacitor.in("enable_b") = enable_b;
+			fluxCapacitor.in("enable_a", {.isEnableSignal = true }) = enable_a;
+			fluxCapacitor.in("enable_a2", {.isEnableSignal = true }) = enable_a2;
+			fluxCapacitor.in("enable_b", {.isEnableSignal = true }) = enable_b;
 			UInt exportOutput = (UInt) fluxCapacitor.out("O", a.width());
 
 			HCL_NAMED(exportOutput);
@@ -1638,7 +1644,9 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeline_multipleNegativeRegister_in_ready_vali
 
 
 		BOOST_TEST(!simu(output).defined());
+		co_await AfterClk(clock);
 
+		BOOST_TEST(!simu(output).defined());
 		co_await AfterClk(clock);
 
 		BOOST_TEST(simu(output).defined());
@@ -1663,14 +1671,236 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeline_multipleNegativeRegister_in_ready_vali
 		stopTest();
 	});
 
+	design.postprocess();
+
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(retiming_pipeline_multipleNegativeRegister_multipleExternalNodes, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+	using namespace gtry::sim;
+	using namespace gtry::utils;
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+
+	auto dspAdd = [](UInt op1, UInt op2)->UInt {
+		Area area("dsp", true);
+		HCL_NAMED(op1);
+		HCL_NAMED(op2);
+
+		UInt result = op1 + op2;
+
+		auto [op1_prev, enable_op1] = negativeReg(op1);
+		auto [op2_prev, enable_op2] = negativeReg(op2);
+
+		sim_assert(enable_op1 == enable_op2);
+
+		ExternalModule hardAdder{ "SuperDuperAdder", "UNISIM", "vcomponents" };
+		hardAdder.in("a", op1.width()) = (BVec) op1_prev;
+		hardAdder.in("b", op2.width()) = (BVec) op2_prev;
+		hardAdder.in("enable", { .isEnableSignal = true }) = enable_op1;
+		UInt exportResult = (UInt) hardAdder.out("O", result.width());
+
+		HCL_NAMED(exportResult);
+		result.exportOverride(exportResult);
+
+		HCL_NAMED(result);
+		return result;
+	};
+
+	
+	UInt input1 = pinIn(32_b).setName("input1");
+	UInt input2 = pinIn(32_b).setName("input2");
+	UInt input3 = pinIn(32_b).setName("input3");
+	Bit enable = pinIn().setName("enable");
+	UInt output;
+	{
+
+		UInt a = input1;
+		UInt b = input2;
+		UInt c = input3;
+
+		ENIF (enable)
+			pipeinputgroup(a, b, c);
+
+		UInt a_plus_b = dspAdd(a, b);
+		HCL_NAMED(a_plus_b);
+		output = dspAdd(a_plus_b, c);
+		//output = a_plus_b;
+		HCL_NAMED(output);	
+
+		pinOut(output).setName("output");
+	}
+
+	addSimulationProcess([=, this]()->SimProcess {
+		simu(input1) = 100;
+		simu(input2) = 10;
+		simu(input3) = 1;
+		simu(enable) = '0';
+
+		BOOST_TEST(!simu(output).defined());
+		co_await AfterClk(clock);
+		BOOST_TEST(!simu(output).defined());
+		co_await AfterClk(clock);
+		BOOST_TEST(!simu(output).defined());
+
+		simu(enable) = '1';
+		co_await AfterClk(clock);
+		BOOST_TEST(!simu(output).defined());
+
+		simu(enable) = '0';
+		co_await AfterClk(clock);
+		BOOST_TEST(!simu(output).defined());
+
+		simu(enable) = '1';
+		co_await AfterClk(clock);
+
+		BOOST_TEST(simu(output).defined());
+
+		BOOST_TEST(simu(output).value() == 111);
+
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+
+		stopTest();
+	});
+
 	design.visualize("before");
 	design.postprocess();
 	design.visualize("after");
 
-	auto *fluxCapacitor = design.getCircuit().findFirstNodeByName("FLUX_CAPACITOR");
-	BOOST_REQUIRE(fluxCapacitor);
-	BOOST_TEST(fluxCapacitor->getNonSignalDriver(0).node == input1.readPort().node);
-	BOOST_TEST(fluxCapacitor->getNonSignalDriver(1).node != input2.readPort().node); // Pointing to register
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
+}
+
+
+BOOST_FIXTURE_TEST_CASE(retiming_pipeline_negativeRegister_ready_valid_state, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+	using namespace gtry::sim;
+	using namespace gtry::utils;
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+	
+	UInt input1 = pinIn(32_b).setName("input1");
+	Bit sop = pinIn().setName("sop");
+	Bit ready = pinIn().setName("ready");
+	Bit valid = pinIn().setName("valid");
+	UInt output = dontCare(UInt(32_b));
+
+	Bit retimingBlockedReady = retimingBlocker(ready);
+	{
+
+		UInt a = input1;
+		Bit s = sop;
+		Bit v = valid;
+
+		ENIF (retimingBlockedReady)
+			pipeinputgroup(a, v, s);
+
+
+		ENIF (retimingBlockedReady & v) {
+
+			UInt accu = 32_b;
+			setName(accu, "accu_next");
+			accu = reg(accu);
+			HCL_NAMED(accu);
+
+			IF (s) accu = 0;
+			IF (v) accu += a;
+
+			output = accu;
+
+
+			Bit enable;
+
+			ExternalModule fluxCapacitor{ "FLUX_ACCUMULATOR", "UNISIM", "vcomponents" };
+			fluxCapacitor.in("a", a.width()) = (BVec) a;
+			fluxCapacitor.in("sop") = s;
+			fluxCapacitor.in("enable", {.isEnableSignal = true }) = enable & ConditionalScope::globalEnable();
+			UInt exportOutput = (UInt) fluxCapacitor.out("O", a.width());
+
+			std::tie(exportOutput, enable) = negativeReg(exportOutput);
+
+			HCL_NAMED(exportOutput);
+			output.exportOverride(exportOutput);
+		}
+
+		pinOut(output).setName("output");
+	}
+	addSimulationProcess([=, this]()->SimProcess {
+		simu(input1) = 5;
+		simu(ready) = '0';
+		simu(valid) = '0';
+		simu(sop) = '0';
+
+
+		BOOST_TEST(!simu(output).defined());
+		co_await AfterClk(clock);
+		BOOST_TEST(!simu(output).defined());
+		co_await AfterClk(clock);
+
+		simu(ready) = '1';
+		simu(valid) = '1';
+		simu(sop) = '1';
+
+		co_await WaitStable();
+
+		BOOST_TEST(!simu(output).defined());
+
+		co_await AfterClk(clock);
+
+		simu(sop) = '0';
+
+		co_await WaitStable();
+
+		BOOST_TEST(simu(output).value() == 5);
+
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output).value() == 10);
+
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output).value() == 15);
+
+		simu(valid) = '0';
+
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output).value() == 15);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output).value() == 15);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output).value() == 15);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output).value() == 15);
+
+		simu(valid) = '1';
+		simu(ready) = '0';
+
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output).value() == 15);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output).value() == 15);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output).value() == 15);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(output).value() == 15);
+
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+
+		stopTest();
+	});
+
+	design.visualize("before");
+	design.postprocess();
+	design.visualize("after");
 
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
 }
+

@@ -84,7 +84,8 @@ void Node_NegativeRegister::assertValidity() const
 std::string Node_NegativeRegister::getInputName(size_t idx) const
 {
 	switch (idx) {
-		case 0: return "in";
+		case (size_t) Inputs::data: return "in";
+		case (size_t) Inputs::expectedEnable: return "expectedEnable";
 		default: return "invalid";
 	}
 }

@@ -84,6 +84,8 @@ namespace gtry::hlim {
 
 		bool hasResetValue() const { return getNonSignalDriver((size_t)Input::RESET_VALUE).node != nullptr; }
 		bool hasEnable() const { return getNonSignalDriver((size_t)Input::ENABLE).node != nullptr; }
+
+		virtual bool inputIsEnable(size_t inputPort) const override;
 	protected:
 		utils::BitFlags<Flags> m_flags;
 

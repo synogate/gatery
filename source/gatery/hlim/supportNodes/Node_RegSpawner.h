@@ -67,6 +67,8 @@ class Node_RegSpawner : public Node<Node_RegSpawner>
 		virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit) override;
 
 		inline size_t getNumStagesSpawned() const { return m_numStagesSpawned; }
+
+		virtual bool inputIsEnable(size_t inputPort) const override;
 	protected:
 		size_t m_numStagesSpawned = 0ull;
 		bool m_wasResolved = false;
