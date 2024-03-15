@@ -17,6 +17,8 @@
 */
 #include "gatery/pch.h"
 
+#include "NodePort.h"
+
 #include "SignalDelay.h"
 #include "Subnet.h"
 #include "../utils/Range.h"
