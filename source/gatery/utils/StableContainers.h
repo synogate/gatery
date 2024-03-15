@@ -86,7 +86,7 @@ class UnstableSet
 		/// Returns the underlying set to iterate over the elements in any order in cases where the order doesn't matter
 		const auto &anyOrder() const { return m_set; }
 
-		auto operator<=>(const UnstableSet&) const = default;
+		//auto operator<=>(const UnstableSet&) const = default;
 	protected:
 		std::set<Type> m_set;
 };
