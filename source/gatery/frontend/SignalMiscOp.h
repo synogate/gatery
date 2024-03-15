@@ -177,6 +177,7 @@ void tap(const Signal& signal)
 {
 	hlim::SignalAttributes att;
 	att.userDefinedVendorAttributes["xilinx"]["mark_debug"] = { .type = "string", .value = "\"true\"" };
+	att.userDefinedVendorAttributes["intel"]["preserve_for_debug"] = { .type = "boolean", .value = "true" };
 	attribute((Signal&)signal, att);
 
 	auto *node = DesignScope::createNode<hlim::Node_SignalTap>();
