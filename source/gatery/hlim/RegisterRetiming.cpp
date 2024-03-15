@@ -596,9 +596,9 @@ std::optional<ForwardRetimingPlan> determineAreaToBeRetimedForward(Circuit &circ
 								<< "Node from:\n" << output.node->getStackTrace() << "\n";
 
 							error 
-								<< "The fanning-in signals are driven by a register " << nodePort.node->getName() << " (" << nodePort.node->getTypeName() << ", id " << nodePort.node->getId()
+								<< "The fanning-in signals are driven by a node " << nodePort.node->getName() << " (" << nodePort.node->getTypeName() << ", id " << nodePort.node->getId()
 								<< ") with an enable signal that is incompatible with the inferred register enable signal of the retiming operation.\n"
-								<< "Register from:\n" << nodePort.node->getStackTrace() << "\n";
+								<< "Node from:\n" << nodePort.node->getStackTrace() << "\n";
 
 							HCL_ASSERT_HINT(false, error.str());					
 						}
