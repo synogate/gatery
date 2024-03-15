@@ -1695,16 +1695,16 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeline_multipleNegativeRegister_multipleExter
 
 		UInt result = op1 + op2;
 
-		auto [op1_prev, enable_op1] = negativeReg(op1);
-		auto [op2_prev, enable_op2] = negativeReg(op2);
-
-		sim_assert(enable_op1 == enable_op2);
+		Bit enable;
 
 		ExternalModule hardAdder{ "SuperDuperAdder", "UNISIM", "vcomponents" };
-		hardAdder.in("a", op1.width()) = (BVec) op1_prev;
-		hardAdder.in("b", op2.width()) = (BVec) op2_prev;
-		hardAdder.in("enable", { .isEnableSignal = true }) = enable_op1;
+		hardAdder.in("a", op1.width()) = (BVec) op1;
+		hardAdder.in("b", op2.width()) = (BVec) op2;
+		hardAdder.in("enable", { .isEnableSignal = true }) = enable & EnableScope::getFullEnable();
 		UInt exportResult = (UInt) hardAdder.out("O", result.width());
+
+		std::tie(exportResult, enable) = negativeReg(exportResult);
+
 
 		HCL_NAMED(exportResult);
 		result.exportOverride(exportResult);
