@@ -1823,7 +1823,7 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeline_negativeRegister_ready_valid_state, Bo
 			ExternalModule fluxCapacitor{ "FLUX_ACCUMULATOR", "UNISIM", "vcomponents" };
 			fluxCapacitor.in("a", a.width()) = (BVec) a;
 			fluxCapacitor.in("sop") = s;
-			fluxCapacitor.in("enable", {.isEnableSignal = true }) = enable & ConditionalScope::globalEnable();
+			fluxCapacitor.in("enable", {.isEnableSignal = true }) = enable & EnableScope::getFullEnable();
 			UInt exportOutput = (UInt) fluxCapacitor.out("O", a.width());
 
 			std::tie(exportOutput, enable) = negativeReg(exportOutput);
@@ -1900,6 +1900,12 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeline_negativeRegister_ready_valid_state, Bo
 	design.visualize("before");
 	design.postprocess();
 	design.visualize("after");
+
+	auto *fluxAccumulator = design.getCircuit().findFirstNodeByName("FLUX_ACCUMULATOR");
+	BOOST_REQUIRE(fluxAccumulator);
+	BOOST_TEST(fluxAccumulator->getNonSignalDriver(0).node == input1.readPort().node);
+	BOOST_TEST(fluxAccumulator->getNonSignalDriver(1).node == sop.readPort().node);
+
 
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
 }
