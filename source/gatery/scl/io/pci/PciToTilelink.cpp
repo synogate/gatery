@@ -26,7 +26,7 @@ namespace gtry::scl::pci {
 
 	void TlpAnswerInfo::setErrorFromLimitations(RequestHeader reqHdr) 
 	{
-		error |= reqHdr.firstDWByteEnable != 0xF;	// no byte addressability yet
+		error |= reqHdr.firstDWByteEnable != 0xF;	//no byte addressability yet
 		error |= reqHdr.lastDWByteEnable != 0x0;	//payload = 1dw -> this needs to be zero;
 		error |= reqHdr.common.length != 1;			//one word allowed only
 	}
@@ -64,11 +64,10 @@ namespace gtry::scl::pci {
 
 		a->setupGet(byteAddress, pack(answerInfo), 2);
 
-		IF(reqHdr.common.isMemWrite()) {
+		IF(reqHdr.common.isMemWrite() & !answerInfo.error) {
 			BVec data = (*complReq)(128, 32_b);
 			a->setupPut(byteAddress, data, pack(answerInfo), 2);
 		}
-
 
 		valid(a) = valid(complReq);
 		ready(complReq) = ready(a);
