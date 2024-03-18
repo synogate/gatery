@@ -244,17 +244,18 @@ BOOST_FIXTURE_TEST_CASE(ptile_hail_mary_completer, BoostUnitTestSimulationFixtur
 	Clock clk = ptileInstance.userClock();
 	ClockScope clkScp(clk);
 
+	scl::Counter blinky(29_b);
+	blinky.inc();
+
+	pinOut(blinky.value().upper(4_b), "fm6_led");
+
 	BitWidth addW = 8_b;
 	BitWidth dataW = 32_b;
 
 	Memory<BVec> mem(addW.count(), dataW);
 	mem.initZero();
 	TileLinkUL tl = tileLinkInit<TileLinkUL>(addW, dataW, pack(TlpAnswerInfo{}).width());
-	{
-		Area area{ "sanityCheck", true };
 		mem <<= tl;
-		design.visualize("myArea", design.getCircuit().getRootNodeGroup()->findChild("sanityCheck"));
-	}
 
 	CompleterInterface complInt = pci::makeTileLinkMaster(move(tl), ptileInstance.settings().dataBusW);
 
@@ -266,16 +267,17 @@ BOOST_FIXTURE_TEST_CASE(ptile_hail_mary_completer, BoostUnitTestSimulationFixtur
 	pinIn(intelHeader, "intel_header", { .simulationOnlyPin = true });
 	rxSim.get<PTileHeader>() = simOverride(rxSim.get<PTileHeader>(), PTileHeader{ swapEndian(intelHeader) });
 
-	auto temp = ptileRxVendorUnlocking(simOverrideDownstream(ptileInstance.rx(), move(rxSim)))
+	auto rxUnlocked = ptileRxVendorUnlocking(simOverrideDownstream(ptileInstance.rx(), move(rxSim)) | strm::regDownstream())
 		.template remove<PTileBarRange>()
 		.add(BarInfo{ .id = ConstBVec(0, 3_b), .logByteAperture = ConstUInt(20, 6_b)});//log byte aperture should be set to ip value
+	HCL_NAMED(rxUnlocked);
+	complInt.request <<= move(rxUnlocked);
 
-	HCL_NAMED(temp);
-	complInt.request <<= move(temp);
-
-	auto [txHard, txSim] = simOverrideUpstream(ptileTxVendorUnlocking(move(complInt.completion)));
-	ptileInstance.tx(move(txHard).template remove<EmptyBits>());
+	auto [txLocked, txSim] = simOverrideUpstream(ptileTxVendorUnlocking(move(complInt.completion)));
+	HCL_NAMED(txLocked);
+	ptileInstance.tx(move(txLocked).template remove<EmptyBits>());
 	pinOut(txSim, "txSim", { .simulationOnlyPin = true });
+
 
 	scl::sim::TlpInstruction readInst;
 	readInst.opcode = TlpOpcode::memoryReadRequest64bit;
@@ -290,10 +292,20 @@ BOOST_FIXTURE_TEST_CASE(ptile_hail_mary_completer, BoostUnitTestSimulationFixtur
 	writeInst.wordAddress = 5;
 	writeInst.payload = std::vector<uint32_t>({ 42 });
 
-	addSimulationProcess([&, this]()->SimProcess { return strm::readyDriver(txSim, clk); });
+	//addSimulationProcess([&, this]()->SimProcess { return strm::readyDriver(txSim, clk); });
+	addSimulationProcess([&, this]()->SimProcess { simu(ready(txSim)) = '1'; co_await OnClk(clk); });
 
 	//send read, write, read
 	addSimulationProcess([&, this]()->SimProcess {
+		simu(intelHeader) = readInst;
+		simu(valid(rxSim)) = '0';
+		simu(eop(rxSim)).invalidate();
+
+		//very very important, the intel core does not assert high until it sees ready
+
+		do {
+			co_await OnClk(clk);
+		} while (simu(ready(rxSim)) != '1');
 		simu(intelHeader) = readInst;
 		simu(valid(rxSim)) = '1';
 		simu(eop(rxSim)) = '1';
@@ -329,7 +341,7 @@ BOOST_FIXTURE_TEST_CASE(ptile_hail_mary_completer, BoostUnitTestSimulationFixtur
 		});
 
 	design.postprocess();
-	design.visualize("myAreaOptimized", design.getCircuit().getRootNodeGroup()->findChild("sanityCheck"));
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 
 	if (true) {
 		m_vhdlExport.emplace("export/ptile/top.vhd");
@@ -340,8 +352,6 @@ BOOST_FIXTURE_TEST_CASE(ptile_hail_mary_completer, BoostUnitTestSimulationFixtur
 		(*m_vhdlExport)(design.getCircuit());
 		//outputVHDL("dut.vhd");
 	}
-	else
-		BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
 
 
