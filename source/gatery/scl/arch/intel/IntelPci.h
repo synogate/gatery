@@ -48,24 +48,6 @@ namespace gtry::scl::arch::intel {
 
 	scl::strm::RvPacketStream<BVec, EmptyBits, scl::Error, PTileHeader, PTilePrefix> ptileTxVendorUnlocking(TlpPacketStream<EmptyBits>&& tx);
 
-	//shoudl really not be intel specific, maybe pci.h
-	//class PciInterfaceSeparator {
-	//public:
-	//	PciInterfaceSeparator();
-	//
-	//	template<Signal... MetaInT>
-	//	PciInterfaceSeparator& attachRx(TlpPacketStream<MetaInT...>&& rx);
-	//	
-	//	template<Signal... MetaOutT>
-	//	TlpPacketStream<MetaOutT...> getTx();
-	//
-	//	RequesterInterface& requesterInterface() { HCL_DESIGNCHECK(m_requesterInterface); return *m_requesterInterface; }
-	//	CompleterInterface& completerInterface() { HCL_DESIGNCHECK(m_completerInterface); return *m_completerInterface; }
-	//	
-	//private:
-	//	std::optional<RequesterInterface> m_requesterInterface;
-	//	std::optional<CompleterInterface> m_completerInterface;
-	//};
 }
 
 
