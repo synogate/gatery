@@ -37,12 +37,9 @@ namespace gtry::scl::arch::intel {
 	{
 		ClockScope clk{ m_usrClk };
 
-		const PinConfig pinCfg{ .type = PinType::STD_LOGIC  };
-
-		//in("tx_data_i"	, 128 * m_cfg.busIndexVariable_w).word(interfaceNumber, 128 * m_cfg.busIndexVariable_w / m_cfg.numberOfInterfaces) = *stream;
 		in("p0_tx_st_data_i", m_cfg.dataBusW) = *stream;
 
-		in("p0_tx_st_hdr_i", 128_b) = (BVec) pack(stream.get<PTileHeader>());
+		in("p0_tx_st_hdr_i", 128_b) = stream.get<PTileHeader>().header;
 		in("p0_tx_st_tlp_prfx_i", 32_b) = stream.get<PTilePrefix>().prefix;
 		;
 		in("p0_tx_st_valid_i", 1_b).lsb() = valid(stream);
@@ -50,12 +47,11 @@ namespace gtry::scl::arch::intel {
 		in("p0_tx_st_eop_i", 1_b).lsb() = eop(stream);
 		in("p0_tx_st_err_i", 1_b).lsb() = error(stream);
 
-		Bit exportReady = out("p0_tx_st_ready_o"); 
+		Bit ipReady = out("p0_tx_st_ready_o"); 
 		for (size_t i = 0; i < m_cfg.txReadyLatency; ++i)
-			exportReady = reg(exportReady, '0');
+			ipReady = reg(ipReady, '0');
 
-
-		ready(stream).exportOverride(exportReady);
+		ready(stream) = ipReady;
 
 		return *this;
 	}
@@ -65,18 +61,16 @@ namespace gtry::scl::arch::intel {
 		ClockScope clkScope{ m_usrClk };
 		RvPacketStream<BVec, EmptyBits,  PTileHeader,  PTilePrefix, PTileBarRange> rx;
 
-		const PinConfig pinCfg{ .type = PinType::STD_LOGIC };
-
 		*rx = out("p0_rx_st_data_o", m_cfg.dataBusW);
-		unpack(out("p0_rx_st_hdr_o", 128_b), rx.get<PTileHeader>());
-		unpack(out("p0_rx_st_tlp_prfx_o", 32_b), rx.get<PTilePrefix>());
+		rx.get<PTileHeader>().header = out("p0_rx_st_hdr_o", 128_b);
+		rx.get<PTilePrefix>().prefix = out("p0_rx_st_tlp_prfx_o", 32_b);
 		rx.get<PTileBarRange>() = PTileBarRange{ out("p0_rx_st_bar_range_o", 3_b) };
 
 		//p0_rx_st_tlp_abort_o : does not apply to non-bypass tlp mode
 		//p0_rx_par_err_o
 
 		valid(rx) = out("p0_rx_st_valid_o", 1_b).lsb();
-		emptyBits(rx) = (UInt)cat(out("p0_rx_st_empty_o", BitWidth::count(m_cfg.dataBusW.bits() / 32)), UInt{"5d0"});
+		emptyBits(rx) = cat(out("p0_rx_st_empty_o", BitWidth::count(m_cfg.dataBusW.bits() / 32)), UInt{"5d0"});
 		/*sop(rx) =*/ out("p0_rx_st_sop_o", 1_b).lsb();
 		eop(rx)	=	out("p0_rx_st_eop_o", 1_b).lsb();
 
