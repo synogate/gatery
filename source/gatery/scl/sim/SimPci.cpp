@@ -192,6 +192,14 @@ namespace gtry::scl::sim {
 		ret.byteCountModifier =  (rng() & 1);
 		ret.byteCount = (rng() & 0xFFF);
 
+		if (ret.opcode == TlpOpcode::memoryWriteRequest64bit || ret.opcode == TlpOpcode::completionWithData)
+		{
+			ret.payload.emplace();
+			ret.payload->reserve(*ret.length);
+			for (size_t i = 0; i < *ret.length; i++)
+				ret.payload->push_back(rng());
+		}
+
 		return ret;
 	}
 
