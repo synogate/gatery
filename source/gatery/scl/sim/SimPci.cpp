@@ -161,7 +161,7 @@ namespace gtry::scl::sim {
 	 * @param seed seed for the randomization
 	 * @return naively random instruction
 	*/
-	TlpInstruction TlpInstruction::randomizeNaive(pci::TlpOpcode op, size_t seed) {
+	TlpInstruction TlpInstruction::randomizeNaive(pci::TlpOpcode op, size_t seed, bool addCoherentPayload) {
 		std::mt19937 rng{ (unsigned int) seed };
 		TlpInstruction ret;
 
@@ -192,13 +192,14 @@ namespace gtry::scl::sim {
 		ret.byteCountModifier =  (rng() & 1);
 		ret.byteCount = (rng() & 0xFFF);
 
-		if (ret.opcode == TlpOpcode::memoryWriteRequest64bit || ret.opcode == TlpOpcode::completionWithData)
-		{
-			ret.payload.emplace();
-			ret.payload->reserve(*ret.length);
-			for (size_t i = 0; i < *ret.length; i++)
-				ret.payload->push_back(rng());
-		}
+		if(addCoherentPayload)
+			if (ret.opcode == TlpOpcode::memoryWriteRequest64bit || ret.opcode == TlpOpcode::completionWithData)
+			{
+				ret.payload.emplace();
+				ret.payload->reserve(*ret.length);
+				for (size_t i = 0; i < *ret.length; i++)
+					ret.payload->push_back(rng());
+			}
 
 		return ret;
 	}
