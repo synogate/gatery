@@ -105,7 +105,6 @@ BOOST_FIXTURE_TEST_CASE(ptile_rx_vendor_unlocking_only_read_requests, BoostUnitT
 		readReq.length = rng() & 0xF;
 		readReq.wordAddress = rng() >> 2;
 		return readReq.asDefaultBitVectorState();
-		//scl::strm::SimPacket packet(dbvs);
 	};
 
 	std::vector<gtry::sim::DefaultBitVectorState> reads(nReads);
@@ -120,12 +119,11 @@ BOOST_FIXTURE_TEST_CASE(ptile_rx_vendor_unlocking_only_read_requests, BoostUnitT
 			simu(ptileHeader) = reads[i];
 			simu(valid(in)) = '1';
 			simu(eop(in)) = '1';
+			//simu(emptyBits(in)) = 0; doesn't matter because it's header only
 			co_await performTransferWait(in, clk);
 			simu(ptileHeader).invalidate();
 			simu(valid(in)) = '0';
 			simu(eop(in)).invalidate();
-			//for (size_t i = 0; i < 2; i++)
-			//	co_await OnClk(clk);
 		}
 	});
 
