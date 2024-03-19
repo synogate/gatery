@@ -823,7 +823,8 @@ struct pciInterfaceSplitterFixture : BoostUnitTestSimulationFixture {
 				scl::sim::TlpInstruction inst = scl::sim::TlpInstruction::randomizeNaive(rng() & 1 ?
 					scl::pci::TlpOpcode::memoryReadRequest64bit :
 					scl::pci::TlpOpcode::memoryWriteRequest64bit,
-					rng()
+					rng(),
+					true
 				);
 				dbv = inst;
 			}
@@ -844,7 +845,7 @@ struct pciInterfaceSplitterFixture : BoostUnitTestSimulationFixture {
 		if (sendRequesterCompletions) {
 			reqComp.resize(numPackets);
 			for (auto& dbv : reqComp) {
-				scl::sim::TlpInstruction inst = scl::sim::TlpInstruction::randomizeNaive(scl::pci::TlpOpcode::completionWithData, rng());
+				scl::sim::TlpInstruction inst = scl::sim::TlpInstruction::randomizeNaive(scl::pci::TlpOpcode::completionWithData, rng(), true);
 				dbv = inst;
 			}
 		}
@@ -862,7 +863,7 @@ struct pciInterfaceSplitterFixture : BoostUnitTestSimulationFixture {
 		if (sendCompleterCompletions) {
 			compComp.resize(numPackets);
 			for (auto& dbv : compComp) {
-				scl::sim::TlpInstruction inst = scl::sim::TlpInstruction::randomizeNaive(scl::pci::TlpOpcode::completionWithData, rng());
+				scl::sim::TlpInstruction inst = scl::sim::TlpInstruction::randomizeNaive(scl::pci::TlpOpcode::completionWithData, rng(), true);
 				dbv = inst;
 			}
 		}
@@ -882,7 +883,8 @@ struct pciInterfaceSplitterFixture : BoostUnitTestSimulationFixture {
 				scl::sim::TlpInstruction inst = scl::sim::TlpInstruction::randomizeNaive(rng() & 1 ?
 					scl::pci::TlpOpcode::memoryReadRequest64bit :
 					scl::pci::TlpOpcode::memoryWriteRequest64bit,
-					rng()
+					rng(),
+					true
 				);
 				dbv = inst;
 			}
