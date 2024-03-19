@@ -16,10 +16,10 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include <gatery/pch.h>
-#include "pciInterfaceSplitter.h"
+#include "PciInterfaceSplitter.h"
 #include <gatery/scl/stream/StreamDemux.h>
 #include <gatery/scl/stream/StreamArbiter.h>
-//#include <gatery/scl/stream/utils.h>
+
 namespace gtry::scl::pci {
 	PciInterfaceSplitter::PciInterfaceSplitter(CompleterInterface& compInt, RequesterInterface& reqInt, TlpPacketStream<EmptyBits, BarInfo>&& rx)
 	{
