@@ -189,6 +189,7 @@ namespace gtry::scl::pci
 		UInt logByteAperture = 6_b; //0-> 1B | 10 -> 1kB | 20 -> 1MB | 30 -> 1GB | etc.
 	};
 
+	//to do: needs to make one into reverse signal
 	struct CompleterInterface {
 		TlpPacketStream<EmptyBits, BarInfo> request;
 		TlpPacketStream<EmptyBits> completion;
