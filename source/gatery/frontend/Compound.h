@@ -37,7 +37,7 @@
 #include <boost/hana/ext/std/pair.hpp>
 #include <boost/hana/transform.hpp>
 #include <boost/hana/zip.hpp>
-#include <boost/pfr.hpp>
+#include <gatery/compat/boost_pfr.h>
 
 namespace gtry
 {

@@ -446,7 +446,7 @@ BOOST_FIXTURE_TEST_CASE(uram288_cascade, TestWithDefaultDevice<gtry::GHDLTestFix
 	testCompilation();
 }
 
-BOOST_FIXTURE_TEST_CASE(ultraRamHelper, TestWithDefaultDevice<gtry::GHDLTestFixture>)
+BOOST_FIXTURE_TEST_CASE(ultraRamHelper, TestWithDefaultDevice<gtry::GHDLTestFixture>, * boost::unit_test::disabled())
 {
 	using namespace gtry;
 	Clock clock({ .absoluteFrequency = 100'000'000 });

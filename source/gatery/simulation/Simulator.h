@@ -39,7 +39,7 @@
 #include <vector>
 #include <any>
 
-#include "../utils/CoroutineWrapper.h"
+#include "../compat/CoroutineWrapper.h"
 
 namespace gtry::hlim {
 	class Node_Pin;

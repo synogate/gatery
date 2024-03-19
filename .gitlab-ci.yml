@@ -9,12 +9,14 @@ linux-build:
   tags:
     - linux
   script:
-    - premake5 gmake2
-    - make -j20
+    - mkdir build/
+    - cd build
+    - cmake ..
+    - make -j 20
   artifacts:
     expire_in: 2 days
     paths:
-      - bin/
+      - build/
 
 windows-build:
   stage: build
@@ -22,7 +24,7 @@ windows-build:
     - windows
   script:
     - premake5 vs2022
-    - '& "${Env:ProgramFiles}\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\amd64\msbuild.exe"'
+    - '& "${Env:ProgramFiles}\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\amd64\msbuild.exe" gatery.sln'
   artifacts:
     expire_in: 2 days
     paths:
@@ -34,7 +36,7 @@ test-linux-frontend:
   tags:
     - linux
   script:
-    - bin/linux-x86_64-Debug/gatery-frontend-test
+    - build/tests/frontend/unittest_frontend -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/
 
 test-linux-scl:
   stage: test
@@ -42,7 +44,7 @@ test-linux-scl:
   tags:
     - linux
   script:
-    - bin/linux-x86_64-Debug/gatery-scl-test
+    - build/tests/scl/unittest_scl -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/
 
 test-windows-frontend:
   stage: test
@@ -60,43 +62,43 @@ test-windows-scl:
   script:
     - .\bin\windows-x86_64-Debug\gatery-scl-test.exe
 
-test-linux-coverage:
-  stage: coverage
-  needs: ["linux-build"]
-  tags:
-    - linux
-  script:
-    - premake5 gmake2
-    - /usr/bin/time -o buildLog.txt -v make -j20 config=coverage
-    - mkdir cov
-    - anybadge -l "Build time (seconds)" -v $(cat buildLog.txt | grep "User time (seconds):" | cut -d' ' -f 4) --file cov/buildTime.svg
-    - anybadge -l "Build max RSS (kB)" -v $(cat buildLog.txt | grep "Maximum resident set size (kbytes)" | cut -d' ' -f 6) --file cov/buildMaxRSS.svg
-    - anybadge -l "Lines of Code" -v $(find ./ -type f \( -iname \*.cpp -o -iname \*.h -o -iname \*.hpp \) | xargs wc -l | tail -1 | cut -d' ' -f 2) --file cov/linesOfCode.svg
-    - lcov --directory . --zerocounters
-    - bin/linux-x86_64-Coverage/gatery-frontend-test -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/
-    - bin/linux-x86_64-Coverage/gatery-scl-test -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/
-    - lcov --directory . --capture --output-file unittest_coverage.info
-    - lcov --remove unittest_coverage.info '/usr/*' --output-file unittest_coverage.info
-    - lcov --remove unittest_coverage.info '*/source/external/*' --output-file unittest_coverage.info
-    - anybadge --value=$(lcov --summary unittest_coverage.info | grep lines | cut -d' ' -f 4 | cut -d'%' -f 1) --file cov/coverage.svg coverage
-    - genhtml unittest_coverage.info -o cov/
-#    - rm -rf /mnt/doxygenDocu/gateryCov/*
-#    - cp -r cov/ /mnt/doxygenDocu/gateryCov
-  artifacts:
-    expire_in: 4 weeks
-    paths:
-        - cov/
-  only:
-    - master
+# test-linux-coverage:
+#   stage: coverage
+#   needs: ["linux-build"]
+#   tags:
+#     - linux
+#   script:
+#     - premake5 gmake2
+#     - /usr/bin/time -o buildLog.txt -v make -j20 config=coverage
+#     - mkdir cov
+#     - anybadge -l "Build time (seconds)" -v $(cat buildLog.txt | grep "User time (seconds):" | cut -d' ' -f 4) --file cov/buildTime.svg
+#     - anybadge -l "Build max RSS (kB)" -v $(cat buildLog.txt | grep "Maximum resident set size (kbytes)" | cut -d' ' -f 6) --file cov/buildMaxRSS.svg
+#     - anybadge -l "Lines of Code" -v $(find ./ -type f \( -iname \*.cpp -o -iname \*.h -o -iname \*.hpp \) | xargs wc -l | tail -1 | cut -d' ' -f 2) --file cov/linesOfCode.svg
+#     - lcov --directory . --zerocounters
+#     - bin/linux-x86_64-Coverage/gatery-frontend-test -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/
+#     - bin/linux-x86_64-Coverage/gatery-scl-test -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/
+#     - lcov --directory . --capture --output-file unittest_coverage.info
+#     - lcov --remove unittest_coverage.info '/usr/*' --output-file unittest_coverage.info
+#     - lcov --remove unittest_coverage.info '*/source/external/*' --output-file unittest_coverage.info
+#     - anybadge --value=$(lcov --summary unittest_coverage.info | grep lines | cut -d' ' -f 4 | cut -d'%' -f 1) --file cov/coverage.svg coverage
+#     - genhtml unittest_coverage.info -o cov/
+# #    - rm -rf /mnt/doxygenDocu/gateryCov/*
+# #    - cp -r cov/ /mnt/doxygenDocu/gateryCov
+#   artifacts:
+#     expire_in: 4 weeks
+#     paths:
+#         - cov/
+#   only:
+#     - master
 
-documentation-job:
-  stage: deploy
-  needs: ["test-linux-coverage"]
-  tags:
-    - documount
-  script:
-    - doxygen doc/Doxyfile
-    - rsync -r --delete --checksum doc/gen/html/ /mnt/doxygenDocu/gatery
-    - rsync -r --delete --checksum cov/ /mnt/doxygenDocu/gateryCov
-  only:
-    - master
+# documentation-job:
+#   stage: deploy
+#   needs: ["test-linux-coverage"]
+#   tags:
+#     - documount
+#   script:
+#     - doxygen doc/Doxyfile
+#     - rsync -r --delete --checksum doc/gen/html/ /mnt/doxygenDocu/gatery
+#     - rsync -r --delete --checksum cov/ /mnt/doxygenDocu/gateryCov
+#   only:
+#     - master

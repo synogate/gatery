@@ -1,6 +1,11 @@
 
 function GateryWorkspaceDefaults()
 
+    newoption {
+        trigger = "with-driver",
+        description = "On windows, enables the driver project"
+    }
+
     configurations { "Debug", "Release", "Coverage" }
     architecture "x64"
     symbols "On"
@@ -84,3 +89,13 @@ project "gatery"
 
     filter "files:**.c"
         flags {"NoPCH"}
+
+
+externalproject "gatery_driver"
+    location ".."
+    uuid "46dda5a3-61d7-480c-a2cd-8538a48ac9ea"
+    language "C++"
+
+    kind "None"
+    filter "options:with-driver"
+        kind "StaticLib"

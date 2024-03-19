@@ -27,6 +27,22 @@
 using namespace boost::unit_test;
 
 using BoostUnitTestSimulationFixture = gtry::BoostUnitTestSimulationFixture;
+
+BOOST_FIXTURE_TEST_CASE(BlinkLED, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 100'000'000, .name = "clk", .resetType = ClockConfig::ResetType::NONE});
+	ClockScope clockScope(clock);
+
+	UInt counter = 24_b;
+	counter = reg(counter + 1, 0);
+	pinOut(counter.upper(8_b), "LED");
+
+	design.postprocess();
+	runEvalOnlyTest();
+}
+
 BOOST_FIXTURE_TEST_CASE(ReverseSyntax, BoostUnitTestSimulationFixture)
 {
 	using namespace gtry;

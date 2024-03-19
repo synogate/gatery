@@ -16,31 +16,42 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
+#include <gatery/frontend.h>
+#include "SdramCommand.h"
+#include "../tilelink/tilelink.h"
 
-#include "../../hlim/NodePort.h"
+namespace gtry::scl::sdram
+{
+	struct MiniControllerConfig
+	{
+		BitWidth sourceW = 0_b;
+	};
 
-#include "../../compat/CoroutineWrapper.h"
+	struct PhyInterface
+	{
+		CommandBus cmd;
 
-namespace gtry::sim {
+		Bit odt;
+		Bit dqsEnable;
+		Bit dqsPreamble;
+		Bit debugSignal;
 
-class WaitUntil {
-	public:
-		enum Trigger {
-			HIGH,
-			LOW,
-			RISING,
-			FALLING,
-			CHANGING
-		};
+		BVec dqIn; // captured data on dq lines
+	};
 
-		WaitUntil(hlim::NodePort np, Trigger trigger = HIGH);
+	scl::TileLinkUL miniController(PhyInterface& dramIo, MiniControllerConfig cfg = {});
 
-		bool await_ready() noexcept { return false; } // always force reevaluation
-		void await_suspend(std::coroutine_handle<> handle);
-		void await_resume() noexcept { }
-	protected:
-		hlim::NodePort m_np;
-		Trigger m_trigger;
-};
+
+	struct PhyGateMateDDR2Config
+	{
+		std::string pinPrefix = "ddr2_";
+		BitWidth addrW;
+		BitWidth dqW;
+	};
+
+	PhyInterface phyGateMateDDR2(PhyGateMateDDR2Config cfg);
 
 }
+
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::sdram::MiniControllerConfig, sourceW);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::sdram::PhyInterface, cmd, odt, dqsEnable, dqsPreamble, dqIn);

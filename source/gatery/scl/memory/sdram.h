@@ -124,7 +124,6 @@ namespace gtry::scl::sdram
 	BVec moduleSimulation(const CommandBus& cmd);
 }
 
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::sdram::CommandBus, cke, csn, rasn, casn, wen, a, ba, dq, dqm);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::sdram::Controller::BankState, rowActive, activeRow);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::sdram::Controller::Command, code, address, size, source);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::sdram::Controller::ReadTask, active, read, size, source, beats);

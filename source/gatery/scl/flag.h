@@ -24,7 +24,7 @@ namespace gtry::scl
 	Bit flagInstantSet(const Bit& set, const Bit& reset, char resetValue = '0');
 
 	inline Bit edge(const Bit& in) { return in != reg(in, '0'); }
-	inline Bit edgeRising(const Bit& in) { return in & !reg(in, '0'); }
+	inline Bit edgeRising(const Bit& in) { return in & !reg(in, '1'); }
 	inline Bit edgeFalling(const Bit& in) { return !in & reg(in, '0'); }
 
 	template<Signal T> T capture(const T& in, Bit condition);

@@ -16,31 +16,22 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
+#include <gatery/frontend/Bit.h>
+#include <gatery/frontend/ExternalModule.h>
 
-#include "../../hlim/NodePort.h"
-
-#include "../../compat/CoroutineWrapper.h"
-
-namespace gtry::sim {
-
-class WaitUntil {
+namespace gtry::scl::arch::colognechip
+{
+	class CC_BUFG : public ExternalModule
+	{
 	public:
-		enum Trigger {
-			HIGH,
-			LOW,
-			RISING,
-			FALLING,
-			CHANGING
-		};
+		CC_BUFG() : ExternalModule("CC_BUFG") {
+			requiresComponentDeclaration(true);
+			isEntity(false);
+		}
 
-		WaitUntil(hlim::NodePort np, Trigger trigger = HIGH);
+		Bit& I() { return in("I"); }
+		Bit O() { return out("O"); }
+	};
 
-		bool await_ready() noexcept { return false; } // always force reevaluation
-		void await_suspend(std::coroutine_handle<> handle);
-		void await_resume() noexcept { }
-	protected:
-		hlim::NodePort m_np;
-		Trigger m_trigger;
-};
-
+	Bit bufg(Bit I) { CC_BUFG buf; buf.I() = I; return buf.O(); }
 }
