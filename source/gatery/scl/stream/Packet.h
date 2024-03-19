@@ -982,7 +982,7 @@ namespace gtry::scl::strm
 	{
 		scl::EmptyBits ret = { emptyBits(headStrm) };
 
-		IF(eop(headStrm) & eop(shiftedTailStrm))
+		IF(eop(headStrm) & eop(shiftedTailStrm) & valid(shiftedTailStrm))
 			ret.emptyBits = emptyBits(shiftedTailStrm); // because the tail has already been shifted to perfectly fit the head
 
 		IF(param.currentState == AppendStreamState::tail)
