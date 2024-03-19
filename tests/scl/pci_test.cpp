@@ -30,6 +30,7 @@
 #include <gatery/scl/tilelink/TileLinkMasterModel.h>
 #include <gatery/scl/sim/PcieHostModel.h>
 #include <gatery/scl/io/pci/pciDispatcher.h>
+#include <gatery/scl/io/pci/PciInterfaceSplitter.h>
 
 using namespace boost::unit_test;
 using namespace gtry;
@@ -771,4 +772,272 @@ BOOST_FIXTURE_TEST_CASE(dispatcher_test, BoostUnitTestSimulationFixture) {
 
 	BOOST_TEST(!runHitsTimeout({ 100, 1'000'000 }));
 }
+
+struct pciInterfaceSplitterFixture : BoostUnitTestSimulationFixture {
+	bool sendRequesterRequests = false;
+	bool sendCompleterRequests = false;
+	bool sendCompleterCompletions = false;
+	bool sendRequesterCompletions = false;
+	size_t numPackets = 10;
+	std::mt19937 rng;
+
+	void runTest() {
+		rng.seed(1140);
+		Clock clk({ .absoluteFrequency = 100'000'000 });
+		ClockScope clkScp(clk);
+
+		BitWidth tlpW = 128_b;
+
+		scl::pci::TlpPacketStream<scl::EmptyBits, scl::pci::BarInfo> rx(tlpW);
+		emptyBits(rx) = BitWidth::count(tlpW.bits());
+		pinIn(rx, "rx");
+
+		scl::pci::CompleterInterface compInt;
+		*compInt.completion = tlpW;
+		emptyBits(compInt.completion) = BitWidth::count(tlpW.bits());
+		pinIn(compInt.completion, "compComp");
+
+		scl::pci::RequesterInterface reqInt;
+		**reqInt.request = tlpW;
+		emptyBits(*reqInt.request) = BitWidth::count(tlpW.bits());
+		pinIn(*reqInt.request, "reqReq");
+
+		scl::pci::PciInterfaceSplitter splitter(compInt, reqInt, move(rx));
+		auto& tx = splitter.tx();
+
+		pinOut(reqInt.completion, "reqComp");
+		pinOut(compInt.request, "compReq");
+		pinOut(tx, "tx");
+			
+		addSimulationProcess([&, this]()->SimProcess {
+			fork(scl::strm::readyDriverRNG(tx, clk, 50));
+			fork(scl::strm::readyDriverRNG(compInt.request, clk, 50));
+			fork(scl::strm::readyDriverRNG(reqInt.completion, clk, 50));
+			co_await OnClk(clk);
+		});
+
+		std::vector<sim::DefaultBitVectorState> compReq;
+		if (sendCompleterRequests) {
+			compReq.resize(numPackets);
+			for (auto& dbv : compReq) {
+				scl::sim::TlpInstruction inst = scl::sim::TlpInstruction::randomizeNaive(rng() & 1 ?
+					scl::pci::TlpOpcode::memoryReadRequest64bit :
+					scl::pci::TlpOpcode::memoryWriteRequest64bit,
+					rng()
+				);
+				dbv = inst;
+			}
+		}
+		
+		scl::SimulationSequencer rxSeq;
+		//sending completion requests
+		addSimulationProcess([&, this]()->SimProcess {
+			if(!sendRequesterCompletions && !sendCompleterRequests)
+				scl::strm::simuStreamInvalidate(rx);
+			for (const auto& dbv : compReq) {
+				fork(scl::strm::sendPacket(rx, scl::strm::SimPacket(dbv), clk, rxSeq));
+				co_await OnClk(clk);
+			}
+		});
+
+		std::vector<sim::DefaultBitVectorState> reqComp;
+		if (sendRequesterCompletions) {
+			reqComp.resize(numPackets);
+			for (auto& dbv : reqComp) {
+				scl::sim::TlpInstruction inst = scl::sim::TlpInstruction::randomizeNaive(scl::pci::TlpOpcode::completionWithData, rng());
+				dbv = inst;
+			}
+		}
+		//sending requester completion
+		addSimulationProcess([&, this]()->SimProcess {
+			if(!sendRequesterCompletions && !sendCompleterRequests)
+				scl::strm::simuStreamInvalidate(rx);
+			for (const auto& dbv : reqComp) {
+				fork(scl::strm::sendPacket(rx, scl::strm::SimPacket(dbv), clk, rxSeq));
+				co_await OnClk(clk);
+			}
+		});
+
+		std::vector<sim::DefaultBitVectorState> compComp;
+		if (sendCompleterCompletions) {
+			compComp.resize(numPackets);
+			for (auto& dbv : compComp) {
+				scl::sim::TlpInstruction inst = scl::sim::TlpInstruction::randomizeNaive(scl::pci::TlpOpcode::completionWithData, rng());
+				dbv = inst;
+			}
+		}
+		//sending completer completion
+		addSimulationProcess([&, this]()->SimProcess {
+			if(!sendCompleterCompletions)
+				scl::strm::simuStreamInvalidate(compInt.completion);
+			for (const auto& dbv : compComp)
+				co_await scl::strm::sendPacket(compInt.completion, scl::strm::SimPacket(dbv), clk);
+			co_await OnClk(clk);
+		});
+
+		std::vector<sim::DefaultBitVectorState> reqReq;
+		if (sendRequesterRequests) {
+			reqReq.resize(numPackets);
+			for (auto& dbv : reqReq) {
+				scl::sim::TlpInstruction inst = scl::sim::TlpInstruction::randomizeNaive(rng() & 1 ?
+					scl::pci::TlpOpcode::memoryReadRequest64bit :
+					scl::pci::TlpOpcode::memoryWriteRequest64bit,
+					rng()
+				);
+				dbv = inst;
+			}
+		}
+		//sending requester request
+		addSimulationProcess([&, this]()->SimProcess {
+			if(!sendRequesterRequests)
+				scl::strm::simuStreamInvalidate(*reqInt.request);
+			for (const auto& dbv : reqReq)
+				co_await scl::strm::sendPacket(*reqInt.request, scl::strm::SimPacket(dbv), clk);
+			co_await OnClk(clk);
+		});
+
+		size_t done = 0;
+
+		if (sendCompleterRequests) {
+			addSimulationProcess([&, this]()->SimProcess {
+				for (const auto& dbv : compReq) {
+					auto receivedPacket = co_await scl::strm::receivePacket(compInt.request, clk);
+					BOOST_TEST(dbv == receivedPacket.payload);
+				}
+				done++;
+				});
+		}
+
+		if (sendRequesterCompletions) {
+			addSimulationProcess([&, this]()->SimProcess {
+				for (const auto& dbv : reqComp) {
+					auto receivedPacket = co_await scl::strm::receivePacket(reqInt.completion, clk);
+					BOOST_TEST(dbv == receivedPacket.payload);
+				}
+				done++;
+				});
+		}
+
+		
+		if (sendCompleterCompletions) {
+			addSimulationProcess([&, this]()->SimProcess {
+				for (const auto& dbv : compComp) {
+					bool packetIsCompleterCompletion = false;
+					scl::strm::SimPacket receivedPacket;
+					while (!packetIsCompleterCompletion) {
+						receivedPacket = co_await scl::strm::receivePacket(tx, clk);
+						if (scl::sim::TlpInstruction::createFrom(receivedPacket.payload).opcode == scl::pci::TlpOpcode::completionWithData)
+							packetIsCompleterCompletion = true;
+					}
+					BOOST_TEST(dbv == receivedPacket.payload);
+				}
+				done++;
+			});
+		}
+
+		if (sendRequesterRequests) {
+			addSimulationProcess([&, this]()->SimProcess {
+				for (const auto& dbv : reqReq) {
+					bool packetIsRequesterRequest = false;
+					scl::strm::SimPacket receivedPacket;
+					while (!packetIsRequesterRequest) {
+						receivedPacket = co_await scl::strm::receivePacket(tx, clk);
+						if (scl::sim::TlpInstruction::createFrom(receivedPacket.payload).opcode != scl::pci::TlpOpcode::completionWithData)
+							packetIsRequesterRequest = true;
+					}
+					BOOST_TEST(dbv == receivedPacket.payload);
+				}
+				done++;
+			});
+		}
+
+		size_t total = 0;
+		if (sendCompleterRequests) total++;
+		if (sendCompleterCompletions) total++;
+		if (sendRequesterRequests) total++;
+		if (sendRequesterCompletions) total++;
+
+		addSimulationProcess([&, this]()->SimProcess {
+			while (done < total)
+				co_await OnClk(clk);
+			stopTest();
+		});
+
+		design.postprocess();
+		BOOST_TEST(!runHitsTimeout({ 100, 1'000'000 }));
+	}
+};
+
+BOOST_FIXTURE_TEST_CASE(pci_splitter_req_req, pciInterfaceSplitterFixture)
+{
+	sendRequesterRequests = true;
+	//sendCompleterRequests = false;
+	//sendCompleterCompletions = false;
+	//sendRequesterCompletions = false;
+	//numPackets = 10;
+	runTest();
+}
+
+BOOST_FIXTURE_TEST_CASE(pci_splitter_comp_comp, pciInterfaceSplitterFixture)
+{
+	//sendRequesterRequests = false;
+	//sendCompleterRequests = false;
+	sendCompleterCompletions = true;
+	//sendRequesterCompletions = false;
+	//numPackets = 10;
+	runTest();
+}
+
+BOOST_FIXTURE_TEST_CASE(pci_splitter_full_tx, pciInterfaceSplitterFixture)
+{
+	sendRequesterRequests = true;
+	//sendCompleterRequests = false;
+	sendCompleterCompletions = true;
+	//sendRequesterCompletions = false;
+	//numPackets = 10;
+	runTest();
+}
+
+BOOST_FIXTURE_TEST_CASE(pci_splitter_comp_req, pciInterfaceSplitterFixture)
+{
+	//sendRequesterRequests = false;
+	sendCompleterRequests = true;
+	//sendCompleterCompletions = false;
+	//sendRequesterCompletions = false;
+	//numPackets = 10;
+	runTest();
+}
+
+BOOST_FIXTURE_TEST_CASE(pci_splitter_req_comp, pciInterfaceSplitterFixture)
+{
+	//sendRequesterRequests = false;
+	//sendCompleterRequests = false;
+	//sendCompleterCompletions = false;
+	sendRequesterCompletions = true;
+	//numPackets = 10;
+	runTest();
+}
+
+BOOST_FIXTURE_TEST_CASE(pci_splitter_full_rx, pciInterfaceSplitterFixture)
+{
+	//sendRequesterRequests = false;
+	sendCompleterRequests = true;
+	//sendCompleterCompletions = false;
+	sendRequesterCompletions = true;
+	//numPackets = 10;
+	runTest();
+}
+
+BOOST_FIXTURE_TEST_CASE(pci_splitter_full_rx_tx, pciInterfaceSplitterFixture)
+{
+	sendRequesterRequests = true;
+	sendCompleterRequests = true;
+	sendCompleterCompletions = true;
+	sendRequesterCompletions = true;
+	//numPackets = 10;
+	runTest();
+}
+
+
+
 
