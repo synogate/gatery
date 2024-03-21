@@ -1482,9 +1482,9 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeline_negativeRegister, BoostUnitTestSimulat
 		stopTest();
 	});
 
-	design.visualize("before");
+	// design.visualize("before");
 	design.postprocess();
-	design.visualize("after");
+	// design.visualize("after");
 
 
 	auto *fluxCapacitor = design.getCircuit().findFirstNodeByName("FLUX_CAPACITOR");
@@ -1573,9 +1573,9 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeline_negativeRegister_compound, BoostUnitTe
 		stopTest();
 	});
 
-	design.visualize("before");
+	// design.visualize("before");
 	design.postprocess();
-	design.visualize("after");
+	// design.visualize("after");
 
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
 }
@@ -1652,9 +1652,9 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeline_multipleNegativeRegister, BoostUnitTes
 		stopTest();
 	});
 
-	design.visualize("before");
+	// design.visualize("before");
 	design.postprocess();
-	design.visualize("after");
+	// design.visualize("after");
 
 	auto *fluxCapacitor = design.getCircuit().findFirstNodeByName("FLUX_CAPACITOR");
 	BOOST_REQUIRE(fluxCapacitor);
@@ -1855,9 +1855,9 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeline_multipleNegativeRegister_multipleExter
 		stopTest();
 	});
 
-	design.visualize("before");
+	// design.visualize("before");
 	design.postprocess();
-	design.visualize("after");
+	// design.visualize("after");
 
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
 }
@@ -1981,9 +1981,9 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeline_negativeRegister_ready_valid_state, Bo
 		stopTest();
 	});
 
-	design.visualize("before");
+	// design.visualize("before");
 	design.postprocess();
-	design.visualize("after");
+	// design.visualize("after");
 
 	auto *fluxAccumulator = design.getCircuit().findFirstNodeByName("FLUX_ACCUMULATOR");
 	BOOST_REQUIRE(fluxAccumulator);
