@@ -497,4 +497,15 @@ void Node_Rewire::optimize()
 		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "In rewire node " << this << " removed unused or redundant inputs." );
 }
 
+bool Node_Rewire::outputIsConstant(size_t port) const
+{
+	for (const auto &range : m_rewireOperation.ranges) {
+		if (range.subwidth == 0) continue;
+
+		if (range.source == OutputRange::Source::INPUT)
+			return false;
+	}
+	return true;
+}
+
 }

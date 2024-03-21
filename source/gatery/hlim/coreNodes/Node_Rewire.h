@@ -87,6 +87,8 @@ class Node_Rewire : public Node<Node_Rewire>
 		virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit) override;
 
 		void optimize();
+
+		virtual bool outputIsConstant(size_t port) const override;
 	protected:
 		ConnectionType m_desiredConnectionType;
 

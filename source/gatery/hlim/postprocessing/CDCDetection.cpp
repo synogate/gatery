@@ -39,63 +39,81 @@ void inferClockDomains(Circuit &circuit, utils::UnstableMap<hlim::NodePort, Sign
 	 
 	utils::UnstableMap<NodePort, std::vector<NodePort>> undetermined;
 
-	std::function<void(const NodePort&, bool)> attemptResolve;
-	std::function<void(const NodePort&, SignalClockDomain)> assignToCD;
 
-	assignToCD = [&](const NodePort &np, SignalClockDomain cd){
+	auto assignToCD = [&](const NodePort &np, SignalClockDomain cd, utils::StableSet<NodePort> &nodePortsToRetry){
 		if (domains.contains(np)) return;
 		domains[np] = cd;
 
 		auto it = undetermined.find(np);
 		if (it != undetermined.end())
 			for (auto n : it->second)
-				attemptResolve(n, false);
+				nodePortsToRetry.insert(n);
+				//nodePortsToRetry.push_back(n);
 	};
 
-	attemptResolve = [&](const NodePort &np, bool insertIntoUndetermined){
-		auto ocr = np.node->getOutputClockRelation(np.port);
-		if (ocr.isConst()) 
-			assignToCD(np, {.type = SignalClockDomain::CONSTANT });
-		else {
-			if (!ocr.dependentClocks.empty()) {
-				if (ocr.dependentClocks[0] == nullptr)
-					assignToCD(np, {.type = SignalClockDomain::UNKNOWN });
-				else
-					assignToCD(np, {.type = SignalClockDomain::CLOCK, .clk=ocr.dependentClocks[0] });
-			} else {
-				bool allConst = true;
-				for (auto i : ocr.dependentInputs) {
-					auto driver = np.node->getDriver(i);
-					if (driver.node == nullptr) continue;
+	auto attemptResolve = [&](const NodePort &nodePort) {
 
-					auto it = domains.find(driver);
-					if (it != domains.end()) {
-						switch (it->second.type) {
+		// Only do this the first time
+		bool insertIntoUndetermined = true;
+
+		//std::vector<NodePort> nodePortsToRetry;
+		//nodePortsToRetry.push_back(nodePort);
+		utils::StableSet<NodePort> nodePortsToRetry;
+		nodePortsToRetry.insert(nodePort);
+
+		while (!nodePortsToRetry.empty()) {
+			// auto np = nodePortsToRetry.back();
+			// nodePortsToRetry.pop_back();
+
+			auto np = *nodePortsToRetry.begin();
+			nodePortsToRetry.erase(nodePortsToRetry.begin());
+
+			auto ocr = np.node->getOutputClockRelation(np.port);
+			if (ocr.isConst())
+				assignToCD(np, { .type = SignalClockDomain::CONSTANT }, nodePortsToRetry);
+			else {
+				if (!ocr.dependentClocks.empty()) {
+					if (ocr.dependentClocks[0] == nullptr)
+						assignToCD(np, { .type = SignalClockDomain::UNKNOWN }, nodePortsToRetry);
+					else
+						assignToCD(np, { .type = SignalClockDomain::CLOCK, .clk = ocr.dependentClocks[0] }, nodePortsToRetry);
+				}
+				else {
+					bool allConst = true;
+					for (auto i : ocr.dependentInputs) {
+						auto driver = np.node->getDriver(i);
+						if (driver.node == nullptr) continue;
+
+						auto it = domains.find(driver);
+						if (it != domains.end()) {
+							switch (it->second.type) {
 							case SignalClockDomain::CONSTANT:
-							break;
+								break;
 							case SignalClockDomain::UNKNOWN:
 							case SignalClockDomain::CLOCK:
-								assignToCD(np, it->second);
+								assignToCD(np, it->second, nodePortsToRetry);
 								allConst = false;
-							break;
+								break;
+							}
 						}
-					} else {
-						allConst = false;
-						if (insertIntoUndetermined)
-							undetermined[driver].push_back(np);
+						else {
+							allConst = false;
+							if (insertIntoUndetermined)
+								undetermined[driver].push_back(np);
+						}
 					}
-				}
 
-				if (allConst)
-					assignToCD(np, {.type = SignalClockDomain::CONSTANT });
+					if (allConst)
+						assignToCD(np, { .type = SignalClockDomain::CONSTANT }, nodePortsToRetry);
+				}
 			}
-		}	
+		}
 	};
 
 	for (auto &n : circuit.getNodes()) {
 		for (auto i : utils::Range(n->getNumOutputPorts())) {
 			NodePort np = {.node = n.get(), .port = i};
-			attemptResolve(np, true);
+			attemptResolve(np);
 		}
 	}
 }

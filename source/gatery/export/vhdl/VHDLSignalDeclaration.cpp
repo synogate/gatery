@@ -27,6 +27,27 @@
 
 namespace gtry::vhdl {
 
+bool isSingleBit(VHDLDataType dataType)
+{
+	switch (dataType) {
+		case VHDLDataType::BOOL:
+		case VHDLDataType::BIT:
+		case VHDLDataType::STD_LOGIC:
+		case VHDLDataType::STD_ULOGIC:
+		case VHDLDataType::VL_LOGIC:
+			return true;
+
+		case VHDLDataType::BIT_VECTOR:
+		case VHDLDataType::STD_LOGIC_VECTOR:
+		case VHDLDataType::STD_ULOGIC_VECTOR:
+		case VHDLDataType::UNSIGNED:
+		case VHDLDataType::VL_LOGIC_VECTOR:
+			return false;
+		default:
+			HCL_ASSERT_HINT(false, "Unhandled case");
+	}
+}
+
 VHDLDataType chooseDataTypeFromOutput(const hlim::NodePort &np)
 {
 	VHDLDataType dataType;

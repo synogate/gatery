@@ -157,7 +157,7 @@ void BaseGrouping::verifySignalsDisjoint()
 	} 
 }
 
-/// @todo: Better move to code formatting
+
 void BaseGrouping::formatConstant(std::ostream &stream, const hlim::Node_Constant *constant, VHDLDataType targetType)
 {
 	const auto& conType = constant->getOutputConnectionType(0);
@@ -171,13 +171,12 @@ void BaseGrouping::formatConstant(std::ostream &stream, const hlim::Node_Constan
 		else
 			stream << "false";
 	} else {
-		char sep = '"';
-		if (conType.isBool())
-			sep = '\'';
+		if (isSingleBit(targetType)) {
+			HCL_ASSERT(conType.isBool());
 
-		stream << sep;
-		stream << constant->getValue();
-		stream << sep;
+			stream << '\'' << constant->getValue() << '\'';
+		} else
+			stream << '"' << constant->getValue() << '"';
 	}
 }
 

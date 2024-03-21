@@ -476,9 +476,11 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentati
 		// one has to convert the result of it (i.e. UNSIGNED(a(7 downto 0)) )
 
 		// Also note that the result of a concatenation must not be explicitly cast but can implicitely be cast to STD_LOGIC_VECTOR or UNSIGNED
-
 		size_t bitExtractIdx;
-		if (rewireNode->getOp().isBitExtract(bitExtractIdx)) {
+
+		if (rewireNode->isNoOp()) {
+			formatExpression(stream, indentation, comments, rewireNode->getDriver(0), dependentInputs, context);
+		} else if (rewireNode->getOp().isBitExtract(bitExtractIdx)) {
 			if (hlim::outputIsBVec(rewireNode->getDriver(0))) {
 
 				switch (context) {
@@ -549,7 +551,12 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentati
 				else if (op.size() > 1 )
 					stream << "("; // Must not cast since concatenation
 
-				char separator = '"';
+				char separator;
+				if (isSingleBit(context)) {
+					HCL_ASSERT(rewireNode->getOutputConnectionType(0).width == 1);
+					separator = '\'';
+				} else 
+					separator = '"';
 
 				for (auto i : utils::Range(op.size())) {
 					if (i > 0) {
