@@ -112,6 +112,11 @@ namespace gtry::scl::strm
 	requires (T::template has<Ready>() and T::template has<Valid>())
 	T eraseBeat(T&& source, UInt beatOffset, UInt beatCount);
 
+	inline auto eraseBeat(UInt beatOffset, UInt beatCount)
+	{
+		return [=](auto&& source) { return eraseBeat(std::forward<decltype(source)>(source), beatOffset, beatCount); };
+	}
+
 	/**
 	 * @brief inserts data into a multi-beat packet stream
 	 * @param source source stream

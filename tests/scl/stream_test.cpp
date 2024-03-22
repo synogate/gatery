@@ -1536,6 +1536,300 @@ BOOST_FIXTURE_TEST_CASE(stream_shiftRight_test_anticipated_end_chaos_light, stre
 	BOOST_TEST(hasAnticipatedEnd());
 	execute();
 }
+
+BOOST_FIXTURE_TEST_CASE(stream_shiftRight_test_one_beat_packet, stream_shiftRight_test)
+{
+	streamShift = 4;
+	packetSize = 12_b;
+	streamW = 16_b;
+	backpressureReadyPercentage = 50;
+	execute();
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_shiftRight_dynamic, BoostUnitTestSimulationFixture)
+{
+	std::mt19937_64 mt(std::random_device{}());
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	BitWidth packetSize = 60_b;
+	BitWidth streamW = 16_b;
+	size_t backpressureReadyPercentage = 100;
+
+	UInt shift = 3_b;
+	pinIn(shift, "shift");
+
+	scl::RvPacketStream<BVec, scl::EmptyBits> in{ streamW };
+	emptyBits(in) = 4_b;
+	pinIn(in, "in");
+
+	UInt shiftStable = scl::capture(shift, valid(in) & sop(in));
+
+	auto out = streamShiftRight(move(in), shiftStable);
+	pinOut(out, "out");
+
+	uint64_t payload = mt() & packetSize.mask();
+	scl::strm::SimPacket inputPacket(payload, packetSize);
+
+	size_t iterations = 4;
+
+	addSimulationProcess(
+		[&, this]()->SimProcess {
+				return scl::strm::readyDriverRNG(out, clk, backpressureReadyPercentage);
+		}
+	);
+
+	
+	addSimulationProcess([&, this]()->SimProcess {
+		size_t shiftAmt = 1;
+		for (size_t i = 0; i < iterations; i++)
+		{
+			simu(shift) = shiftAmt++;
+			co_await scl::strm::sendPacket(in, inputPacket, clk);
+		}
+		
+		simu(shift) = shiftAmt--;
+		for (size_t i = 0; i < iterations; i++)
+		{
+			simu(shift) = shiftAmt--;
+			co_await scl::strm::sendPacket(in, inputPacket, clk);
+		}
+	});	
+
+	addSimulationProcess(
+		[&, this]()->SimProcess {
+			size_t shiftAmt = 1;
+			for (size_t i = 0; i < iterations; i++)
+			{
+				scl::strm::SimPacket outputPacket = co_await scl::strm::receivePacket(out, clk);
+				BOOST_TEST(outputPacket.payload == scl::strm::SimPacket(payload >> shiftAmt, packetSize - shiftAmt).payload /*, "going up shift by " + std::to_string(shiftAmt) + " broken"*/);
+				shiftAmt++;
+			}
+			shiftAmt--;
+			for (size_t i = 0; i < iterations; i++)
+			{
+				scl::strm::SimPacket outputPacket = co_await scl::strm::receivePacket(out, clk);
+				BOOST_TEST(outputPacket.payload == scl::strm::SimPacket(payload >> shiftAmt, packetSize - shiftAmt).payload, "going down shift by " + std::to_string(shiftAmt) + " broken");
+				shiftAmt--;
+			}
+			co_await OnClk(clk);
+			co_await OnClk(clk);
+			co_await OnClk(clk);
+			stopTest();
+		}
+	);
+
+	if(false) recordVCD("stream_shiftRight.vcd");
+	design.postprocess();
+	//design.visualize("stream_shiftRight");
+	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
+}
+
+struct stream_shiftRight_better_fixture : BoostUnitTestSimulationFixture
+{
+	std::mt19937 rng;
+	BitWidth streamW = 16_b;
+	size_t numPackets = 10;
+	size_t waitBetweenPackets = 5;
+	std::function<size_t()> getPacketSize = [](){ return 64; };
+	std::function<size_t()> getShiftAmt = [](){ return 4; };
+	std::function<uint64_t()> getInvalidMask = [](){ return 0; };
+
+	std::optional<uint8_t> backpressureReadyPercentage;
+	Seconds simuTime = { 50, 1'000'000 };
+
+	void execute() {
+		rng.seed(3080);
+		Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+		ClockScope clkScope(clk);
+
+		UInt shiftAmt = BitWidth::count(streamW.bits());
+		pinIn(shiftAmt, "shiftAmt");
+
+		scl::RvPacketStream<BVec, scl::EmptyBits> in{ streamW };
+		emptyBits(in) = BitWidth::count(streamW.bits());
+		pinIn(in, "in");
+
+		auto out = streamShiftRight(move(in), shiftAmt);
+		pinOut(out, "out");
+
+		std::vector<std::tuple<sim::DefaultBitVectorState, size_t>> testCases(numPackets);
+		for (auto& testCase : testCases) {
+			std::get<size_t>(testCase) = getShiftAmt();
+			auto& dbv = std::get<sim::DefaultBitVectorState>(testCase);
+			auto size = getPacketSize();
+			while(size <= std::get<size_t>(testCase))
+				size = getPacketSize(); // very inefficient
+			dbv = sim::createRandomDefaultBitVectorState(size, rng);
+			dbv.setRange(sim::DefaultConfig::DEFINED, 0, dbv.size()); //not necessary but nice for visual debugging
+		}
+
+		addSimulationProcess(
+			[&, this]()->SimProcess {
+				if(backpressureReadyPercentage)
+					return scl::strm::readyDriverRNG(out, clk, *backpressureReadyPercentage);
+				else
+					return scl::strm::readyDriver(out, clk);
+			}
+		);
+
+		//send data
+		addSimulationProcess(
+			[&, this]()->SimProcess {
+				for(const auto& testCase : testCases){
+					const auto& dbv = std::get<sim::DefaultBitVectorState>(testCase);
+					size_t packetSize = dbv.size();
+					size_t shiftAmt = std::get<size_t>(testCase);
+					sim::SimulationContext::current()->onDebugMessage(nullptr, 
+						std::to_string(dbv.size()) + 
+						" >> " + 
+						std::to_string(std::get<size_t>(testCase)) + 
+						": " + 
+						std::to_string((streamW.bits() - (packetSize - shiftAmt) % streamW.bits())%streamW.bits()) +
+						" emptyBits"
+					);
+					co_await scl::strm::sendPacket(in, scl::strm::SimPacket(dbv).invalidBeats(getInvalidMask()), clk);
+					for (size_t i = 0; i < waitBetweenPackets; i++)
+						co_await OnClk(clk);
+				}
+			}
+		);
+
+		//send shift on sop of data, then invalidate
+		addSimulationProcess(
+			[&, this]()->SimProcess {
+				for (const auto& testCase: testCases){
+					simu(shiftAmt) = std::get<size_t>(testCase);
+					do{
+						co_await performTransferWait(in, clk);
+						simu(shiftAmt).invalidate();
+					} while (!(simuValid(in) == '1' && simuReady(in) == '1' && simuEop(in) == '1'));
+				}
+			}
+		);
+
+		//receive packets and check
+		addSimulationProcess(
+			[&, this]()->SimProcess {
+				for (const auto& testCase: testCases)
+				{
+					scl::strm::SimPacket outputPacket = co_await scl::strm::receivePacket(out, clk);
+					auto receivedDbv = outputPacket.payload;
+					const auto& sentDbv = std::get<sim::DefaultBitVectorState>(testCase);
+					const auto& shift = std::get<size_t>(testCase);
+					auto expectedDbv = sentDbv.extract(shift, sentDbv.size() - shift);
+					BOOST_TEST(receivedDbv == expectedDbv);
+					if (receivedDbv != expectedDbv) {
+						sim::SimulationContext::current()->onAssert(nullptr, "The packet finishing at this beat is wrong");
+					}
+				}
+				co_await OnClk(clk);
+				co_await OnClk(clk);
+				co_await OnClk(clk);
+				stopTest();
+			}
+		);
+
+		design.postprocess();
+		BOOST_TEST(!runHitsTimeout(simuTime));
+	}
+};
+
+BOOST_FIXTURE_TEST_CASE(stream_shift_right_better_noargs, stream_shiftRight_better_fixture) {
+	//streamW = 16_b;
+	//numPackets = 10;
+	//waitBetweenPackets = 5;
+	//getPacketSize = [](){ return 64; };
+	//getShiftAmt = [](){ return 4; };
+	//backpressureReadyPercentage;
+	execute();
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_shift_right_better_increasing, stream_shiftRight_better_fixture) {
+	//streamW = 16_b;
+	//numPackets = 10;
+	waitBetweenPackets = 0;
+	//getPacketSize = [](){ return 64; };
+	size_t currentShift = 0;
+	getShiftAmt = [&](){ return currentShift++; };
+	backpressureReadyPercentage = 50;
+	getInvalidMask = [&]() { return rng(); }; //0 to 15
+	execute();
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_shift_right_better_decreasing, stream_shiftRight_better_fixture) {
+	//streamW = 16_b;
+	//numPackets = 10;
+	waitBetweenPackets = 0;
+	//getPacketSize = [](){ return 64; };
+	size_t currentShift = 10;
+	getShiftAmt = [&](){ return currentShift--; };
+	backpressureReadyPercentage = 50;
+	getInvalidMask = [&]() { return rng(); }; //0 to 15
+	execute();
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_shift_right_better_random, stream_shiftRight_better_fixture) {
+	//streamW = 16_b;
+	numPackets = 1000;
+	waitBetweenPackets = 0;
+	getPacketSize = [&](){ return (rng() & 0x1F) + 1; };//1 to 64
+	getShiftAmt = [&]() { return rng() & 0xF; }; //0 to 15
+	getInvalidMask = [&]() { return rng(); };
+	backpressureReadyPercentage = 50;
+	simuTime = { 1000, 1'000'000 };
+	execute();
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_shift_right_better_rework_playground, stream_shiftRight_better_fixture) {
+	//streamW = 16_b;
+	numPackets = 10;
+	waitBetweenPackets = 0;
+	size_t offset = 0;
+	size_t packetSize = 12;
+	getPacketSize = [&]() { return 20; };//return (rng() & 0x3F) + 1; };//1 to 64
+	getShiftAmt = [&]() { return offset++; };// rng() & 0xF;}; //0 to 15
+
+	backpressureReadyPercentage = 50;
+	simuTime = { 1, 1'000'000 };
+	execute();
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_shift_right_better_one_beat, stream_shiftRight_better_fixture) {
+	//streamW = 16_b;
+	//numPackets = 10;
+	waitBetweenPackets = 0;
+	getPacketSize = [](){ return 12; };
+	getShiftAmt = [](){ return 4; };
+	backpressureReadyPercentage = 50;
+	getInvalidMask = [&]() { return rng(); }; //0 to 15
+	execute();
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_shift_right_better_shift_0, stream_shiftRight_better_fixture) {
+	//streamW = 16_b;
+	numPackets = 10;
+	waitBetweenPackets = 0;
+	size_t packetSize = 20;
+	getPacketSize = [&](){ return packetSize++; };
+	getShiftAmt = [](){ return 0; };
+	backpressureReadyPercentage = 50;
+	getInvalidMask = [&]() { return rng(); }; //0 to 15
+	execute();
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_shift_right_better_shift_0_and_one_beat, stream_shiftRight_better_fixture) {
+	//streamW = 16_b;
+	numPackets = 20;
+	waitBetweenPackets = 0;
+	size_t packetSize = 0;
+	getPacketSize = [&](){ return (packetSize++ % streamW.bits()) + 1; };
+	getShiftAmt = [](){ return 0; };
+	backpressureReadyPercentage = 50;
+	getInvalidMask = [&]() { return rng(); }; //0 to 15
+	execute();
+}
+
 BOOST_FIXTURE_TEST_CASE(streamInsert_test, BoostUnitTestSimulationFixture)
 {
 	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
