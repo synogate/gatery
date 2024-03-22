@@ -308,7 +308,7 @@ namespace gtry {
 
 	template<typename T>
 	concept Signal =
-		BaseSignal<T> or
+		BaseSignal<T> or BitVectorSignal<T> or // Signal needs to include BitVectorSignal for overload resolution
 		CompoundSignal<T> or
 		ContainerSignal<T> or
 		TupleSignal<T> or
