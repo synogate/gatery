@@ -1,4 +1,4 @@
-# Memory Maps {#gtry_scl_memorymaps_page}
+@page gtry_scl_memorymaps_page Memory Maps
 
 Gatery supports the automatic creation of memory mapped registers.
 Gatery will handle the actual register creation, address space allocation, and address decoding.
