@@ -1,4 +1,4 @@
-# User Space Driver Framework {#gtry_scl_driver_page}
+@page gtry_scl_driver_page User Space Driver Framework
 
 Gatery provides a framework with utilities for user space driver implementations.
 

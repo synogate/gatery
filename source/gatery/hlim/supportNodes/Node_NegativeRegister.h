@@ -22,36 +22,40 @@
 
 namespace gtry::hlim {
 
-class Node_Register;
-
 /**
- * @brief Spawns registers for retiming
- * @details Defines a source of infinite registers that the forward retiming can pull from.
- * Registers always spawn for all signals going through to spawner, effectively keeping the signals in sync.
+ * @brief Defines a location to which a register should be retimed later on (like a reg hint) but also be consumed.
+ * @details Usefull for external nodes that have internal registers for which balance registers have to be spawned.
  */
-class Node_RegSpawner : public Node<Node_RegSpawner>
+class Node_NegativeRegister : public Node<Node_NegativeRegister>
 {
 	public:
-		enum {
-			INPUT_ENABLE = 0,
-			INPUT_SIGNAL_OFFSET
+		enum class Inputs {
+			data,
+			expectedEnable,
+			count
+		};
+		
+		enum class Outputs {
+			data,
+			enable,
+			count
 		};
 
-		Node_RegSpawner();
+		Node_NegativeRegister();
 
 		virtual void simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;
 
-		void setEnableCondition(const NodePort &value);
-		NodePort getEnableCondition();
-		size_t addInput(const NodePort &value, const NodePort &reset = {});
-		void setClock(Clock* clk);
+		void setConnectionType(const ConnectionType &connectionType);
 
-		bool wasResolved() const { return m_wasResolved; }
-		void markResolved();
-		std::vector<Node_Register*> spawnForward();
+		void input(const NodePort &nodePort);
+		void expectedEnable(const NodePort &nodePort);
+		NodePort expectedEnable() const { return getDriver((size_t) Inputs::expectedEnable); }
+		void disconnectInput();
+
+		NodePort dataOutput() { return {.node = this, .port = (size_t) Outputs::data }; }
+		NodePort enableOutput() { return {.node = this, .port = (size_t) Outputs::enable }; }
 
 		virtual bool hasSideEffects() const override { return false; }
-		virtual bool isCombinatorial(size_t port) const override { return true; }
 
 		virtual std::string getTypeName() const override;
 		virtual void assertValidity() const override;
@@ -65,13 +69,7 @@ class Node_RegSpawner : public Node<Node_RegSpawner>
 		virtual void estimateSignalDelay(SignalDelay &sigDelay) override;
 
 		virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit) override;
-
-		inline size_t getNumStagesSpawned() const { return m_numStagesSpawned; }
-
-		virtual bool inputIsEnable(size_t inputPort) const override;
 	protected:
-		size_t m_numStagesSpawned = 0ull;
-		bool m_wasResolved = false;
 };
 
 }

@@ -25,6 +25,7 @@
 
 #include <gatery/hlim/supportNodes/Node_RegSpawner.h>
 #include <gatery/hlim/supportNodes/Node_RegHint.h>
+#include <gatery/hlim/supportNodes/Node_NegativeRegister.h>
 #include <gatery/hlim/NodePtr.h>
 
 namespace gtry {
@@ -148,4 +149,57 @@ namespace gtry {
 			return pipestage(sig); // forward so it can have overloads
 		});
 	}
+
+	template<BaseSignal T>
+	std::tuple<T, Bit> negativeReg(const T& signal)
+	{
+		SignalReadPort data = signal.readPort();
+
+		auto* pipeStage = DesignScope::createNode<hlim::Node_RegHint>();
+		pipeStage->connectInput(data);
+
+		auto* negReg = DesignScope::createNode<hlim::Node_NegativeRegister>();
+		negReg->input({.node = pipeStage, .port = 0});
+
+		return { T{ SignalReadPort(negReg->dataOutput(), data.expansionPolicy) }, Bit{ SignalReadPort(negReg->enableOutput()) } };
+	}	
+
+	namespace internal {
+		template<BaseSignal T>
+		T negativeReg(const T& signal, std::optional<Bit> &firstEnable)
+		{
+			auto [prev, enable] = negativeReg(signal);
+			if (!firstEnable) 
+				firstEnable = enable;
+			else
+				sim_assert(*firstEnable == enable) << "All enables arising from negative registers of a compound must be equal.";
+
+			return prev;
+		}
+
+		template<Signal T>
+		T negativeReg(const T& val, std::optional<Bit> &firstEnable)
+		{
+			return internal::transformSignal(val, [&](const auto& sig) {
+				if constexpr (!Signal<decltype(sig)>)
+					return sig;
+				else
+					return internal::negativeReg(sig, firstEnable);
+			});
+		}
+
+	}
+
+	template<Signal T>
+	std::tuple<T, Bit> negativeReg(const T& val)
+	{
+		std::optional<Bit> firstEnable;
+
+		return std::make_tuple<T, Bit>(
+			internal::negativeReg(val, firstEnable),
+			firstEnable ? *firstEnable : Bit('1')
+		);
+	}
+
+
 }

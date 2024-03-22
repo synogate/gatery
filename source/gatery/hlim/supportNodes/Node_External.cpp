@@ -34,6 +34,8 @@ void Node_External::copyBaseToClone(BaseNode *copy) const
 
 	other->m_inputPorts = m_inputPorts;
 	other->m_outputPorts = m_outputPorts;
+
+	other->m_inputIsEnable = m_inputIsEnable;
 }
 
 void Node_External::resizeIOPorts(size_t numInputs, size_t numOutputs)
@@ -147,6 +149,16 @@ std::string Node_External::getOutputName(size_t idx) const
 std::string Node_External::attemptInferOutputName(size_t outputPort) const
 {
 	return m_name + '_' + getOutputName(outputPort);
+}
+
+bool Node_External::inputIsEnable(size_t inputPort) const
+{
+	return m_inputIsEnable.contains(inputPort);
+}
+
+void Node_External::declareInputIsEnable(size_t inputPort)
+{
+	m_inputIsEnable.insert(inputPort);
 }
 
 

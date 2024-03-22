@@ -117,6 +117,9 @@ class BaseNode : public NodeIO
 		virtual bool isCombinatorial(size_t port) const;
 		virtual bool outputIsConstant(size_t port) const { return false; }
 
+		/// Returns true, if the node's outputs do not change when this input is deasserted (e.g. like a register's enable signal).
+		virtual bool inputIsEnable(size_t inputPort) const { return false; }
+
 		/// Returns true if the node has no side effects and given its configuration and inputs, the node is not actually needed.
 		virtual bool isNoOp() const { return false; }
 		/// Returns true if isNoOp() but also rewires all nodes connected to the output to not use this node.

@@ -39,6 +39,7 @@
 #include "supportNodes/Node_MemPort.h"
 #include "supportNodes/Node_RegSpawner.h"
 #include "supportNodes/Node_RetimingBlocker.h"
+#include "supportNodes/Node_NegativeRegister.h"
 #include "../utils/Enumerate.h"
 #include "../utils/Zip.h"
 
@@ -53,9 +54,9 @@
 #include <iostream>
 #include <optional>
 
-#ifdef _DEBUG
+//#ifdef _DEBUG
 # define DEBUG_OUTPUT
-#endif
+//#endif
 
 namespace gtry::hlim {
 
@@ -92,45 +93,47 @@ Conjunction suggestForwardRetimingEnableCondition(Circuit &circuit, Subnet &area
 		if (nodePort.node->hasSideEffects())
 			continue;
 
-		// Everything seems good with this node, so proceed
-		if (regSpawner) {  // Register spawners spawn registers, so stop here
-
-			Conjunction enableTerm;
-			if (regSpawner->getDriver(Node_RegSpawner::INPUT_ENABLE).node != nullptr)
-				enableTerm.parseInput({.node = regSpawner, .port = Node_RegSpawner::INPUT_ENABLE});
-			
-			if (enableCondition)
-				enableCondition->intersectTermsWith(enableTerm);
-			else
-				enableCondition = enableTerm;
-		} else
-		if (auto *reg = dynamic_cast<Node_Register*>(nodePort.node)) {  // Registers need special handling
-			// Don't derive enable hints from anchored registers
+		// Check 
+		bool isRegisterSource = false;
+		if (regSpawner)
+			isRegisterSource = true;
+		else if (auto *reg = dynamic_cast<Node_Register*>(nodePort.node)) {
 			if (reg->getFlags().contains(Node_Register::Flags::ALLOW_RETIMING_FORWARD)) {
+				isRegisterSource = true;
+			}
+		}
 
-				Conjunction enableTerm;
-				if (reg->getNonSignalDriver(Node_Register::ENABLE).node != nullptr)
-					enableTerm.parseInput({.node = reg, .port = Node_Register::ENABLE});
-				
-				if (enableCondition)
-					enableCondition->intersectTermsWith(enableTerm);
-				else
-					enableCondition = enableTerm;
-			} else {
-				// Retime over this register. Only follow the data port as the enable port is special.
-				for (unsigned i : {Node_Register::DATA}) {
-					auto driver = reg->getDriver(i);
-					if (driver.node != nullptr)
-						openList.push_back(driver);
+		if (isRegisterSource) {
+			for (size_t i : utils::Range(nodePort.node->getNumInputPorts())) {
+				if (nodePort.node->inputIsEnable(i)) {
+					auto driver = nodePort.node->getDriver(i);
+
+					Conjunction enableTerm;
+					if (nodePort.node->getDriver(i).node != nullptr)
+						enableTerm.parseInput({.node = nodePort.node, .port = i});
+					
+					if (enableCondition)
+						enableCondition->intersectTermsWith(enableTerm);
+					else
+						enableCondition = enableTerm;
 				}
+			}
+		} else
+		if (auto *negReg = dynamic_cast<Node_NegativeRegister*>(nodePort.node)) {  // Negative registers need their expected enables to be ignored
+			for (size_t i : {(size_t)Node_NegativeRegister::Inputs::data}) {
+				auto driver = negReg->getDriver(i);
+				if (driver.node != nullptr)
+					openList.push_back(driver);
 			}
 		} else {
 			// Regular nodes just get added to the retiming area and their inputs are further explored
 			for (size_t i : utils::Range(nodePort.node->getNumInputPorts())) {
 				auto driver = nodePort.node->getDriver(i);
-				if (driver.node != nullptr)
-					if (driver.node->getOutputConnectionType(driver.port).type != ConnectionType::DEPENDENCY)
-						openList.push_back(driver);
+				// Only follow the data port as the enable port is special.
+				if (!nodePort.node->inputIsEnable(i))
+					if (driver.node != nullptr)
+						if (driver.node->getOutputConnectionType(driver.port).type != ConnectionType::DEPENDENCY)
+							openList.push_back(driver);
 			}
 
  			if (auto *memPort = dynamic_cast<Node_MemPort*>(nodePort.node)) { // If it is a memory port attempt to retime entire memory
@@ -472,6 +475,48 @@ std::optional<ForwardRetimingPlan> determineAreaToBeRetimedForward(Circuit &circ
 				// No retiming into the enable condition is needed and the modification/splitting of the 
 				// enable condition is done when implementing the plan.
 			}
+		} else
+		if (auto *negReg = dynamic_cast<Node_NegativeRegister*>(nodePort.node)) {  // Negative Registers need special handling
+			Conjunction regEnable;
+
+			// We do need to check for enable condition compatibility
+			if (negReg->expectedEnable().node != nullptr) {
+				regEnable.parseInput({.node = negReg, .port = (size_t) Node_NegativeRegister::Inputs::expectedEnable});
+
+				if (!enableCondition.isSubsetOf(regEnable)) {
+					if (!failureIsError) return {};
+
+		#ifdef DEBUG_OUTPUT
+			writeSubnet();
+		#endif
+					std::stringstream error;
+
+					error 
+						<< "An error occurred attempting to retime forward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
+						<< "Node from:\n" << output.node->getStackTrace() << "\n";
+
+					error 
+						<< "The fanning-in signals are driven by a negative register " << nodePort.node->getName() << " (" << nodePort.node->getTypeName() << ", id " << nodePort.node->getId()
+						<< ") with an expected enable signal that is incompatible with the inferred register enable signal of the retiming operation.\n"
+						<< "Negative register from:\n" << nodePort.node->getStackTrace() << "\n";
+
+					HCL_ASSERT_HINT(false, error.str());					
+				}
+			}
+
+			retimingPlan.areaToBeRetimed.add(nodePort.node);
+
+			if (negReg->getDriver((size_t) Node_NegativeRegister::Inputs::data).node != nullptr)
+				openList.push_back(negReg->getDriver((size_t) Node_NegativeRegister::Inputs::data));
+
+			forwardPlanningHandleEnablePort(
+				{.node = negReg, .port = (size_t) Node_NegativeRegister::Inputs::expectedEnable},
+				std::move(regEnable),
+				enableCondition,
+				area,
+				retimingPlan,
+				openList);
+
 		} else if (auto *memPort = dynamic_cast<Node_MemPort*>(nodePort.node)) { // If it is a memory port attempt to retime entire memory
 			auto *memory = memPort->getMemory();
 			retimingPlan.areaToBeRetimed.add(memory);
@@ -531,9 +576,44 @@ std::optional<ForwardRetimingPlan> determineAreaToBeRetimedForward(Circuit &circ
 			retimingPlan.areaToBeRetimed.add(nodePort.node);
 			for (size_t i : utils::Range(nodePort.node->getNumInputPorts())) {
 				auto driver = nodePort.node->getDriver(i);
-				if (driver.node != nullptr)
-					if (driver.node->getOutputConnectionType(driver.port).type != ConnectionType::DEPENDENCY)
-						openList.push_back(driver);
+				if (driver.node != nullptr) {
+
+					if (nodePort.node->inputIsEnable(i)) {
+
+						Conjunction enable;
+						enable.parseInput({.node = nodePort.node, .port = i});
+
+						if (!enableCondition.isSubsetOf(enable)) {
+							if (!failureIsError) return {};
+
+					#ifdef DEBUG_OUTPUT
+						writeSubnet();
+					#endif
+							std::stringstream error;
+
+							error 
+								<< "An error occurred attempting to retime forward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
+								<< "Node from:\n" << output.node->getStackTrace() << "\n";
+
+							error 
+								<< "The fanning-in signals are driven by a node " << nodePort.node->getName() << " (" << nodePort.node->getTypeName() << ", id " << nodePort.node->getId()
+								<< ") with an enable signal that is incompatible with the inferred register enable signal of the retiming operation.\n"
+								<< "Node from:\n" << nodePort.node->getStackTrace() << "\n";
+
+							HCL_ASSERT_HINT(false, error.str());					
+						}
+
+						forwardPlanningHandleEnablePort(
+							{.node = nodePort.node, .port = i},
+							std::move(enable),
+							enableCondition,
+							area,
+							retimingPlan,
+							openList);							
+					} else 
+						if (driver.node->getOutputConnectionType(driver.port).type != ConnectionType::DEPENDENCY)
+							openList.push_back(driver);
+				}
 			}
 		}
 	}

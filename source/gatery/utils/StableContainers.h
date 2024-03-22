@@ -85,6 +85,8 @@ class UnstableSet
 		auto &anyOrder() { return m_set; }
 		/// Returns the underlying set to iterate over the elements in any order in cases where the order doesn't matter
 		const auto &anyOrder() const { return m_set; }
+
+		//auto operator<=>(const UnstableSet&) const = default;
 	protected:
 		std::set<Type> m_set;
 };
@@ -123,6 +125,8 @@ class UnstableMap
 		auto &anyOrder() { return m_map; }
 		/// Returns the underlying map to iterate over the elements in any order in cases where the order doesn't matter
 		const auto &anyOrder() const { return m_map; }
+
+		auto operator<=>(const UnstableMap&) const = default;
 	protected:
 		std::map<Key, Value> m_map;
 };

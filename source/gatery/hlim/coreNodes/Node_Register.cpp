@@ -216,4 +216,9 @@ void Node_Register::writeResetValueTo(sim::DefaultBitVectorState &state, const s
 		state.insert(evalState, offset);
 }
 
+bool Node_Register::inputIsEnable(size_t inputPort) const
+{
+	return inputPort == ENABLE;
+}
+
 }

@@ -21,8 +21,13 @@
 
 #include "../supportNodes/Node_RegSpawner.h"
 #include "../supportNodes/Node_RegHint.h"
+#include "../supportNodes/Node_NegativeRegister.h"
 #include "../supportNodes/Node_RetimingBlocker.h"
+#include "../coreNodes/Node_Register.h"
 
+#include <gatery/debug/DebugInterface.h>
+
+#include "../CNF.h"
 #include "../Circuit.h"
 #include "../RegisterRetiming.h"
 #include "../GraphTools.h"
@@ -34,6 +39,33 @@
 #include <iostream>
 
 namespace gtry::hlim {
+
+void determineNegativeRegisterEnables(Circuit &circuit, Subnet &subnet)
+{
+	std::map<Conjunction, NodePort> buildEnableSignalCache;
+
+	for (auto& n : subnet)
+		if (auto* negReg = dynamic_cast<Node_NegativeRegister*>(n)) {
+			Conjunction enable = suggestForwardRetimingEnableCondition(circuit, subnet, negReg->getDriver(0));
+
+			NodePort enableDriver;
+
+			auto it = buildEnableSignalCache.find(enable);
+			if (it != buildEnableSignalCache.end())
+				enableDriver = it->second;
+			else {
+				enableDriver = enable.build(*negReg->getGroup(), &subnet);
+				buildEnableSignalCache[enable] = enableDriver;
+			}
+
+			negReg->expectedEnable(enableDriver);
+
+			while (!negReg->getDirectlyDriven((size_t)Node_NegativeRegister::Outputs::enable).empty()) {
+				auto driven = negReg->getDirectlyDriven((size_t)Node_NegativeRegister::Outputs::enable).front();
+				driven.node->rewireInput(driven.port, enableDriver);
+			}
+		}
+}
 
 
 void resolveRetimingHints(Circuit &circuit, Subnet &subnet)
@@ -57,7 +89,8 @@ void resolveRetimingHints(Circuit &circuit, Subnet &subnet)
 	 */
 
 	// Resolve all register hints back to front
-	for (std::size_t i = regHints.size()-1; i < regHints.size(); i--) {
+	//for (std::size_t i = regHints.size()-1; i < regHints.size(); i--) {
+	for (std::size_t i = 0; i < regHints.size(); i++) {
 		auto node = regHints[i].second;
 		// Skip orphaned retiming hints
 		if (node->getDirectlyDriven(0).empty()) continue;
@@ -93,6 +126,38 @@ void resolveRetimingHints(Circuit &circuit, Subnet &subnet)
 					found = true;
 			HCL_ASSERT(found);
 			HCL_ASSERT(regHint->getDirectlyDriven(0).empty());
+		}
+}
+
+void annihilateNegativeRegisters(Circuit &circuit, Subnet &subnet)
+{
+	for (auto& n : subnet)
+		if (auto* negReg = dynamic_cast<Node_NegativeRegister*>(n)) {
+			auto driver = negReg->getNonSignalDriver(Node_Register::DATA);
+			auto *reg = dynamic_cast<Node_Register*>(driver.node);
+
+			if (reg == nullptr)
+				dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING << "Can not resolve negative register " << negReg << " because it is driven by " << driver.node << " which is not a register with which it can be fused. This usually means that retiming was unsuccessfull (negative register within a combinatorical loop?).");
+			else {
+				// todo: check enables compatible
+				Conjunction regEnable = Conjunction::fromInput( {.node = reg, .port = Node_Register::ENABLE});
+				Conjunction negRegEnable = Conjunction::fromOutput(negReg->expectedEnable());
+
+				if (!regEnable.isEqualTo(negRegEnable)) {
+					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING 
+							<< "Can not resolve negative register " << negReg << " because it is driven by register " << driver.node << " which has an incompatible enable signal.");
+				} else {
+					// Rewire data output to the regs input
+					auto dataDriven = negReg->getDirectlyDriven((size_t)Node_NegativeRegister::Outputs::data);
+					for (const auto &driven : dataDriven)
+						driven.node->rewireInput(driven.port, reg->getDriver(Node_Register::DATA));
+
+					// Rewire enable output to the regs enable
+					auto enableDriven = negReg->getDirectlyDriven((size_t)Node_NegativeRegister::Outputs::enable);
+					for (const auto &driven : enableDriven)
+						driven.node->rewireInput(driven.port, reg->getDriver(Node_Register::ENABLE));
+				}
+			}
 		}
 }
 

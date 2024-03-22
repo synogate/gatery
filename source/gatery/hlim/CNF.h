@@ -76,9 +76,13 @@ class Conjunction {
 			/// @details This is only kept in case the terms are to be used again to build or drive logic to minimize the amount of
 			/// signal nodes that are skipped.
 			NodePort conjunctionDriver;
+
+			auto operator<=>(const Term&) const = default;
 		};
 
 		const utils::UnstableMap<NodePort, Term> &getTerms() const { return m_terms; }
+
+		auto operator<=>(const Conjunction&) const = default;
 	private:
 		/// All terms of the conjunction (the parts that are ANDed together), stored as a map for faster lookup by driver
 		utils::UnstableMap<NodePort, Term> m_terms;

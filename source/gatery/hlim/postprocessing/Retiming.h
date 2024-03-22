@@ -22,7 +22,9 @@ namespace gtry::hlim {
 class Circuit;
 class Subnet;
 
+void determineNegativeRegisterEnables(Circuit &circuit, Subnet &subnet);
 void resolveRetimingHints(Circuit &circuit, Subnet &subnet);
+void annihilateNegativeRegisters(Circuit &circuit, Subnet &subnet);
 
 void bypassRetimingBlockers(Circuit &circuit, Subnet &subnet);
 
