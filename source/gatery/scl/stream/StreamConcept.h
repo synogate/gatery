@@ -30,7 +30,7 @@ namespace gtry::scl::strm
 	concept StreamSignal = CompoundSignal<T> and requires (T stream) { 
 		{ *stream } -> std::assignable_from<typename std::remove_cvref_t<T>::Payload>;
 		{ *stream.operator ->() } -> std::assignable_from<typename std::remove_cvref_t<T>::Payload>;
-		Signal<typename std::remove_cvref_t<T>::Payload>;
+		requires Signal<typename std::remove_cvref_t<T>::Payload>;
 
 		{ stream.template add(internal::TestMeta{}) } -> Signal;
 		{ stream.template remove<internal::TestMeta>() } -> Signal;
