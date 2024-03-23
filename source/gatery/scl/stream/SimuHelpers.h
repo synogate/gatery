@@ -146,6 +146,14 @@ namespace gtry::scl::strm
 		while (!simu(ready(stream)) || !simu(valid(stream)));
 	}
 
+	template<StreamSignal StreamT>
+	SimProcess performPacketTransferWait(const StreamT& stream, const Clock& clock)
+	{
+		do
+			co_await OnClk(clock);
+		while (!(simuValid(stream) == '1' && simuReady(stream) == '1' && simuEop(stream) == '1'));
+	}
+
 	template<StreamSignal T>
 	SimProcess performTransfer(const T& stream, const Clock& clock)
 	{

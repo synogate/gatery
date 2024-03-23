@@ -941,3 +941,126 @@ BOOST_FIXTURE_TEST_CASE(fieldExtractionFuzz_RsetPacketStreamWHighBackPressure, F
 
 	runTest();
 }
+
+struct AppendTestSimulationFixture : public BoostUnitTestSimulationFixture 
+{
+	BitWidth dataW = 8_b;
+	size_t iterations = 100;
+	std::mt19937 rng;
+	
+	std::function<size_t()> headPacketSize = []() { return 4; };
+	std::function<size_t()> tailPacketSize = []() { return 4; };
+	std::function<size_t()> getHeadInvalidBeats = []() { return 0; };
+	std::function<size_t()> getTailInvalidBeats = []() { return 0; };
+
+	void runTest() {
+		Clock clk({ .absoluteFrequency = 100'000'000 });
+		ClockScope clkScp(clk);
+		using namespace gtry::scl;
+		rng.seed(1234);
+
+		RvPacketStream<BVec, EmptyBits> headStrm(dataW);
+		emptyBits(headStrm) = BitWidth::count(headStrm->width().bits());
+		pinIn(headStrm, "head");
+
+		RvPacketStream<BVec, EmptyBits> tailStrm(dataW);
+		emptyBits(tailStrm) = BitWidth::count(tailStrm->width().bits());
+		pinIn(tailStrm, "tail");
+
+		auto headToFunction = constructFrom(headStrm);
+		headToFunction <<= headStrm; // ugly fix
+		RvPacketStream<BVec, EmptyBits> out = strm::streamAppend(move(headToFunction), move(tailStrm));
+		pinOut(out, "out");
+
+		addSimulationProcess([&, this]()->SimProcess { return strm::readyDriverRNG(out, clk, 50); });
+		auto makeRandomPacket = [&](size_t packetSizeInBits) {
+			sim::DefaultBitVectorState state;
+			state.resize(packetSizeInBits);
+			state.setRange(sim::DefaultConfig::DEFINED, 0, state.size());
+			for (auto& byte : state.asWritableBytes(sim::DefaultConfig::VALUE))
+				byte = (std::byte) rng(); // somewhat wasteful, but simple
+			return state;
+			};
+
+		std::vector<gtry::sim::DefaultBitVectorState> heads(iterations);
+		for (auto& dbv : heads)
+			dbv = makeRandomPacket(headPacketSize());
+		std::vector<gtry::sim::DefaultBitVectorState> tails(iterations);
+		for (auto& dbv : tails)
+			dbv = makeRandomPacket(tailPacketSize());
+
+		std::vector<gtry::sim::DefaultBitVectorState> results = copy(heads);
+		for (size_t i = 0; i < iterations; i++)
+			results[i].append(tails[i]);
+
+
+		addSimulationProcess([&, this]()->SimProcess {
+			for (auto head : heads) {
+				co_await strm::sendPacket(headStrm, strm::SimPacket(head).invalidBeats(getHeadInvalidBeats()), clk);
+			}
+			});
+
+		addSimulationProcess([&, this]()->SimProcess {
+			
+			for (auto tail : tails) {
+				co_await strm::sendPacket(tailStrm, strm::SimPacket(tail).invalidBeats(getTailInvalidBeats()), clk);
+				if (tail.size() == 0) {
+					co_await performPacketTransferWait(headStrm, clk);
+				}
+			}
+			});
+
+		//receive and decode gatery tlp
+		addSimulationProcess([&, this]()->SimProcess {
+			for (size_t i = 0; i < iterations; i++)
+			{
+				strm::SimPacket packet = co_await strm::receivePacket(out, clk);
+				BOOST_TEST(packet.payload == results[i]); //, "packet " + std::to_string(i) + " failed");
+				BOOST_TEST(packet.payload == results[i], "packet " + std::to_string(i) + " failed");
+			}
+			co_await OnClk(clk);
+			co_await OnClk(clk);
+			co_await OnClk(clk);
+			co_await OnClk(clk);
+			co_await OnClk(clk);
+			co_await OnClk(clk);
+			co_await OnClk(clk);
+			stopTest();
+			});
+
+		design.postprocess();
+		BOOST_TEST(!runHitsTimeout({ 1000, 1'000'000 }));
+	}
+};
+
+BOOST_FIXTURE_TEST_CASE(streamAppend_only_heads, AppendTestSimulationFixture)
+{
+	dataW = 8_b;
+	iterations = 100;
+
+	headPacketSize = [&]() { return (rng() & 0x1F) + 1; };
+	tailPacketSize = []() { return 0; };
+	runTest();
+}
+
+BOOST_FIXTURE_TEST_CASE(streamAppend_some_empty_tails, AppendTestSimulationFixture)
+{
+	dataW = 8_b;
+	iterations = 100;
+
+	headPacketSize = [&]() { return (rng() & 0x1F) + 1; };
+	tailPacketSize = [&]() { return (rng() & 0x1); };
+	runTest();
+}
+
+BOOST_FIXTURE_TEST_CASE(streamAppend_chaos, AppendTestSimulationFixture)
+{
+	dataW = 8_b;
+	iterations = 1000;
+
+	headPacketSize = [&]() { return (rng() & 0x3F) + 1; };
+	tailPacketSize = [&]() { return (rng() & 0x1F); };
+	runTest();
+}
+
+
