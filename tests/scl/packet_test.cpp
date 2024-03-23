@@ -969,7 +969,7 @@ struct AppendTestSimulationFixture : public BoostUnitTestSimulationFixture
 
 		auto headToFunction = constructFrom(headStrm);
 		headToFunction <<= headStrm; // ugly fix
-		RvPacketStream<BVec, EmptyBits> out = strm::appendStream(move(headToFunction), move(tailStrm));
+		RvPacketStream<BVec, EmptyBits> out = strm::streamAppend(move(headToFunction), move(tailStrm));
 		pinOut(out, "out");
 
 		addSimulationProcess([&, this]()->SimProcess { return strm::readyDriverRNG(out, clk, 50); });
@@ -1033,39 +1033,33 @@ struct AppendTestSimulationFixture : public BoostUnitTestSimulationFixture
 	}
 };
 
-BOOST_FIXTURE_TEST_CASE(append_only_heads, AppendTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(streamAppend_only_heads, AppendTestSimulationFixture)
 {
 	dataW = 8_b;
 	iterations = 100;
 
 	headPacketSize = [&]() { return (rng() & 0x1F) + 1; };
 	tailPacketSize = []() { return 0; };
-	std::function<size_t()> getHeadInvalidBeats = [&]() { return rng(); };
-	//std::function<size_t()> getTailInvalidBeats = []() { return 0; };
 	runTest();
 }
 
-BOOST_FIXTURE_TEST_CASE(append_some_empty_tails, AppendTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(streamAppend_some_empty_tails, AppendTestSimulationFixture)
 {
 	dataW = 8_b;
 	iterations = 100;
 
 	headPacketSize = [&]() { return (rng() & 0x1F) + 1; };
 	tailPacketSize = [&]() { return (rng() & 0x1); };
-	std::function<size_t()> getHeadInvalidBeats = [&]() { return rng(); };
-	std::function<size_t()> getTailInvalidBeats = [&]() { return rng(); };
 	runTest();
 }
 
-BOOST_FIXTURE_TEST_CASE(append_chaos, AppendTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(streamAppend_chaos, AppendTestSimulationFixture)
 {
 	dataW = 8_b;
 	iterations = 1000;
 
 	headPacketSize = [&]() { return (rng() & 0x3F) + 1; };
 	tailPacketSize = [&]() { return (rng() & 0x1F); };
-	std::function<size_t()> getHeadInvalidBeats = [&]() { return rng(); };
-	std::function<size_t()> getTailInvalidBeats = [&]() { return rng(); };
 	runTest();
 }
 
