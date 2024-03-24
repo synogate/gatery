@@ -154,6 +154,7 @@ namespace gtry::hlim {
 		void mergeMuxes(Subnet& subnet);
 		void cullMuxConditionNegations(Subnet& subnet);
 		void removeIrrelevantMuxes(Subnet& subnet);
+		void mergeBinaryMuxChain(Subnet& subnet);
 		void removeIrrelevantComparisons(Subnet& subnet);
 		void mergeRewires(Subnet& subnet);
 		void removeNoOps(Subnet& subnet);
@@ -165,6 +166,8 @@ namespace gtry::hlim {
 		void removeDisabledWritePorts(Subnet& subnet);
 
 		void removeFalseLoops();
+
+		void shuffleNodes();
 
 		void ensureEntityPortSignalNodes();
 		void ensureSignalNodePlacement();

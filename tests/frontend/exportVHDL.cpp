@@ -909,4 +909,60 @@ BOOST_FIXTURE_TEST_CASE(constantRewireCorrectlyFolds, gtry::GHDLTestFixture)
 
 
 
+
+
+BOOST_FIXTURE_TEST_CASE(foldBinaryMuxesToCase, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	std::mt19937 rng(267);
+	std::uniform_int_distribution<unsigned> random(0, 1000);
+	std::vector<size_t> table(10);
+	for (auto &e : table) e = random(rng);
+
+
+	UInt output = 32_b;
+	output = dontCare(output);
+
+	UInt selector = pinIn(4_b).setName("selector");
+	for (size_t i = 0; i < table.size(); i++)
+		IF (selector == i)
+			output = table[i];
+
+	pinOut(output).setName("output");
+
+
+	addSimulationProcess([=,this]()->SimProcess {
+
+		co_await OnClk(clock);
+
+		for (size_t i = 0; i < 16; i++) {
+			simu(selector) = i;
+			co_await OnClk(clock);
+
+			if (i < table.size())
+				BOOST_TEST(simu(output) == table[i]);
+			else
+				BOOST_TEST(simu(output).defined() == 0);
+		}
+
+		stopTest();
+	});
+
+	design.getCircuit().shuffleNodes();
+	
+	//design.visualize("before");
+	testCompilation();
+	//design.visualize("after");
+	BOOST_TEST(exportContains(std::regex{"CASE UNSIGNED\\(selector\\) IS"}));
+}
+
+
+
+
+
+
 BOOST_AUTO_TEST_SUITE_END()

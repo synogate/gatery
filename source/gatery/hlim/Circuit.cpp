@@ -709,6 +709,166 @@ void Circuit::removeIrrelevantMuxes(Subnet &subnet)
 	} while (!done);
 }
 
+
+std::optional<std::pair<Node_Constant*, NodePort>> isComparisonWithConstant(NodePort input)
+{
+	auto driver = input.node->getNonSignalDriver(input.port);
+	if (auto *compare = dynamic_cast<Node_Compare*>(driver.node)) {
+		if (compare->getOp() == Node_Compare::EQ) {
+
+			auto *const1 = dynamic_cast<Node_Constant*>(compare->getNonSignalDriver(0).node);
+			if (const1) 
+				return { std::make_pair(const1, compare->getDriver(1)) };
+
+			auto *const2 = dynamic_cast<Node_Constant*>(compare->getNonSignalDriver(1).node);
+			if (const2)
+				return { std::make_pair(const2, compare->getDriver(0)) };
+		}
+	}
+	return {};
+}
+
+std::optional<std::pair<Node_Multiplexer*, Node_Constant*>> followedByCompatibleMux(Node_Multiplexer *muxNode, NodePort comparisonSignal, RevisitCheck &cycleCheck)
+{
+	for (auto nh : muxNode->exploreOutput(0)) {
+		if (cycleCheck.contains(nh.node())) {
+			nh.backtrack();
+			continue;
+		}
+		cycleCheck.insert(nh.node());
+
+		if (auto *nextMuxNode = dynamic_cast<Node_Multiplexer*>(nh.node())) {
+			if (nextMuxNode->getNumInputPorts() == 3) {
+				auto nextComparison = isComparisonWithConstant({.node = nextMuxNode, .port = 0 });
+				if (nextComparison)
+					if (nextComparison->second == comparisonSignal)
+						if (sim::allDefined(nextComparison->first->getValue()))
+							return { std::make_pair(nextMuxNode, nextComparison->first) };
+			}
+
+			nh.backtrack();
+			continue;
+		}
+		
+		if (!nh.isSignal()) {
+			nh.backtrack();
+			continue;
+		}
+	}
+	return {};
+}
+
+/**
+ * @brief Merge a chain of binary muxes, selected by comparisons, into a single mux.
+ * @details The mux node is capable of multiplexing between more than two inputs, based on a bitvector selector index.
+ * Yet quite often, the frontend constructs large chains of binary multiplexers, each being selected by a comparison between
+ * an index and a constant. This code detects these chains and turns them back into a single multiplexer.
+ */
+void Circuit::mergeBinaryMuxChain(Subnet& subnet)
+{
+	std::vector<BaseNode*> newNodes;
+
+	utils::UnstableSet<Node_Multiplexer *> alreadyHandled;
+	for (auto n : subnet) {
+		if (Node_Multiplexer *muxNode = dynamic_cast<Node_Multiplexer*>(n)) {
+			if (alreadyHandled.contains(muxNode)) continue;
+
+			if (muxNode->getNumInputPorts() != 3) continue;
+			auto comparison = isComparisonWithConstant({.node = muxNode, .port = 0 });
+			if (!comparison) continue;
+
+			if (!sim::allDefined(comparison->first->getValue())) continue;
+
+			RevisitCheck cycleCheck(*this);
+			cycleCheck.insert(muxNode);
+
+			std::vector<std::pair<Node_Multiplexer*, Node_Constant*>> chain;
+			chain.emplace_back(muxNode, comparison->first);
+
+
+			// scan backwards
+			{
+				Node_Multiplexer *backNode = muxNode;
+				while (true) {
+					backNode = dynamic_cast<Node_Multiplexer*>(backNode->getNonSignalDriver(1).node);
+					if (!backNode) break;
+
+					if (cycleCheck.contains(backNode)) break;
+					cycleCheck.insert(backNode);
+
+					if (backNode->getNumInputPorts() != 3) break;
+					auto backComparison = isComparisonWithConstant({.node = backNode, .port = 0 });
+					if (!backComparison) break;
+					if (!sim::allDefined(backComparison->first->getValue())) break;
+
+
+					// The value compared with on every mux must be the same
+					if (backComparison->second != comparison->second) break;
+
+					chain.emplace_back(backNode, backComparison->first);
+				}
+			}
+
+			// We inserted stuff while traveling backwards, so reverse to bring into proper order:
+			std::reverse(chain.begin(), chain.end());
+
+			// scan forwards
+			{
+				Node_Multiplexer *forwardNode = muxNode;
+				while (true) {
+
+					auto next = followedByCompatibleMux(forwardNode, comparison->second, cycleCheck);
+					if (!next) break;
+
+					forwardNode = next->first;
+						
+					chain.emplace_back(next->first, next->second);
+				}
+			}
+
+			for (auto &e : chain)
+				alreadyHandled.insert(e.first);
+
+			size_t width = getOutputWidth(comparison->second);
+
+			// At least 3 muxes and, if joined, at least one quarter of the inputs populated
+			if (chain.size() >= 3 && chain.size()*4 >= (1ull << width)) {
+				std::vector<NodePort> inputs;
+				// Default to the "false" path through the mux chain
+				inputs.resize(1ull << width, chain[0].first->getDriver(1));
+				// Progress forward through the mux chain, potentially overriding if multiple muxes check on the same value
+				for (const auto &c : chain) {
+					HCL_ASSERT(sim::allDefined(c.second->getValue())); // Was checked and ensured before
+
+					size_t idx = c.second->getValue().extractNonStraddling(sim::DefaultConfig::VALUE, 0, c.second->getValue().size());
+					inputs[idx] = c.first->getDriver(2);
+				}
+
+				auto *newMux = createNode<Node_Multiplexer>(inputs.size());
+				newNodes.push_back(newMux);
+				newMux->recordStackTrace();
+				newMux->moveToGroup(chain.back().first->getGroup());
+				newMux->connectSelector(comparison->second);
+				for (size_t i = 0; i < inputs.size(); i++) 
+					newMux->connectInput(i, inputs[i]);
+
+				auto allToRewire = chain.back().first->getDirectlyDriven(0);
+				for (auto np : allToRewire)
+					np.node->rewireInput(np.port, {.node = newMux, .port = 0ull} );
+
+				dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING 
+						<< "Replacing chain of mux nodes starting at node " << chain.front().first 
+						<< " and ending at " << chain.back().first 
+						<< " with one big switching mux." << newMux);
+
+			}
+		}
+	}
+
+	for (auto n : newNodes)
+		subnet.add(n);
+}
+
 void Circuit::removeIrrelevantComparisons(Subnet &subnet)
 {
 	for (auto n : subnet) {
@@ -1375,6 +1535,7 @@ void Circuit::optimizeSubnet(Subnet &subnet)
 	removeIrrelevantComparisons(subnet);
 	removeIrrelevantMuxes(subnet);
 	cullMuxConditionNegations(subnet);
+	mergeBinaryMuxChain(subnet);
 	removeNoOps(subnet);
 	foldRegisterMuxEnableLoops(subnet);
 	removeConstSelectMuxes(subnet);
@@ -1431,6 +1592,7 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
 	circuit.removeIrrelevantComparisons(subnet);
 	circuit.removeIrrelevantMuxes(subnet);	
 	circuit.cullMuxConditionNegations(subnet);
+	circuit.mergeBinaryMuxChain(subnet);
 	circuit.removeNoOps(subnet);
 	circuit.foldRegisterMuxEnableLoops(subnet);
 	circuit.removeConstSelectMuxes(subnet);
@@ -1650,6 +1812,11 @@ BaseNode *Circuit::findFirstNodeByName(std::string_view name)
 		if (n->getName() == name)
 			return n.get();
 	return nullptr;
+}
+
+void Circuit::shuffleNodes()
+{
+	std::random_shuffle(m_nodes.begin(), m_nodes.end());
 }
 
 }
