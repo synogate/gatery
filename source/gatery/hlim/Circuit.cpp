@@ -1816,7 +1816,8 @@ BaseNode *Circuit::findFirstNodeByName(std::string_view name)
 
 void Circuit::shuffleNodes()
 {
-	std::random_shuffle(m_nodes.begin(), m_nodes.end());
+	std::mt19937 rng;
+	std::shuffle(m_nodes.begin(), m_nodes.end(), rng);
 }
 
 }
