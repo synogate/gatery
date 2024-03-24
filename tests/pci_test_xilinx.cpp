@@ -94,7 +94,7 @@ BOOST_FIXTURE_TEST_CASE(pcie_axi4_vendorUnlocking, BoostUnitTestSimulationFixtur
 		});
 
 
-	if (true) { recordVCD("dut.vcd"); }
+	if (false) { recordVCD("dut.vcd"); }
 	design.postprocess();
 	//design.visualize("dut");
 
@@ -149,7 +149,7 @@ BOOST_FIXTURE_TEST_CASE(pcie_axi4_vendorUnlocking_inv, BoostUnitTestSimulationFi
 		});
 
 
-	if (true) { recordVCD("dut.vcd"); }
+	if (false) { recordVCD("dut.vcd"); }
 	design.postprocess();
 	//design.visualize("dut");
 

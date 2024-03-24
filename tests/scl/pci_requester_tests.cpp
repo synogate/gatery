@@ -227,7 +227,7 @@ BOOST_FIXTURE_TEST_CASE(tileLink_requester_test_read_any_word_in_256_b_data_beat
 		co_await OnClk(clk);
 		stopTest();
 		});
-	if (true) { recordVCD("dut.vcd"); }
+	if (false) { recordVCD("dut.vcd"); }
 	design.postprocess();
 
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
