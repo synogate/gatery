@@ -478,8 +478,12 @@ void Program::allocateSignals(const hlim::Circuit &circuit, const hlim::Subnet &
 		auto &mappedInternal = m_stateMapping.nodeToInternalOffset[refNode.node];
 		for (auto i : utils::Range(refNode.refs.size())) {
 			auto &ref = refNode.refs[i];
-			auto refedIdx = m_stateMapping.nodeToInternalOffset[ref.first][ref.second];
-			mappedInternal[refNode.internalSizeOffset+i] = refedIdx;
+			if (ref.first == nullptr)
+				mappedInternal[refNode.internalSizeOffset+i] = ~0ull;
+			else {
+				auto refedIdx = m_stateMapping.nodeToInternalOffset[ref.first][ref.second];
+				mappedInternal[refNode.internalSizeOffset+i] = refedIdx;
+			}
 		}
 	}
 
