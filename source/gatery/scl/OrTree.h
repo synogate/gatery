@@ -67,11 +67,13 @@ namespace gtry::scl {
 		sim_assert(total <= 1) << "multiple conditions were simultaneously true, or tree is not valid in these conditions";
 
 		SigT ret = OrReduce(m_inputs, m_placeRegisterMask).front();
+
 		while (m_placeRegisterMask != 0) { //if there were not enough stages to accommodate the requested register mask
 			if (m_placeRegisterMask & 1)
 				ret = reg(ret);
 			m_placeRegisterMask >>= 1;
 		}
+
 		return ret;
 	}
 
