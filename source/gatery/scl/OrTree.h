@@ -22,8 +22,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 namespace gtry::scl {
 	/**
 	 * @brief This class implements a simple to use Or-tree. It allows for a large amount of non-backpressured
-	 * compounds to be multiplexed efficiently, when only one is "valid" at a time. The validity of the
-	 * inputs is decided by the conditional scope in which the attach function is called.
+	 * compounds to be multiplexed efficiently, when only one is "valid" at a time, by setting all others
+	 * to zero and creating an or-tree. The validity of the inputs is decided by the conditional scope 
+	 * in which the attach function is called. During simulation, an assert will be thrown if multiple inputs are
+	 * simulatenously valid.
 	*/
 	template<Signal SigT>
 	class OrTree
@@ -66,7 +68,7 @@ namespace gtry::scl {
 				m_inputs[i] = allZeros(m_inputs[i]); //cannot do (&=Bit) because it's a compound
 			}
 		}
-		sim_assert(total <= 1) << "multiple conditions were simultaneously true, or tree is not valid in these conditions";
+		sim_assert(total <= 1) << "multiple input conditions were simultaneously true, or-tree is not valid in these conditions";
 
 		SigT ret = OrReduce(m_inputs, m_placeRegisterMask).front();
 
