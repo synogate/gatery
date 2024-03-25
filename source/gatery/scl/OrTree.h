@@ -31,13 +31,11 @@ namespace gtry::scl {
 	class OrTree
 	{
 	public:
-		OrTree(size_t placeRegisterMask = 0) : m_placeRegisterMask(placeRegisterMask) {}
 		void attach(const SigT& in);
-		SigT out();
+		SigT out(size_t placeRegisterMask);
 	private:
 		Vector<SigT> OrReduce(const Vector<SigT>& in, size_t& placeRegisterMask);
 		Area m_area = Area{ "scl_orTree" };
-		size_t m_placeRegisterMask;
 		bool m_generated = false;
 		Vector<SigT> m_inputs;
 		Vector<Bit> m_inputConditions;
@@ -55,7 +53,7 @@ namespace gtry::scl {
 	}
 
 	template<Signal SigT>
-	SigT OrTree<SigT>::out() {
+	SigT OrTree<SigT>::out(size_t placeRegisterMask) {
 		m_area.enter();
 		HCL_DESIGNCHECK(!m_generated);
 		HCL_DESIGNCHECK(m_inputs.size() != 0);
@@ -70,13 +68,15 @@ namespace gtry::scl {
 		}
 		sim_assert(total <= 1) << "multiple input conditions were simultaneously true, or-tree is not valid in these conditions";
 
-		SigT ret = OrReduce(m_inputs, m_placeRegisterMask).front();
+		size_t currentRegisterMask = placeRegisterMask;
+
+		SigT ret = OrReduce(m_inputs, currentRegisterMask).front();
 
 		//if there were not enough stages to accommodate the requested register mask, place more trailing registers
-		while (m_placeRegisterMask != 0) { 
-			if (m_placeRegisterMask & 1)
+		while (currentRegisterMask != 0) { 
+			if (currentRegisterMask & 1)
 				ret = reg(ret);
-			m_placeRegisterMask >>= 1;
+			currentRegisterMask >>= 1;
 		}
 
 		return ret;
