@@ -117,4 +117,5 @@ namespace gtry::scl::arch::xilinx
 	 * @return The multiplication result and the latency in cycles between input and output.
 	*/
 	std::tuple<UInt, size_t> mul(const UInt& a, const UInt& b, BitWidth resultW, size_t resultOffset = 0);
+	UInt mulRetimable(const UInt& a, const UInt& b, BitWidth resultW, size_t resultOffset = 0);
 }

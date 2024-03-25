@@ -288,4 +288,16 @@ namespace gtry::scl::arch::xilinx
 		HCL_NAMED(out);
 		return { out, latency };
 	}
+
+	UInt mulRetimable(const UInt& a, const UInt& b, BitWidth resultW, size_t resultOffset)
+	{
+		auto [result, latency] = mul(a, b, resultW, resultOffset);
+
+		for (size_t i = 0; i < latency; ++i)
+		{
+			Bit en;
+			std::tie(result, en) = negativeReg(result);
+		}
+		return result;
+	}
 }
