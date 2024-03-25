@@ -81,9 +81,9 @@ namespace gtry::scl {
 		if (inSize == 1)
 			return in;
 
-		const size_t OutSize = (inSize + 1) / 2;
-		Vector<SigT> ret(OutSize);
-		for (size_t i = 0; i < OutSize; i++) {
+		const size_t outSize = (inSize + 1) / 2;
+		Vector<SigT> ret(outSize);
+		for (size_t i = 0; i < outSize; i++) {
 			if ((2 * i + 1) == inSize)
 				ret[i] = in.back();
 			else {
