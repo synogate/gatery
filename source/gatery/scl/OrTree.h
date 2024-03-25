@@ -20,6 +20,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 
 namespace gtry::scl {
+	/**
+	 * @brief This class implements a simple to use Or-tree. It allows for a large amount of non-backpressured
+	 * compounds to be multiplexed efficiently, when only one is "valid" at a time. The validity of the
+	 * inputs is decided by the conditional scope in which the attach function is called.
+	*/
 	template<Signal SigT>
 	class OrTree
 	{
@@ -29,21 +34,18 @@ namespace gtry::scl {
 		SigT out();
 	private:
 		Vector<SigT> OrReduce(const Vector<SigT>& in, size_t& placeRegisterMask);
-
 		Area m_area = Area{ "scl_orTree" };
 		size_t m_placeRegisterMask;
 		bool m_generated = false;
 		Vector<SigT> m_inputs;
 		Vector<Bit> m_inputConditions;
 	};
-
-
 }
 
 
 namespace gtry::scl {
 	template<Signal SigT>
-	inline void OrTree<SigT>::attach(const SigT& in) {
+	void OrTree<SigT>::attach(const SigT& in) {
 		m_area.enter();
 		HCL_DESIGNCHECK(!m_generated);
 		m_inputs.push_back(in);
@@ -51,24 +53,25 @@ namespace gtry::scl {
 	}
 
 	template<Signal SigT>
-	inline SigT OrTree<SigT>::out() {
+	SigT OrTree<SigT>::out() {
 		m_area.enter();
 		HCL_DESIGNCHECK(!m_generated);
-		HCL_DESIGNCHECK(m_inputs.size() != 0); // not a good way to do this
+		HCL_DESIGNCHECK(m_inputs.size() != 0);
 		m_generated = true;
 
 		UInt total = ConstUInt(0, BitWidth::count(m_inputs.size()));
 		for (size_t i = 0; i < m_inputs.size(); i++) {
 			total += m_inputConditions[i];
 			IF(!m_inputConditions[i]) {
-				m_inputs[i] = allZeros(m_inputs[i]); //cannot do (&=Bit) because it's a compound, maybe do an overload?
+				m_inputs[i] = allZeros(m_inputs[i]); //cannot do (&=Bit) because it's a compound
 			}
 		}
 		sim_assert(total <= 1) << "multiple conditions were simultaneously true, or tree is not valid in these conditions";
 
 		SigT ret = OrReduce(m_inputs, m_placeRegisterMask).front();
 
-		while (m_placeRegisterMask != 0) { //if there were not enough stages to accommodate the requested register mask
+		//if there were not enough stages to accommodate the requested register mask, place more trailing registers
+		while (m_placeRegisterMask != 0) { 
 			if (m_placeRegisterMask & 1)
 				ret = reg(ret);
 			m_placeRegisterMask >>= 1;
@@ -78,7 +81,7 @@ namespace gtry::scl {
 	}
 
 	template<Signal SigT>
-	inline Vector<SigT> OrTree<SigT>::OrReduce(const Vector<SigT>& in, size_t& placeRegisterMask) {
+	Vector<SigT> OrTree<SigT>::OrReduce(const Vector<SigT>& in, size_t& placeRegisterMask) {
 		const size_t inSize = in.size();
 		if (inSize == 1)
 			return in;
