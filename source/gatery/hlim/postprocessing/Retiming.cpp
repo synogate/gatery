@@ -54,7 +54,7 @@ void determineNegativeRegisterEnables(Circuit &circuit, Subnet &subnet)
 			if (it != buildEnableSignalCache.end())
 				enableDriver = it->second;
 			else {
-				enableDriver = enable.build(*negReg->getGroup(), &subnet);
+				enableDriver = enable.build(*negReg->getGroup(), &subnet, false);
 				buildEnableSignalCache[enable] = enableDriver;
 			}
 
@@ -136,16 +136,23 @@ void annihilateNegativeRegisters(Circuit &circuit, Subnet &subnet)
 			auto driver = negReg->getNonSignalDriver(Node_Register::DATA);
 			auto *reg = dynamic_cast<Node_Register*>(driver.node);
 
-			if (reg == nullptr)
+			if (reg == nullptr) {
 				dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING << "Can not resolve negative register " << negReg << " because it is driven by " << driver.node << " which is not a register with which it can be fused. This usually means that retiming was unsuccessfull (negative register within a combinatorical loop?).");
-			else {
+				HCL_ASSERT_HINT(false, "Can not resolve negative register because the register to resolve with was not found.");
+			} else {
 				// todo: check enables compatible
-				Conjunction regEnable = Conjunction::fromInput( {.node = reg, .port = Node_Register::ENABLE});
-				Conjunction negRegEnable = Conjunction::fromOutput(negReg->expectedEnable());
+				Conjunction regEnable;
+				if (reg->getDriver(Node_Register::ENABLE).node != nullptr)
+					regEnable = Conjunction::fromInput( {.node = reg, .port = Node_Register::ENABLE});
+
+				Conjunction negRegEnable;
+				if (negReg->expectedEnable().node != nullptr)
+					negRegEnable = Conjunction::fromOutput(negReg->expectedEnable());
 
 				if (!regEnable.isEqualTo(negRegEnable)) {
 					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING 
 							<< "Can not resolve negative register " << negReg << " because it is driven by register " << driver.node << " which has an incompatible enable signal.");
+					HCL_ASSERT_HINT(false, "Can not resolve negative register because of incompatible enable signals");
 				} else {
 					// Rewire data output to the regs input
 					auto dataDriven = negReg->getDirectlyDriven((size_t)Node_NegativeRegister::Outputs::data);
@@ -160,6 +167,7 @@ void annihilateNegativeRegisters(Circuit &circuit, Subnet &subnet)
 			}
 		}
 }
+
 
 void bypassRetimingBlockers(Circuit &circuit, Subnet &subnet)
 {
