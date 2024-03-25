@@ -19,6 +19,8 @@
 
 #include <gatery/frontend/ExternalModule.h>
 
+#include <gatery/frontend/tech/TechnologyMappingPattern.h>
+
 namespace gtry::scl::arch::xilinx
 {
 	class DSP48E2 : public ExternalModule
@@ -117,4 +119,16 @@ namespace gtry::scl::arch::xilinx
 	 * @return The multiplication result and the latency in cycles between input and output.
 	*/
 	std::tuple<UInt, size_t> mul(const UInt& a, const UInt& b, BitWidth resultW, size_t resultOffset = 0);
+
+
+
+	class PipelinedMulDSP48E2Pattern : public TechnologyMappingPattern
+	{
+		public:
+			PipelinedMulDSP48E2Pattern();
+			virtual ~PipelinedMulDSP48E2Pattern() = default;
+
+			virtual bool scopedAttemptApply(hlim::NodeGroup *nodeGroup) const override;
+		protected:
+	};	
 }

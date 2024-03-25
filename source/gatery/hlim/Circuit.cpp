@@ -1646,15 +1646,15 @@ void DefaultPostprocessing::run(Circuit &circuit) const
 {
 	dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Running default postprocessing.");
 
+	TechnologyMapping fallbackMapping;
+	const TechnologyMapping* techMapping = m_techMapping ? m_techMapping : &fallbackMapping;
+
+	techMapping->apply(circuit, circuit.getRootNodeGroup(), true);
+
 	generalOptimization(circuit);
 	memoryDetection(circuit);
 
-	if (m_techMapping) {
-		m_techMapping->apply(circuit, circuit.getRootNodeGroup());
-	} else {
-		TechnologyMapping mapping;
-		mapping.apply(circuit, circuit.getRootNodeGroup());
-	}
+	techMapping->apply(circuit, circuit.getRootNodeGroup(), false);
 	generalOptimization(circuit); // Because we ran frontend code for tech mapping
 
 	exportPreparation(circuit);
@@ -1709,13 +1709,14 @@ void MinimalPostprocessing::exportPreparation(Circuit& circuit) const
 void MinimalPostprocessing::run(Circuit& circuit) const
 {
 	dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Running default postprocessing.");
+	TechnologyMapping mapping;
 
+
+	mapping.apply(circuit, circuit.getRootNodeGroup(), true);
 	generalOptimization(circuit);
 	memoryDetection(circuit);
 
-	TechnologyMapping mapping;
-	mapping.apply(circuit, circuit.getRootNodeGroup());
-
+	mapping.apply(circuit, circuit.getRootNodeGroup(), false);
 	generalOptimization(circuit); // Because we ran frontend code for tech mapping
 
 	exportPreparation(circuit);

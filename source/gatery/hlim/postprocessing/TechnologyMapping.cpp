@@ -40,18 +40,18 @@ TechnologyMapping::TechnologyMapping()
 void TechnologyMapping::addPattern(std::unique_ptr<TechnologyMappingPattern> pattern) 
 { 
 	m_patterns.push_back(std::move(pattern));
-	std::sort(m_patterns.begin(), m_patterns.end(), [](const auto &lhs, const auto &rhs)->bool{
+	std::sort(m_patterns.begin(), m_patterns.end(), [](const auto &lhs, const auto &rhs)->bool {
 		return lhs->getPriority() < rhs->getPriority();
 	});
 }
 
 
-void TechnologyMapping::apply(Circuit &circuit, hlim::NodeGroup *nodeGroup) const
+void TechnologyMapping::apply(Circuit &circuit, hlim::NodeGroup *nodeGroup, bool preOptimization) const
 {
 	bool handled = false;
 	{
 		for (auto &pattern : m_patterns)
-			if (pattern->attemptApply(circuit, nodeGroup)) {
+			if ((preOptimization == pattern->runPreOptimization()) && pattern->attemptApply(circuit, nodeGroup)) {
 				handled = true;
 				break;
 			}
@@ -60,7 +60,7 @@ void TechnologyMapping::apply(Circuit &circuit, hlim::NodeGroup *nodeGroup) cons
 	if (!handled)
 		for (size_t i = 0; i < nodeGroup->getChildren().size(); i++) {
 			auto &g = nodeGroup->getChildren()[i];
-			apply(circuit, g.get());
+			apply(circuit, g.get(), preOptimization);
 		}
 }
 
