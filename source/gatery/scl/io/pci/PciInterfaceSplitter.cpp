@@ -20,60 +20,42 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <gatery/scl/stream/StreamDemux.h>
 #include <gatery/scl/stream/StreamArbiter.h>
 
-namespace gtry::scl::pci {
-	PciInterfaceSplitter::PciInterfaceSplitter(CompleterInterface& compInt, RequesterInterface& reqInt, TlpPacketStream<EmptyBits, BarInfo>&& rx)
+namespace gtry::scl::pci 
+{
+	TlpPacketStream<EmptyBits> interfaceSplitter(CompleterInterface&& compInt, RequesterInterface&& reqInt, TlpPacketStream<EmptyBits, BarInfo>&& rx)
 	{
-		this->rx(move(rx));
-		auto localCompComp = constructFrom(compInt.completion);
-		localCompComp <<= compInt.completion;
-		this->completerCompletion(move(localCompComp));
-		auto localReqReq = constructFrom(*reqInt.request);
-		localReqReq <<= *reqInt.request;
-		this->requesterRequest(move(localReqReq));
-		this->generate();
-		compInt.request = this->completerRequest();
-		reqInt.completion = this->requesterCompletion();
+		interfaceSplitterRx(move(compInt.request), move(reqInt.completion), move(rx));
+		return interfaceSplitterTx(move(compInt.completion), move(*reqInt.request));
 	}
-	
-	void PciInterfaceSplitter::generate()
+
+	void interfaceSplitterRx(TlpPacketStream<EmptyBits, BarInfo>&& completerRequest, TlpPacketStream<EmptyBits>&& requesterCompletion, TlpPacketStream<EmptyBits, BarInfo>&& rx)
 	{
-		Area area{ "scl_pci_splitter", true};
-		splitRx();
-		mergeTx();
+		Area area{ "scl_interfaceSplitterRx", true };
+
+		Bit isCompletion = capture(
+			HeaderCommon::fromRawDw0(*rx).isCompletion(),
+			valid(rx) & sop(rx)
+		);
+		HCL_NAMED(isCompletion);
+
+		StreamDemux<TlpPacketStream<EmptyBits, BarInfo>> rxDemux(move(rx), zext(isCompletion));
+		completerRequest <<= rxDemux.out(0);
+		HCL_NAMED(completerRequest);
+		requesterCompletion <<= rxDemux.out(1).template remove<BarInfo>();
+		HCL_NAMED(requesterCompletion);
 	}
-	void PciInterfaceSplitter::splitRx()
+
+	TlpPacketStream<EmptyBits> interfaceSplitterTx(TlpPacketStream<EmptyBits>&& completerCompletion, TlpPacketStream<EmptyBits>&& requesterRequest)
 	{
-		HCL_DESIGNCHECK(m_rx);
+		Area area{ "scl_interfaceSplitterTx", true };
 
-		enum class RxSelector {
-			selectCompleterRequest,
-			selectRequesterCompletion
-		};
+		HCL_NAMED(completerCompletion);
+		HCL_NAMED(requesterRequest);
 
-		HeaderCommon hdr = capture(
-			HeaderCommon::fromRawDw0((*m_rx)->lower(32_b)),
-			HeaderCommon::makeDefault(TlpOpcode::completionWithData, 1),
-			valid(*m_rx) & sop(*m_rx));
-
-		HCL_NAMED(hdr);
-
-		Enum<RxSelector> selector = RxSelector::selectRequesterCompletion;
-		IF(hdr.is4dw())
-			selector = RxSelector::selectCompleterRequest;
-		HCL_NAMED(selector);
-		scl::StreamDemux<TlpPacketStream<EmptyBits, BarInfo>> rxDemux(move(*m_rx), (UInt) selector.toBVec());
-		m_completerRequest		= rxDemux.out((size_t) RxSelector::selectCompleterRequest);
-		m_requesterCompletion	= rxDemux.out((size_t) RxSelector::selectRequesterCompletion).template remove<BarInfo>();
-	}
-	void PciInterfaceSplitter::mergeTx()
-	{
-		HCL_DESIGNCHECK(m_completerCompletion);
-		HCL_DESIGNCHECK(m_requesterRequest);
-
-		scl::StreamArbiter<TlpPacketStream<EmptyBits>> txArbiter;
-		txArbiter.attach(*m_requesterRequest);
-		txArbiter.attach(*m_completerCompletion);
-		m_tx = move(txArbiter.out());
+		StreamArbiter<TlpPacketStream<EmptyBits>> txArbiter;
+		txArbiter.attach(completerCompletion);
+		txArbiter.attach(requesterRequest);
 		txArbiter.generate();
+		return move(txArbiter.out());
 	}
 }

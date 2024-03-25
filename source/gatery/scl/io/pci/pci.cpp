@@ -40,7 +40,8 @@ namespace gtry::scl::pci {
 
 	HeaderCommon HeaderCommon::fromRawDw0(BVec rawDw0)
 	{
-		HCL_DESIGNCHECK(rawDw0.width() == 32_b);
+		HCL_DESIGNCHECK(rawDw0.width() >= 32_b);
+
 		HeaderCommon ret;
 		auto bytes = rawDw0.parts(4);
 		ret.type = bytes[0](0, 5_b);

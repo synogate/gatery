@@ -429,9 +429,8 @@ BOOST_FIXTURE_TEST_CASE(pci_requesterCompletion_tileLink_fullW_test, BoostUnitTe
 			co_await scl::strm::performTransferWait(d, clk);
 			BOOST_TEST(simu(d->source) == reqComp.tag);
 			BOOST_TEST(simu(d->size) == 6);
-			simu(d->data) == reqComp.payload;
+			BOOST_TEST((simu(d->data) == reqComp.payload));
 		}
-
 
 		co_await OnClk(clk);
 		co_await OnClk(clk);
@@ -758,8 +757,7 @@ struct pciInterfaceSplitterFixture : BoostUnitTestSimulationFixture {
 		emptyBits(*reqInt.request) = BitWidth::count(tlpW.bits());
 		pinIn(*reqInt.request, "reqReq");
 
-		scl::pci::PciInterfaceSplitter splitter(compInt, reqInt, move(rx));
-		auto& tx = splitter.tx();
+		scl::Stream tx = scl::pci::interfaceSplitter(std::move(compInt), std::move(reqInt), move(rx));
 
 		pinOut(reqInt.completion, "reqComp");
 		pinOut(compInt.request, "compReq");
@@ -988,6 +986,7 @@ BOOST_FIXTURE_TEST_CASE(pci_splitter_full_rx, pciInterfaceSplitterFixture)
 
 BOOST_FIXTURE_TEST_CASE(pci_splitter_full_rx_tx, pciInterfaceSplitterFixture)
 {
+
 	sendRequesterRequests = true;
 	sendCompleterRequests = true;
 	sendCompleterCompletions = true;
