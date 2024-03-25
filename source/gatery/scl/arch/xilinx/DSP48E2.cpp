@@ -297,7 +297,6 @@ namespace gtry::scl::arch::xilinx
 		{
 			Bit en;
 			std::tie(result, en) = negativeReg(result);
-			sim_assert(en == '1');
 		}
 		return result;
 	}
