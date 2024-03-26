@@ -34,6 +34,6 @@ namespace gtry::scl
 		ready(*slave.d) = '1';
 
 		valid(slave.a) = valid(cmdAddr) & valid(data);
-		slave.a->setupPut(cmdAddr->addr, *data, cmd->id, utils::Log2C(cmd->bytesPerBurst));
+		slave.a->setupPut(cmdAddr->addr, *data, (UInt)cmd->id, utils::Log2C(cmd->bytesPerBurst));
 	}
 }

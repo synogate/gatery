@@ -24,9 +24,9 @@ namespace gtry::scl
 	{
 		UInt startAddress;
 		UInt endAddress; // dma stops before this address
+		BVec id = 0_b;
 
 		size_t bytesPerBurst = 0;
-		size_t id = 0;
 	};
 
 	RvStream<AxiAddress> axiGenerateAddressFromCommand(RvStream<AxiToStreamCmd>&& cmd, const AxiConfig& config);
@@ -49,8 +49,8 @@ namespace gtry::scl
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::AxiToStreamCmd,
 	startAddress,
 	endAddress,
-	bytesPerBurst,
-	id
+	id,
+	bytesPerBurst
 );
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::AxiTransferReport,
