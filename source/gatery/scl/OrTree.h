@@ -32,9 +32,10 @@ namespace gtry::scl {
 	{
 	public:
 		void attach(const SigT& in);
-		SigT out(size_t placeRegisterMask);
+		SigT generate(size_t placeRegisterMask = 0);
+
+		static Vector<SigT> orReduce(const Vector<SigT>& in, size_t& placeRegisterMask);
 	private:
-		Vector<SigT> OrReduce(const Vector<SigT>& in, size_t& placeRegisterMask);
 		Area m_area = Area{ "scl_orTree" };
 		bool m_generated = false;
 		Vector<SigT> m_inputs;
@@ -43,7 +44,8 @@ namespace gtry::scl {
 }
 
 
-namespace gtry::scl {
+namespace gtry::scl 
+{
 	template<Signal SigT>
 	void OrTree<SigT>::attach(const SigT& in) {
 		m_area.enter();
@@ -53,28 +55,20 @@ namespace gtry::scl {
 	}
 
 	template<Signal SigT>
-	SigT OrTree<SigT>::out(size_t placeRegisterMask) {
+	SigT OrTree<SigT>::generate(size_t placeRegisterMask) {
 		m_area.enter();
 		HCL_DESIGNCHECK(!m_generated);
 		HCL_DESIGNCHECK(m_inputs.size() != 0);
 		m_generated = true;
 
-		UInt total = ConstUInt(0, BitWidth::count(m_inputs.size()));
-		for (size_t i = 0; i < m_inputs.size(); i++) {
-			total += m_inputConditions[i];
-			IF(!m_inputConditions[i]) {
-				m_inputs[i] = allZeros(m_inputs[i]); //cannot do (&=Bit) because it's a compound
-			}
-		}
-		sim_assert(total <= 1) << "multiple input conditions were simultaneously true, or-tree is not valid in these conditions";
+		sim_assert(bitcount(m_inputConditions) <= 1) << "multiple input conditions were simultaneously true, or-tree is not valid in these conditions";
 
 		size_t currentRegisterMask = placeRegisterMask;
-
-		SigT ret = OrReduce(m_inputs, currentRegisterMask).front();
+		SigT ret = orReduce(m_inputs, currentRegisterMask).front();
 
 		//if there were not enough stages to accommodate the requested register mask, place more trailing registers
 		while (currentRegisterMask != 0) { 
-			if (currentRegisterMask & 1)
+			if ((currentRegisterMask & 1))
 				ret = reg(ret);
 			currentRegisterMask >>= 1;
 		}
@@ -83,15 +77,14 @@ namespace gtry::scl {
 	}
 
 	template<Signal SigT>
-	Vector<SigT> OrTree<SigT>::OrReduce(const Vector<SigT>& in, size_t& placeRegisterMask) {
-		const size_t inSize = in.size();
-		if (inSize == 1)
+	Vector<SigT> OrTree<SigT>::orReduce(const Vector<SigT>& in, size_t& placeRegisterMask) {
+		if (in.size() == 1)
 			return in;
 
-		const size_t outSize = (inSize + 1) / 2;
+		const size_t outSize = (in.size() + 1) / 2;
 		Vector<SigT> ret(outSize);
 		for (size_t i = 0; i < outSize; i++) {
-			if ((2 * i + 1) == inSize)
+			if ((2 * i + 1) == in.size())
 				ret[i] = in.back();
 			else {
 				ret[i] = constructFrom(in.front());
@@ -99,9 +92,10 @@ namespace gtry::scl {
 			}
 		}
 
-		if (placeRegisterMask & 1) {
+		if ((placeRegisterMask & 1)) {
 			ret = reg(ret);
 		}
-		return OrReduce(ret, placeRegisterMask >>= 1);
+
+		return orReduce(ret, placeRegisterMask >>= 1);
 	}
 }
