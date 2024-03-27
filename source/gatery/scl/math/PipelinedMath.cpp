@@ -48,7 +48,21 @@ UInt pipelinedMul(UInt a, UInt b, BitWidth resultW, size_t resultOffset)
 
 SInt pipelinedMul(SInt a, SInt b, BitWidth resultW, size_t resultOffset)
 {
-	return (SInt) pipelinedMul((UInt) a, (UInt) b, resultW, resultOffset);
+	Area area("scl_pipelinedMul", true);
+	area.getNodeGroup()->template createMetaInfo<PipelinedMulMeta>()->resultOffset = resultOffset;
+	HCL_NAMED(a);
+	HCL_NAMED(b);
+
+	BitWidth immW = resultW + resultOffset;
+
+	auto resizedA = resizeTo(a, immW);
+	HCL_NAMED(resizedA);
+	auto resizedB = resizeTo(b, immW);
+	HCL_NAMED(resizedB);
+
+	SInt out = (resizedA * resizedB).upper(resultW);
+	HCL_NAMED(out);
+	return out;
 }
 
 }
