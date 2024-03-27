@@ -20,14 +20,14 @@
 
 #include "DesignScope.h"
 
-#include <gatery/hlim/coreNodes/Node_RetimingBlocker.h>
+#include <gatery/hlim/supportNodes/Node_RetimingBlocker.h>
 
 namespace gtry::internal
 {
 	SignalReadPort retimingBlocker(SignalReadPort val)
 	{
 		auto* node = DesignScope::createNode<hlim::Node_RetimingBlocker>();
-		node->connectInput(v);
+		node->connectInput(val);
 		return SignalReadPort{node};
 	}
 }
