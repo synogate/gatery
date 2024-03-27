@@ -385,9 +385,9 @@ namespace gtry::scl::arch::xilinx
 		for (size_t i = 0; i < latency; ++i)
 			std::tie(outPhys, enable) = negativeReg(outPhys);
 
-		outPhys = outPhys(resultOffset, resultW);
-		HCL_NAMED(outPhys);
-		return outPhys;
+		UInt outPhysCropped = outPhys(resultOffset, resultW);
+		HCL_NAMED(outPhysCropped);
+		return outPhysCropped;
 	}
 
 
