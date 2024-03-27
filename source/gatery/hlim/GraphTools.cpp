@@ -25,6 +25,8 @@
 #include "coreNodes/Node_Signal.h"
 #include "coreNodes/Node_Register.h"
 #include "coreNodes/Node_MultiDriver.h"
+#include "coreNodes/Node_Compare.h"
+#include "coreNodes/Node_Constant.h"
 #include "supportNodes/Node_ExportOverride.h"
 #include "supportNodes/Node_External.h"
 #include "supportNodes/Node_RegSpawner.h"
@@ -362,5 +364,24 @@ bool drivenByMultipleIOPins(const InterconnectedNodes &in, Node_Pin *&firstDrivi
 
 	return false;
 }
+
+
+std::optional<std::pair<Node_Constant*, NodePort>> isComparisonWithConstant(NodePort output)
+{
+	if (auto *compare = dynamic_cast<Node_Compare*>(output.node)) {
+		if (compare->getOp() == Node_Compare::EQ) {
+
+			auto *const1 = dynamic_cast<Node_Constant*>(compare->getNonSignalDriver(0).node);
+			if (const1) 
+				return { std::make_pair(const1, compare->getDriver(1)) };
+
+			auto *const2 = dynamic_cast<Node_Constant*>(compare->getNonSignalDriver(1).node);
+			if (const2)
+				return { std::make_pair(const2, compare->getDriver(0)) };
+		}
+	}
+	return {};
+}
+
 
 }

@@ -710,24 +710,6 @@ void Circuit::removeIrrelevantMuxes(Subnet &subnet)
 }
 
 
-std::optional<std::pair<Node_Constant*, NodePort>> isComparisonWithConstant(NodePort input)
-{
-	auto driver = input.node->getNonSignalDriver(input.port);
-	if (auto *compare = dynamic_cast<Node_Compare*>(driver.node)) {
-		if (compare->getOp() == Node_Compare::EQ) {
-
-			auto *const1 = dynamic_cast<Node_Constant*>(compare->getNonSignalDriver(0).node);
-			if (const1) 
-				return { std::make_pair(const1, compare->getDriver(1)) };
-
-			auto *const2 = dynamic_cast<Node_Constant*>(compare->getNonSignalDriver(1).node);
-			if (const2)
-				return { std::make_pair(const2, compare->getDriver(0)) };
-		}
-	}
-	return {};
-}
-
 std::optional<std::pair<Node_Multiplexer*, Node_Constant*>> followedByCompatibleMux(Node_Multiplexer *muxNode, NodePort comparisonSignal, RevisitCheck &cycleCheck)
 {
 	for (auto nh : muxNode->exploreOutput(0)) {
@@ -739,7 +721,7 @@ std::optional<std::pair<Node_Multiplexer*, Node_Constant*>> followedByCompatible
 
 		if (auto *nextMuxNode = dynamic_cast<Node_Multiplexer*>(nh.node())) {
 			if (nextMuxNode->getNumInputPorts() == 3) {
-				auto nextComparison = isComparisonWithConstant({.node = nextMuxNode, .port = 0 });
+				auto nextComparison = isComparisonWithConstant(nextMuxNode->getNonSignalDriver(0));
 				if (nextComparison)
 					if (nextComparison->second == comparisonSignal)
 						if (sim::allDefined(nextComparison->first->getValue()))
@@ -774,7 +756,7 @@ void Circuit::mergeBinaryMuxChain(Subnet& subnet)
 			if (alreadyHandled.contains(muxNode)) continue;
 
 			if (muxNode->getNumInputPorts() != 3) continue;
-			auto comparison = isComparisonWithConstant({.node = muxNode, .port = 0 });
+			auto comparison = isComparisonWithConstant(muxNode->getNonSignalDriver(0));
 			if (!comparison) continue;
 
 			if (!sim::allDefined(comparison->first->getValue())) continue;
@@ -797,7 +779,7 @@ void Circuit::mergeBinaryMuxChain(Subnet& subnet)
 					cycleCheck.insert(backNode);
 
 					if (backNode->getNumInputPorts() != 3) break;
-					auto backComparison = isComparisonWithConstant({.node = backNode, .port = 0 });
+					auto backComparison = isComparisonWithConstant(backNode->getNonSignalDriver(0));
 					if (!backComparison) break;
 					if (!sim::allDefined(backComparison->first->getValue())) break;
 
