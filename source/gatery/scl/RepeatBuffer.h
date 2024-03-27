@@ -18,6 +18,7 @@
 #pragma once
 
 #include <gatery/frontend.h>
+#include <gatery/frontend/RetimingBlocker.h>
 
 
 namespace gtry::scl
@@ -51,7 +52,7 @@ namespace gtry::scl
 			TData rdPeek() const { return m_rdPeekData; }
 			void rdPop() { m_rdPop = '1'; }
 
-			void makeReadWrietIndependent();
+			void makeReadWriteIndependent();
 
 			void noConflicts() { m_memory.noConflicts(); }
 			void allowArbitraryPortRetiming() { m_memory.allowArbitraryPortRetiming(); }
@@ -61,6 +62,7 @@ namespace gtry::scl
 			Memory<TData> m_memory;
 			
 			UInt m_wrapAropundLast;
+			UInt m_wrapAropundLastFinal;
 
 			UInt m_wrWrapAropundLast;
 			Bit m_wrReset;
@@ -81,12 +83,12 @@ namespace gtry::scl
 	
 
 	template<Signal TData>
-	void RepeatBuffer<TData>::makeReadWrietIndependent() 
+	void RepeatBuffer<TData>::makeReadWriteIndependent() 
 	{
 		noConflicts();
 		allowArbitraryPortRetiming();
-		//m_wrWrapAropundLast = retimingBlocker(m_wrapAropundLast);
-		//m_rdWrapAropundLast = retimingBlocker(m_wrapAropundLast);
+		m_wrWrapAropundLast = retimingBlocker(m_wrapAropundLastFinal);
+		m_rdWrapAropundLast = retimingBlocker(m_wrapAropundLastFinal);
 	}
 
 	template<Signal TData>
@@ -102,6 +104,7 @@ namespace gtry::scl
 
 		const BitWidth counterWidth = m_memory.addressWidth() + 1;
 		m_wrapAropundLast = counterWidth;
+		m_wrapAropundLastFinal = m_wrapAropundLast;
 		m_wrWrapAropundLast = counterWidth;
 		m_rdWrapAropundLast = counterWidth;
 
@@ -165,8 +168,8 @@ namespace gtry::scl
 		HCL_NAMED(m_rdIsFirst);
 		HCL_NAMED(m_rdIsLast);
 
-		m_wrWrapAropundLast = m_wrapAropundLast;
-		m_rdWrapAropundLast = m_wrapAropundLast;
+		m_wrWrapAropundLast = m_wrapAropundLastFinal;
+		m_rdWrapAropundLast = m_wrapAropundLastFinal;
 		m_wrapAropundLast = minDepth-1;
 
 		m_wrReset = '0';
