@@ -39,12 +39,13 @@ namespace gtry::scl
 			size_t depth();
 			BitWidth wordWidth() const { return width(m_rdPeekData); }
 
-			/// @note Do not modify while reading a packet. Does not latch on its own.
-			void wrapAround(UInt last) { m_wrapAropundLast = zext(last); }
+			/// @note Do not modify while reading a packet.
+			void wrapAround(UInt last) { m_wrapAroundLast = zext(last); }
 
 			void wrReset() { m_wrReset = '1'; }
 			Bit wrIsLast() const { return m_wrIsLast; }
 			void wrPush(TData data) { m_wrPushData = data; m_wrPush = '1'; }
+			void wrWrapAround() { m_wrapAroundLast = m_writePtr; }
 
 			void rdReset() { m_rdReset = '1'; }
 			Bit rdIsFirst() const { return m_rdIsFirst; }
@@ -61,16 +62,17 @@ namespace gtry::scl
 
 			Memory<TData> m_memory;
 			
-			UInt m_wrapAropundLast;
-			UInt m_wrapAropundLastFinal;
+			UInt m_wrapAroundLast;
+			UInt m_wrapAroundLastFinal;
 
-			UInt m_wrWrapAropundLast;
+			UInt m_wrWrapAroundLast;
 			Bit m_wrReset;
 			Bit m_wrPush;
 			TData m_wrPushData;
 			Bit m_wrIsLast;
+			UInt m_writePtr;
 
-			UInt m_rdWrapAropundLast;
+			UInt m_rdWrapAroundLast;
 			Bit m_rdReset;
 			Bit m_rdIsFirst;
 			TData m_rdPeekData;
@@ -87,8 +89,8 @@ namespace gtry::scl
 	{
 		noConflicts();
 		allowArbitraryPortRetiming();
-		m_wrWrapAropundLast = retimingBlocker(m_wrapAropundLastFinal);
-		m_rdWrapAropundLast = retimingBlocker(m_wrapAropundLastFinal);
+		m_wrWrapAroundLast = retimingBlocker(m_wrapAroundLastFinal);
+		m_rdWrapAroundLast = retimingBlocker(m_wrapAroundLastFinal);
 	}
 
 	template<Signal TData>
@@ -103,12 +105,12 @@ namespace gtry::scl
 		m_memory.setup(minDepth, ref);
 
 		const BitWidth counterWidth = m_memory.addressWidth() + 1;
-		m_wrapAropundLast = counterWidth;
-		m_wrapAropundLastFinal = m_wrapAropundLast;
-		m_wrWrapAropundLast = counterWidth;
-		m_rdWrapAropundLast = counterWidth;
+		m_wrapAroundLast = counterWidth;
+		m_wrapAroundLastFinal = m_wrapAroundLast;
+		m_wrWrapAroundLast = counterWidth;
+		m_rdWrapAroundLast = counterWidth;
 
-		HCL_NAMED(m_wrWrapAropundLast);
+		HCL_NAMED(m_wrWrapAroundLast);
 		HCL_NAMED(m_wrReset);
 		HCL_NAMED(m_wrPush);
 		HCL_NAMED(m_wrIsLast);
@@ -116,12 +118,13 @@ namespace gtry::scl
 		HCL_NAMED(m_wrPushData);
 
 
-		HCL_NAMED(m_rdWrapAropundLast);
+		HCL_NAMED(m_rdWrapAroundLast);
 		HCL_NAMED(m_rdReset);
 		HCL_NAMED(m_rdPop);
 
 		{
 			UInt writePtr = counterWidth;
+			writePtr = reg(writePtr, 0);
 			IF (m_wrReset)
 				writePtr = 0;
 
@@ -130,7 +133,9 @@ namespace gtry::scl
 			IF (m_wrPush)
 				m_memory[writePtr(0, -1_b)] = m_wrPushData;
 
-			m_wrIsLast = writePtr == m_wrWrapAropundLast;
+			m_wrIsLast = writePtr == m_wrWrapAroundLast;
+			m_writePtr = writePtr;
+			HCL_NAMED(m_writePtr);
 
 			IF (m_wrPush) {
 				IF (m_wrIsLast)
@@ -138,12 +143,11 @@ namespace gtry::scl
 				ELSE
 					writePtr += 1;
 			}
-
-			writePtr = reg(writePtr, 0);
 		}
 
 		{
 			UInt readPtr = counterWidth;
+			readPtr = reg(readPtr, 0);
 			IF (m_rdReset)
 				readPtr = 0;
 
@@ -152,7 +156,7 @@ namespace gtry::scl
 			HCL_NAMED(readPtr);
 			m_rdPeekData = m_memory[readPtr(0, -1_b)];
 
-			m_rdIsLast = readPtr == m_rdWrapAropundLast;
+			m_rdIsLast = readPtr == m_rdWrapAroundLast;
 
 			IF (m_rdPop) {
 				IF (m_rdIsLast)
@@ -160,17 +164,15 @@ namespace gtry::scl
 				ELSE
 					readPtr += 1;
 			}
-
-			readPtr = reg(readPtr, 0);
 		}
 
 		HCL_NAMED(m_rdPeekData);
 		HCL_NAMED(m_rdIsFirst);
 		HCL_NAMED(m_rdIsLast);
 
-		m_wrWrapAropundLast = m_wrapAropundLastFinal;
-		m_rdWrapAropundLast = m_wrapAropundLastFinal;
-		m_wrapAropundLast = minDepth-1;
+		m_wrWrapAroundLast = m_wrapAroundLastFinal;
+		m_rdWrapAroundLast = m_wrapAroundLastFinal;
+		m_wrapAroundLast = reg(m_wrapAroundLast, minDepth-1);
 
 		m_wrReset = '0';
 		m_wrPush = '0';
