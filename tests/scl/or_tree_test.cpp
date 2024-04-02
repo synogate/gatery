@@ -66,7 +66,7 @@ BOOST_FIXTURE_TEST_CASE(or_tree_simple_test, BoostUnitTestSimulationFixture)
 		}
 	});
 
-	//senquentially receive
+	//sequentially receive
 	addSimulationProcess([&, this]()->SimProcess {
 		for (size_t i = 0; i < numberOfStreams; i++) {
 			co_await performTransferWait(out, clk);
