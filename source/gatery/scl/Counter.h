@@ -74,13 +74,19 @@ namespace gtry::scl
 			if (counterW != BitWidth(0)) {
 				UInt delta = ConstUInt(0, m_value.width());
 				IF(m_inc & !m_dec)
-					delta = 1;
+					delta = 1; // +1
 				IF(m_dec & !m_inc)
-					delta |= '1';
+					delta |= '1'; // -1
+				Bit isFirst = m_value == 0;
 				m_value += delta;
 				if (checkOverflows) {
-					IF(m_last)
-						m_value = 0;
+					IF(delta == 1)
+						IF(m_last)
+							m_value = 0;
+		
+					IF(delta == delta.width().mask())
+						IF(isFirst)
+							m_value = (end - 1).lower(counterW);
 				}
 			}
 			HCL_NAMED(m_load);

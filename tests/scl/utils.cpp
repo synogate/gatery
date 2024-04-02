@@ -178,7 +178,7 @@ BOOST_FIXTURE_TEST_CASE(counter_increment_test, BoostUnitTestSimulationFixture)
 	Bit increment;
 	pinIn(increment, "increment");
 
-	Counter ctr(BitWidth::count(20));
+	Counter ctr(BitWidth::last(finalCount));
 	IF(increment)
 		ctr.inc();
 
@@ -206,40 +206,131 @@ BOOST_FIXTURE_TEST_CASE(counter_increment_test, BoostUnitTestSimulationFixture)
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 } 
 
-BOOST_FIXTURE_TEST_CASE(counter_decrement_test, BoostUnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(counter_increment_then_decrement_test, BoostUnitTestSimulationFixture)
 {
 	Clock clk({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clk);
 
-	size_t finalCount = 20;
+	size_t intermediaryCount = 20;
 
 	Bit increment;
 	pinIn(increment, "increment");
 
-	Counter ctr(BitWidth::count(20));
+	Bit decrement;
+	pinIn(decrement, "decrement");
+
+	Counter ctr(BitWidth::last(intermediaryCount));
+
 	IF(increment)
 		ctr.inc();
+	IF(decrement)
+		ctr.dec();
 
 	pinOut(ctr.value(), "value");
 
 	addSimulationProcess([&, this]()->SimProcess {
 		simu(increment) = '0';
-		co_await OnClk(clk);
-		co_await OnClk(clk);
-		co_await OnClk(clk);
-		co_await OnClk(clk);
-		for (size_t i = 0; i < finalCount; i++) {
+		simu(decrement) = '0';
+		for (size_t i = 0; i < intermediaryCount; i++) {
 			simu(increment) = '1';
 			co_await OnClk(clk);
 			simu(increment) = '0';
 		}
-		for (size_t i = 0; i < 10; i++)
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ctr.value()) == intermediaryCount);
+		for (size_t i = 0; i < intermediaryCount; i++) {
+			simu(decrement) = '1';
 			co_await OnClk(clk);
-
-		BOOST_TEST(simu(ctr.value()) == finalCount);
+			simu(decrement) = '0';
+		}
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ctr.value()) == 0);
 		stopTest();
 		}); 
 
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 } 
+
+BOOST_FIXTURE_TEST_CASE(counter_increment_and_decrement_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+
+	size_t tries = 3;
+
+	Bit increment;
+	pinIn(increment, "increment");
+
+	Bit decrement;
+	pinIn(decrement, "decrement");
+
+	Counter ctr(BitWidth::last(5));
+
+	IF(increment)
+		ctr.inc();
+	IF(decrement)
+		ctr.dec();
+
+	pinOut(ctr.value(), "value");
+
+	addSimulationProcess([&, this]()->SimProcess {
+		simu(increment) = '1';
+		simu(decrement) = '1';
+		for (size_t i = 0; i < tries; i++){
+			co_await OnClk(clk);
+			BOOST_TEST(simu(ctr.value()) == 0);
+		}
+		stopTest();
+	}); 
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+
+BOOST_FIXTURE_TEST_CASE(counter_full_non_power_of_2_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+
+
+	Bit increment;
+	pinIn(increment, "increment");
+
+	Bit decrement;
+	pinIn(decrement, "decrement");
+
+	size_t burst = 14;
+	Counter ctr(5);
+
+	IF(increment)
+		ctr.inc();
+	IF(decrement)
+		ctr.dec();
+
+	pinOut(ctr.value(), "value");
+
+	//this test wraps around twice, then wraps backwards back to zero
+	addSimulationProcess([&, this]()->SimProcess {
+		simu(increment) = '0';
+		simu(decrement) = '0';
+		for (size_t i = 0; i < burst; i++){
+			simu(increment) = '1';
+			co_await OnClk(clk);
+			simu(increment) = '0';
+		}
+		co_await OnClk(clk);
+		for (size_t i = 0; i < burst; i++){
+			simu(decrement) = '1';
+			co_await OnClk(clk);
+			simu(decrement) = '0';
+		}
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ctr.value()) == 0);
+		stopTest();
+		}); 
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
