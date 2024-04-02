@@ -1513,10 +1513,11 @@ void Circuit::optimizeSubnet(Subnet &subnet)
 	propagateConstants(subnet);
 	mergeRewires(subnet);
 	optimizeRewireNodes(subnet);
+	cullMuxConditionNegations(subnet);
+	breakMutuallyExclusiveMuxChains(subnet);
 	mergeMuxes(subnet);
 	removeIrrelevantComparisons(subnet);
 	removeIrrelevantMuxes(subnet);
-	cullMuxConditionNegations(subnet);
 	mergeBinaryMuxChain(subnet);
 	removeNoOps(subnet);
 	foldRegisterMuxEnableLoops(subnet);
@@ -1570,10 +1571,11 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
 	subnet = Subnet::all(circuit);
 	circuit.mergeRewires(subnet);
 	circuit.optimizeRewireNodes(subnet);
+	circuit.cullMuxConditionNegations(subnet);
+	circuit.breakMutuallyExclusiveMuxChains(subnet);
 	circuit.mergeMuxes(subnet);
 	circuit.removeIrrelevantComparisons(subnet);
 	circuit.removeIrrelevantMuxes(subnet);	
-	circuit.cullMuxConditionNegations(subnet);
 	circuit.mergeBinaryMuxChain(subnet);
 	circuit.removeNoOps(subnet);
 	circuit.foldRegisterMuxEnableLoops(subnet);
