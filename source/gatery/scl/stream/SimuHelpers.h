@@ -225,8 +225,6 @@ namespace gtry::scl::strm
 		constexpr bool hasSop	= StreamT::template has<scl::Sop>();
 		constexpr bool hasEop   = StreamT::template has<scl::Eop>();
 
-		HCL_DESIGNCHECK_HINT(hasEop || numberOfBeats == 1, "Trying to send multi-beat data packets without an End of Packet Field");
-
 		if constexpr (!hasTxId) {
 			HCL_DESIGNCHECK_HINT(packet.txid() == 0, "It is not allowed to send a packet with a tx ID on a stream without a tx ID field");
 		}
