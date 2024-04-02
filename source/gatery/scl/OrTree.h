@@ -63,6 +63,12 @@ namespace gtry::scl
 
 		sim_assert(bitcount(m_inputConditions) <= 1) << "multiple input conditions were simultaneously true, or-tree is not valid in these conditions";
 
+		for (size_t i = 0; i < m_inputs.size(); i++) {
+			IF(!m_inputConditions[i]) {
+				m_inputs[i] = allZeros(m_inputs[i]); //cannot do (&=Bit) because it's a compound
+			}
+		}
+
 		size_t currentRegisterMask = placeRegisterMask;
 		SigT ret = orReduce(m_inputs, currentRegisterMask).front();
 
