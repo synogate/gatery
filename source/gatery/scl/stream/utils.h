@@ -869,6 +869,38 @@ namespace gtry::scl::strm
 		return out;
 	}
 
+	template<StreamSignal StreamT> requires (!StreamT::template has<Ready>() && !StreamT::template has<Eop>())
+		auto addReadyAndCompensateForLostBeats(StreamT&& in, std::optional<UInt>& outputTotalPacketsLost = {}, std::optional<decltype(StreamT{}.data) > garbage = {}, BitWidth counterW = 32_b) {
+		Area area("scl_addReadyAndCompensateForLostBeats", true);
+		auto inWithReady = move(in).add(Ready{});
+		Counter totalLostPackets(counterW);
+		Counter 
+
+		mapOut(mmap, totalLostPackets.value(), "add_ready_compensated_beats");
+
+		UInt lostPackets = counterW;
+		UInt inc = ConstUInt(0, counterW);
+		IF(valid(inWithReady) & !ready(inWithReady)) {
+			inc = 1;
+			totalLostPackets.inc();
+			sim_assert('0') << __FILE__ << " " << __LINE__ << " this beat, the packet has been lost, but it will be compensated with a garbage beat in the future";
+		}
+
+		IF(lostPackets != 0) {
+			IF(!valid(inWithReady) & ready(inWithReady)) {
+				inc |= '1'; //basically -1
+				valid(inWithReady) = '1';
+				if (garbage)
+					*inWithReady = *garbage;
+				else
+					*inWithReady = allZeros(*inWithReady);
+			}
+		}
+		lostPackets = reg(lostPackets += inc, 0);
+
+		return inWithReady;
+	}
+
 	template<StreamSignal T, StreamSignal... To>
 	T arbitrate(T&& in1, To&&... inX)
 	{
