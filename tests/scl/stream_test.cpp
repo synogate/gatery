@@ -2578,4 +2578,68 @@ BOOST_FIXTURE_TEST_CASE(credit_broadcaster_test, BoostUnitTestSimulationFixture)
 	BOOST_TEST(!runHitsTimeout({ 10, 1'000'000 }));
 }
 
+BOOST_FIXTURE_TEST_CASE(stream_allowance_stall_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+
+	const size_t allowance = 15;
+
+	BitWidth allowanceW = 8_b;
+
+	Bit allow;
+	pinIn(allow, "allow");
+
+	scl::RvStream<Bit> in('0');
+	pinIn(in, "in");
+
+	auto out = move(in) | scl::strm::allowanceStall(allow, allowanceW);
+
+	pinOut(out, "out");
+
+	addSimulationProcess([&, this]()->SimProcess { return scl::strm::readyDriverRNG(out, clk, 50); });
+
+	std::mt19937 rng(647489);
+	addSimulationProcess([&, this]()->SimProcess {
+		while (true) {
+			co_await scl::strm::sendBeat(in, '1', clk);
+			size_t wait = rng() & 0xF;
+			for (size_t i = 0; i < wait; i++)
+				co_await OnClk(clk);
+		}
+	}); 
+
+	addSimulationProcess([&, this]()->SimProcess {
+		simu(allow) = '0';
+		for (size_t i = 0; i < allowance; i++)
+		{
+			simu(allow) = '1';
+			co_await OnClk(clk);
+			simu(allow) = '0';
+			size_t wait = rng() & 0x3;
+			for (size_t i = 0; i < wait; i++)
+				co_await OnClk(clk);
+		}
+	});
+
+	size_t received = 0;
+	addSimulationProcess([&, this]()->SimProcess {
+		while (received < allowance) {
+			co_await scl::strm::performTransferWait(out, clk);
+			received++;
+		}
+	}); 
+
+	addSimulationProcess([&, this]()->SimProcess {
+		for (size_t i = 0; i < 200; i++){
+			co_await OnClk(clk);
+		}
+		BOOST_TEST(received == allowance);
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 100, 1'000'000 }));
+} 
+
 
