@@ -125,7 +125,10 @@ namespace gtry::utils
 					continue;
 				pos += 4;
 
-				frame = frame.substr(0, pos) + frame.substr(pos + prefix.size());
+				if (pos + prefix.size() <= frame.length())
+					frame = frame.substr(0, pos) + frame.substr(pos + prefix.size());
+				else
+					frame = frame.substr(0, pos);
 			}
 		}
 

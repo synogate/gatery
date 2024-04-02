@@ -39,8 +39,11 @@ namespace gtry::hlim {
 			virtual bool attemptApply(Circuit &circuit, hlim::NodeGroup *nodeGroup) const = 0;
 
 			inline size_t getPriority() const { return m_priority; }
+			/// This is a work around for now to allow tech mappings to run before any register retiming and insert their own negative registers and pipelining hints.
+			inline bool runPreOptimization() const { return m_runPreOptimization; }
 		protected:
 			size_t m_priority = TECH_MAPPING + 100;
+			bool m_runPreOptimization = false;
 	};
 
 	class TechnologyMapping
@@ -50,7 +53,7 @@ namespace gtry::hlim {
 
 			void addPattern(std::unique_ptr<TechnologyMappingPattern> pattern);
 
-			void apply(Circuit &circuit, hlim::NodeGroup *nodeGroup) const;
+			void apply(Circuit &circuit, hlim::NodeGroup *nodeGroup, bool preOptimization) const;
 		protected:
 			std::vector<std::unique_ptr<TechnologyMappingPattern>> m_patterns;
 	};

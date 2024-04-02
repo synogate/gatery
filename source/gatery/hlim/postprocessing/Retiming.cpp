@@ -54,7 +54,7 @@ void determineNegativeRegisterEnables(Circuit &circuit, Subnet &subnet)
 			if (it != buildEnableSignalCache.end())
 				enableDriver = it->second;
 			else {
-				enableDriver = enable.build(*negReg->getGroup(), &subnet);
+				enableDriver = enable.build(*negReg->getGroup(), &subnet, false);
 				buildEnableSignalCache[enable] = enableDriver;
 			}
 
@@ -75,7 +75,7 @@ void resolveRetimingHints(Circuit &circuit, Subnet &subnet)
 	for (auto &n : subnet)
 		if (auto *regSpawner = dynamic_cast<Node_RegSpawner*>(n))
 			spawner.push_back(regSpawner);
-
+/*
 	// Locate all register hints in subnet that can be reached from the spawners
 	auto regHints = getRegHintDistanceToSpawners(spawner, subnet);
 	std::sort(regHints.begin(), regHints.end(), [](const auto &lhs, const auto &rhs){ 
@@ -83,6 +83,12 @@ void resolveRetimingHints(Circuit &circuit, Subnet &subnet)
 		if (lhs.first > rhs.first) return false;
 		return lhs.second->getId() > rhs.second->getId();
 	});
+*/
+	std::vector<Node_RegHint*> regHints;
+	for (auto& n : subnet)
+		if (auto* regHint = dynamic_cast<Node_RegHint*>(n))
+			regHints.push_back(regHint);			
+
 	/**
 	 * @todo This sorting is actually not sufficient. They need to be properly topologically sorted (with the added difficult that the graph can be cyclic).
 	 * For now, we get around this by disabling forward retiming for downstream registers, but this is not a good solution.
@@ -91,7 +97,8 @@ void resolveRetimingHints(Circuit &circuit, Subnet &subnet)
 	// Resolve all register hints back to front
 	//for (std::size_t i = regHints.size()-1; i < regHints.size(); i--) {
 	for (std::size_t i = 0; i < regHints.size(); i++) {
-		auto node = regHints[i].second;
+		//auto node = regHints[i].second;
+		auto node = regHints[i];
 		// Skip orphaned retiming hints
 		if (node->getDirectlyDriven(0).empty()) continue;
 
@@ -117,7 +124,7 @@ void resolveRetimingHints(Circuit &circuit, Subnet &subnet)
 
 	for (auto *regSpawner : spawner)
 		regSpawner->markResolved();
-
+/*
 	for (auto& n : subnet)
 		if (auto* regHint = dynamic_cast<Node_RegHint*>(n)) {
 			bool found = false;
@@ -127,6 +134,7 @@ void resolveRetimingHints(Circuit &circuit, Subnet &subnet)
 			HCL_ASSERT(found);
 			HCL_ASSERT(regHint->getDirectlyDriven(0).empty());
 		}
+*/
 }
 
 void annihilateNegativeRegisters(Circuit &circuit, Subnet &subnet)
@@ -167,6 +175,7 @@ void annihilateNegativeRegisters(Circuit &circuit, Subnet &subnet)
 			}
 		}
 }
+
 
 void bypassRetimingBlockers(Circuit &circuit, Subnet &subnet)
 {

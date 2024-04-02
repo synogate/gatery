@@ -8,14 +8,37 @@
 #include <utility>
 #include <algorithm>
 #include <string>
+#include <string_view>
 
+#include <res/gtry_resources.h>
+
+using namespace std::literals;
 
 namespace gtry::dbg {
 
-	void ReportInterface::create()
+	void ReportInterface::populateDirWithStaticFiles(const std::filesystem::path &outputDir)
+	{
+		if (!std::filesystem::exists(outputDir))
+			std::filesystem::create_directories(outputDir);
+
+		for (const auto &resFile : res::manifest) {
+			if (resFile.filename.starts_with("data/reporting/")) {
+				auto filename = outputDir / resFile.filename.substr("data/reporting/"sv.length());
+				std::ofstream file(filename.string().c_str(), std::fstream::binary);
+				file.write((const char *)resFile.data.data(), resFile.data.size());
+			}
+		}
+	}
+
+	void ReportInterface::create(const std::filesystem::path &outputDir)
 	{
 		instance.reset(nullptr); // Close previous first
-		instance.reset(new ReportInterface());
+		instance.reset(new ReportInterface(outputDir));
+	}
+
+	ReportInterface::ReportInterface(const std::filesystem::path &outputDir) : m_outputDir(outputDir)
+	{
+		populateDirWithStaticFiles(outputDir);
 	}
 
 	void ReportInterface::appendJsonToFile(const std::string& toAppend, std::filesystem::path path, bool create)
@@ -84,7 +107,7 @@ namespace gtry::dbg {
 
 	void ReportInterface::addToJson(const LogMessage& msg)
 	{
-		std::filesystem::path location = ReportInterface::pwdSclToReporting().remove_filename() /= "report.js";
+		std::filesystem::path location = m_outputDir / "report.js";
 
 		if (m_first_message)
 		{
@@ -107,7 +130,7 @@ namespace gtry::dbg {
 
 	void ReportInterface::svgToText(const std::filesystem::path& src)
 	{
-		std::filesystem::path location = ReportInterface::pwdSclToReporting().remove_filename() /= "loopSVG.js";
+		std::filesystem::path location = m_outputDir / "loopSVG.js";
 		std::string svgAsText = getFileContentAsString(std::move(src));
 
 		std::string cleanedSvgAsText = cleanSvgText(svgAsText);
@@ -128,15 +151,12 @@ namespace gtry::dbg {
 			return;
 		}
 
-		// get the current path and append target path
-		std::filesystem::path pwd = ReportInterface::pwdSclToReporting();
-
-		std::ofstream jsonGroupsFile(pwd /= "serializedGroups.js");
+		std::ofstream jsonGroupsFile(m_outputDir / "serializedGroups.js");
 		jsonGroupsFile << "var hierarchyGroupData = [\n";
 		jsonGroupsFile << JsonSerializer::serializeAllGroups(RootGroup->getCircuit()) << "]";
 		jsonGroupsFile.close();
 
-		std::ofstream jsonNodesFile(pwd.remove_filename() /= "serializedNodes.js");
+		std::ofstream jsonNodesFile(m_outputDir / "serializedNodes.js");
 		jsonNodesFile << "var hierarchyNodeData = [\n";
 		jsonNodesFile << JsonSerializer::serializeAllNodes(RootGroup->getCircuit()) << "]";
 		jsonNodesFile.close();

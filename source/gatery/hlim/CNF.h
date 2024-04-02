@@ -46,6 +46,10 @@ class Conjunction {
 		bool isNegationOf(const Conjunction &other) const;
 		bool isSubsetOf(const Conjunction &other) const;
 
+		/// Returns true if this and other can never both be true.
+		/// @param checkComparisons Extend this check into the terms to check for mutually exclusive comparisons with e.g. states.
+		bool cannotBothBeTrue(const Conjunction &other, bool checkComparisons = false) const;
+
 		/// Returns true if any input feeding into the conjunction is unconnected
 		bool isUndefined() const { return m_undefined; }
 		/// Returns true if the conjunction contains terms like "A & !A" such that the result is always false
@@ -64,8 +68,9 @@ class Conjunction {
 		/// @details Fails if isUndefined() or isContradicting() which might change in the future
 		/// @param targetGroup The node group into which to place the new nodes
 		/// @param newNodes If not nullptr, the area to which to add the new nodes.
+		/// @param allowUnconnected If the conjunction is constant one, allow outputing an unconnected NodePort.
 		/// @return The output port of the final logical AND or {} if the Conjunction is empty (always true)
-		NodePort build(NodeGroup &targetGroup, Subnet *newNodes = nullptr) const;
+		NodePort build(NodeGroup &targetGroup, Subnet *newNodes = nullptr, bool allowUnconnected = true) const;
 
 		struct Term {
 			/// (non-signal) driver of the raw signal that directly or negated enters the conjunction

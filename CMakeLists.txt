@@ -1,10 +1,10 @@
 cmake_minimum_required (VERSION 3.20.4)
 
-project(mac)
+project(gatery)
 
 enable_testing()
 
-# LIST(APPEND CMAKE_MODULE_PATH cmake/)
+INCLUDE(cmake/GtryCompileResourceFile.cmake)
 
 ############################################################## 
 
@@ -15,23 +15,29 @@ file(GLOB_RECURSE srcs_gatery
     "source/gatery/*.cpp" "source/gatery/*.h" "source/gatery/*.c"
 )
 
-add_library(gatery STATIC ${srcs_gatery})
+file(GLOB_RECURSE data_files_gatery RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+    "data/*"
+)
 
+gtry_compileResourceFile(
+    OUTPUT_PREFIX gen/res/gtry_resources
+    BINARY_FILES ${data_files_gatery}
+)
+
+add_library(gatery STATIC 
+    ${srcs_gatery}
+    ${CMAKE_CURRENT_BINARY_DIR}/gen/res/gtry_resources.h
+    ${CMAKE_CURRENT_BINARY_DIR}/gen/res/gtry_resources.cpp
+)
 
 target_precompile_headers(gatery
     PUBLIC
         "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/source/gatery/pch.h>"
 )
 
-set(data_files_gatery
-)
-
-foreach(file ${data_files_gatery})
-    configure_file(${file} ${PROJECT_BINARY_DIR}/${file} COPYONLY)
-endforeach(file)
-
 target_include_directories(gatery PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/source
+    ${CMAKE_CURRENT_BINARY_DIR}/gen
 )
 
 target_include_directories(gatery SYSTEM PUBLIC
@@ -65,10 +71,10 @@ if(WIN32)
     target_compile_definitions(gatery PUBLIC -DBOOST_STACKTRACE_USE_WINDBG)
     # Boost docu: Uses COM to show debug info. May require linking with ole32 and dbgeng.
 else()
-    #target_compile_definitions(hcl PUBLIC -DBOOST_STACKTRACE_USE_BACKTRACE)
-    #target_link_libraries(hcl PUBLIC -ldl -lbacktrace)
-    target_compile_definitions(gatery PUBLIC -DBOOST_STACKTRACE_USE_ADDR2LINE)
-    target_link_libraries(gatery PUBLIC -ldl)
+    target_compile_definitions(gatery PUBLIC -DBOOST_STACKTRACE_USE_BACKTRACE)
+    target_link_libraries(gatery PUBLIC -ldl -lbacktrace)
+    #target_compile_definitions(gatery PUBLIC -DBOOST_STACKTRACE_USE_ADDR2LINE)
+    #target_link_libraries(gatery PUBLIC -ldl)
     if(NOT APPLE)
         target_compile_options(gatery PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-fcoroutines>)
     endif ()

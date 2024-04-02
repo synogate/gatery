@@ -710,24 +710,6 @@ void Circuit::removeIrrelevantMuxes(Subnet &subnet)
 }
 
 
-std::optional<std::pair<Node_Constant*, NodePort>> isComparisonWithConstant(NodePort input)
-{
-	auto driver = input.node->getNonSignalDriver(input.port);
-	if (auto *compare = dynamic_cast<Node_Compare*>(driver.node)) {
-		if (compare->getOp() == Node_Compare::EQ) {
-
-			auto *const1 = dynamic_cast<Node_Constant*>(compare->getNonSignalDriver(0).node);
-			if (const1) 
-				return { std::make_pair(const1, compare->getDriver(1)) };
-
-			auto *const2 = dynamic_cast<Node_Constant*>(compare->getNonSignalDriver(1).node);
-			if (const2)
-				return { std::make_pair(const2, compare->getDriver(0)) };
-		}
-	}
-	return {};
-}
-
 std::optional<std::pair<Node_Multiplexer*, Node_Constant*>> followedByCompatibleMux(Node_Multiplexer *muxNode, NodePort comparisonSignal, RevisitCheck &cycleCheck)
 {
 	for (auto nh : muxNode->exploreOutput(0)) {
@@ -739,7 +721,7 @@ std::optional<std::pair<Node_Multiplexer*, Node_Constant*>> followedByCompatible
 
 		if (auto *nextMuxNode = dynamic_cast<Node_Multiplexer*>(nh.node())) {
 			if (nextMuxNode->getNumInputPorts() == 3) {
-				auto nextComparison = isComparisonWithConstant({.node = nextMuxNode, .port = 0 });
+				auto nextComparison = isComparisonWithConstant(nextMuxNode->getNonSignalDriver(0));
 				if (nextComparison)
 					if (nextComparison->second == comparisonSignal)
 						if (sim::allDefined(nextComparison->first->getValue()))
@@ -774,7 +756,7 @@ void Circuit::mergeBinaryMuxChain(Subnet& subnet)
 			if (alreadyHandled.contains(muxNode)) continue;
 
 			if (muxNode->getNumInputPorts() != 3) continue;
-			auto comparison = isComparisonWithConstant({.node = muxNode, .port = 0 });
+			auto comparison = isComparisonWithConstant(muxNode->getNonSignalDriver(0));
 			if (!comparison) continue;
 
 			if (!sim::allDefined(comparison->first->getValue())) continue;
@@ -797,7 +779,7 @@ void Circuit::mergeBinaryMuxChain(Subnet& subnet)
 					cycleCheck.insert(backNode);
 
 					if (backNode->getNumInputPorts() != 3) break;
-					auto backComparison = isComparisonWithConstant({.node = backNode, .port = 0 });
+					auto backComparison = isComparisonWithConstant(backNode->getNonSignalDriver(0));
 					if (!backComparison) break;
 					if (!sim::allDefined(backComparison->first->getValue())) break;
 
@@ -1531,10 +1513,11 @@ void Circuit::optimizeSubnet(Subnet &subnet)
 	propagateConstants(subnet);
 	mergeRewires(subnet);
 	optimizeRewireNodes(subnet);
+	cullMuxConditionNegations(subnet);
+	breakMutuallyExclusiveMuxChains(subnet);
 	mergeMuxes(subnet);
 	removeIrrelevantComparisons(subnet);
 	removeIrrelevantMuxes(subnet);
-	cullMuxConditionNegations(subnet);
 	mergeBinaryMuxChain(subnet);
 	removeNoOps(subnet);
 	foldRegisterMuxEnableLoops(subnet);
@@ -1588,10 +1571,11 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
 	subnet = Subnet::all(circuit);
 	circuit.mergeRewires(subnet);
 	circuit.optimizeRewireNodes(subnet);
+	circuit.cullMuxConditionNegations(subnet);
+	circuit.breakMutuallyExclusiveMuxChains(subnet);
 	circuit.mergeMuxes(subnet);
 	circuit.removeIrrelevantComparisons(subnet);
 	circuit.removeIrrelevantMuxes(subnet);	
-	circuit.cullMuxConditionNegations(subnet);
 	circuit.mergeBinaryMuxChain(subnet);
 	circuit.removeNoOps(subnet);
 	circuit.foldRegisterMuxEnableLoops(subnet);
@@ -1646,15 +1630,15 @@ void DefaultPostprocessing::run(Circuit &circuit) const
 {
 	dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Running default postprocessing.");
 
+	TechnologyMapping fallbackMapping;
+	const TechnologyMapping* techMapping = m_techMapping ? m_techMapping : &fallbackMapping;
+
+	techMapping->apply(circuit, circuit.getRootNodeGroup(), true);
+
 	generalOptimization(circuit);
 	memoryDetection(circuit);
 
-	if (m_techMapping) {
-		m_techMapping->apply(circuit, circuit.getRootNodeGroup());
-	} else {
-		TechnologyMapping mapping;
-		mapping.apply(circuit, circuit.getRootNodeGroup());
-	}
+	techMapping->apply(circuit, circuit.getRootNodeGroup(), false);
 	generalOptimization(circuit); // Because we ran frontend code for tech mapping
 
 	exportPreparation(circuit);
@@ -1709,13 +1693,14 @@ void MinimalPostprocessing::exportPreparation(Circuit& circuit) const
 void MinimalPostprocessing::run(Circuit& circuit) const
 {
 	dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Running default postprocessing.");
+	TechnologyMapping mapping;
 
+
+	mapping.apply(circuit, circuit.getRootNodeGroup(), true);
 	generalOptimization(circuit);
 	memoryDetection(circuit);
 
-	TechnologyMapping mapping;
-	mapping.apply(circuit, circuit.getRootNodeGroup());
-
+	mapping.apply(circuit, circuit.getRootNodeGroup(), false);
 	generalOptimization(circuit); // Because we ran frontend code for tech mapping
 
 	exportPreparation(circuit);

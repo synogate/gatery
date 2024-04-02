@@ -21,6 +21,7 @@
 #include <gatery/hlim/RegisterRetiming.h>
 #include <gatery/hlim/Subnet.h>
 #include <gatery/hlim/coreNodes/Node_Signal.h>
+#include <gatery/hlim/coreNodes/Node_Register.h>
 #include <gatery/hlim/GraphTools.h>
 #include <gatery/hlim/CNF.h>
 #include <gatery/hlim/RegisterRetiming.h>
@@ -1994,3 +1995,49 @@ BOOST_FIXTURE_TEST_CASE(retiming_pipeline_negativeRegister_ready_valid_state, Bo
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
 }
 
+
+BOOST_FIXTURE_TEST_CASE(retiming_forward_without_spawner, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+	using namespace gtry::sim;
+	using namespace gtry::utils;
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+
+
+
+	UInt input = pinIn(32_b);
+	UInt output = 32_b;
+	{
+
+		UInt counter = 32_b;
+		counter = reg(counter, 0, {.allowRetimingForward=true});
+		counter = counter + 1;
+
+		output = counter | reg(input, 0, {.allowRetimingForward=true});
+
+		output = pipestage(output);
+	}
+
+	auto outPin = pinOut(output);
+
+	addSimulationProcess([=,this]()->SimProcess {
+		simu(input) = 0;
+		
+		for (auto i : Range(32)) {
+			BOOST_TEST(simu(outPin).value() == i+1);
+			co_await AfterClk(clock);
+		}
+
+		stopTest();
+	});
+	//design.visualize("retiming_counter_new_before");
+
+	design.postprocess();
+
+	BOOST_TEST(dynamic_cast<hlim::Node_Register*>(outPin.node()->getNonSignalDriver(0).node));
+
+	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
+}

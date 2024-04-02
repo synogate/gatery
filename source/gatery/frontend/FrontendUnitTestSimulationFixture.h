@@ -38,6 +38,7 @@ namespace gtry {
 	class UnitTestSimulationFixture : protected sim::UnitTestSimulationFixture
 	{
 		public:
+			UnitTestSimulationFixture();
 			~UnitTestSimulationFixture();
 
 			/// Compiles the graph and does one combinatory evaluation
