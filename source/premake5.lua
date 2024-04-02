@@ -181,6 +181,9 @@ project "gatery"
     filter "files:gatery/scl/driver/**.cpp"
         flags {"NoPCH"}
 
+    filter "files:gen/**.cpp"
+        flags {"NoPCH"}
+
     filter "files:**.c"
         flags {"NoPCH"}
 
