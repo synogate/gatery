@@ -46,16 +46,19 @@ UnitTestSimulationFixture::UnitTestSimulationFixture()
 			std::string_view param(testSuite.argv[i]);
 			if (param == "html")
 				gtry::dbg::ReportInterface::create(filename + "_log/");
-			else if (param == "web")
+			else if (param == "web") {
 				gtry::dbg::WebSocksInterface::create(1337);
-			else
+			} else
 				throw std::runtime_error("Invalid command line argument after --report");
 		}
 	}
+	gtry::dbg::awaitDebugger();
 }
 
 UnitTestSimulationFixture::~UnitTestSimulationFixture()
 {
+	gtry::dbg::stopInDebugger();
+
 	// Force destruct of simulator (and all frontend signals held inside coroutines) before destruction of DesignScope in base class.
 	m_simulator.reset(nullptr);
 }
