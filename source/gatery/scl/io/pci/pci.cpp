@@ -38,22 +38,25 @@ namespace gtry::scl::pci {
 		return ret;
 	}
 
-	 void HeaderCommon::fromRawDw0(BVec rawDw0)
+	HeaderCommon HeaderCommon::fromRawDw0(BVec rawDw0)
 	{
-		HCL_DESIGNCHECK(rawDw0.width() == 32_b);
+		HCL_DESIGNCHECK(rawDw0.width() >= 32_b);
 
+		HeaderCommon ret;
 		auto bytes = rawDw0.parts(4);
-		type = bytes[0](0, 5_b);
-		fmt = bytes[0](5, 3_b);
-		processingHintPresence = bytes[1][0];
-		trafficClass = bytes[1](4, 3_b);
-		addressType = bytes[2](2, 2_b);
-		attributes.idBasedOrdering = bytes[1][2];
-		attributes.relaxedOrdering = bytes[2][5];
-		attributes.noSnoop = bytes[2][4];
-		poisoned = bytes[2][6];
-		digest = bytes[2][7];
-		length = cat(bytes[2](0, 2_b), bytes[3]);
+		ret.type = bytes[0](0, 5_b);
+		ret.fmt = bytes[0](5, 3_b);
+		ret.processingHintPresence = bytes[1][0];
+		ret.trafficClass = bytes[1](4, 3_b);
+		ret.addressType = bytes[2](2, 2_b);
+		ret.attributes.idBasedOrdering = bytes[1][2];
+		ret.attributes.relaxedOrdering = bytes[2][5];
+		ret.attributes.noSnoop = bytes[2][4];
+		ret.poisoned = bytes[2][6];
+		ret.digest = bytes[2][7];
+		ret.length = cat(bytes[2](0, 2_b), bytes[3]);
+
+		return ret;
 	}
 
 	BVec HeaderCommon::rawDw0()
@@ -101,7 +104,7 @@ namespace gtry::scl::pci {
 		HCL_DESIGNCHECK_HINT(rawHeader.width() == 128_b, "A request header should have 4 DW");
 		RequestHeader ret;
 
-		ret.common.fromRawDw0(rawHeader.part(4, 0));
+		ret.common = HeaderCommon::fromRawDw0(rawHeader.part(4, 0));
 
 		auto dw = rawHeader.parts(4);
 		auto dw1Bytes = dw[1].parts(4);
@@ -144,7 +147,7 @@ namespace gtry::scl::pci {
 		HCL_DESIGNCHECK_HINT(rawHeader.width() == 96_b, "A completion header should have 3 DW");
 
 		CompletionHeader ret;
-		ret.common.fromRawDw0(rawHeader.part(3, 0));
+		ret.common = HeaderCommon::fromRawDw0(rawHeader.part(3, 0));
 
 		auto dw = rawHeader.parts(3);
 		auto dw1Bytes = dw[1].parts(4);

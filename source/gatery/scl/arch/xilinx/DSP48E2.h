@@ -121,7 +121,6 @@ namespace gtry::scl::arch::xilinx
 	std::tuple<UInt, size_t> mul(const UInt& a, const UInt& b, BitWidth resultW, size_t resultOffset = 0);
 
 
-
 	class PipelinedMulDSP48E2Pattern : public TechnologyMappingPattern
 	{
 		public:
@@ -131,4 +130,7 @@ namespace gtry::scl::arch::xilinx
 			virtual bool scopedAttemptApply(hlim::NodeGroup *nodeGroup) const override;
 		protected:
 	};	
+
+
+	UInt mulRetimable(const UInt& a, const UInt& b, BitWidth resultW, size_t resultOffset = 0);
 }

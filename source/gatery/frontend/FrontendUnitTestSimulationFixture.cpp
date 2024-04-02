@@ -174,6 +174,8 @@ void BoostUnitTestSimulationFixture::prepRun()
 
 		if (arg == "--vcd")
 			recordVCD(filename + ".vcd");
+		else if(arg == "--vcdm")
+			recordVCD(filename + "_with_memories" ".vcd", true);
 		else if (arg == "--vhdl")
 			outputVHDL(filename + ".vhd");
 		else if (arg == "--csv")

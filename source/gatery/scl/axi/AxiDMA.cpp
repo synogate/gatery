@@ -33,7 +33,7 @@ namespace gtry::scl
 
 		RvStream<AxiAddress> out;
 		out->addr = config.addrW;
-		out->id = ConstBVec(cmd->id ,config.idW);
+		out->id = zext(cmd->id, config.idW);
 		out->user = ConstBVec(config.arUserW);
 
 		HCL_DESIGNCHECK_HINT(cmd->bytesPerBurst >= config.alignedDataW().bytes(), "Burst size must be at least as large as the data width of the AXI interface.");
