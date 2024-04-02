@@ -21,7 +21,6 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
-#include <gatery/debug/websocks/WebSocksInterface.h>
 
 #include <gatery/scl/stream/SimuHelpers.h>
 #include <gatery/scl/tilelink/tilelink.h>

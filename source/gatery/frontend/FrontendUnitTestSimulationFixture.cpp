@@ -23,9 +23,9 @@
 #include <gatery/export/vhdl/VHDLExport.h>
 #include <gatery/hlim/Circuit.h>
 #include <boost/test/unit_test.hpp>
-#include <gatery/debug/websocks/WebSocksInterface.h>
-#include <gatery/debug/reporting/ReportInterface.h>
 #include <gatery/frontend/EventStatistics.h>
+
+#include <gatery/debug/DebugInterface.h>
 
 
 namespace gtry {
@@ -45,9 +45,9 @@ UnitTestSimulationFixture::UnitTestSimulationFixture()
 			i++;
 			std::string_view param(testSuite.argv[i]);
 			if (param == "html")
-				gtry::dbg::ReportInterface::create(filename + "_log/");
+				gtry::dbg::logHtml(filename + "_log/");
 			else if (param == "web") {
-				gtry::dbg::WebSocksInterface::create(1337);
+				gtry::dbg::logWebsocks(1337);
 			} else
 				throw std::runtime_error("Invalid command line argument after --report");
 		}

@@ -115,6 +115,11 @@ class DebugInterface
 		State m_state = State::DESIGN;
 };
 
+
+void logWebsocks(unsigned port = 1337);
+void logHtml(const std::filesystem::path &outputDir);
+
+
 void awaitDebugger();
 void pushGraph();
 void stopInDebugger();

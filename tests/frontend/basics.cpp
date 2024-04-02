@@ -21,8 +21,6 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
-#include <gatery/debug/websocks/WebSocksInterface.h>
-#include "gatery/debug/reporting/ReportInterface.h"
 
 using namespace boost::unit_test;
 
