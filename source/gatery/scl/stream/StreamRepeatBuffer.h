@@ -119,6 +119,10 @@ namespace gtry::scl::strm {
 
 		valid(ret) = internal::buildValidLatch(settings.releaseNextPacket, repeatBuffer.rdIsLast(), ready(ret));
 
+		if constexpr (StreamT::template has<Eop>()) 
+			if (settings.inferRdEop)
+				eop(ret) = repeatBuffer.rdIsLast();
+
 		IF (transfer(ret))
 			repeatBuffer.rdPop();
 		return ret;
@@ -130,18 +134,25 @@ namespace gtry::scl::strm {
 		if constexpr (StreamT::template has<Ready>())
 			ready(in) = '1';
 
-		if constexpr (StreamT::template has<Eop>()) {
-			if (settings.setWarpAroundFromWrEop) {
-				HCL_DESIGNCHECK_HINT(!settings.wrapAround.valid(), "Creating a repeat buffer with an explicit wrapAround signal precludes inferring the wrap around from the input stream's eop!");
+		IF (transfer(in)) {				
 
-				IF (eop(in) & transfer(in))
-					repeatBuffer.wrWrapAround();
-			} else
-				sim_assert(eop(in) == repeatBuffer.wrIsLast()) << "eop of input stream should match wrap around of repeat buffer";
-		}
+			if constexpr (StreamT::template has<Eop>()) {
+				if (settings.setWarpAroundFromWrEop) {
+					HCL_DESIGNCHECK_HINT(!settings.wrapAround.valid(), "Creating a repeat buffer with an explicit wrapAround signal precludes inferring the wrap around from the input stream's eop!");
 
-		IF (transfer(in))
+					IF (eop(in))
+						repeatBuffer.wrWrapAround();
+				} else
+					sim_assert(eop(in) == repeatBuffer.wrIsLast()) << "eop of input stream should match wrap around of repeat buffer";
+			}
+
+			if (settings.wrResetOnWrSop) {
+				IF (sop(in))
+					repeatBuffer.wrReset();
+			}
+
 			repeatBuffer.wrPush(*in);
+		}
 	}
 
 	template<StreamSignal StreamT>
@@ -150,17 +161,18 @@ namespace gtry::scl::strm {
 		if constexpr (StreamT::template has<Ready>())
 			ready(in) = '1';
 
-		if constexpr (StreamT::template has<Eop>()) {
-			if (settings.setWarpAroundFromWrEop) {
-				HCL_DESIGNCHECK_HINT(!settings.wrapAround.valid(), "Creating a repeat buffer with an explicit wrapAround signal precludes inferring the wrap around from the input stream's eop!");
+		IF (transfer(in)) {
+			if constexpr (StreamT::template has<Eop>()) {
+				if (settings.setWarpAroundFromWrEop) {
+					HCL_DESIGNCHECK_HINT(!settings.wrapAround.valid(), "Creating a repeat buffer with an explicit wrapAround signal precludes inferring the wrap around from the input stream's eop!");
 
-				IF (eop(in) & transfer(in))
-					repeatBuffer.wrWrapAround();
-			} else
-				sim_assert(eop(in) == repeatBuffer.wrIsLast()) << "eop of input stream should match wrap around of repeat buffer";
-		}
+					IF (eop(in))
+						repeatBuffer.wrWrapAround();
+				} else
+					sim_assert(eop(in) == repeatBuffer.wrIsLast()) << "eop of input stream should match wrap around of repeat buffer";
+			}
 
-		IF (transfer(in))
 			repeatBuffer.wrPush(in.removeFlowControl());
+		}
 	}
 }
