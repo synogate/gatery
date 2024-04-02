@@ -53,6 +53,7 @@ namespace gtry::scl
 		}
 		
 		Counter& inc() { m_inc = '1'; return *this; }
+		Counter& dec() { m_dec = '1'; return *this; }
 
 		void reset() { load(0); }
 		const UInt& value() const { return m_value; }
@@ -71,13 +72,15 @@ namespace gtry::scl
 			m_last = m_value == (end - 1).lower(counterW);
 
 			if (counterW != BitWidth(0)) {
-				IF(m_inc)
-				{
-					m_value += 1;
-					if (checkOverflows) {
-						IF(m_last)
-							m_value = 0;
-					}
+				UInt delta = ConstUInt(0, m_value.width());
+				IF(m_inc & !m_dec)
+					delta = 1;
+				IF(m_dec & !m_inc)
+					delta |= '1';
+				m_value += delta;
+				if (checkOverflows) {
+					IF(m_last)
+						m_value = 0;
 				}
 			}
 			HCL_NAMED(m_load);
@@ -93,6 +96,7 @@ namespace gtry::scl
 
 			m_load = '0';
 			m_inc = '0';
+			m_dec = '0';
 			m_loadValue = ConstUInt(m_loadValue.width());
 		}
 
@@ -107,6 +111,7 @@ namespace gtry::scl
 		Bit m_load;
 
 		Bit m_inc;
+		Bit m_dec;
 	};
 
 }
