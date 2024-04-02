@@ -167,3 +167,79 @@ BOOST_FIXTURE_TEST_CASE(thermometric_test, BoostUnitTestSimulationFixture)
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 2, 1'000'000 }));
 }
+
+BOOST_FIXTURE_TEST_CASE(counter_increment_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+
+	size_t finalCount = 20;
+
+	Bit increment;
+	pinIn(increment, "increment");
+
+	Counter ctr(BitWidth::count(20));
+	IF(increment)
+		ctr.inc();
+
+	pinOut(ctr.value(), "value");
+
+	addSimulationProcess([&, this]()->SimProcess {
+		simu(increment) = '0';
+		co_await OnClk(clk);
+		co_await OnClk(clk);
+		co_await OnClk(clk);
+		co_await OnClk(clk);
+		for (size_t i = 0; i < finalCount; i++) {
+			simu(increment) = '1';
+			co_await OnClk(clk);
+			simu(increment) = '0';
+		}
+		for (size_t i = 0; i < 10; i++)
+			co_await OnClk(clk);
+
+		BOOST_TEST(simu(ctr.value()) == finalCount);
+		stopTest();
+	}); 
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+} 
+
+BOOST_FIXTURE_TEST_CASE(counter_decrement_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+
+	size_t finalCount = 20;
+
+	Bit increment;
+	pinIn(increment, "increment");
+
+	Counter ctr(BitWidth::count(20));
+	IF(increment)
+		ctr.inc();
+
+	pinOut(ctr.value(), "value");
+
+	addSimulationProcess([&, this]()->SimProcess {
+		simu(increment) = '0';
+		co_await OnClk(clk);
+		co_await OnClk(clk);
+		co_await OnClk(clk);
+		co_await OnClk(clk);
+		for (size_t i = 0; i < finalCount; i++) {
+			simu(increment) = '1';
+			co_await OnClk(clk);
+			simu(increment) = '0';
+		}
+		for (size_t i = 0; i < 10; i++)
+			co_await OnClk(clk);
+
+		BOOST_TEST(simu(ctr.value()) == finalCount);
+		stopTest();
+		}); 
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+} 

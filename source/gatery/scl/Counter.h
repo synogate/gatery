@@ -43,6 +43,14 @@ namespace gtry::scl
 
 			m_area.leave();
 		}
+
+		Counter(BitWidth ctrW, size_t startupValue = 0) :
+			m_area{ "scl_Counter", true}
+		{
+			init(ctrW.count(), ctrW, true, startupValue);
+
+			m_area.leave();
+		}
 		
 		Counter& inc() { m_inc = '1'; return *this; }
 
