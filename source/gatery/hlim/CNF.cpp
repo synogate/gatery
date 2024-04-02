@@ -49,6 +49,7 @@ namespace gtry::hlim {
 		struct TraceInfo {
 			NodePort signal;
 			bool negated;
+			bool canDescendIntoAnd = true;
 			NodePort lastLogicDriver;
 		};
 
@@ -56,6 +57,7 @@ namespace gtry::hlim {
 		stack.push_back({
 			.signal = nodeOutput,
 			.negated = false,
+			.canDescendIntoAnd = true,
 			.lastLogicDriver = nodeOutput,
 		});
 
@@ -96,11 +98,12 @@ namespace gtry::hlim {
 						stack.push_back({
 							.signal = logicNode->getNonSignalDriver(0), 
 							.negated = !top.negated,
+							.canDescendIntoAnd = top.negated, // if we have ~(a & b) then this is ~a | ~b, thus after a negation we can't descend into ANDs and add them as terms to our conjunction.
 							.lastLogicDriver = logicNode->getDriver(0),
 						});
 						doAddAsTerm = false;
 					} else
-					if (logicNode->getOp() == Node_Logic::AND) {
+					if (top.canDescendIntoAnd && logicNode->getOp() == Node_Logic::AND) {
 						for (auto j : utils::Range(logicNode->getNumInputPorts()))
 							stack.push_back({
 								.signal = logicNode->getNonSignalDriver(j), 
