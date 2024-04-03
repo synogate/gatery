@@ -742,21 +742,19 @@ namespace gtry::scl::strm
 		Area area("scl_addReadyAndCompensateForLostBeats", true);
 		auto inWithReady = move(in).add(Ready{});
 		Counter totalLostPackets(counterW);
-		Counter 
+		Counter lostPackets(counterW);
 
-		mapOut(mmap, totalLostPackets.value(), "add_ready_compensated_beats");
-
-		UInt lostPackets = counterW;
-		UInt inc = ConstUInt(0, counterW);
 		IF(valid(inWithReady) & !ready(inWithReady)) {
-			inc = 1;
+			lostPackets.inc();
 			totalLostPackets.inc();
 			sim_assert('0') << __FILE__ << " " << __LINE__ << " this beat, the packet has been lost, but it will be compensated with a garbage beat in the future";
 		}
 
+		Bit inputValid = valid(inWithReady);
 		IF(lostPackets != 0) {
-			IF(!valid(inWithReady) & ready(inWithReady)) {
-				inc |= '1'; //basically -1
+			valid(inWithReady) = '1';
+			IF(transfer(inWithReady)) {
+				lostPackets.dec();
 				valid(inWithReady) = '1';
 				if (garbage)
 					*inWithReady = *garbage;
@@ -764,7 +762,6 @@ namespace gtry::scl::strm
 					*inWithReady = allZeros(*inWithReady);
 			}
 		}
-		lostPackets = reg(lostPackets += inc, 0);
 
 		return inWithReady;
 	}
