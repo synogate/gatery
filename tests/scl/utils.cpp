@@ -334,3 +334,27 @@ BOOST_FIXTURE_TEST_CASE(counter_full_non_power_of_2_test, BoostUnitTestSimulatio
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
+
+
+BOOST_FIXTURE_TEST_CASE(counter_auto_increment_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+
+	size_t testLength = 14;
+	Counter ctr(10_b);
+
+	pinOut(ctr.value(), "value");
+
+	addSimulationProcess([&, this]()->SimProcess {
+		for (size_t i = 0; i < testLength; i++){
+			co_await OnClk(clk);
+			BOOST_TEST(simu(ctr.value()) == i);
+		}
+		co_await OnClk(clk);
+		stopTest();
+		}); 
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}

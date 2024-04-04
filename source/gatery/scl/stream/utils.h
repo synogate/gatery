@@ -555,7 +555,7 @@ namespace gtry::scl::strm
 		IF(transfer(stalledSource))
 			allowance.dec();
 
-		stallCondition = reg(allowance.value() == 0, '1');
+		stallCondition = reg(allowance.isFirst(), '1');
 		return stalledSource;
 	}
 
