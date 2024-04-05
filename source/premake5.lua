@@ -177,7 +177,7 @@ project "gatery_core"
     filter "system:windows"
         flags { "FatalCompileWarnings" }
     
-    filter "files:gen/"
+    filter "files:gen/**.cpp"
         flags {"NoPCH"}
 
     filter "files:**.c"
@@ -188,6 +188,7 @@ project "gatery_scl"
 
     files { 
         "gatery/scl/**.cpp", "gatery/scl/**.c", "gatery/scl/**.h",
+        "gatery/scl_pch.cpp", "gatery/scl_pch.h"
     }
 
     pchsource "gatery/scl_pch.cpp"
