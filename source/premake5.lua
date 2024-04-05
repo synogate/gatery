@@ -161,7 +161,8 @@ project "gatery_core"
     }
 
     removefiles {
-        "gatery/scl/**.cpp", "gatery/scl/**.c", "gatery/scl/**.h"
+        "gatery/scl/**.cpp", "gatery/scl/**.c", "gatery/scl/**.h",
+        "gatery/scl_pch.cpp", "gatery/scl_pch.h"
     }
 
     pchsource "gatery/pch.cpp"
