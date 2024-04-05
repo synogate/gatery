@@ -259,6 +259,27 @@ namespace gtry::scl::strm
 	*/
 	template<StreamSignal StreamT>
 	StreamT createVStream(const typename StreamT::Payload& payload, const Bit& validBit) { StreamT ret(payload); valid(ret) = validBit; return ret; }
+
+	/**
+	* @brief this module does not comply with valid semantics. It can change its payload without transfer,
+	* but this might be acceptable since its use case is only to prevent catastrophic lockup and to give
+	* proper failure reporting possibilities to user, such as the possibility to mapOut the totalLostPackets.
+	*/
+	template<StreamSignal StreamT> requires (!StreamT::template has<Ready>() && !StreamT::template has<Eop>())
+	std::tuple<decltype(StreamT{}.add(Ready{})), UInt > addReadyAndCompensateForLostBeats(StreamT&& in, BitWidth counterW);
+
+
+	/**
+	 * @brief This overload allows for stream chaining. Please pass in an uninitialized UInt.
+	*/
+	inline auto addReadyAndCompensateForLostBeats(BitWidth counterW, UInt& lostBeatCount){
+		return [=, &lostBeatCount](auto&& source) { 
+			auto [outStream, outLostBeatCount] = addReadyAndCompensateForLostBeats(move(source), counterW);
+			lostBeatCount = outLostBeatCount;
+			return move(outStream);
+		};
+	}
+
 }
 
 namespace gtry::scl::strm
@@ -738,31 +759,30 @@ namespace gtry::scl::strm
 	}
 
 	template<StreamSignal StreamT> requires (!StreamT::template has<Ready>() && !StreamT::template has<Eop>())
-		auto addReadyAndCompensateForLostBeats(StreamT&& in, std::optional<UInt>& outputTotalPacketsLost = {}, std::optional<decltype(StreamT{}.data) > garbage = {}, BitWidth counterW = 32_b) {
+	std::tuple<decltype(StreamT{}.add(Ready{})), UInt> addReadyAndCompensateForLostBeats(StreamT&& in, BitWidth counterW) {
 		Area area("scl_addReadyAndCompensateForLostBeats", true);
+
 		auto inWithReady = move(in).add(Ready{});
-		Counter totalLostPackets(counterW);
-		Counter lostPackets(counterW);
+		Counter totalLostBeats(counterW);
+		Counter lostBeats(counterW);
 
-		IF(valid(inWithReady) & !ready(inWithReady)) {
-			lostPackets.inc();
-			totalLostPackets.inc();
-			sim_assert('0') << __FILE__ << " " << __LINE__ << " this beat, the packet has been lost, but it will be compensated with a garbage beat in the future";
+		Bit lostBeat = valid(inWithReady) & !ready(inWithReady);
+		sim_debugIf(lostBeat) << __FILE__ << " " << __LINE__ << " this beat, the packet has been lost, but it will be compensated with a garbage beat in the future";
+		IF(lostBeat) {
+			lostBeats.inc();
+			totalLostBeats.inc();
 		}
 
-		Bit inputValid = valid(inWithReady);
-		IF(lostPackets != 0) {
-			valid(inWithReady) = '1';
-			IF(transfer(inWithReady)) {
-				lostPackets.dec();
-				valid(inWithReady) = '1';
-				if (garbage)
-					*inWithReady = *garbage;
-				else
-					*inWithReady = allZeros(*inWithReady);
-			}
+		Bit garbageBeat = !lostBeats.isFirst() & !valid(inWithReady);
+		IF(garbageBeat) {
+			valid(inWithReady) |= '1';
+			*inWithReady = allZeros(*inWithReady);
 		}
 
-		return inWithReady;
+		IF(garbageBeat & transfer(inWithReady))
+			lostBeats.dec();
+
+		return std::make_tuple(move(inWithReady), totalLostBeats.value());
 	}
 }
+
