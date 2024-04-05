@@ -30,7 +30,7 @@
 #include <functional>
 
 namespace gtry::sim {
-	class SimulationVisualization;
+	struct SimulationVisualization;
 
 	template<typename ReturnValue>
 	class SimulationFunction;
