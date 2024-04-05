@@ -27,8 +27,11 @@
 #include <stdexcept>
 
 
+template class std::vector<boost::stacktrace::frame>;
+
 namespace gtry::utils 
 {
+
 	void StackTrace::record(size_t size, size_t skipTop) 
 	{ 
 		boost::stacktrace::stacktrace trace;

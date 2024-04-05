@@ -51,6 +51,7 @@ namespace gtry::utils {
 	};
 
 	std::ostream &operator<<(std::ostream &stream, const StackTrace &trace);
-
-
 }
+
+extern template class std::vector<boost::stacktrace::frame>;
+
