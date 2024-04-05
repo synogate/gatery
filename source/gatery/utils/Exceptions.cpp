@@ -23,4 +23,15 @@ namespace gtry::utils {
 template class MHDLError<std::logic_error>;
 template class MHDLError<std::runtime_error>;
 
+std::string composeMHDLErrorString(const char *file, size_t line, const std::string &what)
+{
+	return what + " Location: " + file + '('+boost::lexical_cast<std::string>(line)+')';
+}
+
+InternalError::InternalError(const char *file, size_t line, const std::string &what) : MHDLError<std::logic_error>(file, line, what) { }
+InternalError::~InternalError() { }
+
+DesignError::DesignError(const char *file, size_t line, const std::string &what) : MHDLError<std::runtime_error>(file, line, what) { }
+DesignError::~DesignError() { }
+
 }
