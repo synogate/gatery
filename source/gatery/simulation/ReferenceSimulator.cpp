@@ -285,7 +285,7 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 
 			/*
 			auto& nonConstCircuit = const_cast<hlim::Circuit&>(circuit);
-			auto* loopGroup = nonConstCircuit.getRootNodeGroup()->addChildNodeGroup(hlim::NodeGroup::GroupType::ENTITY);
+			auto* loopGroup = nonConstCircuit.getRootNodeGroup()->addChildNodeGroup(hlim::NodeGroupType::ENTITY);
 			loopGroup->setInstanceName("loopGroup");
 			loopGroup->setName("loopGroup");
 			*/

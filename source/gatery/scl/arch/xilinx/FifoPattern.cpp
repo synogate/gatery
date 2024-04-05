@@ -19,6 +19,8 @@
 
 #include <gatery/scl/Fifo.h>
 
+#include <gatery/hlim/NodeGroup.h>
+
 #include <gatery/frontend/DesignScope.h>
 #include "FifoPattern.h"
 

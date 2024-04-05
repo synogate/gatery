@@ -143,7 +143,7 @@ void gtry::scl::riscv::RV32I::execute()
 {
 	auto entRV = m_area.enter("execute");
 
-	m_trace.name = m_area.getNodeGroup()->instancePath();
+	m_trace.name = m_area.instancePath();
 	m_trace.instructionValid = !m_stall & !m_discardResult;
 	m_trace.instruction = m_instr.instruction;
 	m_trace.instructionPointer = zext(m_IP) | m_IPoffset;

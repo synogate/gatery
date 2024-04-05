@@ -18,6 +18,8 @@
 #include "gatery/scl_pch.h"
 #include "GLOBAL.h"
 
+#include <gatery/hlim/NodeGroup.h>
+
 #include <gatery/debug/DebugInterface.h>
 #include <gatery/frontend/GraphTools.h>
 #include <gatery/frontend/DesignScope.h>

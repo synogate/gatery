@@ -30,7 +30,7 @@ namespace gtry::scl::math {
 UInt pipelinedMul(UInt a, UInt b, BitWidth resultW, size_t resultOffset)
 {
 	Area area("scl_pipelinedMul", true);
-	area.getNodeGroup()->template createMetaInfo<PipelinedMulMeta>()->resultOffset = resultOffset;
+	area.template createMetaInfo<PipelinedMulMeta>()->resultOffset = resultOffset;
 	HCL_NAMED(a);
 	HCL_NAMED(b);
 
@@ -49,7 +49,7 @@ UInt pipelinedMul(UInt a, UInt b, BitWidth resultW, size_t resultOffset)
 SInt pipelinedMul(SInt a, SInt b, BitWidth resultW, size_t resultOffset)
 {
 	Area area("scl_pipelinedMul", true);
-	area.getNodeGroup()->template createMetaInfo<PipelinedMulMeta>()->resultOffset = resultOffset;
+	area.template createMetaInfo<PipelinedMulMeta>()->resultOffset = resultOffset;
 	HCL_NAMED(a);
 	HCL_NAMED(b);
 

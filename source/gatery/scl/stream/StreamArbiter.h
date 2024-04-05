@@ -71,7 +71,7 @@ namespace gtry::scl
 		{
 			auto area = Area{ "scl_StreamArbiter", true };
 			if(!m_instName.empty())
-				area.getNodeGroup()->setInstanceName(m_instName);
+				area.instanceName(m_instName);
 
 			HCL_DESIGNCHECK_HINT(m_out, "No input stream attached and out template not provided.");
 			HCL_DESIGNCHECK_HINT(!m_generated, "Generate called twice.")

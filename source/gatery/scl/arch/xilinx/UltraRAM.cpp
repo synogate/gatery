@@ -42,7 +42,7 @@ std::array<TileLinkUL, 2> arch::xilinx::ultraRam(size_t numWords, UltraRamSettin
 {
 	Area ent{ "scl_ultraRam", true };
 	if (!cfg.name.empty())
-		ent.getNodeGroup()->setInstanceName(std::string{ cfg.name });
+		ent.instanceName(std::string{ cfg.name });
 
 	size_t numRamBlocks = (numWords + 4095) / 4096;
 	if (!cfg.latency)

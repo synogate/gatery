@@ -98,7 +98,7 @@ namespace gtry::scl::arch::xilinx
 	{
 		Area ent{ "scl_mulAccumulate", true };
 		if(!instanceName.empty())
-			ent.getNodeGroup()->setInstanceName(std::string{ instanceName });
+			ent.instanceName(std::string{ instanceName });
 
 		HCL_DESIGNCHECK(a.width() <= 27_b);
 		HCL_DESIGNCHECK(b.width() <= 18_b);
@@ -143,7 +143,7 @@ namespace gtry::scl::arch::xilinx
 	{
 		Area ent{ "scl_mulAccumulate", true };
 		if (!instanceName.empty())
-			ent.getNodeGroup()->setInstanceName(std::string{ instanceName });
+			ent.instanceName(std::string{ instanceName });
 
 		HCL_DESIGNCHECK(a1.width() <= 27_b);
 		HCL_DESIGNCHECK(b1.width() <= 18_b);
