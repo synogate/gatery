@@ -15,7 +15,7 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "DramMiniController.h"
 
 #include <gatery/scl/arch/colognechip/io.h>
@@ -262,7 +262,7 @@ namespace gtry::scl::sdram
 		};
 		HCL_NAMED(phy);
 
-		// we use a ddr output to phase shift by 180° for the command bus
+		// we use a ddr output to phase shift by 180ï¿½ for the command bus
 		auto pinCmd = [&](const Bit& pin, const char* name) {
 			CC_ODDR ddr;
 			ddr.D0() = pin;
@@ -292,7 +292,7 @@ namespace gtry::scl::sdram
 		pinCmdVec(outCmd.a, "a");
 		pinOut(phy.odt, cfg.pinPrefix + "odt");
 
-		// CK: we do a 180° phase shift by inverting ddr inputs
+		// CK: we do a 180ï¿½ phase shift by inverting ddr inputs
 		// fake differential signal as long as not located on ball pairs
 		CC_OBUF clkBufP, clkBufN;
 		clkBufP.voltage("1.8");
@@ -322,7 +322,7 @@ namespace gtry::scl::sdram
 
 
 		// there is a magical "10ns" dealy between DQ flank and DQS flank. While this is what we need, it is here by
-		// accident and caused by LUT delays. Make sure to add 180° phase shift when switching to ODDR.
+		// accident and caused by LUT delays. Make sure to add 180ï¿½ phase shift when switching to ODDR.
 #if 0	// this is what we should do, but if we do the output buffer is always enables
 		CC_ODDR dqsDDR(dqsBuf);
 		dqsDDR.D0() = !phy.dqsPreamble;

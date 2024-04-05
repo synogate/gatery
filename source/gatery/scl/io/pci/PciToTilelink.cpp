@@ -16,7 +16,7 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include <gatery/pch.h>
+#include <gatery/scl_pch.h>
 #include "PciToTileLink.h"
 #include <gatery/scl/utils/Thermometric.h>
 #include <gatery/scl/utils/BitCount.h>

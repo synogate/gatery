@@ -147,14 +147,13 @@ function GateryProjectDefaults()
 	filter {}
 end
 
-project "gatery"
+project "gatery_core"
     kind "StaticLib"
 
     files { 
         "gatery/export/**.cpp", "gatery/export/**.c", "gatery/export/**.h",
         "gatery/frontend/**.cpp", "gatery/frontend/**.c", "gatery/frontend/**.h",
         "gatery/hlim/**.cpp", "gatery/hlim/**.c", "gatery/hlim/**.h",
-        "gatery/scl/**.cpp", "gatery/scl/**.c", "gatery/scl/**.h",
         "gatery/simulation/**.cpp", "gatery/simulation/**.c", "gatery/simulation/**.h",
         "gatery/utils/**.cpp", "gatery/utils/**.c", "gatery/utils/**.h",
         "gatery/debug/**.cpp", "gatery/debug/**.c", "gatery/debug/**.h",
@@ -174,14 +173,30 @@ project "gatery"
     filter "system:windows"
         flags { "FatalCompileWarnings" }
 
+    filter "files:**.c"
+        flags {"NoPCH"}
+
+project "gatery_scl"
+    kind "StaticLib"
+
+    files { 
+        "gatery/scl/**.cpp", "gatery/scl/**.c", "gatery/scl/**.h",
+    }
+
+    pchsource "gatery/scl_pch.cpp"
+    pchheader "gatery/scl_pch.h"
+
+    includedirs "%{prj.location}/"
+    GateryProjectDefaults()
+
+    filter "system:windows"
+        flags { "FatalCompileWarnings" }
+
         removefiles {
             "gatery/scl/driver/linux/**.cpp"
         }
 
     filter "files:gatery/scl/driver/**.cpp"
-        flags {"NoPCH"}
-
-    filter "files:gen/**.cpp"
         flags {"NoPCH"}
 
     filter "files:**.c"

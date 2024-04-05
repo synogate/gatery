@@ -15,6 +15,11 @@ file(GLOB_RECURSE srcs_gatery
     "source/gatery/*.cpp" "source/gatery/*.h" "source/gatery/*.c"
 )
 
+file(GLOB_RECURSE srcs_gatery_scl 
+    "source/gatery/scl/*.cpp" "source/gatery/scl/*.h" "source/gatery/scl/*.c"
+)
+list(REMOVE_ITEM srcs_gatery ${srcs_gatery_scl})
+
 file(GLOB_RECURSE data_files_gatery RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     "data/*"
 )
@@ -24,61 +29,85 @@ gtry_compileResourceFile(
     BINARY_FILES ${data_files_gatery}
 )
 
-add_library(gatery STATIC 
+add_library(gatery_core STATIC 
     ${srcs_gatery}
     ${CMAKE_CURRENT_BINARY_DIR}/gen/res/gtry_resources.h
     ${CMAKE_CURRENT_BINARY_DIR}/gen/res/gtry_resources.cpp
 )
 
-target_precompile_headers(gatery
-    PUBLIC
-        "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/source/gatery/pch.h>"
+target_precompile_headers(gatery_core
+    PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/source/gatery/pch.h>"
 )
 
-target_include_directories(gatery PUBLIC
+target_include_directories(gatery_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/source
     ${CMAKE_CURRENT_BINARY_DIR}/gen
 )
 
-target_include_directories(gatery SYSTEM PUBLIC
+target_include_directories(gatery_core SYSTEM PUBLIC
     ${Boost_INCLUDE_DIRS}
     ${YAML_CPP_INCLUDE_DIRS}
 )
 
-target_link_directories(gatery PUBLIC
+target_link_directories(gatery_core PUBLIC
     ${Boost_LIBRARY_DIR}
     ${YAML_CPP_LIBRARY_DIR}
 )
 
-target_link_libraries(gatery PUBLIC
+target_link_libraries(gatery_core PUBLIC
     ${Boost_LIBRARIES}
     ${YAML_CPP_LIBRARIES}
 )
 
-target_compile_features(gatery PUBLIC cxx_std_23)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(gatery_core PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-std=gnu++2b>)
+else()
+    target_compile_features(gatery_core PUBLIC cxx_std_23)
+endif()
 
-target_compile_definitions(gatery PUBLIC NOMINMAX)
-target_compile_definitions(gatery PUBLIC WIN32_LEAN_AND_MEAN)
-target_compile_definitions(gatery PUBLIC _HAS_DEPRECATED_IS_LITERAL_TYPE=1)
+target_compile_definitions(gatery_core PUBLIC NOMINMAX)
+target_compile_definitions(gatery_core PUBLIC WIN32_LEAN_AND_MEAN)
+target_compile_definitions(gatery_core PUBLIC _HAS_DEPRECATED_IS_LITERAL_TYPE=1)
 
 if (APPLE)
-    target_compile_definitions(gatery PUBLIC _GNU_SOURCE)
-    target_compile_options(gatery PUBLIC -Wunqualified-std-cast-call)
+    target_compile_definitions(gatery_core PUBLIC _GNU_SOURCE)
+    target_compile_options(gatery_core PUBLIC -Wunqualified-std-cast-call)
 #    target_link_libraries(gatery PUBLIC -lstdc++20)
 endif()
 
 if(WIN32)
-    target_compile_definitions(gatery PUBLIC -DBOOST_STACKTRACE_USE_WINDBG)
+    target_compile_definitions(gatery_core PUBLIC -DBOOST_STACKTRACE_USE_WINDBG)
     # Boost docu: Uses COM to show debug info. May require linking with ole32 and dbgeng.
 else()
-    target_compile_definitions(gatery PUBLIC -DBOOST_STACKTRACE_USE_BACKTRACE)
-    target_link_libraries(gatery PUBLIC -ldl -lbacktrace)
-    #target_compile_definitions(gatery PUBLIC -DBOOST_STACKTRACE_USE_ADDR2LINE)
-    #target_link_libraries(gatery PUBLIC -ldl)
+    target_compile_definitions(gatery_core PUBLIC -DBOOST_STACKTRACE_USE_BACKTRACE)
+    target_link_libraries(gatery_core PUBLIC -ldl -lbacktrace)
+    #target_compile_definitions(gatery_core PUBLIC -DBOOST_STACKTRACE_USE_ADDR2LINE)
+    #target_link_libraries(gatery_core PUBLIC -ldl)
     if(NOT APPLE)
-        target_compile_options(gatery PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-fcoroutines>)
+        target_compile_options(gatery_core PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-fcoroutines>)
     endif ()
 endif()
+
+
+
+add_library(gatery_scl STATIC 
+    ${srcs_gatery_scl}
+)
+
+target_precompile_headers(gatery_scl
+    PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/source/gatery/scl_pch.h>"
+)
+
+target_link_libraries(gatery_scl PUBLIC
+    gatery_core
+)
+
+add_library(gatery INTERFACE)
+
+target_link_libraries(gatery INTERFACE
+    # Must be a -start-group -end-group thing because the two have cyclic dependencies
+    "$<LINK_GROUP:RESCAN,gatery_core;gatery_scl>"
+)
 
 
 ############################################################## 

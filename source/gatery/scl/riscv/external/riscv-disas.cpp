@@ -22,7 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 
 #include "riscv-disas.h"
 

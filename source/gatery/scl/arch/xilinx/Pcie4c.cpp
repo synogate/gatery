@@ -8,7 +8,7 @@ distribute it without explicit written license by Synogate to do so.
 This program is distributed WITHOUT ANY WARRANTY; without even the
 implied warranty of MERCHANTABILITY.
 */
-#include <gatery/pch.h>
+#include <gatery/scl_pch.h>
 #include "Pcie4c.h"
 
 

@@ -15,7 +15,7 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "CommunicationsDeviceClass.h"
 
 void gtry::scl::usb::virtualCOMsetup(Function& func, uint8_t interfaceNumber, uint8_t endPoint, boost::optional<Bit&> dtr, boost::optional<Bit&> rts)
