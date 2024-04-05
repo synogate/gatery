@@ -20,13 +20,17 @@
 #include "BitVector.h"
 
 namespace gtry {
+	class UInt;
+}
+
+extern template class std::map<std::variant<gtry::BitVectorSliceStatic, gtry::BitVectorSliceDynamic>, gtry::UInt>;
+
+namespace gtry {
 
 /**
  * @addtogroup gtry_signals
  * @{
  */
-
-	class UInt;
 
 	class UIntDefault : public BaseBitVectorDefault {
 		public:
@@ -44,24 +48,43 @@ namespace gtry {
 		using DefaultValue = UIntDefault;
 
 		using Base::Base;
-		UInt(UInt&& rhs) : Base(std::move(rhs)) { }
-		UInt(const UInt &rhs) : Base(rhs) { } // Necessary because otherwise deleted copy ctor takes precedence over templated ctor.
+		UInt(UInt&& rhs);
+		UInt(const UInt &rhs);
 
 		template<BitVectorIntegralLiteral Int>
-		UInt(Int vec) { HCL_DESIGNCHECK_HINT(vec >= 0, "Can not assign negative values to UInt"); assign((std::uint64_t)vec, Expansion::zero); }
-		UInt(const char rhs[]) { assign(std::string_view(rhs), Expansion::zero); }
+		UInt(Int vec) : UInt() { HCL_DESIGNCHECK_HINT(vec >= 0, "Can not assign negative values to UInt"); assign((std::uint64_t)vec, Expansion::zero); }
+		UInt(const char rhs[]);
+
+		// make explicit in cpp to force instantiation of base class template there (and only there)
+		UInt();
+		~UInt();
 
 		template<BitVectorIntegralLiteral Int>
 		UInt& operator = (Int rhs) { HCL_DESIGNCHECK_HINT(rhs >= 0, "Can not assign negative values to UInt"); assign((std::uint64_t)rhs, Expansion::zero); return *this; }
-		UInt& operator = (const char rhs[]) { assign(std::string_view(rhs), Expansion::zero); return *this; }
+		UInt& operator = (const char rhs[]);
 
 		// These must be here since they are implicitly deleted due to the cop and move ctors
-		UInt& operator = (const UInt &rhs) { BaseBitVector::operator=(rhs); return *this; }
-		UInt& operator = (UInt&& rhs) { BaseBitVector::operator=(std::move(rhs)); return *this; }
+		UInt& operator = (const UInt &rhs);
+		UInt& operator = (UInt&& rhs);
 
 		virtual BVec toBVec() const override;
 		virtual void fromBVec(const BVec &bvec) override;
 	};
+
+	// By far the most common operations!
+	extern template UInt& SliceableBitVector<UInt, UIntDefault>::operator() (const Selection&);
+	extern template const UInt& SliceableBitVector<UInt, UIntDefault>::operator() (const Selection&) const;
+	extern template UInt& SliceableBitVector<UInt, UIntDefault>::operator() (size_t, BitWidth);
+	extern template const UInt& SliceableBitVector<UInt, UIntDefault>::operator() (size_t, BitWidth) const;
+	extern template UInt& SliceableBitVector<UInt, UIntDefault>::operator() (size_t, BitReduce);
+	extern template const UInt& SliceableBitVector<UInt, UIntDefault>::operator() (size_t, BitReduce) const;
+
+	extern template UInt& SliceableBitVector<UInt, UIntDefault>::lower(BitWidth);
+	extern template const UInt& SliceableBitVector<UInt, UIntDefault>::lower(BitWidth) const;
+	extern template UInt& SliceableBitVector<UInt, UIntDefault>::lower(BitReduce);
+	extern template const UInt& SliceableBitVector<UInt, UIntDefault>::lower(BitReduce) const;
+
+
 
 	UInt ext(const Bit& bit, BitWidth extendedWidth, Expansion policy);
 	inline UInt ext(const Bit& bit, BitWidth extendedWidth) { return ext(bit, extendedWidth, Expansion::zero); }

@@ -18,6 +18,8 @@
 #include "gatery/pch.h"
 #include "BVec.h"
 
+template class std::map<std::variant<gtry::BitVectorSliceStatic, gtry::BitVectorSliceDynamic>, gtry::BVec>;
+
 namespace gtry 
 {
 	BVec ext(const BVec& bvec, BitWidth extendedWidth, Expansion policy)

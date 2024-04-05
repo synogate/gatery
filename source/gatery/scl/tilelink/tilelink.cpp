@@ -205,29 +205,13 @@ namespace gtry::scl
 namespace gtry 
 {
 	template class Reverse<scl::TileLinkChannelD>;
-
-	template void connect(scl::TileLinkUL&, scl::TileLinkUL&);
-	template void connect(scl::TileLinkUH&, scl::TileLinkUH&);
-	template void connect(scl::TileLinkChannelA&, scl::TileLinkChannelA&);
-	template void connect(scl::TileLinkChannelD&, scl::TileLinkChannelD&);
-
-#ifndef __clang__
-	template auto upstream(scl::TileLinkUL&);
-	template auto upstream(scl::TileLinkUH&);
-	template auto upstream(scl::TileLinkChannelA&);
-	template auto upstream(scl::TileLinkChannelD&);
-	template auto upstream(const scl::TileLinkUL&);
-	template auto upstream(const scl::TileLinkUH&);
-	template auto upstream(const scl::TileLinkChannelA&);
-	template auto upstream(const scl::TileLinkChannelD&);
-
-	template auto downstream(scl::TileLinkUL&);
-	template auto downstream(scl::TileLinkUH&);
-	template auto downstream(scl::TileLinkChannelA&);
-	template auto downstream(scl::TileLinkChannelD&);
-	template auto downstream(const scl::TileLinkUL&);
-	template auto downstream(const scl::TileLinkUH&);
-	template auto downstream(const scl::TileLinkChannelA&);
-	template auto downstream(const scl::TileLinkChannelD&);
-#endif
 }
+
+
+GTRY_INSTANTIATE_TEMPLATE_COMPOUND(gtry::scl::TileLinkD)
+GTRY_INSTANTIATE_TEMPLATE_COMPOUND(gtry::scl::TileLinkA)
+GTRY_INSTANTIATE_TEMPLATE_STREAM(gtry::scl::TileLinkChannelA)
+GTRY_INSTANTIATE_TEMPLATE_STREAM(gtry::scl::TileLinkChannelD)
+GTRY_INSTANTIATE_TEMPLATE_COMPOUND_MINIMAL(gtry::scl::TileLinkUL)
+GTRY_INSTANTIATE_TEMPLATE_COMPOUND_MINIMAL(gtry::scl::TileLinkUB)
+GTRY_INSTANTIATE_TEMPLATE_COMPOUND_MINIMAL(gtry::scl::TileLinkUH)

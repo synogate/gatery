@@ -17,6 +17,7 @@
 */
 #pragma once
 #include <gatery/frontend.h>
+#include <gatery/frontend/CompoundTemplateInstantiations.h>
 
 #include "../stream/Stream.h"
 #include "../stream/utils.h"
@@ -192,3 +193,15 @@ namespace gtry::scl
 	}
 }
 
+GTRY_EXTERN_TEMPLATE_COMPOUND(gtry::scl::AxiAddress)
+GTRY_EXTERN_TEMPLATE_COMPOUND(gtry::scl::AxiWriteResponse)
+GTRY_EXTERN_TEMPLATE_COMPOUND(gtry::scl::AxiWriteData)
+GTRY_EXTERN_TEMPLATE_COMPOUND(gtry::scl::AxiReadData)
+GTRY_EXTERN_TEMPLATE_COMPOUND_MINIMAL(gtry::scl::Axi4)
+
+
+GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::strm::RvStream<gtry::scl::AxiAddress>)
+GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::strm::RvPacketStream<gtry::scl::AxiAddress>)
+GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::strm::RvPacketStream<gtry::scl::AxiWriteData>)
+GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::strm::RvStream<gtry::scl::AxiWriteResponse>)
+GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::strm::RvPacketStream<gtry::scl::AxiReadData>)

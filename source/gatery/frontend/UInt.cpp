@@ -19,8 +19,31 @@
 #include "UInt.h"
 #include "BVec.h"
 
+template class std::map<std::variant<gtry::BitVectorSliceStatic, gtry::BitVectorSliceDynamic>, gtry::UInt>;
+
 namespace gtry 
 {
+	template UInt& SliceableBitVector<UInt, UIntDefault>::operator() (const Selection&);
+	template const UInt& SliceableBitVector<UInt, UIntDefault>::operator() (const Selection&) const;
+	template UInt& SliceableBitVector<UInt, UIntDefault>::operator() (size_t, BitWidth);
+	template const UInt& SliceableBitVector<UInt, UIntDefault>::operator() (size_t, BitWidth) const;
+	template UInt& SliceableBitVector<UInt, UIntDefault>::operator() (size_t, BitReduce);
+	template const UInt& SliceableBitVector<UInt, UIntDefault>::operator() (size_t, BitReduce) const;
+	template UInt& SliceableBitVector<UInt, UIntDefault>::lower(BitWidth);
+	template const UInt& SliceableBitVector<UInt, UIntDefault>::lower(BitWidth) const;
+	template UInt& SliceableBitVector<UInt, UIntDefault>::lower(BitReduce);
+	template const UInt& SliceableBitVector<UInt, UIntDefault>::lower(BitReduce) const;
+
+	UInt::UInt(UInt&& rhs) : Base(std::move(rhs)) { }
+	UInt::UInt(const UInt &rhs) : Base(rhs) { }
+	UInt::UInt(const char rhs[]) { assign(std::string_view(rhs), Expansion::zero); }
+	UInt& UInt::operator = (const char rhs[]) { assign(std::string_view(rhs), Expansion::zero); return *this; }
+	UInt& UInt::operator = (const UInt &rhs) { BaseBitVector::operator=(rhs); return *this; }
+	UInt& UInt::operator = (UInt&& rhs) { BaseBitVector::operator=(std::move(rhs)); return *this; }
+
+	UInt::UInt() { }
+	UInt::~UInt() { }
+
 	UInt ext(const Bit& bit, BitWidth extendedWidth, Expansion policy)
 	{
 		HCL_DESIGNCHECK_HINT(extendedWidth.bits() != 0, "ext is not allowed to reduce width");

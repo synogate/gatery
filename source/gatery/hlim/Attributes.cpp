@@ -21,6 +21,9 @@
 
 #include "../utils/ConfigTree.h"
 
+template class std::map<std::string, gtry::hlim::AttribValue>;
+template class std::map<std::string, gtry::hlim::VendorSpecificAttributes>;
+
 namespace gtry::hlim {
 
 void Attributes::fuseWith(const Attributes &rhs)

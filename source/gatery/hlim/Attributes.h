@@ -114,3 +114,6 @@ struct MemoryAttributes : public Attributes {
 };
 
 }
+
+extern template class std::map<std::string, gtry::hlim::AttribValue>;
+extern template class std::map<std::string, gtry::hlim::VendorSpecificAttributes>;

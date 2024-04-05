@@ -259,4 +259,8 @@ namespace gtry::scl
 		}
 	};
 
+
+	// Quite common
+	extern template class StreamArbiter<RvPacketStream<BVec>, ArbiterPolicyLowest>;
+	extern template class StreamArbiter<RvPacketStream<BVec, EmptyBits>, ArbiterPolicyLowest>;
 }

@@ -138,3 +138,11 @@ namespace gtry::scl
 	}
 }
 
+namespace gtry 
+{
+	template void connect(scl::TileLinkStreamFetch::Command&, scl::TileLinkStreamFetch::Command&);
+#if !defined(__clang__) || __clang_major__ >= 14
+	template auto upstream(scl::TileLinkStreamFetch::Command&);
+	template auto downstream(scl::TileLinkStreamFetch::Command&);
+#endif
+}

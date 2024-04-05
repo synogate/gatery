@@ -1029,3 +1029,8 @@ namespace gtry::scl::strm
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::internal::ShiftRightMetaParams, state, mustAnticipateEnd, isSingleBeat);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::internal::ShiftRightSteadyShift, shift);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::internal::AppendStreamMetaParams, currentState, tailShiftAmt);
+
+namespace gtry {
+	extern template class Enum<scl::strm::internal::ShiftRightState>;
+	extern template class Enum<scl::strm::internal::AppendStreamState>;
+}

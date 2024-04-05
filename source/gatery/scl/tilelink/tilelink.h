@@ -343,35 +343,20 @@ namespace gtry::scl
 	extern template Bit eop(const TileLinkChannelD&);
 }
 
-namespace gtry 
-{
-	extern template class Reverse<scl::TileLinkChannelD>;
-
-	extern template void connect(scl::TileLinkUL&, scl::TileLinkUL&);
-	extern template void connect(scl::TileLinkUH&, scl::TileLinkUH&);
-	extern template void connect(scl::TileLinkChannelA&, scl::TileLinkChannelA&);
-	extern template void connect(scl::TileLinkChannelD&, scl::TileLinkChannelD&);
-
-#ifndef __clang__
-	extern template auto upstream(scl::TileLinkUL&);
-	extern template auto upstream(scl::TileLinkUH&);
-	extern template auto upstream(scl::TileLinkChannelA&);
-	extern template auto upstream(scl::TileLinkChannelD&);
-	extern template auto upstream(const scl::TileLinkUL&);
-	extern template auto upstream(const scl::TileLinkUH&);
-	extern template auto upstream(const scl::TileLinkChannelA&);
-	extern template auto upstream(const scl::TileLinkChannelD&);
-
-	extern template auto downstream(scl::TileLinkUL&);
-	extern template auto downstream(scl::TileLinkUH&);
-	extern template auto downstream(scl::TileLinkChannelA&);
-	extern template auto downstream(scl::TileLinkChannelD&);
-	extern template auto downstream(const scl::TileLinkUL&);
-	extern template auto downstream(const scl::TileLinkUH&);
-	extern template auto downstream(const scl::TileLinkChannelA&);
-	extern template auto downstream(const scl::TileLinkChannelD&);
-#endif
-}
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkA, opcode, param, size, source, address, mask, data);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkD, opcode, param, size, source, sink, data, error);
+
+namespace gtry 
+{
+	extern template class Reverse<scl::TileLinkChannelD>;
+}
+
+GTRY_EXTERN_TEMPLATE_COMPOUND(gtry::scl::TileLinkD);
+GTRY_EXTERN_TEMPLATE_COMPOUND(gtry::scl::TileLinkA);
+
+GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::TileLinkChannelA);
+GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::TileLinkChannelD);
+GTRY_EXTERN_TEMPLATE_COMPOUND_MINIMAL(gtry::scl::TileLinkUL);
+GTRY_EXTERN_TEMPLATE_COMPOUND_MINIMAL(gtry::scl::TileLinkUB);
+GTRY_EXTERN_TEMPLATE_COMPOUND_MINIMAL(gtry::scl::TileLinkUH);

@@ -18,6 +18,7 @@
 #pragma once
 
 #include "../Counter.h"
+#include "Stream.h"
 #include "metaSignals.h"
 #include "../cdc.h"
 
@@ -711,3 +712,14 @@ namespace gtry::scl::strm
 		return out;
 	}
 }
+
+
+// Quite common:
+
+GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::strm::PacketStream<gtry::BVec>)
+GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::strm::RvPacketStream<gtry::BVec>)
+GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::strm::VPacketStream<gtry::BVec>)
+
+GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::strm::PacketStream<gtry::BVec, gtry::scl::strm::EmptyBits>)
+GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::strm::RvPacketStream<gtry::BVec, gtry::scl::strm::EmptyBits>)
+GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::strm::VPacketStream<gtry::BVec, gtry::scl::strm::EmptyBits>)

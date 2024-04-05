@@ -173,3 +173,16 @@ namespace gtry::scl
 		return master;
 	}
 }
+
+GTRY_INSTANTIATE_TEMPLATE_COMPOUND(gtry::scl::AxiAddress)
+GTRY_INSTANTIATE_TEMPLATE_COMPOUND(gtry::scl::AxiWriteResponse)
+GTRY_INSTANTIATE_TEMPLATE_COMPOUND(gtry::scl::AxiWriteData)
+GTRY_INSTANTIATE_TEMPLATE_COMPOUND(gtry::scl::AxiReadData)
+GTRY_INSTANTIATE_TEMPLATE_COMPOUND_MINIMAL(gtry::scl::Axi4)
+
+
+GTRY_INSTANTIATE_TEMPLATE_STREAM(gtry::scl::strm::RvStream<gtry::scl::AxiAddress>)
+GTRY_INSTANTIATE_TEMPLATE_STREAM(gtry::scl::strm::RvPacketStream<gtry::scl::AxiAddress>)
+GTRY_INSTANTIATE_TEMPLATE_STREAM(gtry::scl::strm::RvPacketStream<gtry::scl::AxiWriteData>)
+GTRY_INSTANTIATE_TEMPLATE_STREAM(gtry::scl::strm::RvStream<gtry::scl::AxiWriteResponse>)
+GTRY_INSTANTIATE_TEMPLATE_STREAM(gtry::scl::strm::RvPacketStream<gtry::scl::AxiReadData>)
