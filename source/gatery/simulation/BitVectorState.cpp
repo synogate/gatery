@@ -20,6 +20,9 @@
 
 namespace gtry::sim {
 
+template class BitVectorState<DefaultConfig>;
+template class BitVectorState<ExtendedConfig>;
+
 DefaultBitVectorState createDefaultBitVectorState(std::size_t bitWidth, const void *data) {
 	BitVectorState<DefaultConfig> state;
 	state.resize(bitWidth);
@@ -99,6 +102,27 @@ void asData(const DefaultBitVectorState &src, std::span<std::byte> dst, std::spa
 		dst[j] = (value[j] & def) | (filler & ~def);
 	}
 }
+
+
+template void insertBigInt(BitVectorState<DefaultConfig> &, size_t, size_t, BigInt);
+template BigInt extractBigInt<DefaultConfig>(const BitVectorState<DefaultConfig> &, size_t, size_t);
+
+gtry::sim::BigInt bitwiseNegation(const gtry::sim::BigInt &v, size_t width)
+{
+	// Export and reimport so it can't track the sign.
+	std::vector<std::uint64_t> words;
+	export_bits(v, std::back_inserter(words), 64, false);
+	for (auto &elem : words)
+		elem = ~elem;
+
+	while (words.size() < width/64)
+		words.push_back(~0ull);
+	
+	gtry::sim::BigInt result;
+   	import_bits(result, words.begin(), words.end(), 64, false);
+	return result;
+}
+
 
 DefaultBitVectorState parseBit(char value)
 {

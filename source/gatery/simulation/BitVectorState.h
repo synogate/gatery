@@ -32,6 +32,9 @@
 #include <random>
 
 namespace gtry::sim {
+typedef boost::multiprecision::number<boost::multiprecision::cpp_int_backend<>> BigInt;
+
+
 
 struct DefaultConfig
 {
@@ -150,9 +153,6 @@ protected:
 		size_t m_size = 0;
 		std::array<std::vector<typename Config::BaseType>, Config::NUM_PLANES> m_values;
 };
-
-typedef boost::multiprecision::number<boost::multiprecision::cpp_int_backend<>> BigInt;
-
 
 template<typename Config>
 bool allDefinedNonStraddling(const BitVectorState<Config> &vec, size_t start, size_t size) {
@@ -361,22 +361,9 @@ BigInt extractBigInt(const BitVectorState<Config> &vec, size_t offset, size_t si
 		return fullChunkPart | (partialChunk << (lastChunkOffset - offset));
 	}
 }
+extern template BigInt extractBigInt<DefaultConfig>(const BitVectorState<DefaultConfig> &, size_t, size_t);
 
-inline gtry::sim::BigInt bitwiseNegation(const gtry::sim::BigInt &v, size_t width)
-{
-	// Export and reimport so it can't track the sign.
-	std::vector<std::uint64_t> words;
-	export_bits(v, std::back_inserter(words), 64, false);
-	for (auto &elem : words)
-		elem = ~elem;
-
-	while (words.size() < width/64)
-		words.push_back(~0ull);
-	
-	gtry::sim::BigInt result;
-   	import_bits(result, words.begin(), words.end(), 64, false);
-	return result;
-}
+gtry::sim::BigInt bitwiseNegation(const gtry::sim::BigInt &v, size_t width);
 
 
 /**
@@ -419,9 +406,7 @@ void insertBigInt(BitVectorState<Config> &vec, size_t offset, size_t size, BigIn
 		}
 	}
 }
-
-
-
+extern template void insertBigInt(BitVectorState<DefaultConfig> &, size_t, size_t, BigInt);
 
 using DefaultBitVectorState = BitVectorState<DefaultConfig>;
 using ExtendedBitVectorState = BitVectorState<ExtendedConfig>;
@@ -833,11 +818,10 @@ inline void BitVectorState<Config>::insert(const BitVectorState& state, size_t o
 	while (srcOffset < width) {
 		size_t chunkSize = std::min<size_t>(64, width - srcOffset);
 
-		auto val = state.extractNonStraddling(sim::DefaultConfig::VALUE, srcOffset, chunkSize);
-		insertNonStraddling(sim::DefaultConfig::VALUE, offset, chunkSize, val);
-
-		auto def = state.extractNonStraddling(sim::DefaultConfig::DEFINED, srcOffset, chunkSize);
-		insertNonStraddling(sim::DefaultConfig::DEFINED, offset, chunkSize, def);
+		for (auto i : utils::Range<size_t>(Config::NUM_PLANES)) {
+			auto val = state.extractNonStraddling((typename Config::Plane) i, srcOffset, chunkSize);
+			insertNonStraddling((typename Config::Plane) i, offset, chunkSize, val);
+		}
 
 		offset += chunkSize;
 		srcOffset += chunkSize;
@@ -931,5 +915,9 @@ void BitVectorState<Config>::append(const BitVectorState<Config> &src)
 	resize(size() + src.size());
 	copyRange(offset, src, 0, src.size());
 }
+
+extern template class BitVectorState<DefaultConfig>;
+extern template class BitVectorState<ExtendedConfig>;
+
 
 }
