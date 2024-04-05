@@ -23,6 +23,7 @@
 
 #ifdef _WIN32
 #include <ktmw32.h>
+#include <io.h>
 #pragma comment(lib, "KtmW32.lib")
 
 #define USE_TRANSACTION

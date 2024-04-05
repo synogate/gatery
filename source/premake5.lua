@@ -160,6 +160,9 @@ project "gatery_core"
         "gatery/*"
     }
 
+    removefiles {
+        "gatery/scl/**.cpp", "gatery/scl/**.c", "gatery/scl/**.h"
+    }
 
     pchsource "gatery/pch.cpp"
     pchheader "gatery/pch.h"
@@ -172,6 +175,9 @@ project "gatery_core"
 
     filter "system:windows"
         flags { "FatalCompileWarnings" }
+    
+    filter "files:gen/"
+        flags {"NoPCH"}
 
     filter "files:**.c"
         flags {"NoPCH"}
