@@ -44,7 +44,7 @@ class Node_SignalTap : public Node<Node_SignalTap>
 			unsigned format;
 		};
 		
-		typedef boost::variant<std::string, FormattedSignal> LogMessagePart;
+		typedef std::variant<std::string, FormattedSignal> LogMessagePart;
 		
 		inline void setLevel(Level level) { m_level = level; }
 		inline Level getLevel() const { return m_level; }

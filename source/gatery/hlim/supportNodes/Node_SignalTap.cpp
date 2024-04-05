@@ -90,7 +90,7 @@ void Node_SignalTap::simulateCommit(sim::SimulatorCallbacks &simCallbacks, sim::
 
 		Concatenator concatenator(this, state, inputOffsets);
 		for (const auto &part : m_logMessage)
-			boost::apply_visitor(concatenator, part);
+			std::visit(concatenator, part);
 
 		switch (m_level) {
 			case LVL_WATCH:
