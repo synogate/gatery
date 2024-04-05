@@ -130,8 +130,42 @@ namespace gtry
 
 	using MemType = hlim::Node_Memory::MemType;
 
+	class BaseMemory {
+		public:
+			size_t readLatencyHint() const;
+
+			void setType(MemType type);
+			void setType(MemType type, size_t readLatency);
+
+			MemoryCapabilities::Choice getTargetRequirements() const;
+
+			void setName(std::string name);
+			void noConflicts();
+			/// Whether ports of the memory can be retimed arbitrarily wrt. each other without any hazard logic. This is a very dangerous option.
+			void allowArbitraryPortRetiming();
+			bool valid();
+
+			void fillPowerOnState(sim::DefaultBitVectorState powerOnState);
+			void setPowerOnStateZero();
+
+			void initZero();
+
+			std::size_t size() const;
+			BitWidth wordSize() const;
+			BitWidth addressWidth() const;
+			std::size_t numWords() const;
+
+		protected:
+			hlim::NodePtr<hlim::Node_Memory> m_memoryNode;
+			uint64_t m_numWords = 0;
+			size_t m_wordWidth = 0;
+
+			void setup();
+			MemoryCapabilities::Choice getTargetRequirementsForType(MemType type) const;
+	};
+
 	template<typename Data>
-	class Memory 
+	class Memory : public BaseMemory
 	{
 	public:
 		Memory() = default;
@@ -145,78 +179,14 @@ namespace gtry
 			m_wordWidth = width(m_defaultValue).value;
 			m_numWords = numWords;
 
-
-			Area area{ "scl_memory" };
-			auto ent = area.enter();
-
-			ent["word_width"] = m_wordWidth;
-			ent["num_words"] = numWords;
-		
-			m_memoryNode = DesignScope::createNode<hlim::Node_Memory>();
-			sim::DefaultBitVectorState state;
-			state.resize(m_numWords * m_wordWidth);
-			state.clearRange(sim::DefaultConfig::DEFINED, 0, m_numWords * m_wordWidth);
-			m_memoryNode->setPowerOnState(std::move(state));
-
-			MemType memType = ent.config("type").as(MemType::DONT_CARE);
-			if (utils::ConfigTree lat = ent.config("readLatency"))
-				setType(memType, lat.as<size_t>());
-			else
-				setType(memType);
-
-			m_memoryNode->loadConfig();
+			BaseMemory::setup();
 		}
 
-		size_t readLatencyHint() const { return m_memoryNode->getRequiredReadLatency(); }
-
-		void setType(MemType type) { 
-			if (type == MemType::EXTERNAL)
-				m_memoryNode->setType(type, ~0ull);
-			else {
-				auto c = getTargetRequirementsForType(type);
-				m_memoryNode->setType(type, c.totalReadLatency);
-			}
-		}
-		void setType(MemType type, size_t readLatency) { 
-			// if (type != MemType::EXTERNAL) {
-			// 	auto c = getTargetRequirementsForType(type);
-			// 	// TODO: This prevents things like: Set to DONT_CARE, choose a large size, and fore it into lutrams with a read latency of 0. Do we want that?
-			// 	HCL_DESIGNCHECK_HINT(readLatency >= c.totalReadLatency, "The specified read latency is less than what the target device reports is necessary for this kind of memory!");
-			// }
-			m_memoryNode->setType(type, readLatency); 
-		}
-
-		MemoryCapabilities::Choice getTargetRequirements() const { return getTargetRequirementsForType(m_memoryNode->type()); }
-
-		void setName(std::string name) { m_memoryNode->setName(std::move(name)); }
-		void noConflicts() { m_memoryNode->setNoConflicts(); }
-		/// Whether ports of the memory can be retimed arbitrarily wrt. each other without any hazard logic. This is a very dangerous option.
-		void allowArbitraryPortRetiming() { m_memoryNode->allowArbitraryPortRetiming(); }
-		bool valid() { return m_memoryNode != nullptr; }
-
-		void fillPowerOnState(sim::DefaultBitVectorState powerOnState) { m_memoryNode->fillPowerOnState(std::move(powerOnState)); }
-		void setPowerOnStateZero() {
-			auto& state = m_memoryNode->getPowerOnState();
-			state.clearRange(sim::DefaultConfig::VALUE, 0, state.size());
-			state.setRange(sim::DefaultConfig::DEFINED, 0, state.size());
-		}
 		void addResetLogic(std::function<Data(UInt)> address2data) {
 			m_memoryNode->setInitializationNetDataWidth(m_wordWidth);
 			UInt data = pack(address2data(hlim::NodePort{m_memoryNode, (size_t)hlim::Node_Memory::Outputs::INITIALIZATION_ADDR}));
 			m_memoryNode->rewireInput((size_t)hlim::Node_Memory::Inputs::INITIALIZATION_DATA, data.readPort());
 		}
-
-		void initZero() {
-			setPowerOnStateZero();
-			m_memoryNode->setInitializationNetDataWidth(m_wordWidth);
-			UInt data = ConstUInt(0, BitWidth(m_wordWidth));
-			m_memoryNode->rewireInput((size_t)hlim::Node_Memory::Inputs::INITIALIZATION_DATA, data.readPort());
-		}
-
-		std::size_t size() const { return m_memoryNode->getSize(); }
-		BitWidth wordSize() const { return BitWidth{ m_wordWidth }; }
-		BitWidth addressWidth() const { return BitWidth{ utils::Log2C(numWords()) }; }
-		std::size_t numWords() const { return size() / m_wordWidth; }
 
 		MemoryPortFactory<Data> operator [] (const UInt& address) { HCL_DESIGNCHECK(m_memoryNode != nullptr); return MemoryPortFactory<Data>(m_memoryNode, address, m_defaultValue); }
 		const MemoryPortFactory<Data> operator [] (const UInt& address) const { HCL_DESIGNCHECK(m_memoryNode != nullptr); return MemoryPortFactory<Data>(m_memoryNode, address, m_defaultValue); }
@@ -226,36 +196,14 @@ namespace gtry
 
 		const Data& defaultValue() const { return m_defaultValue; }
 	protected:
-		hlim::NodePtr<hlim::Node_Memory> m_memoryNode;
 		Data m_defaultValue;
-		uint64_t m_numWords = 0;
-		size_t m_wordWidth = 0;
 
-		Memory(hlim::Node_Memory* memoryNode, Data def = Data{}) : m_memoryNode(memoryNode) { 
+		Memory(hlim::Node_Memory* memoryNode, Data def = Data{}) { 
+			m_memoryNode = memoryNode;
 			m_defaultValue = std::move(def);
 			m_wordWidth = width(m_defaultValue).value;
 			m_numWords = m_memoryNode->getSize() / m_wordWidth;
 			HCL_DESIGNCHECK(m_memoryNode->getSize() % m_wordWidth == 0);
-		}
-
-		MemoryCapabilities::Choice getTargetRequirementsForType(MemType type) const {
-			MemoryCapabilities::Request request = {
-				.size = m_memoryNode->getSize(),
-			};
-
-			if (m_memoryNode->getPorts().empty())
-				request.maxDepth = m_numWords;
-			else
-				request.maxDepth = m_memoryNode->getMaxDepth();
-
-			HCL_DESIGNCHECK_HINT(type != MemType::EXTERNAL, "Can't query the target device for properties of external memory!");
-			switch (type) {
-				case MemType::SMALL: request.sizeCategory = MemoryCapabilities::SizeCategory::SMALL; break;
-				case MemType::MEDIUM: request.sizeCategory = MemoryCapabilities::SizeCategory::MEDIUM; break;
-				case MemType::LARGE: request.sizeCategory = MemoryCapabilities::SizeCategory::LARGE; break;
-				default: break;
-			};
-			return TechnologyScope::getCap<MemoryCapabilities>().select(request);
 		}
 	};
 
