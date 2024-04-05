@@ -37,7 +37,7 @@ Block::~Block()
 
 void Block::buildFrom(hlim::NodeGroup *nodeGroup)
 {
-	HCL_ASSERT(nodeGroup->getGroupType() == hlim::NodeGroup::GroupType::AREA);
+	HCL_ASSERT(nodeGroup->getGroupType() == hlim::NodeGroupType::AREA);
 
 	m_comment = nodeGroup->getComment();
 
@@ -47,7 +47,7 @@ void Block::buildFrom(hlim::NodeGroup *nodeGroup)
 	processifyNodes("default", nodeGroup, false);
 
 	for (auto &childGrp : nodeGroup->getChildren()) {
-		if (childGrp->getGroupType() == hlim::NodeGroup::GroupType::AREA)
+		if (childGrp->getGroupType() == hlim::NodeGroupType::AREA)
 			processifyNodes(childGrp->getName(), childGrp.get(), true); // reccursively merge all areas into this process(es)
 	}
 }

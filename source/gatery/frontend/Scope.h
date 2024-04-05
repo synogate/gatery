@@ -17,10 +17,16 @@
 */
 #pragma once
 
-#include <gatery/hlim/NodeGroup.h>
 #include <gatery/utils/Preprocessor.h>
+#include <gatery/utils/ConfigTree.h>
+
+#include "../hlim/NodeGroupType.h"
 
 namespace gtry {
+
+namespace hlim {
+	class NodeGroup;
+}
 	
 /**
  * @addtogroup gtry_scopes
@@ -61,28 +67,39 @@ thread_local FinalType *BaseScope<FinalType>::m_currentScope = nullptr;
 class GroupScope : public BaseScope<GroupScope>
 {
 	public:
-		using GroupType = hlim::NodeGroup::GroupType;
+		using GroupType = hlim::NodeGroupType;
 		
 		GroupScope(GroupType groupType, std::string_view name);
 		GroupScope(hlim::NodeGroup *nodeGroup);
 		
 		GroupScope &setComment(std::string comment);
 
-		std::string instancePath() const { return m_nodeGroup->instancePath(); }
+		std::string instancePath() const;
 
-		utils::ConfigTree config(std::string_view attribute) const { return m_nodeGroup->config(attribute); }
+		utils::ConfigTree config(std::string_view attribute) const;
 		
 		const hlim::NodeGroup* nodeGroup() const { return m_nodeGroup; }
 		hlim::NodeGroup* nodeGroup() { return m_nodeGroup; }
 
-		auto operator [] (std::string_view key) { return m_nodeGroup->properties()[key]; }
+		utils::PropertyTree operator [] (std::string_view key);
 
 		static GroupScope *get() { return m_currentScope; }
 		static hlim::NodeGroup *getCurrentNodeGroup() { return m_currentScope==nullptr?nullptr:m_currentScope->m_nodeGroup; }
 
-		void setPartition(bool value) { m_nodeGroup->setPartition(value); }
-		bool isPartition() const { return m_nodeGroup->isPartition(); }
+		template<typename MetaType, typename... Args>
+		MetaType *createMetaInfo(Args&&... args) {
+			metaInfo(std::make_unique<MetaType>(std::forward<Args>(args)...));
+			return (MetaType*)metaInfo();
+		}
 
+		void metaInfo(std::unique_ptr<hlim::NodeGroupMetaInfo> metaInfo);
+		hlim::NodeGroupMetaInfo* metaInfo();
+
+		void setPartition(bool value);
+		bool isPartition() const;
+
+		void instanceName(std::string name);
+		const std::string &instanceName() const;
 	protected:
 		hlim::NodeGroup *m_nodeGroup;
 };

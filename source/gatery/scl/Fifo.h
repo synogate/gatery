@@ -50,7 +50,7 @@ namespace gtry::scl
 	class Fifo
 	{
 	public:
-		Fifo() : m_area("scl_fifo") { m_area.getNodeGroup()->template createMetaInfo<FifoMeta>(); }
+		Fifo() : m_area("scl_fifo") { m_area.template createMetaInfo<FifoMeta>(); }
 		Fifo(const Fifo&) = delete;
 		Fifo(Fifo&&) = default;
 		explicit Fifo(size_t minDepth, const TData& ref = TData{}) : Fifo() { setup(minDepth, std::move(ref)); }
@@ -109,7 +109,7 @@ namespace gtry::scl
 	template<Signal TData>
 	inline size_t Fifo<TData>::depth()
 	{
-		auto* meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
+		auto* meta = dynamic_cast<FifoMeta*>(m_area.metaInfo());
 		FifoCapabilities::Choice& fifoChoice = meta->fifoChoice;
 		return fifoChoice.readDepth;
 	}
@@ -168,7 +168,7 @@ namespace gtry::scl
 	template<Signal TData>
 	inline Bit gtry::scl::Fifo<TData>::almostEmpty(const UInt& level)
 	{
-		auto* meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
+		auto* meta = dynamic_cast<FifoMeta*>(m_area.metaInfo());
 		auto scope = m_area.enter();
 		HCL_DESIGNCHECK_HINT(m_hasSetup, "fifo not initialized");
 
@@ -188,7 +188,7 @@ namespace gtry::scl
 	template<Signal TData>
 	inline Bit gtry::scl::Fifo<TData>::almostFull(const UInt& level)
 	{
-		auto* meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
+		auto* meta = dynamic_cast<FifoMeta*>(m_area.metaInfo());
 		auto scope = m_area.enter();
 		HCL_DESIGNCHECK_HINT(m_hasSetup, "fifo not initialized");
 
@@ -219,14 +219,14 @@ namespace gtry::scl
 		FifoCapabilities::Choice choice = TechnologyScope::getCap<FifoCapabilities>().select(fifoRequest);
 		HCL_DESIGNCHECK_HINT(utils::isPow2(choice.readDepth), "The SCL fifo implementation only works for power of 2 depths!");
 
-		auto* meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
+		auto* meta = dynamic_cast<FifoMeta*>(m_area.metaInfo());
 		meta->fifoChoice = choice;
 	}
 
 	template<Signal TData>
 	inline void Fifo<TData>::finalFifoSelection()
 	{
-		auto* meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
+		auto* meta = dynamic_cast<FifoMeta*>(m_area.metaInfo());
 
 		FifoCapabilities::Request fifoRequest;
 		fifoRequest.readDepth = meta->fifoChoice.readDepth;
@@ -286,7 +286,7 @@ namespace gtry::scl
 		auto scopeLock = ConditionalScope::lock(); // exit conditionals
 
 		finalFifoSelection();
-		auto* meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
+		auto* meta = dynamic_cast<FifoMeta*>(m_area.metaInfo());
 
 		Memory<TData> mem{ depth(), m_peekData };
 		mem.setType(MemType::DONT_CARE, 1);
@@ -330,7 +330,7 @@ namespace gtry::scl
 	inline void Fifo<TData>::generateCdc(const UInt& pushPut, UInt& pushGet, UInt& popPut, const UInt& popGet)
 	{
 		auto scope = m_area.enter("scl_fifo_cdc");
-		auto* meta = dynamic_cast<FifoMeta*>(m_area.getNodeGroup()->getMetaInfo());
+		auto* meta = dynamic_cast<FifoMeta*>(m_area.metaInfo());
 
 		HCL_DESIGNCHECK_HINT(meta->fifoChoice.latency_read_full == meta->fifoChoice.latency_read_almostFull, 
 			"Technology mapping yielded invalid choice, only supporting equal latencies for latency_read_full and latency_read_almostFull.");

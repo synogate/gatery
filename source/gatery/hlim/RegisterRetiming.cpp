@@ -106,8 +106,6 @@ Conjunction suggestForwardRetimingEnableCondition(Circuit &circuit, Subnet &area
 		if (isRegisterSource) {
 			for (size_t i : utils::Range(nodePort.node->getNumInputPorts())) {
 				if (nodePort.node->inputIsEnable(i)) {
-					auto driver = nodePort.node->getDriver(i);
-
 					Conjunction enableTerm;
 					if (nodePort.node->getDriver(i).node != nullptr)
 						enableTerm.parseInput({.node = nodePort.node, .port = i});
@@ -1422,7 +1420,7 @@ writeSubnet();
 				}
 
 				auto *group = memPort->getGroup();
-				while (group->getGroupType() == NodeGroup::GroupType::SFU)
+				while (group->getGroupType() == NodeGroupType::SFU)
 					group = group->getParent();
 
 				backwardPlanningHandleEnablePort(
@@ -1653,7 +1651,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const utils::StableS
 	for (auto np : outputsEnteringRetimingArea) {
 
 		NodeGroup *nodeGroup = np.node->getGroup();
-		if (nodeGroup->getGroupType() == NodeGroup::GroupType::SFU)
+		if (nodeGroup->getGroupType() == NodeGroupType::SFU)
 			nodeGroup = nodeGroup->getParent();	
 
 		// Don't insert registers on constants
@@ -1715,7 +1713,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const utils::StableS
 			continue;
 
 		NodeGroup *nodeGroup = input.node->getGroup();
-		if (nodeGroup->getGroupType() == NodeGroup::GroupType::SFU)
+		if (nodeGroup->getGroupType() == NodeGroupType::SFU)
 			nodeGroup = nodeGroup->getParent();
 
 

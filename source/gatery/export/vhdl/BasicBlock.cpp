@@ -282,14 +282,14 @@ void BasicBlock::collectInstantiations(hlim::NodeGroup *nodeGroup, bool reccursi
 			if (m_ast.isEmpty(childGroup.get(), true))
 				continue;
 			switch (childGroup->getGroupType()) {
-				case hlim::NodeGroup::GroupType::ENTITY:
+				case hlim::NodeGroupType::ENTITY:
 					handleEntityInstantiation(childGroup.get());
 				break;
-				case hlim::NodeGroup::GroupType::AREA:
+				case hlim::NodeGroupType::AREA:
 					if (reccursive)
 						nodeGroupStack.push_back(childGroup.get());
 				break;
-				case hlim::NodeGroup::GroupType::SFU:
+				case hlim::NodeGroupType::SFU:
 					handleSFUInstantiation(childGroup.get());
 				break;
 			}
@@ -495,7 +495,7 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
 
 		if (reccursive)
 			for (const auto &childGroup : group->getChildren())
-				if (childGroup->getGroupType() == hlim::NodeGroup::GroupType::AREA)
+				if (childGroup->getGroupType() == hlim::NodeGroupType::AREA)
 					nodeGroupStack.push_back(childGroup.get());
 	}
 

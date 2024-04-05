@@ -20,6 +20,7 @@
 #include "Clock.h"
 #include "EventStatistics.h"
 #include "SimSigHandle.h"
+#include <gatery/hlim/NodeGroup.h>
 
 
 

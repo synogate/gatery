@@ -1,6 +1,7 @@
 #include "gatery/pch.h"
 #include "gatery/debug/reporting/ReportInterface.h"
 #include "gatery/utils/StackTrace.h"
+#include "gatery/hlim/NodeGroup.h"
 #include "gatery/frontend/DesignScope.h"
 #include "external/magic_enum.hpp"
 #include <iostream>

@@ -22,6 +22,7 @@
 #include "../Circuit.h"
 #include "../Clock.h"
 
+#include "../../simulation/simProc/SimulationProcess.h"
 #include "../../simulation/simProc/SensitivityList.h"
 #include "../../simulation/simProc/WaitChange.h"
 #include "../../simulation/simProc/WaitClock.h"

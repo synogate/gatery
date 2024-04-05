@@ -122,13 +122,13 @@ void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubn
 
 			file << " label=\"" << nodeGroup->getInstanceName() << "\";" << std::endl;
 			switch (nodeGroup->getGroupType()) {
-				case hlim::NodeGroup::GroupType::ENTITY:
+				case hlim::NodeGroupType::ENTITY:
 					file << " color=blue;" << std::endl;
 				break;
-				case hlim::NodeGroup::GroupType::AREA:
+				case hlim::NodeGroupType::AREA:
 					file << " color=black; style=filled; fillcolor=azure; " << std::endl;
 				break;
-				case hlim::NodeGroup::GroupType::SFU:
+				case hlim::NodeGroupType::SFU:
 					file << " color=black; style=filled; fillcolor=beige;" << std::endl;
 				break;
 			}

@@ -19,8 +19,8 @@
 
 #include <gatery/utils/StableContainers.h>
 
-#include "../simulation/simProc/SimulationProcess.h"
-#include "../simulation/SimulationVisualization.h"
+//#include "../simulation/simProc/SimulationProcess.h"
+//#include "../simulation/SimulationVisualization.h"
 
 #include "../utils/CppTools.h"
 
@@ -28,6 +28,13 @@
 #include <memory>
 #include <map>
 #include <functional>
+
+namespace gtry::sim {
+	class SimulationVisualization;
+
+	template<typename ReturnValue>
+	class SimulationFunction;
+}
 
 namespace gtry::hlim {
 
@@ -152,6 +159,7 @@ namespace gtry::hlim {
 		void cullOrphanedSignalNodes();
 		void cullUnusedNodes(Subnet& subnet);
 		void mergeMuxes(Subnet& subnet);
+		void breakMutuallyExclusiveMuxChains(Subnet& subnet);
 		void cullMuxConditionNegations(Subnet& subnet);
 		void removeIrrelevantMuxes(Subnet& subnet);
 		void mergeBinaryMuxChain(Subnet& subnet);
@@ -238,3 +246,7 @@ namespace gtry::hlim {
 
 
 }
+
+extern template class std::unique_ptr<gtry::hlim::BaseNode>;
+extern template class std::unique_ptr<gtry::hlim::Clock>;
+extern template class std::unique_ptr<gtry::hlim::SignalGroup>;

@@ -55,6 +55,8 @@
 
 #include "../simulation/BitVectorState.h"
 #include "../simulation/ReferenceSimulator.h"
+#include "../simulation/SimulationVisualization.h"
+#include "../simulation/simProc/SimulationProcess.h"
 #include "../utils/Range.h"
 #include "GraphTools.h"
 
@@ -70,6 +72,10 @@
 
 #include <iostream>
 
+template class std::unique_ptr<gtry::hlim::BaseNode>;
+template class std::unique_ptr<gtry::hlim::Clock>;
+template class std::unique_ptr<gtry::hlim::SignalGroup>;
+
 namespace gtry::hlim {
 
 Circuit::Circuit(std::string_view topName)
@@ -78,7 +84,7 @@ Circuit::Circuit(std::string_view topName)
 	readDebugNodeIds();
 #endif
 
-	m_root.reset(new NodeGroup(*this, NodeGroup::GroupType::ENTITY, topName, nullptr));
+	m_root.reset(new NodeGroup(*this, NodeGroupType::ENTITY, topName, nullptr));
 }
 
 Circuit::~Circuit()
@@ -577,6 +583,71 @@ void Circuit::mergeMuxes(Subnet &subnet)
 	} while (!done);
 }
 
+
+void Circuit::breakMutuallyExclusiveMuxChains(Subnet& subnet)
+{
+#if 0
+	for (size_t i = 0; i < m_nodes.size(); i++) {
+		if (Node_Multiplexer *muxNode = dynamic_cast<Node_Multiplexer*>(m_nodes[i].get())) {
+			if (muxNode->getNumInputPorts() != 3) continue;
+
+			//std::cout << "Found 2-input mux" << std::endl;
+
+			Conjunction condition;
+			condition.parseInput({.node = muxNode, .port = 0});
+
+			// So far, CNF can't properly handle negations, so we are restricted to only checking a chain along the "false" path
+			for (size_t muxInput : { 1 }) {
+
+				// Scan the "condition = true" input and check for any mux whose enable condition can not be true as well
+				for (auto nh : muxNode->exploreInput(muxInput)) {
+
+				}
+
+				auto input0 = muxNode->getNonSignalDriver(muxInput?2:1);
+				auto input1 = muxNode->getNonSignalDriver(muxInput?1:2);
+
+				if (input1.node == nullptr)
+					continue;
+
+				if (Node_Multiplexer *prevMuxNode = dynamic_cast<Node_Multiplexer*>(input0.node)) {
+					if (prevMuxNode->getNumInputPorts() != 3) continue;
+					if (prevMuxNode == muxNode) continue; // sad thing
+					if (!subnet.contains(prevMuxNode)) continue; // todo: Optimize
+
+					Conjunction prevCondition;
+					prevCondition.parseInput({.node = prevMuxNode, .port = 0});
+
+					bool conditionsMatch = false;
+					bool prevConditionNegated;
+
+					if (prevCondition.cannotBothBeTrue(condition)) {
+
+
+
+/*
+
+						if (prevMuxNode->getNonSignalDriver(prevConditionNegated?2:1) == muxNode->getNonSignalDriver(muxInput?2:1))
+							dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_POSTPROCESSING << "Not merging muxes " << prevMuxNode << " and " << muxNode << " because the former is driving itself.");
+						else {
+							//std::cout << "Conditions match!" << std::endl;
+							dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Merging muxes " << prevMuxNode << " and " << muxNode << " because they form an if then else pair");
+
+							auto bypass = prevMuxNode->getDriver(prevConditionNegated?2:1);
+
+							// Connect second mux directly to bypass
+							muxNode->connectInput(muxInput, bypass);
+
+							//done = false;
+						}
+						*/
+					}
+				}
+			}
+		}
+	}
+#endif
+}
 
 void Circuit::mergeRewires(Subnet &subnet)
 {
@@ -1299,7 +1370,7 @@ void Circuit::ensureEntityPortSignalNodes()
 	for (auto idx : utils::Range(m_nodes.size())) {
 		auto node = m_nodes[idx].get();
 
-		if (node->getGroup()->getGroupType() == NodeGroup::GroupType::SFU)
+		if (node->getGroup()->getGroupType() == NodeGroupType::SFU)
 			continue;
 
 		auto *extSrcNode = dynamic_cast<Node_External*>(node);
@@ -1331,7 +1402,7 @@ void Circuit::ensureEntityPortSignalNodes()
 
 					// if we are in a special node group, move up until we are out of it, because we must not mess with those.
 					NodeGroup *group = driven.node->getGroup();
-					while (group->getGroupType() == NodeGroup::GroupType::SFU)
+					while (group->getGroupType() == NodeGroupType::SFU)
 						group = group->getParent();
 
 					if (group != node->getGroup()) {
@@ -1365,7 +1436,7 @@ void Circuit::ensureSignalNodePlacement()
 			if (driver.node == nullptr) continue;
 			if (node->getDriverConnType(i).isDependency()) continue;
 			if (dynamic_cast<Node_Signal*>(driver.node) != nullptr) continue;
-			if (driver.node->getGroup() != nullptr && driver.node->getGroup()->getGroupType() == NodeGroup::GroupType::SFU) continue;
+			if (driver.node->getGroup() != nullptr && driver.node->getGroup()->getGroupType() == NodeGroupType::SFU) continue;
 			if (dynamic_cast<Node_MultiDriver*>(driver.node) != nullptr) continue;
 
 			auto it = addedSignalsNodes.find(driver);
@@ -1593,7 +1664,22 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
 
 	subnet = Subnet::all(circuit);
 	determineNegativeRegisterEnables(circuit, subnet);
+	/*
+	{
+			DotExport exp("neg_reg_enables.dot");
+			exp(circuit, ConstSubnet::all(circuit));
+			exp.runGraphViz("neg_reg_enables.svg");	
+	}
+	*/
+
 	resolveRetimingHints(circuit, subnet);
+	/*
+	{
+			DotExport exp("before_resolving.dot");
+			exp(circuit, ConstSubnet::all(circuit));
+			exp.runGraphViz("before_resolving.svg");	
+	}
+	*/
 	annihilateNegativeRegisters(circuit, subnet);
 	bypassRetimingBlockers(circuit, subnet);
 /*

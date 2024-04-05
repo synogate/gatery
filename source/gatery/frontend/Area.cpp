@@ -17,26 +17,93 @@
 */
 #include "gatery/pch.h"
 #include "Area.h"
+#include "../hlim/NodeGroup.h"
 
-gtry::Area::Area(std::string_view name, bool instantEnter)
-{
-	auto* parent = GroupScope::getCurrentNodeGroup();
-	m_nodeGroup = parent->addChildNodeGroup(hlim::NodeGroup::GroupType::ENTITY, name);
-	m_nodeGroup->recordStackTrace();
 
-	if (instantEnter)
-		m_inScope.emplace(m_nodeGroup);
-}
+namespace gtry {
 
-gtry::GroupScope gtry::Area::enter() const
-{
-	return { m_nodeGroup };
-}
+	Area::Area(std::string_view name, bool instantEnter)
+	{
+		auto* parent = GroupScope::getCurrentNodeGroup();
+		m_nodeGroup = parent->addChildNodeGroup(hlim::NodeGroupType::ENTITY, name);
+		m_nodeGroup->recordStackTrace();
 
-std::pair<gtry::GroupScope, gtry::GroupScope> gtry::Area::enter(std::string_view subName) const
-{
-	hlim::NodeGroup* sub = m_nodeGroup->addChildNodeGroup(hlim::NodeGroup::GroupType::ENTITY, subName);
-	sub->recordStackTrace();
+		if (instantEnter)
+			m_inScope.emplace(m_nodeGroup);
+	}
 
-	return { m_nodeGroup, sub };
+	GroupScope Area::enter() const
+	{
+		return { m_nodeGroup };
+	}
+
+	std::pair<GroupScope, GroupScope> Area::enter(std::string_view subName) const
+	{
+		hlim::NodeGroup* sub = m_nodeGroup->addChildNodeGroup(hlim::NodeGroupType::ENTITY, subName);
+		sub->recordStackTrace();
+
+		return { m_nodeGroup, sub };
+	}
+
+	utils::PropertyTree Area::operator [] (std::string_view key)
+	{
+		return m_nodeGroup->properties()[key];
+	}
+
+	void Area::metaInfo(std::unique_ptr<hlim::NodeGroupMetaInfo> metaInfo)
+	{
+		m_nodeGroup->setMetaInfo(std::move(metaInfo));
+	}
+
+	hlim::NodeGroupMetaInfo* Area::metaInfo()
+	{
+		return m_nodeGroup->getMetaInfo();
+	}
+
+
+	void Area::setPartition(bool value)
+	{
+		m_nodeGroup->setPartition(value);
+		if (value)
+			useComponentInstantiation(true);
+	}
+	
+	bool Area::isPartition() const
+	{
+		return m_nodeGroup->isPartition();
+	}
+
+	void Area::useComponentInstantiation(bool b)
+	{
+		m_nodeGroup->useComponentInstantiation(b);
+	}
+	bool Area::useComponentInstantiation() const
+	{
+		return m_nodeGroup->useComponentInstantiation();
+	}
+
+	hlim::GroupAttributes &Area::groupAttributes()
+	{
+		return m_nodeGroup->groupAttributes();
+	}
+
+	const hlim::GroupAttributes &Area::groupAttributes() const
+	{
+		return m_nodeGroup->groupAttributes();
+	}
+
+	void Area::instanceName(std::string name)
+	{
+		m_nodeGroup->setInstanceName(std::move(name));
+	}
+
+	std::string Area::instancePath() const
+	{
+		return  m_nodeGroup->instancePath();
+	}
+
+	const std::string &Area::instanceName() const
+	{
+		return m_nodeGroup->getInstanceName();
+	}
 }

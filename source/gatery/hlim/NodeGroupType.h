@@ -15,27 +15,21 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#pragma once
 
-#include "gatery/pch.h"
+namespace gtry::hlim {
 
-#include "TechnologyMappingPattern.h"
+	class NodeGroupMetaInfo {
+	public:
+		virtual ~NodeGroupMetaInfo() = default;
+	};	
 
-#include "../Scope.h"
-#include "../../hlim/NodeGroup.h"
+	enum class NodeGroupType {
+		ENTITY = 0x01,
+		AREA = 0x02,
+		SFU = 0x03,
+	};
 
-namespace gtry {
-
-TechnologyMappingPattern::TechnologyMappingPattern()
-{
-}
-
-bool TechnologyMappingPattern::attemptApply(hlim::Circuit &circuit, hlim::NodeGroup *nodeGroup) const
-{
-	if (nodeGroup == nullptr) return false;
-	if (nodeGroup->getParent() == nullptr) return false;
-	GroupScope scope(nodeGroup->getParent());
-	return scopedAttemptApply(nodeGroup);
-}
-
+	class NodeGroup;
 }
 

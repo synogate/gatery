@@ -69,7 +69,7 @@ MemoryGroup *formMemoryGroupIfNecessary(Circuit &circuit, Node_Memory *memory)
 
 		auto *logicalMemNodeGroup = memory->getGroup();
 
-		auto *physMemNodeGroup = logicalMemNodeGroup->addChildNodeGroup(NodeGroup::GroupType::ENTITY, "physical_memory");
+		auto *physMemNodeGroup = logicalMemNodeGroup->addChildNodeGroup(NodeGroupType::ENTITY, "physical_memory");
 		physMemNodeGroup->recordStackTrace();
 		memory->moveToGroup(physMemNodeGroup);
 
@@ -162,7 +162,7 @@ bool MemoryGroup::ReadPort::findOutputRegisters(size_t readLatency, NodeGroup *m
 
 MemoryGroup::MemoryGroup(NodeGroup *group) : m_nodeGroup(group)
 {
-	m_nodeGroup->setGroupType(NodeGroup::GroupType::SFU);
+	m_nodeGroup->setGroupType(NodeGroupType::SFU);
 }
 
 const MemoryGroup::ReadPort &MemoryGroup::findReadPort(Node_MemPort *memPort)
@@ -241,7 +241,7 @@ NodeGroup *MemoryGroup::lazyCreateFixupNodeGroup()
 			name = "Memory_Helper";
 		else
 			name = m_memory->getName()+"_Memory_Helper";
-		m_fixupNodeGroup = m_nodeGroup->getParent()->addChildNodeGroup(NodeGroup::GroupType::ENTITY, name);
+		m_fixupNodeGroup = m_nodeGroup->getParent()->addChildNodeGroup(NodeGroupType::ENTITY, name);
 		m_fixupNodeGroup->recordStackTrace();
 		m_fixupNodeGroup->setComment("Auto generated to handle various memory access issues such as read during write and read modify write hazards.");
 	}

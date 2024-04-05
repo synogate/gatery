@@ -66,16 +66,16 @@ void NodeGroupInfo::buildFrom(AST &ast, hlim::NodeGroup *nodeGroup, bool mergeAr
 
 		for (const auto &childGroup : group->getChildren()) {
 			switch (childGroup->getGroupType()) {
-				case hlim::NodeGroup::GroupType::ENTITY:
+				case hlim::NodeGroupType::ENTITY:
 					subEntities.push_back(childGroup.get());
 				break;
-				case hlim::NodeGroup::GroupType::AREA:
+				case hlim::NodeGroupType::AREA:
 					if (mergeAreasReccursive)
 						nodeGroupStack.push_back(childGroup.get());
 					else
 						subAreas.push_back(childGroup.get());
 				break;
-				case hlim::NodeGroup::GroupType::SFU:
+				case hlim::NodeGroupType::SFU:
 					SFUs.push_back(childGroup.get());
 				break;
 			}
@@ -99,7 +99,7 @@ Entity::~Entity()
 void Entity::buildFrom(hlim::NodeGroup *nodeGroup)
 {
 	m_nodeGroup = nodeGroup;
-	HCL_ASSERT(nodeGroup->getGroupType() == hlim::NodeGroup::GroupType::ENTITY);
+	HCL_ASSERT(nodeGroup->getGroupType() == hlim::NodeGroupType::ENTITY);
 
 	m_comment = nodeGroup->getComment();
 

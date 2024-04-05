@@ -20,10 +20,12 @@
 #include "Scope.h"
 #include "trace.h"
 
+#include <gatery/hlim/NodeGroup.h>
+
 namespace gtry 
 {
 
-	GroupScope::GroupScope(hlim::NodeGroup::GroupType groupType, std::string_view name) : BaseScope<GroupScope>()
+	GroupScope::GroupScope(hlim::NodeGroupType groupType, std::string_view name) : BaseScope<GroupScope>()
 	{
 		m_nodeGroup = m_parentScope->m_nodeGroup->addChildNodeGroup(groupType, name);
 		m_nodeGroup->recordStackTrace();
@@ -39,4 +41,50 @@ namespace gtry
 		m_nodeGroup->setComment(std::move(comment));
 		return *this;
 	}
+
+	std::string GroupScope::instancePath() const
+	{
+		return m_nodeGroup->instancePath();
+	}
+
+	utils::ConfigTree GroupScope::config(std::string_view attribute) const
+	{
+		return m_nodeGroup->config(attribute);
+	}
+
+	utils::PropertyTree GroupScope::operator [] (std::string_view key)
+	{
+		return m_nodeGroup->properties()[key];
+	}
+
+	void GroupScope::metaInfo(std::unique_ptr<hlim::NodeGroupMetaInfo> metaInfo)
+	{
+		m_nodeGroup->setMetaInfo(std::move(metaInfo));
+	}
+
+	hlim::NodeGroupMetaInfo* GroupScope::metaInfo()
+	{
+		return m_nodeGroup->getMetaInfo();
+	}
+
+	void GroupScope::setPartition(bool value) 
+	{ 
+		m_nodeGroup->setPartition(value); 
+	}
+
+	bool GroupScope::isPartition() const
+	{
+		return m_nodeGroup->isPartition(); 
+	}
+
+	void GroupScope::instanceName(std::string name)
+	{
+		m_nodeGroup->setInstanceName(std::move(name));
+	}
+
+	const std::string &GroupScope::instanceName() const
+	{
+		return m_nodeGroup->getInstanceName();
+	}
+
 }

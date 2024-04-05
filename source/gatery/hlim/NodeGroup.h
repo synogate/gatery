@@ -17,12 +17,11 @@
 */
 #pragma once
 
-#include "Node.h"
-
 #include "Attributes.h"
 
 #include "../utils/StackTrace.h"
 #include "../utils/ConfigTree.h"
+#include "NodeGroupType.h"
 
 #include <vector>
 #include <string>
@@ -36,13 +35,23 @@
 namespace gtry::hlim {
 
 	class Circuit;
+	class BaseNode;
 	class Node_Signal;
 	class Node_Register;
+}
 
-	class NodeGroupMetaInfo {
-	public:
-		virtual ~NodeGroupMetaInfo() = default;
-	};
+
+namespace boost::container {
+	extern template class flat_map<std::string, size_t>;
+}
+namespace std {
+	extern template class vector<gtry::hlim::BaseNode*>;
+	extern template class unique_ptr<gtry::hlim::NodeGroup>;
+	//extern template class vector<std::unique_ptr<gtry::hlim::NodeGroup>>;
+	extern template class unique_ptr<gtry::hlim::NodeGroupMetaInfo>;
+}
+
+namespace gtry::hlim {
 
 	class NodeGroupConfig
 	{
@@ -68,13 +77,7 @@ namespace gtry::hlim {
 	class NodeGroup
 	{
 	public:
-		enum class GroupType {
-			ENTITY = 0x01,
-			AREA = 0x02,
-			SFU = 0x03,
-		};
-
-		NodeGroup(Circuit &circuit, GroupType groupType, std::string_view name, NodeGroup* parent);
+		NodeGroup(Circuit &circuit, NodeGroupType groupType, std::string_view name, NodeGroup* parent);
 		virtual ~NodeGroup();
 
 		void recordStackTrace() { m_stackTrace.record(10, 1); }
@@ -83,7 +86,7 @@ namespace gtry::hlim {
 		void setInstanceName(std::string name) { m_instanceName = std::move(name); }
 		void setComment(std::string comment) { m_comment = std::move(comment); }
 
-		NodeGroup* addChildNodeGroup(GroupType groupType, std::string_view name);
+		NodeGroup* addChildNodeGroup(NodeGroupType groupType, std::string_view name);
 		NodeGroup* findChild(std::string_view name);
 
 		void moveInto(NodeGroup* newParent);
@@ -115,11 +118,12 @@ namespace gtry::hlim {
 
 		utils::ConfigTree config(std::string_view attribute);
 
-		inline void setGroupType(GroupType groupType) { m_groupType = groupType; }
-		inline GroupType getGroupType() const { return m_groupType; }
+		inline void setGroupType(NodeGroupType groupType) { m_groupType = groupType; }
+		inline NodeGroupType getGroupType() const { return m_groupType; }
 
 		template<typename MetaType, typename... Args>
 		MetaType *createMetaInfo(Args&&... args);
+		void setMetaInfo(std::unique_ptr<NodeGroupMetaInfo> metaInfo);
 
 		void dropMetaInfo() { m_metaInfo.reset(); }
 
@@ -145,7 +149,7 @@ namespace gtry::hlim {
 		std::string m_name;
 		std::string m_instanceName;
 		std::string m_comment;
-		GroupType m_groupType;
+		NodeGroupType m_groupType;
 		utils::PropertyTree m_properties;
 		utils::PropertyTree m_usedSettings;
 		GroupAttributes m_groupAttributes;
@@ -171,7 +175,9 @@ namespace gtry::hlim {
 	template<typename MetaType, typename... Args>
 	MetaType *NodeGroup::createMetaInfo(Args&&... args)
 	{
-		m_metaInfo.reset(new MetaType(std::forward<Args>(args)...));
+		setMetaInfo(std::make_unique<MetaType>(std::forward<Args>(args)...));
 		return (MetaType*)m_metaInfo.get();
 	}
 }
+
+
