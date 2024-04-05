@@ -226,6 +226,9 @@ void Node_Rewire::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::D
 					break;
 					case OutputRange::CONST_UNDEFINED:
 					break;
+					case OutputRange::INPUT:
+						// Impossible, but here to prevent warning
+					break;
 				}
 			}
 			outputOffset += range.subwidth;
@@ -237,26 +240,24 @@ void Node_Rewire::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::D
 	} else {
 		size_t outputOffset = 0;
 		for (const auto &range : m_rewireOperation.ranges) {
-			if (range.source == OutputRange::INPUT) {
-				if (inputOffsets[range.inputIdx] == ~0ull)
+			switch (range.source) {
+				case OutputRange::CONST_ONE:
+					state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0] + outputOffset, range.subwidth);
+					state.setRange(sim::DefaultConfig::VALUE, outputOffsets[0] + outputOffset, range.subwidth);
+				break;
+				case OutputRange::CONST_ZERO:
+					state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0] + outputOffset, range.subwidth);
+					state.clearRange(sim::DefaultConfig::VALUE, outputOffsets[0] + outputOffset, range.subwidth);
+				break;
+				case OutputRange::CONST_UNDEFINED:
 					state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0] + outputOffset, range.subwidth);
-				else
-					state.copyRange(outputOffsets[0] + outputOffset, state, inputOffsets[range.inputIdx]+range.inputOffset, range.subwidth);
-
-			} else {
-				switch (range.source) {
-					case OutputRange::CONST_ONE:
-						state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0] + outputOffset, range.subwidth);
-						state.setRange(sim::DefaultConfig::VALUE, outputOffsets[0] + outputOffset, range.subwidth);
-					break;
-					case OutputRange::CONST_ZERO:
-						state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0] + outputOffset, range.subwidth);
-						state.clearRange(sim::DefaultConfig::VALUE, outputOffsets[0] + outputOffset, range.subwidth);
-					break;
-					case OutputRange::CONST_UNDEFINED:
+				break;
+				case OutputRange::INPUT:
+					if (inputOffsets[range.inputIdx] == ~0ull)
 						state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0] + outputOffset, range.subwidth);
-					break;
-				}				
+					else
+						state.copyRange(outputOffsets[0] + outputOffset, state, inputOffsets[range.inputIdx]+range.inputOffset, range.subwidth);
+				break;
 			}
 			outputOffset += range.subwidth;
 		}

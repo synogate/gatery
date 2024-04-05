@@ -122,7 +122,7 @@ void BMP::writeBinary(std::ostream &stream)
     size_t rowPaddingBytes = paddedRowSize - rowSize;
     for (auto y : utils::Range(m_height)) {
         stream.write((const char *) &m_pixelData[y * m_pixelStride], rowSize);
-        for (auto i : utils::Range(rowPaddingBytes))
+        for ([[maybe_unused]] auto i : utils::Range(rowPaddingBytes))
             stream.put(0x00);
     }
 }

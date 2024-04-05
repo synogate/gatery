@@ -281,8 +281,6 @@ namespace gtry {
 
 	void Bit::assign(SignalReadPort in, bool ignoreConditions)
 	{
-		hlim::ConnectionType type = m_node->getOutputConnectionType(0);
-
 		if (m_slice)
 			in = m_slice->assign(rawDriver(), in);
 
