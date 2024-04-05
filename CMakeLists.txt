@@ -122,8 +122,10 @@ add_library(gatery INTERFACE)
 target_link_libraries(gatery INTERFACE
     # Must be a -start-group -end-group thing because the two have cyclic dependencies
 #    "$<LINK_GROUP:RESCAN,gatery_core;gatery_scl>"
+    -Wl,--start-group
     gatery_scl
     gatery_core
+    -Wl,--end-group
 )
 
 
