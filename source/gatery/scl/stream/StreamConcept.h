@@ -33,9 +33,9 @@ namespace gtry::scl::strm
 		requires Signal<typename std::remove_cvref_t<T>::Payload>;
 
 		{ stream.template add(internal::TestMeta{}) } -> Signal;
-		{ stream.template remove<internal::TestMeta>() } -> Signal;
+		//{ stream.template remove<internal::TestMeta>() } -> Signal; // Very expensive to check
 		{ std::remove_reference_t<decltype(stream)>::template has<internal::TestMeta>() } -> std::convertible_to<bool>;
-		{ stream.removeFlowControl() } -> Signal;
+		//{ stream.removeFlowControl() } -> Signal; // Very expensive to check
 
 	//	{ stream.template transform([](Signal auto&&) { return Bit{}; }) } -> Signal;
 	};
