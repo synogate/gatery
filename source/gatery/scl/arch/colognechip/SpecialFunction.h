@@ -33,5 +33,5 @@ namespace gtry::scl::arch::colognechip
 		Bit O() { return out("O"); }
 	};
 
-	Bit bufg(Bit I) { CC_BUFG buf; buf.I() = I; return buf.O(); }
+	inline Bit bufg(Bit I) { CC_BUFG buf; buf.I() = I; return buf.O(); }
 }
