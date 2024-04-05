@@ -363,7 +363,7 @@ namespace gtry::scl::strm
 	}}
 
 	/**
-	* @brief This overload allows for stream chaining. Please pass in an uninitialized UInt.
+	* @brief This overload allows for stream chaining
 	*/
 	inline auto addReadyAndCompensateForLostBeats(BitWidth counterW){
 		return [=](auto&& source) { 
