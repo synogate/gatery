@@ -172,45 +172,14 @@ SignalTapHelper sim_debugIf(Bit condition);
 
 
 
-template<typename Signal, typename std::enable_if_t<std::is_base_of_v<ElementarySignal, Signal>>* = nullptr  >
-void tap(const Signal& signal)
-{
-	hlim::SignalAttributes att;
-	att.userDefinedVendorAttributes["xilinx"]["mark_debug"] = { .type = "string", .value = "\"true\"" };
-	attribute((Signal&)signal, att);
+//template<typename Signal, typename std::enable_if_t<std::is_base_of_v<ElementarySignal, Signal>>* = nullptr  >
+//void tap(const Signal& signal)
 
-	auto *node = DesignScope::createNode<hlim::Node_SignalTap>();
-	node->recordStackTrace();
-	node->setLevel(hlim::Node_SignalTap::LVL_WATCH);
-	node->setName(std::string(signal.getName()));
-
-	node->addInput(signal.readPort());
-}
-
-
-#if 0
-
-// This version requires (HANA) adaptation of structs
-namespace internal
-{
-	struct TapVisitor : CompoundVisitor
-	{
-		void operator () (ElementarySignal& vec) final { tap(vec); }
-	};
-}
-
-void tap(Signal auto& signal)
-{
-	internal::TapVisitor v;
-	v.enter("");
-	VisitCompound<std::remove_reference_t<decltype(signal)>>{}(signal, v);
-	v.leave();
-}
-
-#else
 
 namespace internal
 {
+	void tap(const ElementarySignal& signal);
+
 	void tap(const ContainerSignal auto& signal);
 	void tap(const CompoundSignal auto& signal);
 	void tap(const TupleSignal auto& signal);
@@ -223,7 +192,7 @@ namespace internal
 
 	void tap(const CompoundSignal auto& signal)
 	{
-		tap(boost::pfr::structure_tie(signal));
+		tap(structure_tie(signal));
 	}
 
 	void tap(const TupleSignal auto& signal)
@@ -245,8 +214,6 @@ void tap(const Signal auto& ...args)
 {
 	(internal::tap(args), ...);
 }
-
-#endif
 
 /**@}*/
 

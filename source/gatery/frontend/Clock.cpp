@@ -155,7 +155,12 @@ namespace gtry
 				s << ", " << attr.first << ": " << attr.second.value;
 
 	}
-
+	
+	ClockConfig &ClockConfig::addRegisterAttribute(const std::string &vendor, const std::string &attrib, const std::string &type, const std::string &value)
+	{ 
+		attributes.userDefinedVendorAttributes[vendor][attrib] = {.type = type, .value = value};
+		return *this; 
+	}
 
 	//Clock::Clock(size_t freq) : Clock(ClockConfig{ .absoluteFrequency = ClockConfig::ClockRational{freq, 1} })
 	//{

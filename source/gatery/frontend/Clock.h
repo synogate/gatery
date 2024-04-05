@@ -38,6 +38,10 @@
 namespace gtry {
 
 
+	namespace hlim {
+		class Node_Register;
+	}
+
 /**
  * @addtogroup gtry_frontend
  * @{
@@ -78,10 +82,7 @@ namespace gtry {
 
 		hlim::Attributes attributes;
 
-		inline ClockConfig &addRegisterAttribute(const std::string &vendor, const std::string &attrib, const std::string &type, const std::string &value) { 
-			attributes.userDefinedVendorAttributes[vendor][attrib] = {.type = type, .value = value};
-			return *this; 
-		}
+		ClockConfig &addRegisterAttribute(const std::string &vendor, const std::string &attrib, const std::string &type, const std::string &value);
 	};
 
 	std::ostream& operator << (std::ostream&, const ClockConfig&);

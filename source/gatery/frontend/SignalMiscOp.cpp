@@ -24,6 +24,7 @@
 #include "Compound.h"
 #include "Clock.h"
 #include "Pack.h"
+#include "Attributes.h"
 
 #include "../hlim/coreNodes/Node_ClkRst2Signal.h"
 #include "../hlim/coreNodes/Node_Logic.h"
@@ -290,4 +291,18 @@ namespace gtry
 		helper.triggerIf(condition);
 		return helper;
 	}
+
+	void internal::tap(const ElementarySignal& signal)
+	{
+		hlim::SignalAttributes att;
+		att.userDefinedVendorAttributes["xilinx"]["mark_debug"] = { .type = "string", .value = "\"true\"" };
+		attribute((ElementarySignal&)signal, att);
+
+		auto *node = DesignScope::createNode<hlim::Node_SignalTap>();
+		node->recordStackTrace();
+		node->setLevel(hlim::Node_SignalTap::LVL_WATCH);
+		node->setName(std::string(signal.getName()));
+
+		node->addInput(signal.readPort());
+	}	
 }
