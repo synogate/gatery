@@ -13,8 +13,6 @@
 
 #include <gatery/scl/sim/SimulationSequencer.h>
 
-#include "gatery/debug/reporting/ReportInterface.h"
-
 using namespace boost::unit_test;
 using namespace gtry;
 

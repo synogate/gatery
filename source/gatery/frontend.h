@@ -39,7 +39,7 @@
 #include "frontend/ExternalComponent.h"
 #include "frontend/ExternalModule.h"
 #include "frontend/Final.h"
-#include "frontend/FrontendUnitTestSimulationFixture.h"
+//#include "frontend/FrontendUnitTestSimulationFixture.h"
 #include "frontend/FSM.h"
 #include "frontend/GraphTools.h"
 #include "frontend/Memory.h"
@@ -62,11 +62,12 @@
 #include "frontend/SignalLogicOp.h"
 #include "frontend/SignalMiscOp.h"
 #include "frontend/SimSigHandle.h"
-#include "frontend/tech/TechnologyMappingPattern.h"
+//#include "frontend/tech/TechnologyMappingPattern.h"
 #include "frontend/tech/TechnologyCapabilities.h"
-#include "frontend/tech/TargetTechnology.h"
+//#include "frontend/tech/TargetTechnology.h"
 #include "frontend/trace.h"
 #include "frontend/Vector.h"
+#include "frontend/CompoundTemplateInstantiations.h"
 #include "debug/DebugInterface.h"
 
 namespace gtry {
