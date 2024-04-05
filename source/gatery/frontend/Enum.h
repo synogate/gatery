@@ -131,13 +131,13 @@ namespace gtry {
 
 		Enum<T>& operator=(T rhs);
 
-		void exportOverride(const Enum<T>& exportOverride) { exportOverride(exportOverride.readPort); }
+		void exportOverride(const Enum<T>& exportOverride) { BaseEnum::exportOverride(exportOverride.readPort()); }
 
 		void resetValue(T v);
 		std::optional<T> resetValue() const { return m_resetValue; }
 		Enum<T> final() const;
 
-		constexpr BitWidth width() const override final;
+		BitWidth width() const override final;
 
 		virtual BVec toBVec() const override { return (BVec) numericalValue(); }
 		virtual void fromBVec(const BVec &bvec) override { (*this) = Enum<T>((UInt)bvec); }
@@ -280,7 +280,7 @@ namespace gtry {
 	}
 
 	template<EnumType T>
-	constexpr BitWidth Enum<T>::width() const
+	BitWidth Enum<T>::width() const
 	{
 		BitWidth maxWidth = 0_b;
 		for(auto v : magic_enum::enum_values<T>())
