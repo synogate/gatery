@@ -1,6 +1,21 @@
-cmake_minimum_required (VERSION 3.24)
+#cmake_minimum_required (VERSION 3.24)
+cmake_minimum_required (VERSION 3.20)
 
 project(gatery)
+
+IF (USE_CLANG)
+    Message("Building with clang!")
+    SET (CMAKE_CXX_COMPILER_ID "Clang")
+    SET (CMAKE_C_COMPILER             "/usr/bin/clang")
+    SET (CMAKE_CXX_COMPILER             "/usr/bin/clang++")
+    SET (CMAKE_AR      "/usr/bin/llvm-ar")
+    SET (CMAKE_LINKER  "/usr/bin/llvm-ld")
+    SET (CMAKE_NM      "/usr/bin/llvm-nm")
+    SET (CMAKE_OBJDUMP "/usr/bin/llvm-objdump")
+    SET (CMAKE_RANLIB  "/usr/bin/llvm-ranlib")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftime-trace")
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+endif()
 
 enable_testing()
 
@@ -106,7 +121,9 @@ add_library(gatery INTERFACE)
 
 target_link_libraries(gatery INTERFACE
     # Must be a -start-group -end-group thing because the two have cyclic dependencies
-    "$<LINK_GROUP:RESCAN,gatery_core;gatery_scl>"
+#    "$<LINK_GROUP:RESCAN,gatery_core;gatery_scl>"
+    gatery_scl
+    gatery_core
 )
 
 
