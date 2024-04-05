@@ -27,7 +27,17 @@
 #include <boost/test/unit_test.hpp>
 
 #include <boost/test/unit_test.hpp>
+
+#ifdef _WIN32
+#pragma warning(push, 0)
+#pragma warning(disable : 4018) // boost process environment "'<': signed/unsigned mismatch"
+#endif
 #include <boost/process.hpp>
+#ifdef _WIN32
+#pragma warning(pop)
+#endif
+
+
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
 
