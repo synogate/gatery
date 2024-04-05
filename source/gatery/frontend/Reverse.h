@@ -149,7 +149,7 @@ namespace gtry
 	{
 		return std::apply([](auto&&... args) {
 			return std::tuple<decltype(downstream(args))...>{downstream(args)...};
-		}, boost::pfr::structure_tie(signal));
+		}, structure_tie(signal));
 	}
 
 	template<CompoundSignal T>
@@ -157,7 +157,7 @@ namespace gtry
 	{
 		return std::apply([](auto&&... args) {
 			return std::tuple<decltype(downstream(args))...>{downstream(args)...};
-		}, boost::pfr::structure_tie(signal));
+		}, structure_tie(signal));
 	}
 
 	template<TupleSignal T>
@@ -181,7 +181,7 @@ namespace gtry
 	{
 		return std::apply([](auto&&... args) {
 			return std::tuple<decltype(upstream(args))...>{upstream(args)...};
-		}, boost::pfr::structure_tie(signal));
+		}, structure_tie(signal));
 	}
 
 	template<CompoundSignal T>
@@ -189,7 +189,7 @@ namespace gtry
 	{
 		return std::apply([](auto&&... args) {
 			return std::tuple<decltype(upstream(args))...>{upstream(args)...};
-		}, boost::pfr::structure_tie(signal));
+		}, structure_tie(signal));
 	}
 
 	template<TupleSignal T>

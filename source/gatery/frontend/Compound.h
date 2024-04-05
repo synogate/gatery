@@ -41,6 +41,38 @@
 
 namespace gtry
 {
+	template<typename T>
+	concept IsHanaAdapted = requires() {
+		{boost::hana::accessors_impl<T>::apply() };
+	};
+
+
+	#if 0
+	// Provide a specialization for structure_tie that is faster than boost pfr:
+	template<typename T> requires(IsHanaAdapted<T>)
+	constexpr auto structure_tie(T &t) {
+		return boost::hana::unpack(boost::hana::accessors<T>(), [&](auto... Member) {
+					return std::tie(boost::hana::second(Member)(t)...);
+				});	
+	}
+	template<typename T> requires(IsHanaAdapted<T>)
+	constexpr auto structure_tie(const T &t) {
+		return boost::hana::unpack(boost::hana::accessors<T>(), [&](auto... Member) {
+					return std::tie(boost::hana::second(Member)(t)...);
+				});	
+	}
+
+	// Fallback:
+	template<typename T> requires(!IsHanaAdapted<T>)
+	constexpr auto structure_tie(T &t) { return boost::pfr::structure_tie(t); }
+	template<typename T> requires(!IsHanaAdapted<T>)
+	constexpr auto structure_tie(const T &t) { return boost::pfr::structure_tie(t); }
+	#else
+	template<typename T>
+	constexpr auto structure_tie(T &t) { return boost::pfr::structure_tie(t); }
+	template<typename T>
+	constexpr auto structure_tie(const T &t) { return boost::pfr::structure_tie(t); }
+	#endif
 
 	struct CompoundMemberAnnotation {
 		std::string_view shortDesc;

@@ -58,7 +58,7 @@ namespace gtry
 	T constructFrom(const T& val)
 	{
 		return gtry::make_from_tuple<T>(
-			boost::hana::transform(boost::pfr::structure_tie(val), [&](auto&& member) {
+			boost::hana::transform(structure_tie(val), [&](auto&& member) {
 				if constexpr(Signal<decltype(member)>)
 					return constructFrom(member);
 				else if constexpr (internal::SignalHolder<decltype(member)>)
