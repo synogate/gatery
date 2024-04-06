@@ -32,15 +32,14 @@ namespace gtry::scl::sdram
 		CommandBus cmd;
 
 		Bit odt;
-		Bit dqsEnable;
-		Bit dqsPreamble;
-		Bit debugSignal;
+		Bit dqWriteValid;
+		Bit dqReadValid;
 
 		BVec dqIn; // captured data on dq lines
 	};
 
 	scl::TileLinkUL miniController(PhyInterface& dramIo, MiniControllerConfig cfg = {});
-
+	scl::TileLinkUL miniControllerMappedMemory(PhyInterface& dramIo, BitWidth sourceW = 0_b);
 
 	struct PhyGateMateDDR2Config
 	{
@@ -54,4 +53,4 @@ namespace gtry::scl::sdram
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::sdram::MiniControllerConfig, sourceW);
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::sdram::PhyInterface, cmd, odt, dqsEnable, dqsPreamble, dqIn);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::sdram::PhyInterface, cmd, dqWriteValid, dqReadValid, dqIn);
