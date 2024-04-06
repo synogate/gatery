@@ -131,7 +131,7 @@ namespace gtry::scl::sdram
 
 		enum class State
 		{
-			Idle, Cas, Read1, Read2
+			Idle, Cas, Wait, First, Second, Ack, Recovery
 		};
 
 		Reg<Enum<State>> state{ State::Idle };
@@ -158,38 +158,59 @@ namespace gtry::scl::sdram
 			dramIo.cmd.wen = a->isGet();
 			dramIo.cmd.a = (BVec)zext(cat('1', a->address(addrWordW.bits(), 10_b - addrWordW), ConstUInt(0, addrWordW)));
 			dramIo.cmd.ba = (BVec)a->address(10, dramIo.cmd.ba.width());
-			
-			IF(a->isGet())
-				state = State::Read1;
-			ELSE
-				state = State::Idle;
+			state = State::Wait;
 		}
 
-		BVec readBuf = dramIo.dqIn.width();
-		IF(state.current() == State::Read1)
+		IF(state.current() == State::Wait)
 		{
-			IF(dramIo.dqReadValid)
-			{
-				readBuf = dramIo.dqIn;
-				state = State::Read2;
-			}
+			state = State::First;
 		}
-		readBuf = reg(readBuf);
-		HCL_NAMED(readBuf);
-		(*tl.d)->data = (BVec)cat(dramIo.dqIn, readBuf);
 
-		IF(state.current() == State::Read2)
+		IF(state.current() == State::First)
 		{
-			IF(dramIo.dqReadValid)
-			{
-				valid(*tl.d) = '1';
-			}
+			dramIo.dqWriteValid = a->isPut();
+			dramIo.cmd.dq = a->data.part(2, 0);
+			dramIo.cmd.dqm = ~a->mask.part(2, 0);
+
+			IF(a->isPut() | dramIo.dqReadValid)
+				state = State::Second;
+		}
+
+		IF(state.current() == State::Second)
+		{
+			dramIo.dqWriteValid = a->isPut();
+			dramIo.cmd.dq = a->data.part(2, 1);
+			dramIo.cmd.dqm = ~a->mask.part(2, 1);
+			state = State::Ack;
+		}
+
+		IF(state.current() == State::Ack)
+		{
+			valid(*tl.d) = '1';
 			IF(transfer(*tl.d))
 			{
 				ready(a) = '1';
-				state = State::Idle;
+				state = State::Recovery;
 			}
 		}
+
+		Counter recoveryCounter{ 4 };
+		IF(state.current() == State::Recovery)
+		{
+			recoveryCounter.inc();
+			IF(recoveryCounter.isLast())
+				state = State::Idle;
+		}
+
+		BVec readData = tl.a->data.width();
+		IF(dramIo.dqReadValid)
+		{
+			readData.part(2, 0) = readData.part(2, 1);
+			readData.part(2, 1) = dramIo.dqIn;
+		}
+		readData = reg(readData);
+		HCL_NAMED(readData);
+		(*tl.d)->data = readData;
 
 		HCL_NAMED(tl);
 		return tl;
