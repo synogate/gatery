@@ -35,6 +35,7 @@
 #include <gatery/frontend/Attributes.h>
 
 #include "../general/MemoryTools.h"
+#include <gatery/debug/DebugInterface.h>
 
 #include <iostream>
 
@@ -53,12 +54,41 @@ bool BlockramUltrascale::apply(hlim::NodeGroup *nodeGroup) const
 {
 	auto *memGrp = dynamic_cast<hlim::MemoryGroup*>(nodeGroup->getMetaInfo());
 	if (memGrp == nullptr) return false;
-	if (memGrp->getMemory()->type() == hlim::Node_Memory::MemType::EXTERNAL)
+	if (memGrp->getMemory()->type() == hlim::Node_Memory::MemType::EXTERNAL) {
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because it is external memory.");
 		return false;
+	}
 
-	if (memGrp->getReadPorts().size() != 1) return false;
-	if (memGrp->getWritePorts().size() > 1) return false;
-	if (memGrp->getMemory()->getRequiredReadLatency() == 0) return false;
+	if (memGrp->getReadPorts().size() == 0) {
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because it has no read ports.");
+		return false;
+	}
+
+	if (memGrp->getReadPorts().size() > 1) {
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because it has more than one read port and so far only one read port is supported.");
+		return false;
+	}
+	const auto &rp = memGrp->getReadPorts().front();
+	if (memGrp->getWritePorts().size() > 1) {
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because it has more than one write port and so far only one write port is supported.");
+
+		return false;
+	}
+	if (memGrp->getMemory()->getRequiredReadLatency() == 0) {
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because it is asynchronous (zero latency reads) and the targeted block ram needs at least one cycle latency.");
+
+		return false;
+	}
+
 	if (memGrp->getMemory()->getMinPortWidth() != memGrp->getMemory()->getMaxPortWidth()) return false;
 	//if (!memtools::memoryIsSingleClock(nodeGroup)) return false;
 
@@ -70,6 +100,55 @@ bool BlockramUltrascale::apply(hlim::NodeGroup *nodeGroup) const
 	auto &circuit = DesignScope::get()->getCircuit();
 	memGrp->convertToReadBeforeWrite(circuit);
 	memGrp->attemptRegisterRetiming(circuit);
+
+
+
+	hlim::Clock* writeClock = nullptr;
+	if (memGrp->getWritePorts().size() > 0) {
+		writeClock = memGrp->getWritePorts().front().node->getClocks()[0];
+		if (writeClock->getTriggerEvent() != hlim::Clock::TriggerEvent::RISING) {
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+					<< " because its write clock is not triggering on rising clock edges.");
+			return false;
+		}
+	}
+
+	auto *readClock = rp.dedicatedReadLatencyRegisters.front()->getClocks()[0];
+	if (readClock->getTriggerEvent() != hlim::Clock::TriggerEvent::RISING) {
+		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because its read clock is not triggering on rising clock edges.");
+		return false;
+	}
+
+	hlim::NodePort readEnable;
+	if (rp.dedicatedReadLatencyRegisters.front()->hasEnable())
+		readEnable = rp.dedicatedReadLatencyRegisters.front()->getDriver((size_t)hlim::Node_Register::Input::ENABLE);
+
+	for (auto reg : rp.dedicatedReadLatencyRegisters) {
+		if (reg->hasResetValue()) {
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+					<< " because one of its output registers has a reset value.");
+			return false;
+		}
+
+		if (reg->hasEnable()) {
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+					<< " because one of its output registers has an enable.");
+			return false;
+		}
+
+		if (readClock != reg->getClocks()[0]) {
+			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+					<< " because its output registers have differing clocks.");
+			return false;
+		}
+	}
+
 	memGrp->resolveWriteOrder(circuit);
 	memGrp->updateNoConflictsAttrib();
 	memGrp->buildReset(circuit);

@@ -24,8 +24,6 @@
 #include <gatery/simulation/waveformFormats/VCDSink.h>
 #include <gatery/export/vhdl/VHDLExport.h>
 
-#include <gatery/debug/websocks/WebSocksInterface.h>
-
 #include <gatery/scl/crc.h>
 
 using namespace boost::unit_test;

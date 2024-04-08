@@ -1,5 +1,5 @@
 /*  This file is part of Gatery, a library for circuit design.
-	Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2024 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
@@ -17,25 +17,18 @@
 */
 #pragma once
 
-#include <gatery/frontend.h>
+#include <gatery/frontend/UInt.h>
+#include <gatery/frontend/SInt.h>
+#include <gatery/hlim/NodeGroup.h>
 
-namespace gtry::scl
+namespace gtry::scl::math {
+
+struct PipelinedMulMeta : hlim::NodeGroupMetaInfo
 {
-	UInt bitcount(Signal auto vec)
-	{
-		using namespace gtry::hlim;
+	size_t resultOffset;
+};
 
-		GroupScope entity(GroupScope::GroupType::ENTITY, "bitcount");
-		entity
-			.setComment("Counts the number of high bits");
+UInt pipelinedMul(UInt a, UInt b, BitWidth resultW, size_t resultOffset = 0);
+SInt pipelinedMul(SInt a, SInt b, BitWidth resultW, size_t resultOffset = 0);
 
-		static_assert(std::is_same_v<Bit, std::remove_cvref_t<decltype(*begin(vec))>>, "bitcount only works on bit vectors");
-		HCL_NAMED(vec);
-
-		UInt sumOfOnes = ConstUInt(0, BitWidth::last(vec.size()));
-		for (const auto& it : vec)
-			sumOfOnes += (UInt)zext(it);
-		HCL_NAMED(sumOfOnes);
-		return sumOfOnes;
-	}
 }

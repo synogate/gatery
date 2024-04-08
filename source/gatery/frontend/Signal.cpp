@@ -52,11 +52,14 @@ gtry::SignalReadPort gtry::SignalReadPort::expand(size_t width, hlim::Connection
 				rewire->setConcat();
 				break;
 		}
-
+/*
+		// This actually does more harm than good
 		auto* signal = DesignScope::createNode<hlim::Node_Signal>();
 		signal->connectInput({ .node = rewire, .port = 0 });
 		signal->setName(node->getName());
 		ret = hlim::NodePort{ .node = signal, .port = 0 };
+*/
+		ret = hlim::NodePort{ .node = rewire, .port = 0 };
 	}
 	return SignalReadPort{ ret, expansionPolicy };
 }

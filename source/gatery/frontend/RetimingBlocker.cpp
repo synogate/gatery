@@ -1,5 +1,5 @@
 /*  This file is part of Gatery, a library for circuit design.
-	Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2024 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
@@ -15,27 +15,19 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#pragma once
+#include "gatery/pch.h"
+#include "Reg.h"
 
-#include <gatery/frontend.h>
+#include "DesignScope.h"
 
-namespace gtry::scl
+#include <gatery/hlim/supportNodes/Node_RetimingBlocker.h>
+
+namespace gtry::internal
 {
-	UInt bitcount(Signal auto vec)
+	SignalReadPort retimingBlocker(SignalReadPort val)
 	{
-		using namespace gtry::hlim;
-
-		GroupScope entity(GroupScope::GroupType::ENTITY, "bitcount");
-		entity
-			.setComment("Counts the number of high bits");
-
-		static_assert(std::is_same_v<Bit, std::remove_cvref_t<decltype(*begin(vec))>>, "bitcount only works on bit vectors");
-		HCL_NAMED(vec);
-
-		UInt sumOfOnes = ConstUInt(0, BitWidth::last(vec.size()));
-		for (const auto& it : vec)
-			sumOfOnes += (UInt)zext(it);
-		HCL_NAMED(sumOfOnes);
-		return sumOfOnes;
+		auto* node = DesignScope::createNode<hlim::Node_RetimingBlocker>();
+		node->connectInput(val);
+		return SignalReadPort{node};
 	}
 }

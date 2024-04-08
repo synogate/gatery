@@ -28,6 +28,7 @@
 #include "BlockramUltrascale.h"
 #include "Lutram7Series.h"
 #include "LutramUltrascale.h"
+#include "DSP48E2.h"
 
 #include <regex>
 
@@ -174,6 +175,9 @@ void XilinxDevice::setupCustomComposition(const gtry::utils::ConfigTree &customC
 
 	m_technologyMapping.addPattern(std::make_unique<EmbeddedMemoryPattern>(*this));
 
+	if (customComposition["DSP48E2"].as(false))
+		m_technologyMapping.addPattern(std::make_unique<PipelinedMulDSP48E2Pattern>());
+
 	if (customComposition["BUFG"].as(false))
 		m_technologyMapping.addPattern(std::make_unique<BUFGPattern>());
 
@@ -201,6 +205,8 @@ void XilinxDevice::setupDevice(std::string device)
 		m_technologyMapping.addPattern(std::make_unique<BUFGPattern>());
 		m_technologyMapping.addPattern(std::make_unique<ODDRPattern>());
 
+		// Has DSP48E1
+		
 	} else if (kintexVirtexUltraDevStr.parse(m_device)) {
 		if (kintexVirtexUltraDevStr.KintexVirtex == 'K')
 			m_family = "Kintex Ultrascale";
@@ -212,6 +218,7 @@ void XilinxDevice::setupDevice(std::string device)
 
 		m_technologyMapping.addPattern(std::make_unique<BUFGPattern>());
 		m_technologyMapping.addPattern(std::make_unique<ODDRPattern>());
+		m_technologyMapping.addPattern(std::make_unique<PipelinedMulDSP48E2Pattern>());
 
 	} else
 		HCL_DESIGNCHECK_HINT(false, "The device string " + m_device + " does not match the pattern of any of the known device families. Specify a familiy or use custom_composition to specify the device's hardware features.");

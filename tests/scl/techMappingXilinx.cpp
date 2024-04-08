@@ -29,6 +29,7 @@
 #include <gatery/scl/arch/xilinx/UltraRAM.h>
 #include <gatery/scl/arch/xilinx/DSP48E2.h>
 #include <gatery/scl/tilelink/TileLinkMasterModel.h>
+#include <gatery/scl/math/PipelinedMath.h>
 
 #include <gatery/hlim/coreNodes/Node_MultiDriver.h>
 
@@ -831,6 +832,98 @@ BOOST_FIXTURE_TEST_CASE(DSP48E2_mul_asymetric_partial_test, DSP48E2_mul_fixture)
 	using namespace gtry;
 	test(26_b, 38_b, 16_b, 20);
 }
+
+
+class DSP48E2_pipelinedMul_fixture : public TestWithDefaultDevice<gtry::GHDLTestFixture>
+{
+protected:
+	void test(gtry::BitWidth aW, gtry::BitWidth bW, gtry::BitWidth resultW, size_t resultOffset)
+	{
+		using namespace gtry;
+		Clock clock({ .absoluteFrequency = 100'000'000, .name = "clk" });
+		ClockScope clkScp(clock);
+
+		PipeBalanceGroup group;
+
+		UInt a = pinIn(aW).setName("a");
+		UInt b = pinIn(bW).setName("b");
+
+		UInt retimeableA = a;
+		UInt retimeableB = b;
+		retimeableA = group(retimeableA);
+		retimeableB = group(retimeableB);
+
+		auto c = scl::math::pipelinedMul(retimeableA, retimeableB, resultW, resultOffset);
+		pinOut(c, "c");
+
+		UInt e = pinIn(c.width()).setName("e");
+
+		std::queue<uint64_t> expected;
+
+		addSimulationProcess([&]()->SimProcess {
+			std::mt19937_64 rng{ std::random_device{}() };
+
+			for (size_t i = 0; i < 64; ++i)
+			{
+				uint64_t aVal = rng() & a.width().mask();
+				simu(a) = aVal;
+				uint64_t bVal = rng() & b.width().mask();
+				simu(b) = bVal;
+				expected.push((aVal * bVal >> resultOffset) & resultW.mask());
+				co_await OnClk(clock);
+			}
+		});
+
+		addSimulationProcess([&]()->SimProcess {
+			size_t latency = group.getNumPipeBalanceGroupStages();
+			for(size_t i = 0; i < latency; ++i)
+				co_await OnClk(clock);
+			while (!expected.empty())
+			{
+				simu(e) = expected.front();
+				co_await OnClk(clock);
+				BOOST_TEST(simu(c) == expected.front());
+				expected.pop();
+			}
+			BOOST_TEST(simu(c) != 0);
+			stopTest();
+		});
+
+		design.visualize("before");
+		runTest({ 2, 1'000'000 });
+		design.visualize("after");
+
+		BOOST_TEST(exportContains(std::regex{"DSP48E2"}));
+	}
+};
+
+BOOST_FIXTURE_TEST_CASE(DSP48E2_pipelinedMul_symetric_full_test, DSP48E2_pipelinedMul_fixture)
+{
+	using namespace gtry;
+	test(8_b, 8_b, 16_b, 0);
+	//test(32_b, 32_b, 64_b, 0);
+}
+
+BOOST_FIXTURE_TEST_CASE(DSP48E2_pipelinedMul_asymetric_full_test, DSP48E2_pipelinedMul_fixture)
+{
+	using namespace gtry;
+	test(26_b, 38_b, 64_b, 0);
+}
+
+BOOST_FIXTURE_TEST_CASE(DSP48E2_pipelinedMul_symetric_partial_test, DSP48E2_pipelinedMul_fixture)
+{
+	using namespace gtry;
+	test(48_b + 13_b, 48_b + 13_b, 48_b, 13);
+}
+
+BOOST_FIXTURE_TEST_CASE(DSP48E2_pipelinedMul_asymetric_partial_test, DSP48E2_pipelinedMul_fixture)
+{
+	using namespace gtry;
+	test(26_b, 38_b, 16_b, 20);
+}
+
+
+
 
 BOOST_FIXTURE_TEST_CASE(test_bidir_pin_extnode, gtry::GHDLTestFixture)
 {

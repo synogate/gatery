@@ -23,8 +23,10 @@
 #include "coreNodes/Node_Logic.h"
 #include "coreNodes/Node_Signal.h"
 #include "coreNodes/Node_Constant.h"
+#include "coreNodes/Node_Compare.h"
 
 #include "CNF.h"
+#include "GraphTools.h"
 #include "Subnet.h"
 
 #include <vector>
@@ -47,6 +49,7 @@ namespace gtry::hlim {
 		struct TraceInfo {
 			NodePort signal;
 			bool negated;
+			bool canDescendIntoAnd = true;
 			NodePort lastLogicDriver;
 		};
 
@@ -54,6 +57,7 @@ namespace gtry::hlim {
 		stack.push_back({
 			.signal = nodeOutput,
 			.negated = false,
+			.canDescendIntoAnd = true,
 			.lastLogicDriver = nodeOutput,
 		});
 
@@ -94,11 +98,12 @@ namespace gtry::hlim {
 						stack.push_back({
 							.signal = logicNode->getNonSignalDriver(0), 
 							.negated = !top.negated,
+							.canDescendIntoAnd = top.negated, // if we have ~(a & b) then this is ~a | ~b, thus after a negation we can't descend into ANDs and add them as terms to our conjunction.
 							.lastLogicDriver = logicNode->getDriver(0),
 						});
 						doAddAsTerm = false;
 					} else
-					if (logicNode->getOp() == Node_Logic::AND) {
+					if (top.canDescendIntoAnd && logicNode->getOp() == Node_Logic::AND) {
 						for (auto j : utils::Range(logicNode->getNumInputPorts()))
 							stack.push_back({
 								.signal = logicNode->getNonSignalDriver(j), 
@@ -175,6 +180,39 @@ namespace gtry::hlim {
 		return true;
 	}
 
+	bool Conjunction::cannotBothBeTrue(const Conjunction &other, bool checkComparisons) const
+	{
+		if (m_undefined || other.m_undefined)
+			return false;
+		if (m_contradicting || other.m_contradicting) 
+			return true;
+
+		for (const auto &pair : m_terms.anyOrder()) {
+			auto it = other.m_terms.find(pair.second.driver);
+			if (it != other.m_terms.end()) {
+				if (it->second.negated != pair.second.negated)
+					return true;
+
+				if (checkComparisons && !it->second.negated && !pair.second.negated) {
+					auto cmp1 = isComparisonWithConstant(pair.second.driver);
+					if (!cmp1) continue;
+
+					auto cmp2 = isComparisonWithConstant(it->second.driver);
+					if (!cmp2) continue;
+
+					if (cmp1->second != cmp2->second) continue;
+
+					if (sim::allDefined(cmp1->first->getValue()) && 
+						sim::allDefined(cmp1->first->getValue()) &&
+						cmp1->first->getValue().size() == cmp2->first->getValue().size() &&
+						cmp1->first->getValue() != cmp2->first->getValue())
+						return true;
+				}
+			}
+		}
+		return false;
+	}
+
 	void Conjunction::intersectTermsWith(const Conjunction &other)
 	{
 		std::vector<NodePort> signalsToRemove;
@@ -197,13 +235,24 @@ namespace gtry::hlim {
 		}
 	}
 
-	NodePort Conjunction::build(NodeGroup &targetGroup, Subnet *newNodes) const
+	NodePort Conjunction::build(NodeGroup &targetGroup, Subnet *newNodes, bool allowUnconnected) const
 	{
 		HCL_ASSERT_HINT(!m_undefined, "Can not build undefined conjunction");
 		HCL_ASSERT_HINT(!m_contradicting, "Can not build contradicting conjunction");
 
-		if (m_terms.empty())
-			return {};
+		Circuit &circuit = targetGroup.getCircuit();
+
+		if (m_terms.empty()) {
+			if (allowUnconnected)
+				return {};
+
+			auto *oneNode = circuit.createNode<Node_Constant>(sim::parseBit(true), hlim::ConnectionType::BOOL);
+			oneNode->moveToGroup(&targetGroup);
+			oneNode->recordStackTrace();
+			if (newNodes) newNodes->add(oneNode);
+
+			return { .node = oneNode, .port = 0ull };
+		}
 
 		// Sort elements to make algorithm stable wrt. reruns
 		std::vector<NodePort> sortedTerms;
@@ -213,8 +262,6 @@ namespace gtry::hlim {
 
 		std::sort(sortedTerms.begin(), sortedTerms.end(), utils::StableCompare<NodePort>());
 
-
-		Circuit &circuit = targetGroup.getCircuit();
 
 		// Replace signals in sortedTerms with either the "conjunctionDriver", or the negation thereof
 		for (auto &np : sortedTerms) {

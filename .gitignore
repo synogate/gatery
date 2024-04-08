@@ -26,3 +26,5 @@ Makefile
 /tests/*.txt
 /scripts/**
 test_export
+
+source/gen/
