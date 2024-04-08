@@ -115,6 +115,9 @@ namespace gtry::scl::sdram
 	{
 		Area ent{ "scl_miniControllerMappedMemory", true };
 
+		const hlim::ClockRational tREFI{ 7'800, 1'000'000'000 }; // 7.8 us
+		const hlim::ClockRational tRFC{ 128, 1'000'000'000 }; // 127.5 ns
+
 		scl::TileLinkUL tl = tileLinkInit<TileLinkUL>(
 			dramIo.cmd.a.width() + dramIo.cmd.ba.width() + 10_b,
 			dramIo.cmd.dq.width() * 2,
@@ -137,16 +140,42 @@ namespace gtry::scl::sdram
 		Reg<Enum<State>> state{ State::Idle };
 		state.setName("state");
 
-		IF(state.current() == State::Idle & valid(a))
+		scl::Counter refreshInterval{ hlim::floor(tREFI * ClockScope::getClk().absoluteFrequency()) };
+		Bit refreshEnabled = scl::flag(valid(a), '0');
+		HCL_NAMED(refreshEnabled);
+		IF(refreshEnabled)
+			refreshInterval.inc();
+		Bit refreshReq;
+		IF(refreshInterval.isLast())
+			refreshReq = '1';
+		refreshReq = reg(refreshReq);
+		HCL_NAMED(refreshReq);
+
+		IF(state.current() == State::Idle)
 		{
-			// activate command
-			dramIo.cmd.csn = '0';
-			dramIo.cmd.rasn = '0';
-			dramIo.cmd.casn = '1';
-			dramIo.cmd.wen = '1';
-			dramIo.cmd.a = (BVec)a->address.upper(dramIo.cmd.a.width());
-			dramIo.cmd.ba = (BVec)a->address(10, dramIo.cmd.ba.width());
-			state = State::Cas;
+			IF(valid(a))
+			{
+				// activate command
+				dramIo.cmd.csn = '0';
+				dramIo.cmd.rasn = '0';
+				dramIo.cmd.casn = '1';
+				dramIo.cmd.wen = '1';
+				dramIo.cmd.a = (BVec)a->address.upper(dramIo.cmd.a.width());
+				dramIo.cmd.ba = (BVec)a->address(10, dramIo.cmd.ba.width());
+				state = State::Cas;
+			}
+
+			IF(refreshReq)
+			{
+				// activate command
+				dramIo.cmd.csn = '0';
+				dramIo.cmd.rasn = '0';
+				dramIo.cmd.casn = '0';
+				dramIo.cmd.wen = '1';
+
+				refreshReq = '0';
+				state = State::Recovery;
+			}
 		}
 
 		IF(state.current() == State::Cas)
@@ -194,7 +223,8 @@ namespace gtry::scl::sdram
 			}
 		}
 
-		Counter recoveryCounter{ 4 };
+		size_t recoveryCyclesRefresh = hlim::ceil(tRFC * ClockScope::getClk().absoluteFrequency());
+		Counter recoveryCounter{ std::max<size_t>(recoveryCyclesRefresh, 4) };
 		IF(state.current() == State::Recovery)
 		{
 			recoveryCounter.inc();
