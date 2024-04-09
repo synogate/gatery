@@ -28,7 +28,7 @@ function Gtry_ReadFileAsArray(name, out_file)
     end
 end
 
-function Gtry_EmbedResources(name, prefix_path, pattern)
+function Gtry_EmbedResources(name, namespace, prefix_path, pattern)
 
     local header = io.open(name .. ".h", "wb")
     local source = io.open(name .. ".cpp", "wb")
@@ -41,13 +41,10 @@ function Gtry_EmbedResources(name, prefix_path, pattern)
 #include <array>
 #include <cstddef>
 
-namespace gtry::res {
-
-
-]])
-
+namespace ]])
+    header:write(namespace .. "{\n")
     source:write("#include \"" .. name .. ".h\"\n")
-    source:write("namespace gtry::res {\n\n")
+    source:write("namespace " .. namespace .. " {\n\n")
 
     local manifest_content = ""
 
@@ -171,7 +168,7 @@ project "gatery_core"
     includedirs "%{prj.location}/"
     GateryProjectDefaults()
 
-    Gtry_EmbedResources("gen/res/gtry_resources", "../data/", "**")
+    Gtry_EmbedResources("gen/res/gtry_resources", "gtry::res", "../data/", "**")
     includedirs "gen/"
 
     filter "system:windows"

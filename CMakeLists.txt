@@ -40,6 +40,7 @@ file(GLOB_RECURSE data_files_gatery RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 gtry_compileResourceFile(
+    NAMESPACE "gtry::res"
     OUTPUT_PREFIX gen/res/gtry_resources
     BINARY_FILES ${data_files_gatery}
 )
@@ -98,7 +99,8 @@ else()
     target_link_libraries(gatery_core PUBLIC -ldl -lbacktrace)
     #target_compile_definitions(gatery_core PUBLIC -DBOOST_STACKTRACE_USE_ADDR2LINE)
     #target_link_libraries(gatery_core PUBLIC -ldl)
-    if(NOT APPLE)
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    else()
         target_compile_options(gatery_core PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-fcoroutines>)
     endif ()
 endif()
