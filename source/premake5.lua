@@ -43,7 +43,7 @@ function Gtry_EmbedResources(name, namespace, prefix_path, pattern)
 
 namespace ]])
     header:write(namespace .. "{\n")
-    source:write("#include \"" .. name .. ".h\"\n")
+    source:write("#include \"" .. path.getbasename(name) .. ".h\"\n")
     source:write("namespace " .. namespace .. " {\n\n")
 
     local manifest_content = ""
