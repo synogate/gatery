@@ -19,12 +19,13 @@ namespace gtry::dbg {
 
 	void ReportInterface::populateDirWithStaticFiles(const std::filesystem::path &outputDir)
 	{
-		if (!std::filesystem::exists(outputDir))
-			std::filesystem::create_directories(outputDir);
-
 		for (const auto &resFile : res::manifest) {
 			if (resFile.filename.starts_with("data/reporting/")) {
 				auto filename = outputDir / resFile.filename.substr("data/reporting/"sv.length());
+				auto folder = filename.parent_path();
+				if (!std::filesystem::exists(folder))
+					std::filesystem::create_directories(folder);
+
 				std::ofstream file(filename.string().c_str(), std::fstream::binary);
 				file.write((const char *)resFile.data.data(), resFile.data.size());
 			}
