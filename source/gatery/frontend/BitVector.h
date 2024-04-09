@@ -33,6 +33,7 @@
 #include <compare>
 #include <optional>
 #include <map>
+#include <variant>
 
 namespace gtry {
 
