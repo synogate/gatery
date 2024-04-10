@@ -144,7 +144,7 @@ namespace gtry::dbg {
 
 	void prerenderedSubnetSvgToJson(std::ostream &json, size_t id, const hlim::ConstSubnet &subnet, const std::filesystem::path &prerenderedSvg)
 	{
-		std::string cleanedSvgAsText = removeHeader(escapeAndAddId(getFileContentAsString("temp_prerendered_subnet.svg"), id));
+		std::string cleanedSvgAsText = escapeAndAddId(removeHeader(getFileContentAsString(prerenderedSvg)), id);
 
 		json << "{ \"imageId\" : " << id << ",\n  \"subnet_nodes\": ";
 		json::serializeSubnet(json, subnet);

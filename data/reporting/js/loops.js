@@ -38,14 +38,13 @@ function fileNotAvailable(file) {
 function insertSVG() {
     const target = document.getElementById("svgTarget");
     temp = document.getElementsByTagName("template")[0];
-    for (i = 0; i < loopSVGs.length; i++) {
-        let svg = loopSVGs[i];
-        let key = "image" + i;
-        temp.content.querySelector('#svg-holder').innerHTML = svg[key];
+    for (i = 0; i < prerenderedSubnets.length; i++) {
+        let prerenderedSubnet = prerenderedSubnets[i];
+        temp.content.querySelector('#svg-holder').innerHTML = prerenderedSubnet.content;
         templateContent = document.importNode(temp.content, true);
         target.append(templateContent);
 
-        makeInteractive(i);
+        makeInteractive(prerenderedSubnet.imageId);
     }
 }
 

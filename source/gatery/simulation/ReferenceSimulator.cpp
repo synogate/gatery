@@ -320,9 +320,7 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 
 			//dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING << "Simulator detected a signal loop: " << loopSubnet);
 			dbg::LogMessage msg{};
-			msg << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING << "Simulator detected a signal loop: ";
-			for (auto n : loopSubnet)
-				msg << n;
+			msg << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING << "Simulator detected a signal loop: " << loopSubnet;
 			dbg::log(msg);
 
 			//{
@@ -333,23 +331,10 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 			{
 				hlim::ConstSubnet looping = hlim::ConstSubnet::all(circuit).filterLoopNodesOnly();
 				//loopSubnet.dilate(true, true);
-#if 0
-                dbg::ReportInterface RI;
 
-                // get the current path and append target path
-                std::filesystem::path pwd = RI.pwdSclToReporting();
-
-				DotExport exp(pwd /= "loop_only.dot");
-
-				exp(circuit, looping);
-                exp.runGraphViz(pwd.remove_filename() /= "loop_only.svg");
-
-                RI.svgToText(pwd.remove_filename() /= "loop_only.svg");
-#else
 				DotExport exp("loop_only.dot");
 				exp(circuit, looping);
 				exp.runGraphViz("loop_only.svg");
-#endif
 			}
 			//{
 			//	hlim::Subnet all;
