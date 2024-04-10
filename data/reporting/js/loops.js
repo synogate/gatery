@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function loadScripts() {
-    const scripts = ["report.js", "serializedNodes.js", "loopSVG.js"];
+    const scripts = ["data/report.js", "data/nodes.js", "data/prerenderedSubnets.js"];
     const promises = scripts.map(function(src) {
         return new Promise(function(resolve, reject) {
             var script = document.createElement('script');
@@ -121,7 +121,7 @@ function loopFillOffcanvas(nodeId) {
 
 function getNodeById(nodeId) {
     let wanted;
-    hierarchyNodeData[0].data.forEach(node => {
+    hierarchyNodeData.forEach(node => {
         if (node.id == nodeId) {
             wanted = node;
         }
@@ -148,7 +148,7 @@ function getStacktrace(stacktrace) {
 }
 
 function getNodeProperty(node, propertyName, description) {
-    if (node[propertyName] === "" || node[propertyName].length === 0) {
+    if (!(propertyName in node) || node[propertyName] === "" || node[propertyName].length === 0) {
         return `${description}: No ${description} found for this node.`;
     } else if (Array.isArray(node[propertyName]) || typeof node[propertyName] === 'object') {
         return `${description}:\n<ul>${getObject(node[propertyName], "", false)}</ul>`;

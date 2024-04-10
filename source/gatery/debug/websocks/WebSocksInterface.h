@@ -36,17 +36,6 @@ namespace gtry::hlim {
 
 namespace gtry::dbg {
 
-class JsonSerializer
-{
-	public:
-		std::string serializeAllLogMessages(const std::span<std::string> &logMessages);
-		std::string serializeLogMessage(const LogMessage &logMessage);
-		std::string serializeAllGroups(const hlim::Circuit &circuit);
-		std::string serializeAllNodes(const hlim::Circuit &circuit);
-	protected:
-		void serializeStackTrace(std::ostream &json, const utils::StackTrace &trace, bool resolved);
-};
-
 class WebSocksInterface : public DebugInterface
 {
 	public:

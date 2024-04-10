@@ -1,7 +1,7 @@
 
 function loadSerializedNodes() {
     const target = document.getElementById("nodeTarget");
-    const scripts = ["serializedNodes.js", "serializedGroups.js"];
+    const scripts = ["data/nodes.js", "data/groups.js"];
     temp = document.getElementsByTagName("template")[0];
     nodeTemp = temp.content.querySelectorAll("p")[0];
     nodeTempLink = temp.content.querySelector("a");
@@ -16,7 +16,7 @@ function loadSerializedNodes() {
         document.head.append(script);
     });
 
-    hierarchyNodeData[0].data.forEach(nodeItem => {
+    hierarchyNodeData.forEach(nodeItem => {
         node = document.importNode(nodeTemp, true);
         nodeLink = document.importNode(nodeTempLink, true);
         nodebtn = document.importNode(nodeButton, true);
@@ -53,7 +53,7 @@ function loadSerializedGroups() {
     groupTempLink = temp.content.querySelector("a");
     groupButton = temp.content.querySelector("button");
     
-    hierarchyGroupData[0].data.forEach(groupItem => {
+    hierarchyGroupData.forEach(groupItem => {
         group = document.importNode(groupTemp, true);
         groupLink = document.importNode(groupTempLink, true);
         groupbtn = document.importNode(groupButton, true);
@@ -187,7 +187,7 @@ function fillOffcanvas(node, isGroup) {
 }
 
 function getNodeProperty(node, propertyName, description) {
-    if (node[propertyName] === "" || node[propertyName].length === 0) {
+    if (!(propertyName in node) || node[propertyName] === "" || node[propertyName].length === 0) {
         return `${description}: No ${description} found for this node.`;
     } else if (Array.isArray(node[propertyName]) || typeof node[propertyName] === 'object') {
         return `${description}:\n<ul>${getObject(node[propertyName], "", false)}</ul>`;
@@ -232,7 +232,7 @@ function eventHander() {
 } 
 
 function loadScripts() {
-    const scripts = ["serializedNodes.js", "serializedGroups.js"];
+    const scripts = ["data/nodes.js", "data/groups.js"];
     const promises = scripts.map(function(src) {
         return new Promise(function(resolve, reject) {
             var script = document.createElement('script');
