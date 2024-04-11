@@ -45,20 +45,20 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 	auto *memGrp = dynamic_cast<hlim::MemoryGroup*>(nodeGroup->getMetaInfo());
 	if (memGrp == nullptr) return false;
 	if (memGrp->getMemory()->type() == hlim::Node_Memory::MemType::EXTERNAL) {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because it is external memory.");
 		return false;
 	}
 
 	if (memGrp->getReadPorts().size() == 0) {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because it has no read ports.");
 		return false;
 	}
 
 	if (memGrp->getReadPorts().size() > 1) {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because it has more than one read port and so far only one read port is supported.");
 		return false;
@@ -66,14 +66,14 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 	const auto &rp = memGrp->getReadPorts().front();
 
 	if (memGrp->getWritePorts().size() > 1) {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because it has more than one write port and so far only one write port is supported.");
 
 		return false;
 	}
 	if (memGrp->getMemory()->getRequiredReadLatency() == 0) {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because it is asynchronous (zero latency reads) and the targeted block ram needs at least one cycle latency.");
 
@@ -90,7 +90,7 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 	if (memGrp->getWritePorts().size() > 0) {
 		writeClock = memGrp->getWritePorts().front().node->getClocks()[0];
 		if (writeClock->getTriggerEvent() != hlim::Clock::TriggerEvent::RISING) {
-			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 					<< " because its write clock is not triggering on rising clock edges.");
 			return false;
@@ -99,7 +99,7 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 
 	auto *readClock = rp.dedicatedReadLatencyRegisters.front()->getClocks()[0];
 	if (readClock->getTriggerEvent() != hlim::Clock::TriggerEvent::RISING) {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because its read clock is not triggering on rising clock edges.");
 		return false;
@@ -111,14 +111,14 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 
 	for (auto reg : rp.dedicatedReadLatencyRegisters) {
 		if (reg->hasResetValue()) {
-			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 					<< " because one of its output registers has a reset value.");
 			return false;
 		}
 
 		if (readClock != reg->getClocks()[0]) {
-			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 					<< " because its output registers have differing clocks.");
 			return false;
@@ -138,7 +138,7 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 	bool isDualClock = memGrp->getWritePorts().size() > 0 && writeClock != readClock;
 
 	if (isDualClock && (readFirst || writeFirst)) {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because explicit read during write behavior for dual clock rams is not supported yet.");
 		return false;

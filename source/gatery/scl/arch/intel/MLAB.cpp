@@ -60,25 +60,25 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 	auto *memGrp = dynamic_cast<hlim::MemoryGroup*>(nodeGroup->getMetaInfo());
 	if (memGrp == nullptr) return false;
 	if (memGrp->getMemory()->type() == hlim::Node_Memory::MemType::EXTERNAL) {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because it is external memory.");
 		return false;
 	}
 	if (memGrp->getReadPorts().size() == 0) {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because it has no read ports.");
 		return false;
 	}
 	if (memGrp->getReadPorts().size() > 1) {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because it has more than one read port and so far only one read port is supported.");
 		return false;
 	}
 	const auto &rp = memGrp->getReadPorts().front();
 	if (memGrp->getWritePorts().size() > 1) {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because it has more than one write port and so far only one write port is supported.");
 
@@ -107,7 +107,7 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 	bool supportsWriteFirst = memGrp->getMemory()->getRequiredReadLatency() >= 1;
 
 	if (memGrp->getWritePorts().size() != 0 && !supportsWriteFirst)  {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because automatic building of read during write bypasses for MLABs is not yet implemented.");
 
@@ -132,19 +132,19 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 		if (reg->hasResetValue()) {
 			// actually for mlabs, the output register is cleared to zero. If we check for zero reset values, we can relax this.
 
-			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 					<< " because one of its output registers has a reset value.");
 			return false;
 		}
 		if (reg->hasEnable()) {
-			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 					<< " because one of its output registers has an enable.");
 			return false;
 		}
 		if (readClock != reg->getClocks()[0]) {
-			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 					<< " because its output registers have differing clocks.");
 			return false;
@@ -153,7 +153,7 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 
 	if (readClock != nullptr) {
 		if (readClock->getTriggerEvent() != hlim::Clock::TriggerEvent::RISING) {
-			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 					<< " because its read clock is not triggering on rising clock edges.");
 			return false;
@@ -162,7 +162,7 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 
 	if (writeClock != nullptr) {
 		if (writeClock->getTriggerEvent() != hlim::Clock::TriggerEvent::RISING) {
-			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 					<< " because its write clock is not triggering on rising clock edges.");
 			return false;
@@ -170,7 +170,7 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 	}
 
 	if (writeClock != readClock) {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because differing read and write clocks are not yet supported.");
 		return false;

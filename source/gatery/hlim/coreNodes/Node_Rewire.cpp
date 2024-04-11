@@ -483,19 +483,19 @@ void Node_Rewire::optimize()
 	setOp(std::move(op));
 
 	if (zeroWidthSubrangesRemoved)
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "In rewire node " << this << " removed zero subwidth ranges." );
+		dbg::log(dbg::LogMessage(getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "In rewire node " << this << " removed zero subwidth ranges." );
 
 	if (constantsWereMerged)
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "In rewire node " << this << " merged explicit constant inputs into rewire operation." );
+		dbg::log(dbg::LogMessage(getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "In rewire node " << this << " merged explicit constant inputs into rewire operation." );
 
 	if (mergedSubranges)
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "In rewire node " << this << " merged consecutive, compatible ranges." );
+		dbg::log(dbg::LogMessage(getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "In rewire node " << this << " merged consecutive, compatible ranges." );
 
 	if (inputsWereMerged)
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "In rewire node " << this << " merged redundant inputs." );
+		dbg::log(dbg::LogMessage(getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "In rewire node " << this << " merged redundant inputs." );
 
 	if (inputsWereRemoved)
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "In rewire node " << this << " removed unused or redundant inputs." );
+		dbg::log(dbg::LogMessage(getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "In rewire node " << this << " removed unused or redundant inputs." );
 }
 
 bool Node_Rewire::outputIsConstant(size_t port) const

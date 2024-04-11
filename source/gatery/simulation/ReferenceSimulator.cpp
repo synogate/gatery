@@ -318,10 +318,7 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 					}
 			}
 
-			//dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING << "Simulator detected a signal loop: " << loopSubnet);
-			dbg::LogMessage msg{};
-			msg << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING << "Simulator detected a signal loop: " << loopSubnet;
-			dbg::log(msg);
+			dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING << "Simulator detected a signal loop: " << loopSubnet);
 
 			//{
 			//	DotExport exp("loop.dot");

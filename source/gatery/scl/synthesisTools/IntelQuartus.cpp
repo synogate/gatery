@@ -292,11 +292,11 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 				delaySettings << "# " + direction << " pin " << vhdlPinName;
 				if (pinParam.delaySpecifiedElsewhere) {
 					delaySettings << " has its delay defined elsewhere!\n";
-					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_DESIGN << vhdlPinName << " has its delay defined elsewhere!");
+					dbg::log(dbg::LogMessage(portNode->getGroup()) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_DESIGN << vhdlPinName << " has its delay defined elsewhere!");
 				}
 				else {
 					delaySettings << " has no delay setting!\n";
-					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_DESIGN << vhdlPinName << " has no delay setting!");
+					dbg::log(dbg::LogMessage(portNode->getGroup()) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_DESIGN << vhdlPinName << " has no delay setting!");
 				}
 			}
 		}
@@ -509,7 +509,7 @@ set_global_assignment -name NUM_PARALLEL_PROCESSORS ALL
 									d.node->rewireInput(d.port, driver);
 							}
 
-							dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+							dbg::log(dbg::LogMessage{centralEntity} << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
 									<< "Applying workaround for intel quartus entity in out port signal incompatibilities to " << node.get() << " port " << outIdx << " by inserting " << signalNode << " in " << centralEntity);
 						}
 						

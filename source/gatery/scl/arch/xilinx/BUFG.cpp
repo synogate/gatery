@@ -85,7 +85,7 @@ bool BUFGPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 		bufg->setInput(0, input);
 		output.exportOverride(bufg->getOutputBit(0));
 	} else
-		dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+		dbg::log(dbg::LogMessage{nodeGroup} << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
 				<< "Not replacing " << nodeGroup << " with BUFG because the 'globalBufferPlaceholder' signal could not be found or is not a bit!");
 
 

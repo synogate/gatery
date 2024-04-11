@@ -413,7 +413,7 @@ namespace gtry::scl::arch::xilinx
 
 			out.exportOverride((BVec) pipelinedMulDSP48E2((UInt)a, (UInt) b, out.width(), meta->resultOffset));
 		} else
-			dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+			dbg::log(dbg::LogMessage{nodeGroup} << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
 					<< "Not replacing " << nodeGroup << " with DSP48E2 because necessary signals could not be found!");
 
 

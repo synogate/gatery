@@ -56,7 +56,7 @@ std::array<TileLinkUL, 2> arch::xilinx::ultraRam(size_t numWords, UltraRamSettin
 
 	if (*cfg.latency > ram.size() + 2)
 	{
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_DESIGN << "Thre requested URAM latency of " << *cfg.latency << " cannot be fullfilled with " << ram.size() << " memory blocks.");
+		dbg::log(dbg::LogMessage(ent.getNodeGroup()) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_DESIGN << "Thre requested URAM latency of " << *cfg.latency << " cannot be fullfilled with " << ram.size() << " memory blocks.");
 		*cfg.latency = ram.size() + 2;
 	}
 
