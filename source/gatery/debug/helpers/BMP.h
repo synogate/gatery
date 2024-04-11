@@ -20,6 +20,11 @@
 #include <span>
 #include <ostream>
 
+/**
+ * @addtogroup gtry_frontend_logging
+ * @{
+ */
+
 namespace gtry::dbg {
 
 class BMP {
@@ -45,5 +50,6 @@ class BMP {
 
 };
 
-
 }
+
+/**@}*/

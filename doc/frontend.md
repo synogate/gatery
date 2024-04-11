@@ -1,6 +1,7 @@
 @page gtry_frontend_page Frontend
 
 Submodules:
+- @subpage gtry_frontend_logging_page
 - @subpage gtry_frontend_retiming_page
 
 See @ref gtry_frontend

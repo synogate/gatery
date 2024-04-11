@@ -20,6 +20,10 @@
 #include <fstream>
 #include <filesystem>
 
+/**
+ * @addtogroup gtry_frontend_logging
+ * @{
+ */
 
 namespace gtry::dbg::json {
 
@@ -54,5 +58,6 @@ class IncrementalArray {
 		friend class Appender;
 };
 
-
 }
+
+/**@}*/

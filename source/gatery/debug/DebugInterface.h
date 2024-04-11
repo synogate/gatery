@@ -33,8 +33,21 @@ namespace hlim {
 	class Circuit;
 }
 
+/**
+ * @addtogroup gtry_frontend_logging
+ * @{
+ */
+
 namespace dbg {
 
+/**
+ * @brief Helper class for composing logging messages.
+ * @details Similarly to std::ostream, it uses the << operator to concatenate message parts.
+ * However quite crucially, message parts can be nodes, groups, subnets, etc. such that the logging backend 
+ * can properly render these in whatever way is suitable.
+ * 
+ * A common use case is `log(LogMessage() << LogMessage::LOG_ERROR << LogMessage::LOG_POSTPROCESSING << LogMessage::Anchor(currentGroup) << "Something is wrong with node " << brokenNode);`
+ */
 class LogMessage
 {
 	public:
@@ -54,20 +67,37 @@ class LogMessage
 			const hlim::NodeGroup *group;
 		};
 
+		/// Creates an empty log message
 		LogMessage();
+		/// Same as `LogMessage() << Anchor(anchor)`
 		LogMessage(const hlim::NodeGroup *anchor);
+		/// Same as `LogMessage() << c`
 		LogMessage(const char *c);
 
+		/// Sets the severity of the log message
 		LogMessage &operator<<(Severity s) { m_severity = s; return *this; }
+		/// Sets the origin of the log message
 		LogMessage &operator<<(Source s) { m_source = s; return *this; }
+		/// Sets a node group as an anchor or context of this log message, to allow backends to filter messages by node group.
 		LogMessage &operator<<(Anchor a) { m_anchor = a.group; return *this; }
 
+		/// Adds a string message part 
 		LogMessage &operator<<(const char *c) { m_messageParts.push_back(c); return *this; }
+		/// Adds a string message part 
 		LogMessage &operator<<(std::string s) { m_messageParts.push_back(std::move(s)); return *this; }
+		/// Adds a string message part
 		LogMessage &operator<<(std::string_view s) { m_messageParts.push_back(std::string(s)); return *this; }
+		/// @brief Adds a reference to a node to the message.
+		/// @details Note that the node may change or even be deleted between now and when the log message is viewed.
 		LogMessage &operator<<(const hlim::BaseNode *node) { m_messageParts.push_back(node); return *this; }
+		/// @brief Adds a reference to a group to the message.
+		/// @details Note that the group may change or even be deleted between now and when the log message is viewed.
 		LogMessage &operator<<(const hlim::NodeGroup *group) { m_messageParts.push_back(group); return *this; }
+		/// @brief Adds a reference to a node port to the message.
+		/// @details Note that the node may change or even be deleted between now and when the log message is viewed.
 		LogMessage &operator<<(const hlim::NodePort &nodePort) { m_messageParts.push_back(nodePort); return *this; }
+		/// @brief Adds a reference to a subnet to the message, usually to be displayed as a visual graph.
+		/// @details Note that the nodes int the subnet may change or even be deleted between now and when the log message is viewed.
 		LogMessage &operator<<(hlim::Subnet subnet) { m_messageParts.push_back(std::move(subnet)); return *this; }
 
 		template<std::derived_from<hlim::BaseNode> T>
@@ -79,11 +109,14 @@ class LogMessage
 		template<typename T>
 		LogMessage &operator<<(const T &v) { return this->operator<<(std::to_string(v)); }
 */
+		/// Adds an integer number to the message
 		LogMessage &operator<<(std::size_t v) { m_messageParts.push_back(std::to_string(v)); return *this; }
 
 		Severity severity() const { return m_severity; }
 		Source source() const { return m_source; }
 
+		/// @brief Returns the parts of which this message is composed.
+		/// @details Each part is a std::variant that aside from strings can refer entities in the circuit.
 		const auto &parts() const { return m_messageParts; }
 		const hlim::NodeGroup *anchor() const { return m_anchor; }
 	protected:
@@ -101,6 +134,10 @@ enum class State {
 	SIMULATION
 };
 
+/**
+ * @brief Common interface that all logging backends must implement.
+ * @details Also serves as the default implementation that silently ignores all log messages.
+ */
 class DebugInterface 
 {
 	public:
@@ -128,8 +165,9 @@ class DebugInterface
 		State m_state = State::DESIGN;
 };
 
-
+/// Initialize logging to use the browser based web debugger that connects via websockets
 void logWebsocks(unsigned port = 1337);
+/// Initialize logging to write to a html-file based static log
 void logHtml(const std::filesystem::path &outputDir);
 
 
@@ -138,9 +176,13 @@ void pushGraph();
 void stopInDebugger();
 void operate();
 void changeState(State state, hlim::Circuit* circuit);
+
 size_t createAreaVisualization(unsigned width, unsigned height);
 void updateAreaVisualization(size_t id, const std::string content);
+
+/// Log a message to whatever backend has been initialized.
 void log(const LogMessage &msg);
+/// Print a short, human readable description of how the log can be accessed.
 std::string howToReachLog();
 
 
@@ -149,3 +191,5 @@ void vis();
 }
 
 }
+
+/**@}*/

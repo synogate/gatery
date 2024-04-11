@@ -34,6 +34,12 @@ namespace gtry::hlim {
 	class Circuit;
 }
 
+
+/**
+ * @addtogroup gtry_frontend_logging
+ * @{
+ */
+
 namespace gtry::dbg {
 
 class WebSocksInterface : public DebugInterface
@@ -110,3 +116,5 @@ class WebSocksInterface : public DebugInterface
 };
 
 }
+
+/**@}*/

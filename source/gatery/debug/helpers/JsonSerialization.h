@@ -37,6 +37,11 @@ namespace gtry::dbg {
 	class LogMessage;
 }
 
+/**
+ * @addtogroup gtry_frontend_logging
+ * @{
+ */
+
 namespace gtry::dbg::json {
 	void serializeSubnet(std::ostream &json, const hlim::ConstSubnet &subnet);
 
@@ -52,3 +57,5 @@ namespace gtry::dbg::json {
 	void serializeStackTrace(std::ostream &json, const utils::StackTrace &trace, bool resolved);
 
 }
+
+/**@}*/

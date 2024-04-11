@@ -22,6 +22,11 @@ namespace gtry::hlim {
 	class Circuit;
 }
 
+/**
+ * @addtogroup gtry_frontend_logging
+ * @{
+ */
+
 namespace gtry::dbg {
 	class ReportInterface : public DebugInterface
 	{
@@ -51,3 +56,4 @@ namespace gtry::dbg {
 	};
 }
 
+/**@}*/
