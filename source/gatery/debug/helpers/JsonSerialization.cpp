@@ -64,6 +64,7 @@ void serializeLogMessage(std::ostream &json, const LogMessage &msg)
 	json 
 		<< "{ \"severity\": \"" << magic_enum::enum_name(msg.severity()) << "\",\n"
 		<< "\"source\": \"" << magic_enum::enum_name(msg.source()) << "\",\n"
+		<< "\"anchor\": " << (msg.anchor()?msg.anchor()->getId():~0ull) << ",\n"
 		<< "\"message_parts\": [\n";
 	
 	bool firstPart = true;
@@ -79,11 +80,12 @@ void serializeLogMessage(std::ostream &json, const LogMessage &msg)
 			json << "{\"type\": \"node\", \"id\": " << std::get<const hlim::BaseNode*>(part)->getId() << "}\n";
 		else if (std::holds_alternative<const hlim::NodeGroup*>(part))
 			json << "{\"type\": \"group\", \"id\": " << std::get<const hlim::NodeGroup*>(part)->getId() << "}\n";
-		else if (std::holds_alternative<const hlim::Subnet*>(part)) {
+		else if (std::holds_alternative<hlim::Subnet>(part)) {
 			json << "{\"type\": \"subnet\", \"nodes\": ";
-			serializeSubnet(json, std::get<const hlim::Subnet*>(part)->asConst());
+			serializeSubnet(json, std::get<hlim::Subnet>(part).asConst());
 			json << "}\n";
-		}
+		} else if (std::holds_alternative<hlim::NodePort>(part))
+			json << "{\"type\": \"nodeport\", \"node\": " << std::get<hlim::NodePort>(part).node->getId() << ", \"port\": " << std::get<hlim::NodePort>(part).port << "}\n";
 	}
 
 	json << "]}";

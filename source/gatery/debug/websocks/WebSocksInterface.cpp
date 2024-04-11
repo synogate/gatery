@@ -138,6 +138,11 @@ WebSocksInterface::~WebSocksInterface()
 	m_ioc.run();
 }
 
+std::string WebSocksInterface::howToReachLog()
+{
+	return "Open the web debugger in a browser";
+}
+
 void WebSocksInterface::waitAccept()
 {
 	m_acceptor.async_accept([this](beast::error_code ec, tcp::socket socket){

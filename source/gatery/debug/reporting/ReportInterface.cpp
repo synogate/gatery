@@ -81,11 +81,16 @@ namespace gtry::dbg {
 		m_prerenderedSubnets.open(dataFolder / "prerenderedSubnets.js", "prerenderedSubnets"sv);
 	}
 
+	std::string ReportInterface::howToReachLog()
+	{
+		return std::string("In a web browser, open file://") + std::filesystem::absolute(m_outputDir / "index.html").string();
+	}
+
 	void ReportInterface::log(LogMessage msg)
 	{
 		for (const auto &part : msg.parts())
-			if (std::holds_alternative<const hlim::Subnet*>(part))
-				prerenderSubnet(std::get<const hlim::Subnet*>(part)->asConst());
+			if (std::holds_alternative<hlim::Subnet>(part))
+				prerenderSubnet(std::get<hlim::Subnet>(part).asConst());
 	
 		json::serializeLogMessage(m_logMessages.append().newEntity(), msg);
 	}

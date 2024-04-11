@@ -2041,3 +2041,97 @@ BOOST_FIXTURE_TEST_CASE(retiming_forward_without_spawner, BoostUnitTestSimulatio
 
 	runTest(hlim::ClockRational(100, 1) / clock.getClk()->absoluteFrequency());
 }
+
+
+
+BOOST_FIXTURE_TEST_CASE(retiming_forward_missingReg, BoostUnitTestSimulationFixture, *boost::unit_test::disabled())
+{
+	using namespace gtry;
+	using namespace gtry::sim;
+	using namespace gtry::utils;
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+
+	UInt input = pinIn(32_b);
+	UInt output = 32_b;
+	{
+
+		UInt counter = 32_b;
+		counter = reg(counter, 0, {.allowRetimingForward=true});
+		counter = counter + 1;
+
+		output = counter | input;
+
+		output = pipestage(output);
+	}
+
+	auto outPin = pinOut(output);
+
+	BOOST_REQUIRE_THROW(design.postprocess(), gtry::utils::DesignError);
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(retiming_forward_warn_multi_spawners, BoostUnitTestSimulationFixture, *boost::unit_test::disabled())
+{
+	using namespace gtry;
+	using namespace gtry::sim;
+	using namespace gtry::utils;
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	UInt input1 = pinIn(32_b).setName("input1");
+	UInt input2 = pinIn(32_b).setName("input2");
+	UInt a = input1;
+	UInt b = input2;
+
+	Bit enable = pinIn().setName("enable");
+	ENIF (enable) {
+		pipeinputgroup(a);
+		pipeinputgroup(b);
+	}
+
+	UInt output = a + b;
+
+	output = pipestage(output);
+
+	pinOut(output).setName("output");
+
+	design.postprocess();
+}
+
+
+BOOST_FIXTURE_TEST_CASE(retiming_forward_incompatible_enables, BoostUnitTestSimulationFixture, *boost::unit_test::disabled())
+{
+	using namespace gtry;
+	using namespace gtry::sim;
+	using namespace gtry::utils;
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	UInt input1 = pinIn(32_b).setName("input1");
+	UInt input2 = pinIn(32_b).setName("input2");
+	UInt a = input1;
+	UInt b = input2;
+
+	Bit enable1 = pinIn().setName("enable1");
+	Bit enable2 = pinIn().setName("enable2");
+	ENIF (enable1)
+		pipeinputgroup(a);
+
+	ENIF (enable2)
+		pipeinputgroup(b);
+
+	UInt output = a + b;
+
+	// First time can be handled by creating "latches".
+	output = pipestage(pipestage(output));
+
+	pinOut(output).setName("output");
+
+	BOOST_REQUIRE_THROW(design.postprocess(), gtry::utils::DesignError);
+}

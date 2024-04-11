@@ -37,10 +37,10 @@ class Conjunction {
 
 		/// @brief Parse the logic feeding into the given input port.
 		/// @details The logic must not have cycles.
-		void parseInput(const NodePort &nodeInput);
+		void parseInput(const NodePort &nodeInput, Subnet *area = nullptr);
 		/// @brief Parse the logic feedung into the given input port.
 		/// @details The logic must not have cycles.
-		void parseOutput(const NodePort &nodeOutput);
+		void parseOutput(const NodePort &nodeOutput, Subnet *area = nullptr);
 
 		bool isEqualTo(const Conjunction &other) const;
 		bool isNegationOf(const Conjunction &other) const;

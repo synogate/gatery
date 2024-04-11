@@ -122,8 +122,15 @@ void resolveRetimingHints(Circuit &circuit, Subnet &subnet)
 		node->bypassOutputToInput(0, 0);
 	}
 
-	for (auto *regSpawner : spawner)
+	for (auto *regSpawner : spawner) {
 		regSpawner->markResolved();
+
+		dbg::log(dbg::LogMessage{}	
+					<< dbg::LogMessage::LOG_INFO
+					<< dbg::LogMessage::LOG_POSTPROCESSING
+					<< dbg::LogMessage::Anchor{ regSpawner->getGroup() }
+					<< "Registers spawner " << regSpawner << " delayed its signals by " << regSpawner->getNumStagesSpawned() << " cycle(s).");
+	}
 /*
 	for (auto& n : subnet)
 		if (auto* regHint = dynamic_cast<Node_RegHint*>(n)) {

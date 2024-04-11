@@ -32,11 +32,13 @@
 #include <vector>
 
 namespace gtry::hlim {
-	void Conjunction::parseInput(const NodePort &nodeInput) {
-		parseOutput(nodeInput.node->getDriver(nodeInput.port));
+	void Conjunction::parseInput(const NodePort &nodeInput, Subnet *area) {
+		if (area)
+			area->add(nodeInput.node);
+		parseOutput(nodeInput.node->getDriver(nodeInput.port), area);
 	}
 
-	void Conjunction::parseOutput(const NodePort &nodeOutput) {
+	void Conjunction::parseOutput(const NodePort &nodeOutput, Subnet *area) {
 		m_terms.clear();
 		m_undefined = false;
 		m_contradicting = false;
@@ -65,6 +67,9 @@ namespace gtry::hlim {
 		while (!stack.empty()) {
 			auto top = stack.back();
 			stack.pop_back();
+
+			if (area)
+				area->add(top.signal.node);
 
 			auto it = alreadyVisited.find(top.signal);
 			if (it != alreadyVisited.end()) {
@@ -96,7 +101,7 @@ namespace gtry::hlim {
 				if (Node_Logic *logicNode = dynamic_cast<Node_Logic*>(top.signal.node)) {
 					if (logicNode->getOp() == Node_Logic::NOT) {
 						stack.push_back({
-							.signal = logicNode->getNonSignalDriver(0), 
+							.signal = logicNode->getDriver(0), 
 							.negated = !top.negated,
 							.canDescendIntoAnd = top.negated, // if we have ~(a & b) then this is ~a | ~b, thus after a negation we can't descend into ANDs and add them as terms to our conjunction.
 							.lastLogicDriver = logicNode->getDriver(0),
@@ -106,7 +111,7 @@ namespace gtry::hlim {
 					if (top.canDescendIntoAnd && logicNode->getOp() == Node_Logic::AND) {
 						for (auto j : utils::Range(logicNode->getNumInputPorts()))
 							stack.push_back({
-								.signal = logicNode->getNonSignalDriver(j), 
+								.signal = logicNode->getDriver(j), 
 								.negated = top.negated,
 								.lastLogicDriver = logicNode->getDriver(j),
 							});
@@ -115,7 +120,7 @@ namespace gtry::hlim {
 				} else
 				if (dynamic_cast<Node_Signal*>(top.signal.node)) {
 					stack.push_back({
-						.signal = top.signal.node->getNonSignalDriver(0),
+						.signal = top.signal.node->getDriver(0),
 						.negated = top.negated,
 						.lastLogicDriver = top.lastLogicDriver,
 					});

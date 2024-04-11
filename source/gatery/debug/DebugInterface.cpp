@@ -26,6 +26,11 @@ LogMessage::LogMessage()
 {
 }
 
+LogMessage::LogMessage(const hlim::NodeGroup *anchor)
+{
+	(*this) << Anchor{ anchor };
+}
+
 LogMessage::LogMessage(const char *c)
 {
 	(*this) << c;
@@ -91,6 +96,10 @@ void logHtml(const std::filesystem::path &outputDir)
 	ReportInterface::create(outputDir);
 }
 
+std::string howToReachLog()
+{
+	return DebugInterface::instance->howToReachLog();
+}
 
 
 }

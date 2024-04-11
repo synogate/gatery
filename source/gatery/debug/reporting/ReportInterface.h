@@ -33,6 +33,8 @@ namespace gtry::dbg {
 			virtual void log(LogMessage msg) override;
 
 			virtual void changeState(State state, hlim::Circuit* circuit) override;
+
+			virtual std::string howToReachLog() override;
 		protected:
 			std::filesystem::path m_outputDir;
 

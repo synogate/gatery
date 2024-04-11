@@ -21,6 +21,9 @@
 #include <string>
 #include <variant>
 
+#include "../hlim/NodePort.h"
+#include "../hlim/Subnet.h"
+
 namespace gtry {
 
 namespace hlim {
@@ -47,18 +50,25 @@ class LogMessage
 			LOG_TECHNOLOGY_MAPPING
 		};
 
+		struct Anchor {
+			const hlim::NodeGroup *group;
+		};
+
 		LogMessage();
+		LogMessage(const hlim::NodeGroup *anchor);
 		LogMessage(const char *c);
 
 		LogMessage &operator<<(Severity s) { m_severity = s; return *this; }
 		LogMessage &operator<<(Source s) { m_source = s; return *this; }
+		LogMessage &operator<<(Anchor a) { m_anchor = a.group; return *this; }
 
 		LogMessage &operator<<(const char *c) { m_messageParts.push_back(c); return *this; }
 		LogMessage &operator<<(std::string s) { m_messageParts.push_back(std::move(s)); return *this; }
 		LogMessage &operator<<(std::string_view s) { m_messageParts.push_back(std::string(s)); return *this; }
 		LogMessage &operator<<(const hlim::BaseNode *node) { m_messageParts.push_back(node); return *this; }
 		LogMessage &operator<<(const hlim::NodeGroup *group) { m_messageParts.push_back(group); return *this; }
-		LogMessage &operator<<(const hlim::Subnet &subnet) { m_messageParts.push_back(&subnet); return *this; }
+		LogMessage &operator<<(const hlim::NodePort &nodePort) { m_messageParts.push_back(nodePort); return *this; }
+		LogMessage &operator<<(hlim::Subnet subnet) { m_messageParts.push_back(std::move(subnet)); return *this; }
 
 		template<std::derived_from<hlim::BaseNode> T>
 		LogMessage &operator<<(const T &v) { return this->operator<<((const hlim::BaseNode *)v); }
@@ -75,11 +85,13 @@ class LogMessage
 		Source source() const { return m_source; }
 
 		const auto &parts() const { return m_messageParts; }
+		const hlim::NodeGroup *anchor() const { return m_anchor; }
 	protected:
 		Severity m_severity = LOG_INFO;
 		Source m_source = LOG_DESIGN;
+		const hlim::NodeGroup *m_anchor = nullptr;
 
-		std::vector<std::variant<const char*, std::string, const hlim::BaseNode*, const hlim::NodeGroup*, const hlim::Subnet*>> m_messageParts;
+		std::vector<std::variant<const char*, std::string, const hlim::BaseNode*, const hlim::NodeGroup*, hlim::Subnet, hlim::NodePort>> m_messageParts;
 };
 
 enum class State {
@@ -104,6 +116,7 @@ class DebugInterface
 		virtual void log(LogMessage msg) { }
 		virtual void operate() { }
 		virtual void changeState(State state, hlim::Circuit* circuit) { m_state = state; }
+		virtual std::string howToReachLog() { return "Logging disabled! Rerun with a call to e.g. gtry::dbg::logWebsocks or gtry::dbg::logHtml."; }
 
 		virtual void createVisualization(const std::string &id, const std::string &title) { }
 		virtual void updateVisualization(const std::string &id, const std::string &imageData) { }
@@ -128,6 +141,7 @@ void changeState(State state, hlim::Circuit* circuit);
 size_t createAreaVisualization(unsigned width, unsigned height);
 void updateAreaVisualization(size_t id, const std::string content);
 void log(const LogMessage &msg);
+std::string howToReachLog();
 
 
 void vis();

@@ -43,6 +43,8 @@ class WebSocksInterface : public DebugInterface
 
 		static void create(unsigned port = 1337);
 
+		virtual std::string howToReachLog() override;
+
 		virtual void awaitDebugger() override;
 		virtual void pushGraph() override;
 		virtual void stopInDebugger() override;

@@ -289,7 +289,7 @@ void Circuit::disconnectZeroBitOutputPins()
 			continue;
 
 		if (pin->isOutputPin() && pin->getConnectionType().width == 0) {
-			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing output pin " << pin << " because it's output is of width zero");
+			dbg::log(dbg::LogMessage(pin->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing output pin " << pin << " because it's output is of width zero");
 			pin->disconnect();
 		}
 	}
@@ -325,7 +325,7 @@ void Circuit::insertConstUndefinedNodes()
 		if (signal->getDriver(0).node == nullptr) {
 			auto *constant = buildConstUndefFor(signal);
 			signal->rewireInput(0, {.node = constant, .port = 0ull});
-			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Prepended undriven signal node " << signal << " with const undefined node " << constant);
+			dbg::log(dbg::LogMessage(signal->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Prepended undriven signal node " << signal << " with const undefined node " << constant);
 		} else {
 			RevisitCheck alreadyVisited(*this);
 
@@ -336,7 +336,7 @@ void Circuit::insertConstUndefinedNodes()
 					auto *constant = buildConstUndefFor(signal);
 					signal->rewireInput(0, {.node = constant, .port = 0ull});
 
-					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Splitting signal loop on node " << signal << " with const undefined node " << constant);
+					dbg::log(dbg::LogMessage(signal->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Splitting signal loop on node " << signal << " with const undefined node " << constant);
 					break;
 				}
 				alreadyVisited.insert(driver.node);
@@ -389,7 +389,7 @@ void Circuit::cullUnnamedSignalNodes()
 					signal->bypassOutputToInput(0, 0);
 				signal->disconnectInput();
 
-				dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Culling unnamed signal node " << signal);
+				dbg::log(dbg::LogMessage(signal->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Culling unnamed signal node " << signal);
 
 				if (i+1 != m_nodes.size())
 					m_nodes[i] = std::move(m_nodes.back());
@@ -428,7 +428,7 @@ void Circuit::cullSequentiallyDuplicatedSignalNodes()
 				
 				signal->bypassOutputToInput(0, 0);
 				signal->disconnectInput();
-				dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Culling sequentially duplicated signal node " << signal);
+				dbg::log(dbg::LogMessage(signal->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Culling sequentially duplicated signal node " << signal);
 
 				if (i+1 != m_nodes.size())
 					m_nodes[i] = std::move(m_nodes.back());
@@ -563,10 +563,10 @@ void Circuit::mergeMuxes(Subnet &subnet)
 
 						if (conditionsMatch) {
 							if (prevMuxNode->getNonSignalDriver(prevConditionNegated?2:1) == muxNode->getNonSignalDriver(muxInput?2:1))
-								dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_POSTPROCESSING << "Not merging muxes " << prevMuxNode << " and " << muxNode << " because the former is driving itself.");
+								dbg::log(dbg::LogMessage(muxNode->getGroup()) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_POSTPROCESSING << "Not merging muxes " << prevMuxNode << " and " << muxNode << " because the former is driving itself.");
 							else {
 								//std::cout << "Conditions match!" << std::endl;
-								dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Merging muxes " << prevMuxNode << " and " << muxNode << " because they form an if then else pair");
+								dbg::log(dbg::LogMessage(muxNode->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Merging muxes " << prevMuxNode << " and " << muxNode << " because they form an if then else pair");
 
 								auto bypass = prevMuxNode->getDriver(prevConditionNegated?2:1);
 
@@ -678,9 +678,9 @@ void Circuit::mergeRewires(Subnet &subnet)
 								auto prevInputOffset = prevRewireNode->getOp().ranges[0].inputOffset;
 
 								if (prevRewireNode->getNonSignalDriver(prevInputIdx) == rewireNode->getNonSignalDriver(inputIdx))
-									dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_POSTPROCESSING << "Not merging rewires " << prevRewireNode << " and " << prevRewireNode << " because the former is driving itself.");
+									dbg::log(dbg::LogMessage(rewireNode->getGroup()) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_POSTPROCESSING << "Not merging rewires " << prevRewireNode << " and " << rewireNode << " because the former is driving itself.");
 								else {
-									dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Merging rewires " << prevRewireNode << " and " << prevRewireNode << " by directly fetching from input " << prevInputIdx << " at bit offset " << prevInputOffset);
+									dbg::log(dbg::LogMessage(rewireNode->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Merging rewires " << prevRewireNode << " and " << rewireNode << " by directly fetching from input " << prevInputIdx << " at bit offset " << prevInputOffset);
 
 									auto op = rewireNode->getOp();
 									for (auto &r : op.ranges) {
@@ -763,9 +763,9 @@ void Circuit::removeIrrelevantMuxes(Subnet &subnet)
 
 						if (allSubnetOutputsMuxed) {
 							if (muxNode->getNonSignalDriver(muxInputPort) == muxOutput.node->getNonSignalDriver(muxOutput.port))
-								dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_POSTPROCESSING << "Not removing mux " << muxNode << " because it is driving itself");
+								dbg::log(dbg::LogMessage(muxNode->getGroup()) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_POSTPROCESSING << "Not removing mux " << muxNode << " because it is driving itself");
 							else {
-								dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing mux " << muxNode << " because only input " << muxInputPort << " is relevant further on");
+								dbg::log(dbg::LogMessage(muxNode->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing mux " << muxNode << " because only input " << muxInputPort << " is relevant further on");
 								//std::cout << "Rewiring past mux" << std::endl;
 								muxOutput.node->connectInput(muxOutput.port, muxNode->getDriver(muxInputPort));
 								done = false;
@@ -909,7 +909,7 @@ void Circuit::mergeBinaryMuxChain(Subnet& subnet)
 				for (auto np : allToRewire)
 					np.node->rewireInput(np.port, {.node = newMux, .port = 0ull} );
 
-				dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING 
+				dbg::log(dbg::LogMessage(newMux->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING 
 						<< "Replacing chain of mux nodes starting at node " << chain.front().first 
 						<< " and ending at " << chain.back().first 
 						<< " with one big switching mux." << newMux);
@@ -943,7 +943,7 @@ void Circuit::removeIrrelevantComparisons(Subnet &subnet)
 			for (auto i : utils::Range(2)) {
 				if (constInputs[i] == nullptr) continue;
 				if (constInputs[i]->getValue().get(sim::DefaultConfig::DEFINED, 0) == false) {
-					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Compare node " << compNode 
+					dbg::log(dbg::LogMessage(compNode->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Compare node " << compNode 
 									<< " is comparing to an undefined signal coming from " << constInputs[i] << ". Hardwireing output to undefined source " << compNode->getDriver(i).node);
 					// replace with undefined
 					compNode->bypassOutputToInput(0, i);
@@ -954,7 +954,7 @@ void Circuit::removeIrrelevantComparisons(Subnet &subnet)
 					// replace with inverter
 					auto *notNode = createNode<Node_Logic>(Node_Logic::NOT);
 
-					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Compare node " << compNode 
+					dbg::log(dbg::LogMessage(compNode->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Compare node " << compNode 
 									<< " is comparing to a constant and actually an inverter. Replacing with logic node for inversion " << notNode);
 
 					notNode->moveToGroup(compNode->getGroup());
@@ -969,7 +969,7 @@ void Circuit::removeIrrelevantComparisons(Subnet &subnet)
 
 					break;
 				} else {
-					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Compare node " << compNode 
+					dbg::log(dbg::LogMessage(compNode->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Compare node " << compNode 
 							<< " is comparing to a constant and actually an identity function. Removing by directly attaching outputs to " << compNode->getDriver(i^1).node);
 					// bypass
 					compNode->bypassOutputToInput(0, i^1);
@@ -995,7 +995,7 @@ void Circuit::cullMuxConditionNegations(Subnet &subnet)
 				if (Node_Logic *logicNode = dynamic_cast<Node_Logic*>(condition.node)) {
 					if (logicNode->getOp() == Node_Logic::NOT) {
 						if (logicNode->getNonSignalDriver(0).node == logicNode)
-							dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_POSTPROCESSING << "Not removing/bypassing negation " << logicNode << " because it is driving itself");
+							dbg::log(dbg::LogMessage(muxNode->getGroup()) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_POSTPROCESSING << "Not removing/bypassing negation " << logicNode << " because it is driving itself");
 						else {
 							muxNode->connectSelector(logicNode->getDriver(0));
 
@@ -1005,7 +1005,7 @@ void Circuit::cullMuxConditionNegations(Subnet &subnet)
 							muxNode->connectInput(0, input1);
 							muxNode->connectInput(1, input0);
 
-							dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing/bypassing negation " << logicNode << " to mux " << muxNode << " selector by swapping mux inputs.");
+							dbg::log(dbg::LogMessage(muxNode->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing/bypassing negation " << logicNode << " to mux " << muxNode << " selector by swapping mux inputs.");
 
 							done = false; // check same mux again to unravel chain of NOTs
 						}
@@ -1027,7 +1027,7 @@ void Circuit::removeNoOps(Subnet &subnet)
 		bool removeNode = false;
 
 		if (m_nodes[i]->bypassIfNoOp()) {
-			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing " << m_nodes[i].get() << " because it is a no-op.");
+			dbg::log(dbg::LogMessage(m_nodes[i].get()->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing " << m_nodes[i].get() << " because it is a no-op.");
 			removeNode = true;
 		}
 
@@ -1069,11 +1069,11 @@ void Circuit::foldRegisterMuxEnableLoops(Subnet &subnet)
 
 							regNode->connectInput(Node_Register::Input::ENABLE, {.node=andNode, .port=0ull});
 
-							dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Replacing mux loop through " << muxNode << " on register " << regNode << " by and-ing the condition to register enable through " << andNode);
+							dbg::log(dbg::LogMessage(regNode->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Replacing mux loop through " << muxNode << " on register " << regNode << " by and-ing the condition to register enable through " << andNode);
 						} else {
 							regNode->connectInput(Node_Register::Input::ENABLE, muxCondition);
 
-							dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Replacing mux loop through " << muxNode << " on register " << regNode << " by binding the condition to register enable");
+							dbg::log(dbg::LogMessage(regNode->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Replacing mux loop through " << muxNode << " on register " << regNode << " by binding the condition to register enable");
 						}
 						regNode->connectInput(Node_Register::Input::DATA, muxNode->getDriver(2));
 					} else if (muxInput2.node == regNode) {
@@ -1093,11 +1093,11 @@ void Circuit::foldRegisterMuxEnableLoops(Subnet &subnet)
 
 							regNode->connectInput(Node_Register::Input::ENABLE, {.node=andNode, .port=0ull});
 
-							dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Replacing mux loop through " << muxNode << " on register " << regNode << " by and-ing the condition to register enable through " << andNode);
+							dbg::log(dbg::LogMessage(regNode->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Replacing mux loop through " << muxNode << " on register " << regNode << " by and-ing the condition to register enable through " << andNode);
 						} else {
 							regNode->connectInput(Node_Register::Input::ENABLE, {.node=notNode, .port=0ull});
 
-							dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Replacing mux loop through " << muxNode << " on register " << regNode << " by binding the condition to register enable");
+							dbg::log(dbg::LogMessage(regNode->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Replacing mux loop through " << muxNode << " on register " << regNode << " by binding the condition to register enable");
 						}
 						regNode->connectInput(Node_Register::Input::DATA, muxNode->getDriver(1));
 					}
@@ -1118,7 +1118,7 @@ void Circuit::removeConstSelectMuxes(Subnet &subnet)
 			if (auto *constNode = dynamic_cast<Node_Constant*>(sel.node)) {
 				if (constNode->getValue().size() == 0)
 				{
-					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing mux " << muxNode << " because its selector is constant, empty, and defaults to zero.");
+					dbg::log(dbg::LogMessage(muxNode->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing mux " << muxNode << " because its selector is constant, empty, and defaults to zero.");
 					muxNode->bypassOutputToInput(0, 1);
 				}
 				else
@@ -1127,7 +1127,7 @@ void Circuit::removeConstSelectMuxes(Subnet &subnet)
 					std::uint64_t selDefined = constNode->getValue().extractNonStraddling(sim::DefaultConfig::DEFINED, 0, constNode->getValue().size());
 					std::uint64_t selValue = constNode->getValue().extractNonStraddling(sim::DefaultConfig::VALUE, 0, constNode->getValue().size());
 					if ((selDefined ^ (~0ull >> (64 - constNode->getValue().size()))) == 0) {
-						dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing mux " << muxNode << " because its selector is constant and defined.");
+						dbg::log(dbg::LogMessage(muxNode->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing mux " << muxNode << " because its selector is constant and defined.");
 						muxNode->bypassOutputToInput(0, 1+selValue);
 					}
 				}
@@ -1313,7 +1313,7 @@ void Circuit::propagateConstants(Subnet &subnet)
 					subnet.add(constant);
 					NodePort newConstOutputPort{.node = constant, .port = 0};
 
-					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Replacing " << successor.node << " port " << port << " with folded constant " << constant);
+					dbg::log(dbg::LogMessage(successor.node->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Replacing " << successor.node << " port " << port << " with folded constant " << constant);
 
 					while (!successor.node->getDirectlyDriven(port).empty()) {
 						NodePort input = successor.node->getDirectlyDriven(port).back();
@@ -1524,7 +1524,7 @@ void Circuit::ensureNoLiteralComparison()
 			sigNode->setName("compare_op_left");
 			node->rewireInput(0, {.node = sigNode, .port = 0ull});
 
-			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING 
+			dbg::log(dbg::LogMessage(node->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING 
 					<< "Inserting named signal " << sigNode << " for compare node " << node << " to prevent literal on literal comparison"
 			);
 
@@ -1547,7 +1547,7 @@ void Circuit::removeDisabledWritePorts(Subnet &subnet)
 					auto enableState = constNode->getValue();
 					HCL_ASSERT(enableState.size() == 1);
 					if (enableState.get(sim::DefaultConfig::DEFINED, 0) && !enableState.get(sim::DefaultConfig::VALUE, 0)) {
-						dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing " << m_nodes[i].get() << " because it is a write port with a constant zero write enable.");
+						dbg::log(dbg::LogMessage(m_nodes[i].get()->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Removing " << m_nodes[i].get() << " because it is a write port with a constant zero write enable.");
 
 						memPort->disconnectMemory();
 						removeNode = true;
@@ -1604,7 +1604,7 @@ void Circuit::postprocess(const PostProcessor &postProcessor)
 	postProcessor.run(*this);
 
 	detectUnguardedCDCCrossings(*this, ConstSubnet::all(*this), [this](const BaseNode *affectedNode) {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING 
+		dbg::log(dbg::LogMessage(affectedNode->getGroup()) << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING 
 				<< "Unintentional clock domain crossing detected at node " << affectedNode
 		);
 
