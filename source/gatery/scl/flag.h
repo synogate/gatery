@@ -50,6 +50,16 @@ namespace gtry::scl
 		return ret;
 	}
 
+	inline Bit flagInstantReset(const Bit& set, const Bit& reset, char resetValue)
+	{
+		char newResetValue = 'x';
+		if (resetValue == '1')
+			newResetValue = '0';
+		if(resetValue == '0')
+			newResetValue = '1';
+		return !flagInstantSet(reset, set, newResetValue);
+	}
+
 	template<Signal T>
 	T capture(const T& in, Bit condition)
 	{
