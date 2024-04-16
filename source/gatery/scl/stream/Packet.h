@@ -1068,7 +1068,7 @@ namespace gtry::scl::strm
 		static_assert(std::remove_cvref_t<decltype(in)>::template has<scl::EmptyBits>(), "this implementation requires empty bits field");
 		UInt packetBitCount = countPacketSize(in, maxPacketSizeInBits);
 		IF(transfer(in) & eop(in))
-			sim_assert(packetBitCount >= zext(bitCutoff));
+			sim_assert(packetBitCount >= zext(bitCutoff)) << "input packet too small with respect to bit cutoff";
 		UInt bitsLeft = BitWidth::last(maxPacketSizeInBits);
 		bitsLeft = reg(bitsLeft, maxPacketSizeInBits);
 
