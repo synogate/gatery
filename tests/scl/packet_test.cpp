@@ -1064,3 +1064,123 @@ BOOST_FIXTURE_TEST_CASE(streamAppend_chaos, AppendTestSimulationFixture)
 }
 
 
+struct dropTailSimulationFixture : public BoostUnitTestSimulationFixture 
+{
+	BitWidth streamW = 8_b;
+	size_t keep = 12;
+	size_t maxPacketSize = 64;
+	size_t numPackets = 1000;
+
+	std::mt19937_64 rng;
+
+	std::function<void(sim::DefaultBitVectorState&)> makePacket = [&](sim::DefaultBitVectorState& packet) {
+		std::uniform_int_distribution<size_t> distrib(keep, maxPacketSize);
+		packet.resize(distrib(rng));
+		for (size_t i = 0; i < packet.getNumBlocks(); i++){
+			packet.data(sim::DefaultConfig::VALUE)[i] = rng();
+			packet.data(sim::DefaultConfig::DEFINED)[i] = BitWidth(64).mask();
+		}
+	};
+
+	void runTest() {
+		rng.seed(1234);
+		Clock clk({ .absoluteFrequency = 100'000'000 });
+		ClockScope clkScp(clk);
+
+		scl::RvPacketStream<UInt, scl::EmptyBits> in(streamW);
+		emptyBits(in) = BitWidth::count(in->width().bits());
+		pinIn(in, "in");
+
+		auto out = scl::strm::streamDropTail(move(in), keep, maxPacketSize);
+
+		pinOut(out, "out");
+
+		addSimulationProcess([&, this]()->SimProcess {
+			return scl::strm::readyDriverRNG(out, clk, 50);
+			}); 
+
+		std::vector<sim::DefaultBitVectorState> sentPackets(numPackets);
+
+		for (auto& packet: sentPackets)
+			makePacket(packet);
+
+
+		addSimulationProcess([&, this]()->SimProcess {
+			for (auto& packet : sentPackets)
+				co_await scl::strm::sendPacket(in, scl::strm::SimPacket(packet), clk);
+			co_await OnClk(clk);
+			});
+
+		addSimulationProcess([&, this]()->SimProcess {
+			for (auto& packet : sentPackets) {
+				auto receivedPacket = co_await scl::strm::receivePacket(out, clk);
+				if (keep <= packet.size())
+					BOOST_TEST(receivedPacket.payload == packet.extract(0, keep));
+				else
+					BOOST_TEST(receivedPacket.payload == packet);
+			}
+			stopTest();
+			});	
+
+
+		design.postprocess();
+		BOOST_TEST(!runHitsTimeout({ 100, 1'000'000 }));
+	}
+};
+
+
+BOOST_FIXTURE_TEST_CASE(stream_drop_tail_static, dropTailSimulationFixture)
+{
+	streamW = 8_b;
+	keep = 12;
+	maxPacketSize = 64;
+	numPackets = 100;
+	runTest();
+} 
+
+BOOST_FIXTURE_TEST_CASE(stream_drop_tail_static_one_beat, dropTailSimulationFixture)
+{
+	streamW = 8_b;
+	keep = 4;
+	maxPacketSize = 64;
+	numPackets = 100;
+	runTest();
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_drop_tail_static_edge_case, dropTailSimulationFixture)
+{
+	streamW = 8_b;
+	keep = 16;
+	maxPacketSize = 64;
+	numPackets = 100;
+	runTest();
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_drop_tail_static_keep_max, dropTailSimulationFixture)
+{
+	streamW = 8_b;
+	keep = 64;
+	maxPacketSize = 64;
+	numPackets = 100;
+	runTest();
+}
+
+//should fail
+BOOST_FIXTURE_TEST_CASE(stream_drop_tail_static_small_packet, dropTailSimulationFixture, *boost::unit_test::disabled())
+{
+	streamW = 8_b;
+	keep = 12;
+	maxPacketSize = 64;
+	numPackets = 100;
+
+	makePacket = [&](sim::DefaultBitVectorState& packet) {
+		packet.resize(keep/2);
+		for (size_t i = 0; i < packet.getNumBlocks(); i++){
+			packet.data(sim::DefaultConfig::VALUE)[i] = rng();
+			packet.data(sim::DefaultConfig::DEFINED)[i] = BitWidth(64).mask();
+		}
+	};
+	runTest();
+}
+
+
