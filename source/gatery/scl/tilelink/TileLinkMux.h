@@ -41,6 +41,8 @@ namespace gtry::scl
 		Area m_area = Area{ "scl_TileLinkMux", true };
 		bool m_generated = false;
 		std::list<TLink> m_source;
+		
+		std::shared_ptr<AddressSpaceDescription> m_addrSpaceDescription = std::make_shared<AddressSpaceDescription>();
 	};
 }
 
@@ -68,6 +70,7 @@ namespace gtry::scl
 		TLink& link = m_source.emplace_back();
 		link = constructFrom(source);
 		link <<= source;
+		connectAddrDesc(source.addrSpaceDesc, m_addrSpaceDescription);
 
 		return *this;
 	}
@@ -87,6 +90,7 @@ namespace gtry::scl
 		generateChanA(sink.a);
 		generateChanD(*sink.d);
 
+		connectAddrDesc(m_addrSpaceDescription, sink.addrSpaceDesc);
 		HCL_NAMED(sink);
 		return sink;
 	}

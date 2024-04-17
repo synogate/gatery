@@ -140,6 +140,7 @@ namespace gtry
 			MemoryCapabilities::Choice getTargetRequirements() const;
 
 			void setName(std::string name);
+			const std::string &name() const;
 			void noConflicts();
 			/// Whether ports of the memory can be retimed arbitrarily wrt. each other without any hazard logic. This is a very dangerous option.
 			void allowArbitraryPortRetiming();

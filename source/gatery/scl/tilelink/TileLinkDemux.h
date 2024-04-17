@@ -49,6 +49,7 @@ namespace gtry::scl
 		bool m_generated = false;
 		TLink m_source;
 		std::list<Sink> m_sink;
+		std::shared_ptr<AddressSpaceDescription> m_addrSpaceDescription = std::make_shared<AddressSpaceDescription>();
 	};
 }
 
@@ -61,6 +62,10 @@ namespace gtry::scl
 		m_source = constructFrom(source);
 		m_source <<= source;
 		m_sourceAttached = true;
+
+		m_addrSpaceDescription->name = "TileLinkDemux";
+		connectAddrDesc(source.addrSpaceDesc, m_addrSpaceDescription);
+		connectAddrDesc(m_source.addrSpaceDesc, m_addrSpaceDescription);
 	}
 
 	template<TileLinkSignal TLink>
@@ -79,6 +84,8 @@ namespace gtry::scl
 		sink <<= s.bus;
 		s.address = addressBase;
 		s.addressBits = sink.a->address.width().bits();
+
+		m_addrSpaceDescription->children.emplace_back(addressBase * 8, sink.addrSpaceDesc);
 	}
 
 	template<TileLinkSignal TLink>

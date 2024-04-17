@@ -81,6 +81,11 @@ namespace gtry {
 	{
 		m_memoryNode->setName(std::move(name));
 	}
+	
+	const std::string &BaseMemory::name() const
+	{
+		return m_memoryNode->getName();
+	}
 
 	void BaseMemory::noConflicts()
 	{

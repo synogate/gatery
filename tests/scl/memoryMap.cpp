@@ -84,7 +84,7 @@ BOOST_FIXTURE_TEST_CASE(MemoryMapStruct, BoostUnitTestSimulationFixture)
 	BOOST_TEST(tree.name == "myMemoryMap");
 	BOOST_TEST(tree.subScopes.front().name == "myStruct");
 	BOOST_TEST(tree.subScopes.front().registeredSignals.front().name == "field1");
-	BOOST_TEST(tree.subScopes.front().physicalRegisters.front().description.name == "field1");
+	BOOST_TEST(tree.subScopes.front().physicalRegisters.front().description->name == "field1");
 }
 
 BOOST_FIXTURE_TEST_CASE(MemoryMapStream, BoostUnitTestSimulationFixture)
@@ -109,7 +109,7 @@ BOOST_FIXTURE_TEST_CASE(MemoryMapStream, BoostUnitTestSimulationFixture)
 	BOOST_TEST(tree.name == "myMemoryMap");
 	BOOST_TEST(tree.subScopes.front().name == "myStream");
 	BOOST_TEST(tree.subScopes.front().registeredSignals.front().name == "payload");
-	BOOST_TEST(tree.subScopes.front().physicalRegisters.front().description.name == "payload_bits_0_to_8");
+	BOOST_TEST(tree.subScopes.front().physicalRegisters.front().description->name == "payload_bits_0_to_7");
 }
 
 
@@ -161,6 +161,8 @@ BOOST_FIXTURE_TEST_CASE(MemoryMapStructTileLink, BoostUnitTestSimulationFixture)
 	}
 	
 
+	//scl::format(std::cout, *cpuInterface.addrSpaceDesc);
+
 	scl::TileLinkMasterModel linkModel;
 	linkModel.init("cpuBus", 
 		cpuInterface.a->address.width(), 
@@ -201,6 +203,79 @@ BOOST_FIXTURE_TEST_CASE(MemoryMapStructTileLink, BoostUnitTestSimulationFixture)
 
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
+
+
+BOOST_FIXTURE_TEST_CASE(MemoryMapStructTileLinkTileLinkDemux, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+	using namespace gtry::scl;
+	using namespace gtry::scl::strm;
+
+
+	Clock clock({
+			.absoluteFrequency = {{125'000'000,1}},
+			.initializeRegs = false,
+	});
+	HCL_NAMED(clock);
+	ClockScope scp(clock);
+
+	MyStruct myStruct1{ Bit{}, 4_b, 20_b };
+	pinOut(myStruct1, "myStruct1");
+	MyStruct myStruct2{ Bit{}, 4_b, 20_b };
+	pinOut(myStruct2, "myStruct2");
+
+	TileLinkUL cpuInterface;
+	{
+		TileLinkUL cpuInterface1;
+		TileLinkUL cpuInterface2;
+		{
+
+			PackedMemoryMap memoryMap("myMemoryMap1");
+			mapIn(memoryMap, myStruct1, "myStruct1");
+			mapOut(memoryMap, myStruct1, "myStruct1");
+
+			
+			auto tileLink = toTileLinkUL(memoryMap, 8_b);
+			cpuInterface1 = constructFrom(*tileLink);
+			*tileLink <<= cpuInterface1;
+		}
+
+		{
+
+			PackedMemoryMap memoryMap("myMemoryMap2");
+			mapIn(memoryMap, myStruct1, "myStruct1");
+			mapOut(memoryMap, myStruct1, "myStruct1");
+
+			
+			auto tileLink = toTileLinkUL(memoryMap, 8_b);
+			cpuInterface2 = constructFrom(*tileLink);
+			*tileLink <<= cpuInterface2;
+		}
+
+		scl::TileLinkDemux<TileLinkUL> demux;
+
+		cpuInterface = scl::tileLinkInit<scl::TileLinkUL>(16_b, 8_b, 0_b);
+		demux.attachSource(cpuInterface);
+
+		demux.attachSink(cpuInterface1, 0x1000);
+		demux.attachSink(cpuInterface2, 0x2000);
+
+		demux.generate();
+	}
+
+	//scl::format(std::cout, *cpuInterface.addrSpaceDesc);
+
+	auto *desc = cpuInterface.addrSpaceDesc->getNonForwardingElement();
+
+	BOOST_TEST(desc->name == "TileLinkDemux");
+	BOOST_REQUIRE(desc->children.size() == 2);
+	BOOST_TEST(desc->children[0].offsetInBits == 0x1000*8);
+	BOOST_TEST(desc->children[0].desc->getNonForwardingElement()->name == "myMemoryMap1");
+	BOOST_TEST(desc->children[1].offsetInBits == 0x2000*8);
+	BOOST_TEST(desc->children[1].desc->getNonForwardingElement()->name == "myMemoryMap2");
+}
+
+
 
 
 BOOST_FIXTURE_TEST_CASE(MemoryMapStreamOutTileLink, BoostUnitTestSimulationFixture)

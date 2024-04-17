@@ -69,6 +69,8 @@ namespace gtry::scl
 			masterD->error = slaveD->error;
 		}
 
+		master.addrSpaceDesc = slave.addrSpaceDesc;
+		HCL_NAMED(master);		
 		return master;
 	}
 
@@ -150,6 +152,8 @@ namespace gtry::scl
 			ready(*slave.d) = ready(*master.d) | (!secondBeatOfBurst & sd.isBurst());
 			valid(*master.d) = valid(*slave.d) & (secondBeatOfBurst | !sd.isBurst());
 		}
+
+		master.addrSpaceDesc = slave.addrSpaceDesc;
 		HCL_NAMED(master);
 		return master;
 	}
@@ -310,6 +314,7 @@ namespace gtry::scl
 		auto&& metaBlueprint = internal::addBurstRequest(slave.a, aReg);
 		internal::addBurstResponse(*slave.d, *master.d, metaBlueprint);
 
+		master.addrSpaceDesc = slave.addrSpaceDesc;
 		HCL_NAMED(master);
 		HCL_NAMED(slave);
 		return master;

@@ -199,7 +199,7 @@ struct dma_pcieHost_to_axi_slave_with_driver : public BoostUnitTestSimulationFix
 		scl::PackedMemoryMap memoryMap("memoryMap");
 		scl::mapIn(memoryMap, dmaControl, "dma_ctrl");
 
-		auto [memoryMapEntries, driverInterface] = host.addMemoryMap(memoryMap);
+		auto [memoryMapEntries, addressSpaceDesc, driverInterface] = host.addMemoryMap(memoryMap);
 
 		//std::cout << memoryMap.getTree().physicalDescription << std::endl;
 

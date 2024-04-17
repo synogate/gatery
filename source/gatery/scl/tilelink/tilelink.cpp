@@ -199,6 +199,11 @@ namespace gtry::scl
 
 		ready(link.a) = ready(d);
 		*link.d <<= strm::regReady(move(d));
+
+		AddressSpaceDescriptionHandle desc = std::make_shared<AddressSpaceDescription>();
+		desc->size = link.a->address.width() * 8_b;
+		desc->name = mem.name();
+		connectAddrDesc(link.addrSpaceDesc, desc);
 	}
 }
 

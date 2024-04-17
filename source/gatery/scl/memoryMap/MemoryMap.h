@@ -18,6 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 #include <gatery/utils/StableContainers.h>
+#include "AddressSpaceDescription.h"
 
 #include <boost/flyweight.hpp>
 
@@ -31,46 +32,6 @@ namespace gtry::scl
  * @addtogroup gtry_scl_memorymaps
  * @{
  */
-
-
-	// Todo: Make this a tileLink thing
-	struct AddressSpaceDescription {
-		enum Flags
-		{
-			F_READ = 1,
-			F_WRITE = 2,
-		};
-
-		/// Start of this field in the address space (in bits!)
-		std::uint64_t offsetInBits = 0;
-		/// Size of this field in the address space (in bits)
-		BitWidth size;
-		/// Whether anything in this field (or the sub fields) can be read or written
-		//size_t flags = F_READ | F_WRITE;
-		/// Name of this address region
-		boost::flyweight<std::string> name;
-		/// Short description of what this address space contains
-		boost::flyweight<std::string> descShort;
-		/// Long description of what this address space contains
-		boost::flyweight<std::string> descLong;
-		/// Optional descriptions of sub-ranges in this address range
-		std::vector<boost::flyweight<AddressSpaceDescription>> children;
-
-		auto operator<=>(const AddressSpaceDescription&) const = default;
-	};
-
-    std::size_t hash_value(AddressSpaceDescription const& d);
-
-	void format(std::ostream &stream, const AddressSpaceDescription &desc, size_t indent = 0);
-	inline std::ostream &operator<<(std::ostream &stream, const AddressSpaceDescription &desc) { format(stream, desc); return stream; }
-
-	namespace driver {
-		struct MemoryMapEntry;
-	}
-	using FlatAddressSpaceDescription = std::vector<driver::MemoryMapEntry>;
-	FlatAddressSpaceDescription exportAddressSpaceDescription(const AddressSpaceDescription &desc);
-	void format(std::ostream &stream, std::string_view name, std::span<const driver::MemoryMapEntry> memoryMap);
-	void writeGTKWaveFilterFile(std::ostream &stream, std::span<const driver::MemoryMapEntry> memoryMap);
 
 	/**
 	 * @brief Interface and no-op fallback implementation for the automatic generation of memory mapped control registers.
