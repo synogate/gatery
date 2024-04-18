@@ -92,6 +92,21 @@ namespace gtry::scl::strm
 	*/
 	template<StreamSignal StreamT>
 	StreamT streamAppend(StreamT&& head, StreamT&& tail);
+
+	/**
+	 * @brief helper to count bits in a packet stream
+	 * @return running count of bits in current packet, combinational with transfer
+	*/
+	template<scl::StreamSignal StreamT>
+	UInt countPacketSize(const StreamT& in, BitWidth maxPacketW);
+
+	/**
+	 * @brief drops tail of a packet stream with bit granularity. Can be used to keep only the header of a packet stream
+	 * /!\ sim asserts if input packet is too small.
+	 * @param bitCutoff Size at which to cut off the packet (size of the resulting packet). Must be stable during sop.
+	*/
+	template<scl::StreamSignal StreamT>
+	StreamT streamDropTail(StreamT&& in, const UInt& bitCutoff, BitWidth maxPacketW);
 }
 
 namespace gtry::scl::strm
@@ -1024,6 +1039,63 @@ namespace gtry::scl::strm
 		HCL_NAMED(ret);
 		return ret;
 	}
+
+	template<scl::StreamSignal StreamT>
+	UInt countPacketSize(const StreamT& in, BitWidth maxPacketW) {
+		Area area{ "scl_count_packet_size", true };
+		UInt bits = BitWidth::last(maxPacketW.bits());
+
+		IF(transfer(in) & eop(in))
+			bits = 0;
+
+		bits = reg(bits, 0);
+
+		UInt fullBits = in->width().bits() - zext(emptyBits(in)); HCL_NAMED(fullBits);
+		IF(transfer(in)) {
+			IF(eop(in))
+				bits += zext(fullBits);
+			ELSE
+				bits += zext(in->width().bits());
+		}
+
+		HCL_NAMED(bits);
+		return bits;
+	}
+
+
+	template<scl::StreamSignal StreamT>
+	StreamT streamDropTail(StreamT&& in, const UInt& bitCutoff, BitWidth maxPacketW) {
+		Area area{ "scl_stream_drop_tail", true };
+		static_assert(std::remove_cvref_t<decltype(in)>::template has<scl::EmptyBits>(), "this implementation requires empty bits field");
+
+		UInt localCutoff = capture(bitCutoff, valid(in) & sop(in));
+
+		UInt packetBitCount = countPacketSize(in, maxPacketW);
+		IF(transfer(in) & eop(in))
+			sim_assert(packetBitCount >= zext(localCutoff)) << "input packet too small with respect to bit cutoff";
+		UInt bitsLeft = BitWidth::last(maxPacketW.bits());
+		bitsLeft = reg(bitsLeft, maxPacketW.bits());
+
+		IF(valid(in) & sop(in))
+			bitsLeft = zext(localCutoff);
+		HCL_NAMED(bitsLeft);
+
+		Bit lastBeat = bitsLeft <= in->width().bits(); HCL_NAMED(lastBeat);
+		Bit drop = scl::flagInstantReset(lastBeat & transfer(in), valid(in) & sop(in), '0'); HCL_NAMED(drop);
+
+		StreamT ret = constructFrom(in);
+		ret <<= move(in);
+		valid(ret) &= !drop;
+		eop(ret) |= lastBeat;
+
+		emptyBits(ret) = (ret->width().bits() - bitsLeft.lower(BitWidth::last(ret->width().bits()))).lower(-1_b);
+
+		IF(transfer(ret))
+			bitsLeft -= ret->width().bits();
+
+		return ret;
+	}
+
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::internal::ShiftRightMetaParams, state, mustAnticipateEnd, isSingleBeat);

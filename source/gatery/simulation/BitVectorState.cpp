@@ -53,6 +53,21 @@ DefaultBitVectorState createRandomDefaultBitVectorState(std::size_t bitWidth, st
 	return state;
 }
 
+DefaultBitVectorState createDefinedRandomDefaultBitVectorState(std::size_t bitWidth, std::mt19937 &rng)
+{
+	std::uniform_int_distribution<DefaultConfig::BaseType> random;
+
+	BitVectorState<DefaultConfig> state;
+	state.resize(bitWidth);
+	
+	for (size_t j = 0; j < state.getNumBlocks(); j++)
+	{
+		state.data(DefaultConfig::VALUE)[j] = random(rng);
+		state.data(DefaultConfig::DEFINED)[j] = ~0ull; //64bit mask
+	}
+	return state;
+}
+
 bool operator==(const DefaultBitVectorState &lhs, std::span<const std::byte> rhs)
 {
 	if (lhs.size() != rhs.size() * 8)

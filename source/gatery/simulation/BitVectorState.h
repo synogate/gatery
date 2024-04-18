@@ -549,6 +549,7 @@ DefaultBitVectorState createDefaultBitVectorState(std::size_t numWords, std::siz
 DefaultBitVectorState createDefaultBitVectorState(std::size_t bitWidth, const void *data);
 DefaultBitVectorState createDefaultBitVectorState(std::size_t bitWidth, size_t value);
 DefaultBitVectorState createRandomDefaultBitVectorState(std::size_t bitWidth, std::mt19937 &rng);
+DefaultBitVectorState createDefinedRandomDefaultBitVectorState(std::size_t bitWidth, std::mt19937& rng);
 
 bool operator==(const DefaultBitVectorState &lhs, std::span<const std::byte> rhs);
 inline bool operator!=(const DefaultBitVectorState &lhs, std::span<const std::byte> rhs) { return !(lhs == rhs); }
