@@ -1071,15 +1071,11 @@ struct dropTailSimulationFixture : public BoostUnitTestSimulationFixture
 	BitWidth maxPacketW = 64_b;
 	size_t numPackets = 1000;
 
-	std::mt19937_64 rng;
+	std::mt19937 rng;
 
-	std::function<void(sim::DefaultBitVectorState&)> makePacket = [&](sim::DefaultBitVectorState& packet) {
+	std::function<sim::DefaultBitVectorState()> makePacket = [&]() {
 		std::uniform_int_distribution<size_t> distrib(keep, maxPacketW.bits());
-		packet.resize(distrib(rng));
-		for (size_t i = 0; i < packet.getNumBlocks(); i++){
-			packet.data(sim::DefaultConfig::VALUE)[i] = rng();
-			packet.data(sim::DefaultConfig::DEFINED)[i] = BitWidth(64).mask();
-		}
+		return sim::createDefinedRandomDefaultBitVectorState(distrib(rng), rng);
 	};
 
 	void runTest() {
@@ -1102,8 +1098,7 @@ struct dropTailSimulationFixture : public BoostUnitTestSimulationFixture
 		std::vector<sim::DefaultBitVectorState> sentPackets(numPackets);
 
 		for (auto& packet: sentPackets)
-			makePacket(packet);
-
+			packet = makePacket();
 
 		addSimulationProcess([&, this]()->SimProcess {
 			for (auto& packet : sentPackets)
@@ -1173,12 +1168,8 @@ BOOST_FIXTURE_TEST_CASE(stream_drop_tail_static_small_packet, dropTailSimulation
 	maxPacketW = 64_b;
 	numPackets = 100;
 
-	makePacket = [&](sim::DefaultBitVectorState& packet) {
-		packet.resize(keep/2);
-		for (size_t i = 0; i < packet.getNumBlocks(); i++){
-			packet.data(sim::DefaultConfig::VALUE)[i] = rng();
-			packet.data(sim::DefaultConfig::DEFINED)[i] = BitWidth(64).mask();
-		}
+	makePacket = [&]() {
+		return sim::createDefinedRandomDefaultBitVectorState(keep / 2, rng);
 	};
 	runTest();
 }
