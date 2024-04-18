@@ -102,7 +102,8 @@ namespace gtry::scl::strm
 
 	/**
 	 * @brief drops tail of a packet stream with bit granularity. Can be used to keep only the header of a packet stream
-	 * /!\ sim asserts if input packet is too small. 
+	 * /!\ sim asserts if input packet is too small.
+	 * @param bitCutoff Size at which to cut off the packet (size of the resulting packet). Must be stable during sop.
 	*/
 	template<scl::StreamSignal StreamT>
 	StreamT streamDropTail(StreamT&& in, const UInt& bitCutoff, BitWidth maxPacketW);
@@ -1066,14 +1067,17 @@ namespace gtry::scl::strm
 	StreamT streamDropTail(StreamT&& in, const UInt& bitCutoff, BitWidth maxPacketW) {
 		Area area{ "scl_stream_drop_tail", true };
 		static_assert(std::remove_cvref_t<decltype(in)>::template has<scl::EmptyBits>(), "this implementation requires empty bits field");
+
+		UInt localCutoff = capture(bitCutoff, valid(in) & sop(in));
+
 		UInt packetBitCount = countPacketSize(in, maxPacketW);
 		IF(transfer(in) & eop(in))
-			sim_assert(packetBitCount >= zext(bitCutoff)) << "input packet too small with respect to bit cutoff";
+			sim_assert(packetBitCount >= zext(localCutoff)) << "input packet too small with respect to bit cutoff";
 		UInt bitsLeft = BitWidth::last(maxPacketW.bits());
 		bitsLeft = reg(bitsLeft, maxPacketW.bits());
 
 		IF(valid(in) & sop(in))
-			bitsLeft = bitCutoff;
+			bitsLeft = zext(localCutoff);
 		HCL_NAMED(bitsLeft);
 
 		Bit lastBeat = bitsLeft <= in->width().bits(); HCL_NAMED(lastBeat);
