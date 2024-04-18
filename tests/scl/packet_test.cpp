@@ -1068,13 +1068,13 @@ struct dropTailSimulationFixture : public BoostUnitTestSimulationFixture
 {
 	BitWidth streamW = 8_b;
 	size_t keep = 12;
-	size_t maxPacketSize = 64;
+	BitWidth maxPacketW = 64_b;
 	size_t numPackets = 1000;
 
 	std::mt19937_64 rng;
 
 	std::function<void(sim::DefaultBitVectorState&)> makePacket = [&](sim::DefaultBitVectorState& packet) {
-		std::uniform_int_distribution<size_t> distrib(keep, maxPacketSize);
+		std::uniform_int_distribution<size_t> distrib(keep, maxPacketW.bits());
 		packet.resize(distrib(rng));
 		for (size_t i = 0; i < packet.getNumBlocks(); i++){
 			packet.data(sim::DefaultConfig::VALUE)[i] = rng();
@@ -1091,7 +1091,7 @@ struct dropTailSimulationFixture : public BoostUnitTestSimulationFixture
 		emptyBits(in) = BitWidth::count(in->width().bits());
 		pinIn(in, "in");
 
-		auto out = scl::strm::streamDropTail(move(in), keep, maxPacketSize);
+		auto out = scl::strm::streamDropTail(move(in), keep, maxPacketW);
 
 		pinOut(out, "out");
 
@@ -1133,7 +1133,7 @@ BOOST_FIXTURE_TEST_CASE(stream_drop_tail_static, dropTailSimulationFixture)
 {
 	streamW = 8_b;
 	keep = 12;
-	maxPacketSize = 64;
+	maxPacketW = 64_b;
 	numPackets = 100;
 	runTest();
 } 
@@ -1142,7 +1142,7 @@ BOOST_FIXTURE_TEST_CASE(stream_drop_tail_static_one_beat, dropTailSimulationFixt
 {
 	streamW = 8_b;
 	keep = 4;
-	maxPacketSize = 64;
+	maxPacketW = 64_b;
 	numPackets = 100;
 	runTest();
 }
@@ -1151,7 +1151,7 @@ BOOST_FIXTURE_TEST_CASE(stream_drop_tail_static_edge_case, dropTailSimulationFix
 {
 	streamW = 8_b;
 	keep = 16;
-	maxPacketSize = 64;
+	maxPacketW = 64_b;
 	numPackets = 100;
 	runTest();
 }
@@ -1160,7 +1160,7 @@ BOOST_FIXTURE_TEST_CASE(stream_drop_tail_static_keep_max, dropTailSimulationFixt
 {
 	streamW = 8_b;
 	keep = 64;
-	maxPacketSize = 64;
+	maxPacketW = 64_b;
 	numPackets = 100;
 	runTest();
 }
@@ -1170,7 +1170,7 @@ BOOST_FIXTURE_TEST_CASE(stream_drop_tail_static_small_packet, dropTailSimulation
 {
 	streamW = 8_b;
 	keep = 12;
-	maxPacketSize = 64;
+	maxPacketW = 64_b;
 	numPackets = 100;
 
 	makePacket = [&](sim::DefaultBitVectorState& packet) {

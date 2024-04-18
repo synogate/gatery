@@ -98,14 +98,14 @@ namespace gtry::scl::strm
 	 * @return running count of bits in current packet, combinational with transfer
 	*/
 	template<scl::StreamSignal StreamT>
-	UInt countPacketSize(const StreamT& in, size_t maxPacketSizeInBits);
+	UInt countPacketSize(const StreamT& in, BitWidth maxPacketW);
 
 	/**
 	 * @brief drops tail of a packet stream with bit granularity. Can be used to keep only the header of a packet stream
 	 * /!\ sim asserts if input packet is too small. 
 	*/
 	template<scl::StreamSignal StreamT>
-	StreamT streamDropTail(StreamT&& in, const UInt& bitCutoff, size_t maxPacketSizeInBits);
+	StreamT streamDropTail(StreamT&& in, const UInt& bitCutoff, BitWidth maxPacketW);
 }
 
 namespace gtry::scl::strm
@@ -1040,9 +1040,9 @@ namespace gtry::scl::strm
 	}
 
 	template<scl::StreamSignal StreamT>
-	UInt countPacketSize(const StreamT& in, size_t maxPacketSizeInBits) {
+	UInt countPacketSize(const StreamT& in, BitWidth maxPacketW) {
 		Area area{ "scl_count_packet_size", true };
-		UInt bits = BitWidth::last(maxPacketSizeInBits);
+		UInt bits = BitWidth::last(maxPacketW.bits());
 
 		IF(transfer(in) & eop(in))
 			bits = 0;
@@ -1063,14 +1063,14 @@ namespace gtry::scl::strm
 
 
 	template<scl::StreamSignal StreamT>
-	StreamT streamDropTail(StreamT&& in, const UInt& bitCutoff, size_t maxPacketSizeInBits) {
+	StreamT streamDropTail(StreamT&& in, const UInt& bitCutoff, BitWidth maxPacketW) {
 		Area area{ "scl_stream_drop_tail", true };
 		static_assert(std::remove_cvref_t<decltype(in)>::template has<scl::EmptyBits>(), "this implementation requires empty bits field");
-		UInt packetBitCount = countPacketSize(in, maxPacketSizeInBits);
+		UInt packetBitCount = countPacketSize(in, maxPacketW);
 		IF(transfer(in) & eop(in))
 			sim_assert(packetBitCount >= zext(bitCutoff)) << "input packet too small with respect to bit cutoff";
-		UInt bitsLeft = BitWidth::last(maxPacketSizeInBits);
-		bitsLeft = reg(bitsLeft, maxPacketSizeInBits);
+		UInt bitsLeft = BitWidth::last(maxPacketW.bits());
+		bitsLeft = reg(bitsLeft, maxPacketW.bits());
 
 		IF(valid(in) & sop(in))
 			bitsLeft = bitCutoff;
