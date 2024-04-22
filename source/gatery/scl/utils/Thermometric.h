@@ -39,4 +39,6 @@ namespace gtry::scl {
 
 	UInt thermometricToUInt(BVec in);
 
+	BVec emptyMaskGenerator(UInt in, BitWidth wordSize, BitWidth fullSize);
+
 }

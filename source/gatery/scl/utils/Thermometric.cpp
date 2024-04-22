@@ -40,4 +40,19 @@ namespace gtry::scl {
 		return bitcount((UInt)in);
 	}
 
+	BVec emptyMaskGenerator(UInt in, BitWidth wordSize, BitWidth fullSize)
+	{
+		size_t numSteps = in.width().last();
+		BVec ret = ~ConstBVec(0, fullSize);
+		for (size_t i = 0; i < fullSize.value / wordSize.value; i++) {
+			Bit b;
+			if (i <= numSteps)
+				b = in <= (numSteps - i);
+			else
+				b = '0';
+			ret.word(i, wordSize) = (BVec) sext(b);
+		}
+		return ret;
+	}
+
 }
