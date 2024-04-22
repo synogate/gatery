@@ -42,12 +42,14 @@ namespace gtry::scl {
 
 	BVec emptyMaskGenerator(UInt in, BitWidth wordSize, BitWidth fullSize)
 	{
-		size_t numSteps = in.width().last();
+		size_t maxInput = in.width().last();
+		size_t numWords = fullSize.value / wordSize.value;
 		BVec ret = ~ConstBVec(0, fullSize);
-		for (size_t i = 0; i < fullSize.value / wordSize.value; i++) {
+		for (size_t i = 0; i < numWords; i++) {
+			size_t threshold = numWords-1 - i;
 			Bit b;
-			if (i <= numSteps)
-				b = in <= (numSteps - i);
+			if (threshold <= maxInput)
+				b = in <= threshold;
 			else
 				b = '0';
 			ret.word(i, wordSize) = (BVec) sext(b);
