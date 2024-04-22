@@ -253,11 +253,17 @@ namespace gtry {
 		HCL_DESIGNCHECK_HINT(!m_range, "BaseBitVector::resetNode is not allowed for alias BaseBitVector's.");
 		m_node = nullptr;
 		m_range.reset();
+		m_width = 0_b;
+		m_expansionPolicy = Expansion::none;
 		m_bitAlias.clear();
 		m_lsbAlias = std::nullopt;
 		m_msbAlias = std::nullopt;
 		m_dynamicBitAlias.clear();
+		m_readPort = {};
 		m_readPortDriver = nullptr;
+
+		if (auto* scope = ConditionalScope::get())
+			m_initialScopeId = scope->getId();		
 	}
 
 	Bit &BaseBitVector::getDynamicBitAlias(const UInt &idx) const

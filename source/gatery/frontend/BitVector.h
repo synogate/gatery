@@ -75,7 +75,7 @@ namespace gtry {
 		explicit operator T() const { if (m_node) return T(readPort()); else return T{}; }
 
 		void resize(size_t width);
-		void resetNode();
+		virtual void resetNode();
 
 		Bit& lsb() { return aliasLsb(); }
 		const Bit& lsb() const { return aliasLsb(); }
@@ -275,6 +275,11 @@ namespace gtry {
 
 		FinalType& operator()(const Selection& selection);
 		const FinalType& operator() (const Selection& selection) const;
+
+		virtual void resetNode() override {
+			BaseBitVector::resetNode();
+			m_rangeAlias.clear();
+		}
 	protected:
 		template<typename T>
 		FinalType& aliasRange(std::shared_ptr<T> range) const {
