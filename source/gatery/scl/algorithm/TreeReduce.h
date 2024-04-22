@@ -30,7 +30,7 @@ namespace gtry::scl
 	
 	template<typename Signal>
 	Signal delay(Signal signal, unsigned delay) {
-		for (auto i : utils::Range(delay))
+		for ([[maybe_unused]] auto i : utils::Range(delay))
 			signal = reg(signal);
 		return signal;
 	}
