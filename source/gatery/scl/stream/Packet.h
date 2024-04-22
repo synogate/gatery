@@ -26,7 +26,7 @@
 namespace gtry::scl::strm
 {
 	template<class T>
-	concept PacketStreamSignal = StreamSignal<T> and T::template has<Eop>();
+	concept PacketStreamSignal = StreamSignal<T> and std::remove_cvref_t<T>::template has<Eop>();
 
 	template<StreamSignal T>
 	requires (T::template has<Valid>() or T::template has<Eop>())
