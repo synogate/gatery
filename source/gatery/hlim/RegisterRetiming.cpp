@@ -752,11 +752,17 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 	for (auto n : retimingPlan->areaToBeRetimed)
 		for (auto i : utils::Range(n->getNumOutputPorts()))
 			if (n->getOutputConnectionType(i).type != ConnectionType::DEPENDENCY)
-				for (auto np : n->getDirectlyDriven(i))
+				for (auto np : n->getDirectlyDriven(i)) {
+
+					// this is a bit of a quick hack, stuff driven by the Node_RetimingBlocker should not be part of the retiming area in the first place.
+					if (dynamic_cast<Node_RetimingBlocker*>(np.node->getNonSignalDriver(np.port).node))
+						continue;
+
 					if (!retimingPlan->areaToBeRetimed.contains(np.node)) {
 						outputsLeavingRetimingArea.insert({.node = n, .port = i});
 						break;
 					}
+				}
 
 	if (retimingPlan->regSpawnersToSpawn.size() > 1) {
 
