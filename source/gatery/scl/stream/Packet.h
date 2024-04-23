@@ -1034,6 +1034,19 @@ namespace gtry::scl::strm
 			return ret;
 		}
 
+		scl::Empty streamAppendMeta(const scl::Empty& in, const StreamSignal auto& headStrm, const StreamSignal auto& shiftedTailStrm, const AppendStreamMetaParams& param)
+		{
+			scl::Empty ret = in;
+
+			IF(eop(headStrm) & eop(shiftedTailStrm))
+				ret.empty = empty(shiftedTailStrm); // because the tail has already been shifted to perfectly fit the head
+
+			IF(param.currentState == AppendStreamState::tail)
+				ret.empty = empty(shiftedTailStrm);
+
+			return ret;
+		}
+
 		template<BitVectorSignal SigT, StreamSignal StreamT>
 		SigT streamAppendMeta(const SigT& in, const StreamT& headStrm, const StreamT& shiftedTailStrm, const AppendStreamMetaParams& param) 
 		{
@@ -1064,6 +1077,8 @@ namespace gtry::scl::strm
 		using namespace internal;
 		Area area{ "scl_stream_append", true };
 		HCL_DESIGNCHECK_HINT(head->width() == tail->width(), "the BitWidths do not match");
+		HCL_NAMED(head);
+		HCL_NAMED(tail);
 
 		UInt tailShiftAmt = capture(
 			head->width().bits() - zext(emptyBits(head)), 
@@ -1075,8 +1090,9 @@ namespace gtry::scl::strm
 		 	shiftedTail <<= strm::streamShiftLeft(tail, tailShiftAmt.lower(-1_b));
 		else {
 			static_assert(StreamT::template has<Empty>());
-			shiftedTail <<= strm::streamShiftLeftBytes(tail, tailShiftAmt.lower(-1_b).lower(-3_b));
+			shiftedTail <<= strm::streamShiftLeftBytes(tail, tailShiftAmt.lower(-1_b).upper(-3_b));
 		}
+		HCL_NAMED(shiftedTail);
 			
 
 		Reg<Enum<AppendStreamState>> state{ AppendStreamState::head };
