@@ -25,3 +25,9 @@ namespace gtry {
 	template class Enum<scl::strm::internal::ShiftRightState>;
 	template class Enum<scl::strm::internal::AppendStreamState>;
 }
+
+namespace gtry::scl::strm
+{
+	template RvPacketStream<BVec, EmptyBits> streamDropTail(RvPacketStream<BVec, EmptyBits> &&in, const UInt& bitCutoff, BitWidth maxPacketW);
+	template RvPacketStream<BVec, Empty> streamDropTailBytes(RvPacketStream<BVec, Empty> &&in, const UInt& byteCutoff, BitWidth maxPacketW);
+}

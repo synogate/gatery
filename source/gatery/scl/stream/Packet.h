@@ -28,6 +28,18 @@ namespace gtry::scl::strm
 	template<class T>
 	concept PacketStreamSignal = StreamSignal<T> and std::remove_cvref_t<T>::template has<Eop>();
 
+	template<Signal MetaT, StreamSignal StreamT>
+	void initStreamMeta(StreamT &stream, MetaT &meta) { }
+
+	template<Signal MetaT, StreamSignal StreamT> requires (std::same_as<std::remove_cvref_t<MetaT>, Empty>)
+	void initStreamMeta(StreamT &stream, MetaT &meta);
+
+	template<Signal MetaT, StreamSignal StreamT> requires (std::same_as<std::remove_cvref_t<MetaT>, EmptyBits>)
+	void initStreamMeta(StreamT &stream, MetaT &meta);
+
+	template<StreamSignal T>
+	T makeStream(BitWidth width);
+
 	template<StreamSignal T>
 	requires (T::template has<Valid>() or T::template has<Eop>())
 	T eraseLastBeat(T& source);
@@ -45,6 +57,9 @@ namespace gtry::scl::strm
 
 	template<BaseSignal Payload, Signal... Meta>
 	auto streamShiftLeft(Stream<Payload, Meta...>& in, UInt shift, Bit reset = '0');
+
+	template<BaseSignal Payload, Signal... Meta>
+	auto streamShiftLeftBytes(Stream<Payload, Meta...>& in, UInt shift, Bit reset = '0');
 
 	/**
 	* @brief applies a shift on a packetStream's data. Also computes new EmptyBits signal. As a side-effect, it can also be used to get rid of packet headers.
@@ -101,16 +116,51 @@ namespace gtry::scl::strm
 	UInt countPacketSize(const StreamT& in, BitWidth maxPacketW);
 
 	/**
+	 * @brief helper to count bits in a packet stream
+	 * @return Returns a single beat of the count once it is fully computed.
+	*/
+	template<scl::StreamSignal StreamT>
+	RvStream<UInt> packetSize(StreamT&& in, BitWidth maxPacketW);
+
+	/**
 	 * @brief drops tail of a packet stream with bit granularity. Can be used to keep only the header of a packet stream
 	 * /!\ sim asserts if input packet is too small.
 	 * @param bitCutoff Size at which to cut off the packet (size of the resulting packet). Must be stable during sop.
 	*/
-	template<scl::StreamSignal StreamT>
+	template<scl::StreamSignal StreamT> requires (std::remove_cvref_t<StreamT>::template has<EmptyBits>())
 	StreamT streamDropTail(StreamT&& in, const UInt& bitCutoff, BitWidth maxPacketW);
+
+	/**
+	 * @brief drops tail of a packet stream with byte granularity. Can be used to keep only the header of a packet stream
+	 * /!\ sim asserts if input packet is too small.
+	 * @param bitCutoff Size at which to cut off the packet (size of the resulting packet). Must be stable during sop.
+	*/
+	template<scl::StreamSignal StreamT> requires (std::remove_cvref_t<StreamT>::template has<Empty>())
+	StreamT streamDropTailBytes(StreamT&& in, const UInt& byteCutoff, BitWidth maxPacketW);
 }
 
 namespace gtry::scl::strm
 {
+
+	template<Signal MetaT, StreamSignal StreamT> requires (std::same_as<std::remove_cvref_t<MetaT>, Empty>)
+	void initStreamMeta(StreamT &stream, MetaT &meta) {
+		meta.empty = BitWidth::count(stream->width().bytes());
+	}
+
+	template<Signal MetaT, StreamSignal StreamT> requires (std::same_as<std::remove_cvref_t<MetaT>, EmptyBits>)
+	void initStreamMeta(StreamT &stream, MetaT &meta) {
+		meta.emptyBits = BitWidth::count(stream->width().bits());
+	}
+
+	template<StreamSignal T>
+	T makeStream(BitWidth width) {
+		T res{ width };
+		std::apply([&](auto& ...meta) {
+				(initStreamMeta(res, meta), ...);
+			}, res._sig);
+		return res;
+	}
+
 
 	template<StreamSignal T>
 	class SimuStreamPerformTransferWait {
@@ -297,6 +347,14 @@ namespace gtry::scl::strm
 		}
 		HCL_NAMED(out);
 		return out;
+	}
+
+	template<BaseSignal Payload, Signal... Meta>
+	auto streamShiftLeftBytes(Stream<Payload, Meta...>& in, UInt shift, Bit reset)
+	{
+		auto outBits = streamShiftLeft(in, cat(shift, "3b0"), reset);
+		UInt outEmptyBits = emptyBits(outBits);
+		return outBits.template remove<EmptyBits>().template add<Empty>({outEmptyBits.upper(-3_b)});	
 	}
 
 
@@ -1012,7 +1070,14 @@ namespace gtry::scl::strm
 			transfer(head) & eop(head)
 		); 
 		HCL_NAMED(tailShiftAmt);
-		StreamT shiftedTail = strm::streamShiftLeft(tail, tailShiftAmt.lower(-1_b));
+		StreamT shiftedTail = constructFrom(head);
+		if constexpr (StreamT::template has<EmptyBits>())
+		 	shiftedTail <<= strm::streamShiftLeft(tail, tailShiftAmt.lower(-1_b));
+		else {
+			static_assert(StreamT::template has<Empty>());
+			shiftedTail <<= strm::streamShiftLeftBytes(tail, tailShiftAmt.lower(-1_b).lower(-3_b));
+		}
+			
 
 		Reg<Enum<AppendStreamState>> state{ AppendStreamState::head };
 		state.setName("state");
@@ -1062,12 +1127,17 @@ namespace gtry::scl::strm
 		return bits;
 	}
 
-
 	template<scl::StreamSignal StreamT>
+	RvStream<UInt> packetSize(StreamT&& in, BitWidth maxPacketW) {
+		RvStream<UInt> result = { countPacketSize(in, maxPacketW) };
+		ready(in) = ready(result);
+		valid(result) = valid(in) & eop(in);
+		return result;
+	}
+
+	template<scl::StreamSignal StreamT> requires (std::remove_cvref_t<StreamT>::template has<EmptyBits>())
 	StreamT streamDropTail(StreamT&& in, const UInt& bitCutoff, BitWidth maxPacketW) {
 		Area area{ "scl_stream_drop_tail", true };
-		static_assert(std::remove_cvref_t<decltype(in)>::template has<scl::EmptyBits>(), "this implementation requires empty bits field");
-
 		UInt localCutoff = capture(bitCutoff, valid(in) & sop(in));
 
 		UInt packetBitCount = countPacketSize(in, maxPacketW);
@@ -1095,6 +1165,17 @@ namespace gtry::scl::strm
 
 		return ret;
 	}
+	extern template RvPacketStream<BVec, EmptyBits> streamDropTail(RvPacketStream<BVec, EmptyBits> &&in, const UInt& bitCutoff, BitWidth maxPacketW);
+
+	template<scl::StreamSignal StreamT> requires (std::remove_cvref_t<StreamT>::template has<Empty>())
+	StreamT streamDropTailBytes(StreamT&& in, const UInt& byteCutoff, BitWidth maxPacketW) {
+		UInt inEmptyBytes = empty(in);
+		auto inBits = in.template remove<Empty>().template add<EmptyBits>({cat(inEmptyBytes, "3b0")});
+		auto outBits = streamDropTail(move(inBits), cat(byteCutoff, "3b0"), maxPacketW);
+		UInt outEmptyBits = emptyBits(outBits);
+		return outBits.template remove<EmptyBits>().template add<Empty>({outEmptyBits.upper(-3_b)});
+	}
+	extern template RvPacketStream<BVec, Empty> streamDropTailBytes(RvPacketStream<BVec, Empty> &&in, const UInt& byteCutoff, BitWidth maxPacketW);
 
 }
 
