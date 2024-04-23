@@ -290,7 +290,7 @@ namespace gtry::scl
 	template<strm::PacketStreamSignal StreamT>
 	StreamT overwriteFields(StreamT &&inputStream, std::span<const Field> fields, std::span<BVec> values)
 	{
-		Area area("zeroOutFields", true);
+		Area area("overwriteFields", true);
 		HCL_NAMED(inputStream);
 
 		StreamT result = constructFrom(inputStream);
