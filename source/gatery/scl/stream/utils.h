@@ -145,11 +145,11 @@ namespace gtry::scl::strm
 
 	template<StreamSignal StreamT> 
 		requires (StreamT::template has<Ready>() and StreamT::template has<Valid>())
-	StreamT allowanceStall(StreamT&& source, Bit allow, BitWidth allowanceW);
+	StreamT allowanceStall(StreamT&& source, Bit allow, BitWidth allowanceW, size_t initialAllowance = 0);
 
-	inline auto allowanceStall(Bit allow, BitWidth allowanceW)
+	inline auto allowanceStall(Bit allow, BitWidth allowanceW, size_t initialAllowance = 0)
 	{
-		return [=](auto&& source) { return allowanceStall(std::forward<decltype(source)>(source), allow, allowanceW); };
+		return [=](auto&& source) { return allowanceStall(std::forward<decltype(source)>(source), allow, allowanceW, initialAllowance); };
 	}
 		
 	/**
@@ -545,17 +545,21 @@ namespace gtry::scl::strm
 
 	template<StreamSignal StreamT> 
 		requires (StreamT::template has<Ready>() and StreamT::template has<Valid>())
-	StreamT allowanceStall(StreamT&& source, Bit allow, BitWidth allowanceW) {
-		Bit stallCondition;
+	StreamT allowanceStall(StreamT&& source, Bit allow, BitWidth allowanceW, size_t initialAllowance) {
+		Area area{ "scl_allowance_stall", true };
+		HCL_DESIGNCHECK(BitWidth::last(initialAllowance) <= allowanceW);
+
+		Bit stallCondition; HCL_NAMED(stallCondition);
 		StreamT stalledSource = move(source) | scl::strm::stall(stallCondition);
 
-		Counter allowance(allowanceW);
+		Counter allowance(allowanceW, initialAllowance);
 		IF(allow)
 			allowance.inc();
 		IF(transfer(stalledSource))
 			allowance.dec();
 
-		stallCondition = reg(allowance.isFirst(), '1');
+		const Bit initialStall = initialAllowance == 0 ? '1' : '0';
+		stallCondition = reg(allowance.becomesFirst(), initialStall); //problem: only guarantees average cadence.
 		return stalledSource;
 	}
 
