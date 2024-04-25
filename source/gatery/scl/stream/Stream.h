@@ -150,14 +150,16 @@ namespace gtry::scl::strm
 	template<Signal T>
 	inline auto Stream<PayloadT, Meta...>::add(T&& signal)
 	{
-		if constexpr (has<T>())
+		using Tplain = std::remove_reference_t<T>;
+
+		if constexpr (has<Tplain>())
 		{
 			Stream ret;
 			connect(ret.data, data);
 
 			auto newMeta = std::apply([&](auto& ...meta) {
 				auto fun = [&](auto& member) -> decltype(auto) {
-					if constexpr (std::is_same_v<std::remove_cvref_t<decltype(member)>, T>)
+					if constexpr (std::is_same_v<std::remove_cvref_t<decltype(member)>, Tplain>)
 						return std::forward<decltype(member)>(signal);
 					else
 						return std::forward<decltype(member)>(member);
@@ -171,13 +173,13 @@ namespace gtry::scl::strm
 		}
 		else
 		{
-			if constexpr (std::is_same_v<T, Ready>)
+			if constexpr (std::is_same_v<Tplain, Ready>)
 			{
 				// Ready is always the first meta signal if present to fit R*Stream type declarations
 				// This is a bit of a hack, all meta signals should have some kind of deterministic ordering instead
-				Stream<PayloadT, T, Meta...> ret;
+				Stream<PayloadT, Ready, Meta...> ret;
 				connect(*ret, data);
-				ret.template get<T>() <<= signal;
+				ret.template get<Ready>() <<= signal;
 
 				std::apply([&](auto& ...meta) {
 					((ret.template get<std::remove_reference_t<decltype(meta)>>() <<= meta), ...);
@@ -186,9 +188,9 @@ namespace gtry::scl::strm
 			}
 			else
 			{
-				Stream<PayloadT, Meta..., T> ret;
+				Stream<PayloadT, Meta..., Tplain> ret;
 				connect(*ret, data);
-				ret.template get<T>() <<= signal;
+				ret.template get<Tplain>() <<= signal;
 
 				std::apply([&](auto& ...meta) {
 					((ret.template get<std::remove_reference_t<decltype(meta)>>() <<= meta), ...);
