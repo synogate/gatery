@@ -70,6 +70,7 @@ namespace gtry::scl
 		const UInt& value() const { return m_value; }
 		const Bit& isLast() const { return m_last; }
 		Bit isFirst() const { return m_value == 0; }
+		Bit becomesFirst() const { return m_becomesFirst; }
 
 		void load(UInt value) { m_load = '1'; m_loadValue = value; }
 	protected:
@@ -109,7 +110,7 @@ namespace gtry::scl
 			{
 				m_value = m_loadValue;
 			}
-
+			m_becomesFirst = m_value == 0;
 			m_value = reg(m_value, resetValue, {.allowRetimingBackward = true, .allowRetimingForward = true});
 			HCL_NAMED(m_value);
 			HCL_NAMED(m_last);
@@ -127,6 +128,8 @@ namespace gtry::scl
 
 		UInt m_value;
 		Bit m_last;
+
+		Bit m_becomesFirst;
 
 		UInt m_loadValue;
 		Bit m_load;
