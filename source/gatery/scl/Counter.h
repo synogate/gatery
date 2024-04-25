@@ -43,13 +43,34 @@ namespace gtry::scl
 
 			m_area.leave();
 		}
+
+		Counter(BitWidth ctrW, size_t startupValue = 0) :
+			m_area{ "scl_Counter", true}
+		{
+			init(ctrW.count(), ctrW, true, startupValue);
+
+			m_area.leave();
+		}
 		
-		Counter& inc() { m_inc = '1'; return *this; }
+		Counter& inc() { 
+			m_inc = '1';
+			if (gtry::ConditionalScope ___condScope{'1', true})
+				m_incrementNeverUsed &= '0';
+			return *this;
+		}
+
+		Counter& dec() {
+			m_dec = '1';
+			if (gtry::ConditionalScope ___condScope{'1', true})
+				m_incrementNeverUsed &= '0';
+			return *this;
+		}
 
 		void reset() { load(0); }
 		const UInt& value() const { return m_value; }
 		const Bit& isLast() const { return m_last; }
 		Bit isFirst() const { return m_value == 0; }
+		Bit becomesFirst() const { return m_becomesFirst; }
 
 		void load(UInt value) { m_load = '1'; m_loadValue = value; }
 	protected:
@@ -59,17 +80,28 @@ namespace gtry::scl
 			m_loadValue = counterW;
 
 			HCL_NAMED(m_inc);
+			HCL_NAMED(m_dec);
 
 			m_last = m_value == (end - 1).lower(counterW);
 
 			if (counterW != BitWidth(0)) {
-				IF(m_inc)
-				{
-					m_value += 1;
-					if (checkOverflows) {
+				UInt delta = ConstUInt(0, m_value.width());
+				IF(m_incrementNeverUsed)
+					delta = 1;    // +1, auto-increment by default
+				IF(m_inc & !m_dec)
+					delta = 1;    // +1
+				IF(m_dec & !m_inc)
+					delta |= '1'; // -1
+				Bit isFirst = m_value == 0;
+				m_value += delta;
+				if (checkOverflows) {
+					IF(delta == 1)
 						IF(m_last)
 							m_value = 0;
-					}
+		
+					IF(delta == delta.width().mask())
+						IF(isFirst)
+							m_value = (end - 1).lower(counterW);
 				}
 			}
 			HCL_NAMED(m_load);
@@ -78,13 +110,15 @@ namespace gtry::scl
 			{
 				m_value = m_loadValue;
 			}
-
-			m_value = reg(m_value, resetValue);
+			m_becomesFirst = m_value == 0;
+			m_value = reg(m_value, resetValue, {.allowRetimingBackward = true, .allowRetimingForward = true});
 			HCL_NAMED(m_value);
 			HCL_NAMED(m_last);
 
 			m_load = '0';
 			m_inc = '0';
+			m_dec = '0';
+			m_incrementNeverUsed = '1';
 			m_loadValue = ConstUInt(m_loadValue.width());
 		}
 
@@ -95,10 +129,16 @@ namespace gtry::scl
 		UInt m_value;
 		Bit m_last;
 
+		Bit m_becomesFirst;
+
 		UInt m_loadValue;
 		Bit m_load;
 
 		Bit m_inc;
+		Bit m_dec;
+
+		Bit m_incrementNeverUsed;
+
 	};
 
 }
