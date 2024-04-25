@@ -559,7 +559,7 @@ namespace gtry::scl::strm
 			allowance.dec();
 
 		const Bit initialStall = initialAllowance == 0 ? '1' : '0';
-		stallCondition = reg(allowance.becomesFirst(), initialStall); //problem: only guarantees average cadence.
+		stallCondition = reg(allowance.becomesFirst(), initialStall);
 		return stalledSource;
 	}
 
