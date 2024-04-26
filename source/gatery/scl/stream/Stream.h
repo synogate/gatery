@@ -102,8 +102,19 @@ namespace gtry::scl::strm
 		template<Signal T>
 		static constexpr bool has();
 
-		template<Signal T> inline auto add(T&& signal);
-		template<Signal T> inline auto add(T&& signal) const requires (GTRY_STREAM_ASSIGNABLE);
+		template<Signal T> requires (!StreamSignal<T>) inline auto add(T&& signal);
+		template<Signal T> requires (!StreamSignal<T>) inline auto add(T&& signal) const requires (GTRY_STREAM_ASSIGNABLE);
+
+		/**
+		 * @brief Adds the payload of a stream as a metadata field to another stream.
+		 * @details The streams are synchronized to wait for each other and, in case of packet streams, to keep the metadata signal stable for the entire duration of a packet.
+		 */
+		template<StreamSignal T> inline auto add(T&& stream) &&;
+
+		/**
+		 * @brief Adds the payload of a stream as a metadata field to another stream, encapsulating it in a wrapper struct to make it identifyable with the ::get, ::has, and ::remove member functions.
+		 */
+		template<Signal Wrapper, StreamSignal T> inline auto addAs(T&& stream) && { return move(*this).add(stream.transform([](const auto &v) { return Wrapper{ v }; })); }
 
 		template<Signal T> constexpr T& get() { return std::get<T>(_sig); }
 		template<Signal T> constexpr const T& get() const { return std::get<T>(_sig); }
@@ -147,7 +158,7 @@ namespace gtry::scl::strm
 	}
 
 	template<Signal PayloadT, Signal ...Meta>
-	template<Signal T>
+	template<Signal T> requires (!StreamSignal<T>) 
 	inline auto Stream<PayloadT, Meta...>::add(T&& signal)
 	{
 		if constexpr (has<T>())
@@ -199,7 +210,7 @@ namespace gtry::scl::strm
 	}
 
 	template<Signal PayloadT, Signal ...Meta>
-	template<Signal T>
+	template<Signal T> requires (!StreamSignal<T>) 
 	inline auto Stream<PayloadT, Meta...>::add(T&& signal) const requires (GTRY_STREAM_ASSIGNABLE)
 	{
 		if constexpr (has<T>())
@@ -218,6 +229,21 @@ namespace gtry::scl::strm
 			};
 		}
 	}
+
+	// Forward declared here, actually in utils.h
+	template<StreamSignal BeatStreamT, StreamSignal PacketStreamT>
+	std::tuple<PacketStreamT, BeatStreamT> replicateForEntirePacket(PacketStreamT &&packetStream, BeatStreamT &&beatStream);
+
+	template<Signal PayloadT, Signal ...Meta>
+	template<StreamSignal T> 
+	inline auto Stream<PayloadT, Meta...>::add(T&& stream) &&
+	{
+		auto [result, duplicated] = replicateForEntirePacket(move(*this), move(stream));
+		ready(duplicated) = '1';
+
+		return result.template add<std::remove_cvref_t<decltype(*duplicated)>>(move(*duplicated));
+	}
+
 
 	template<Signal PayloadT, Signal ...Meta>
 	inline auto Stream<PayloadT, Meta...>::transform(std::invocable<Payload> auto&& fun)

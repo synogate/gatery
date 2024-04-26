@@ -251,6 +251,17 @@ namespace gtry::scl::strm
 	*/
 	template<StreamSignal StreamT>
 	StreamT createVStream(const typename StreamT::Payload& payload, const Bit& validBit) { StreamT ret(payload); valid(ret) = validBit; return ret; }
+
+
+
+	/**
+	 * @brief Stalls both streams to synchonize them, such that every beat on the second stream is lined up and kept constant for all beats of a corresponding packet on the first stream.
+	 * @details If the second stream is not a packet stream, the two streams are simply aligned beat for beat.
+	 * @returns The input streams, but stalling each other to be aligned.
+	 */
+	template<StreamSignal BeatStreamT, StreamSignal PacketStreamT>
+	std::tuple<PacketStreamT, BeatStreamT> replicateForEntirePacket(PacketStreamT &&packetStream, BeatStreamT &&beatStream);
+
 }
 
 namespace gtry::scl::strm
@@ -710,6 +721,23 @@ namespace gtry::scl::strm
 		StreamT out = move(in);
 		eop(out) &= ctr.isLast();
 		return out;
+	}
+
+
+	template<StreamSignal BeatStreamT, StreamSignal PacketStreamT>
+	std::tuple<PacketStreamT, BeatStreamT> replicateForEntirePacket(PacketStreamT &&packetStream, BeatStreamT &&beatStream)
+	{
+		BeatStreamT outBeatStream = constructFrom(beatStream);
+		PacketStreamT outPacketStream = constructFrom(packetStream);
+
+		// Stall packet stream if we don't have anything on the beat stream
+		outPacketStream <<= move(packetStream) | stall(!valid(beatStream)); 
+		// Stall the beat stream until the eop of the packet stream. Compose the transfer(packetStream) from the valid of the input and the ready of the output to not have a dependency on valid(beatStream)
+		outBeatStream <<= move(beatStream) | stall(!(valid(packetStream) & ready(outPacketStream) & eop(packetStream)));
+		// But make the beat stream "duplicate" its output for the entire duration of the packet, i.e.
+		valid(outBeatStream) = valid(beatStream) & valid(packetStream);
+
+		return { move(outPacketStream), move(outBeatStream) };
 	}
 }
 
