@@ -1282,3 +1282,82 @@ BOOST_FIXTURE_TEST_CASE(AddStreamAsMetaData, AddStreamAsMetaDataSimulationFixtur
 	numPackets = 100;
 	runTest();
 }
+
+
+struct AddMetaSignalFromPacketSimulationFixture : public BoostUnitTestSimulationFixture 
+{
+	BitWidth streamW = 8_b;
+	BitWidth maxPacketW = 64_b;
+	size_t numPackets = 1000;
+
+	std::mt19937 rng;
+
+	sim::DefaultBitVectorState makePacket(std::mt19937 &rng, size_t idx) {
+		std::uniform_int_distribution<size_t> distrib(4, maxPacketW.bits());
+		return sim::createDefaultBitVectorState(distrib(rng), idx);
+	}
+
+	void runTest() {
+		rng.seed(1234);
+		Clock clk({ .absoluteFrequency = 100'000'000 });
+		ClockScope clkScp(clk);
+
+		scl::RvPacketStream<UInt, scl::EmptyBits> in(streamW);
+		emptyBits(in) = BitWidth::count(in->width().bits());
+		pinIn(in, "in");
+
+		scl::RvPacketStream<UInt, scl::EmptyBits, MyMeta> out = move(in) | 
+					scl::strm::addMetaSignalFromPacket(maxPacketW.bits() / streamW.bits() + 1, 
+								[&](scl::RvPacketStream<UInt, scl::EmptyBits> &&in) {
+									return scl::strm::packetSize(move(in), maxPacketW).transform([](const UInt &size) { return MyMeta{ size }; }) | scl::strm::regDownstream();
+								});
+
+		pinOut(out, "out");
+
+		addSimulationProcess([&, this]()->SimProcess {
+			fork([&, this]()->SimProcess {
+				co_await scl::strm::readyDriverRNG(out, clk, 50);
+			}); 
+
+			std::vector<sim::DefaultBitVectorState> sentPackets(numPackets);
+
+			for (size_t idx = 0; idx < sentPackets.size(); idx++)
+				sentPackets[idx] = makePacket(rng, idx);
+
+
+			fork([&, this]()->SimProcess {
+				for (auto& packet : sentPackets)
+					co_await scl::strm::sendPacket(in, scl::strm::SimPacket(packet), clk);
+			});
+
+
+			fork([&, this]()->SimProcess {
+				for (auto& packet : sentPackets) {
+					auto receivedPacket = co_await scl::strm::receivePacket(out, clk);
+					BOOST_TEST(receivedPacket.payload == packet);
+				}
+			});	
+
+			for (auto& packet : sentPackets) {
+				scl::strm::SimuStreamPerformTransferWait<decltype(out)> streamTransfer;
+				do {
+					co_await streamTransfer.wait(out, clk);
+					BOOST_TEST(simu(out.template get<MyMeta>().myMeta) == packet.size());
+				} while (!simuEop(out));
+			}
+			stopTest();
+		});
+
+
+		design.postprocess();
+		BOOST_TEST(!runHitsTimeout({ 100, 1'000'000 }));
+	}
+};
+
+BOOST_FIXTURE_TEST_CASE(AddMetaSignalFromPacket, AddMetaSignalFromPacketSimulationFixture)
+{
+	streamW = 8_b;
+	maxPacketW = 64_b;
+	numPackets = 100;
+	runTest();
+}

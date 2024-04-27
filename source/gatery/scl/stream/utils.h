@@ -21,6 +21,7 @@
 #include "Stream.h"
 #include "metaSignals.h"
 #include "../cdc.h"
+#include "StreamBroadcaster.h"
 
 namespace gtry::scl::strm
 {
@@ -261,6 +262,35 @@ namespace gtry::scl::strm
 	 */
 	template<StreamSignal BeatStreamT, StreamSignal PacketStreamT>
 	std::tuple<PacketStreamT, BeatStreamT> replicateForEntirePacket(PacketStreamT &&packetStream, BeatStreamT &&beatStream);
+
+
+	/**
+	 * @brief Computes a meta signal from each packet using the given functor and attaches the result as a meta signal.
+	 * @details The functor returns an RvStream to indicate, when it has completed its computation. It must produce one beat
+	 * for each ingested packet (or for each ingested beat if the input is not a packet stream).
+	 * The packet stream is duplicated into a fifo to ensure on the output side that the meta signal can be joined with the packet such that it is stable
+	 * for the entire duration of the packet.
+	 * @param inputStream The packet stream to processs and return
+	 * @param maxPacketLength The depth of the fifo, which must be at least as big as the maximum packet size in beats.
+	 * @param functor A lambda transforming the input packet stream into a stream of meta information structs.
+	 * @returns A delayed variant of the input stream with the computed meta information attached and stable between sop and eop.
+	 */
+	template<StreamSignal InStreamT, typename Functor>
+	auto addMetaSignalFromPacket(InStreamT &&inputStream, size_t maxPacketLength, Functor functor);
+
+	/**
+	 * @brief Computes a meta signal from each packet using the given functor and attaches the result as a meta signal.
+	 * @details The functor returns an RvStream to indicate, when it has completed its computation. It must produce one beat
+	 * for each ingested packet (or for each ingested beat if the input is not a packet stream).
+	 * The packet stream is duplicated into a fifo to ensure on the output side that the meta signal can be joined with the packet such that it is stable
+	 * for the entire duration of the packet.
+	 * @param maxPacketLength The depth of the fifo, which must be at least as big as the maximum packet size in beats.
+	 * @param functor A lambda transforming the input packet stream into a stream of meta information structs.
+	 */
+	template<typename Functor>
+	inline auto addMetaSignalFromPacket(size_t maxPacketLength, Functor functor) {
+		return [maxPacketLength, functor](auto&& in) { return addMetaSignalFromPacket(std::forward<decltype(in)>(in), maxPacketLength, functor); };
+	}
 
 }
 
@@ -739,6 +769,22 @@ namespace gtry::scl::strm
 
 		return { move(outPacketStream), move(outBeatStream) };
 	}
+
+	template<StreamSignal InStreamT, typename Functor>
+	auto addMetaSignalFromPacket(InStreamT &&inputStream, size_t maxPacketLength, Functor functor)
+	{
+		Area area("addMetaSignalFromPacket", true);
+		HCL_NAMED(inputStream);
+
+		StreamBroadcaster bcast(move(inputStream));
+		auto metaStream = functor(bcast.bcastTo());
+		HCL_NAMED(metaStream);
+
+		auto resultStream = (bcast.bcastTo() | fifo(maxPacketLength)).add(metaStream);
+		HCL_NAMED(resultStream);
+		return resultStream;
+	}
+
 }
 
 
