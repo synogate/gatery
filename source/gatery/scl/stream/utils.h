@@ -144,6 +144,15 @@ namespace gtry::scl::strm
 		return [=](auto&& source) { return stall(std::forward<decltype(source)>(source), stallCondition); };
 	}
 
+	template<StreamSignal StreamT> 
+		requires (StreamT::template has<Ready>() and StreamT::template has<Valid>())
+	StreamT allowanceStall(StreamT&& source, Bit allow, BitWidth allowanceW, size_t initialAllowance = 0);
+
+	inline auto allowanceStall(Bit allow, BitWidth allowanceW, size_t initialAllowance = 0)
+	{
+		return [=](auto&& source) { return allowanceStall(std::forward<decltype(source)>(source), allow, allowanceW, initialAllowance); };
+	}
+		
 	/**
 	 * @brief stalls a packet stream using a stall condition. This function ensures a stream is backpressured without losing any data. It will not interrupt an ongoing packet
 	 * @param source source stream
@@ -534,6 +543,27 @@ namespace gtry::scl::strm
 		}
 		return out;
 	}
+
+	template<StreamSignal StreamT> 
+		requires (StreamT::template has<Ready>() and StreamT::template has<Valid>())
+	StreamT allowanceStall(StreamT&& source, Bit allow, BitWidth allowanceW, size_t initialAllowance) {
+		Area area{ "scl_allowance_stall", true };
+		HCL_DESIGNCHECK(BitWidth::last(initialAllowance) <= allowanceW);
+
+		Bit stallCondition; HCL_NAMED(stallCondition);
+		StreamT stalledSource = move(source) | scl::strm::stall(stallCondition);
+
+		Counter allowance(allowanceW, initialAllowance);
+		IF(allow)
+			allowance.inc();
+		IF(transfer(stalledSource))
+			allowance.dec();
+
+		const Bit initialStall = initialAllowance == 0 ? '1' : '0';
+		stallCondition = reg(allowance.becomesFirst(), initialStall);
+		return stalledSource;
+	}
+
 
 	template<StreamSignal T>
 		requires (T::template has<Ready>() and T::template has<Valid>())
