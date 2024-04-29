@@ -21,6 +21,7 @@
 #include "Stream.h"
 #include "metaSignals.h"
 #include "../cdc.h"
+#include "StreamBroadcaster.h"
 
 namespace gtry::scl::strm
 {
@@ -260,6 +261,46 @@ namespace gtry::scl::strm
 	*/
 	template<StreamSignal StreamT>
 	StreamT createVStream(const typename StreamT::Payload& payload, const Bit& validBit) { StreamT ret(payload); valid(ret) = validBit; return ret; }
+
+
+
+	/**
+	 * @brief Stalls both streams to synchonize them, such that every beat on the second stream is lined up and kept constant for all beats of a corresponding packet on the first stream.
+	 * @details If the second stream is not a packet stream, the two streams are simply aligned beat for beat.
+	 * @returns The input streams, but stalling each other to be aligned.
+	 */
+	template<StreamSignal BeatStreamT, StreamSignal PacketStreamT>
+	std::tuple<PacketStreamT, BeatStreamT> replicateForEntirePacket(PacketStreamT &&packetStream, BeatStreamT &&beatStream);
+
+
+	/**
+	 * @brief Computes a meta signal from each packet using the given functor and attaches the result as a meta signal.
+	 * @details The functor returns an RvStream to indicate, when it has completed its computation. It must produce one beat
+	 * for each ingested packet (or for each ingested beat if the input is not a packet stream).
+	 * The packet stream is duplicated into a fifo to ensure on the output side that the meta signal can be joined with the packet such that it is stable
+	 * for the entire duration of the packet.
+	 * @param inputStream The packet stream to processs and return
+	 * @param maxPacketLength The depth of the fifo, which must be at least as big as the maximum packet size in beats.
+	 * @param functor A lambda transforming the input packet stream into a stream of meta information structs.
+	 * @returns A delayed variant of the input stream with the computed meta information attached and stable between sop and eop.
+	 */
+	template<StreamSignal InStreamT, typename Functor>
+	auto addMetaSignalFromPacket(InStreamT &&inputStream, size_t maxPacketLength, Functor functor);
+
+	/**
+	 * @brief Computes a meta signal from each packet using the given functor and attaches the result as a meta signal.
+	 * @details The functor returns an RvStream to indicate, when it has completed its computation. It must produce one beat
+	 * for each ingested packet (or for each ingested beat if the input is not a packet stream).
+	 * The packet stream is duplicated into a fifo to ensure on the output side that the meta signal can be joined with the packet such that it is stable
+	 * for the entire duration of the packet.
+	 * @param maxPacketLength The depth of the fifo, which must be at least as big as the maximum packet size in beats.
+	 * @param functor A lambda transforming the input packet stream into a stream of meta information structs.
+	 */
+	template<typename Functor>
+	inline auto addMetaSignalFromPacket(size_t maxPacketLength, Functor functor) {
+		return [maxPacketLength, functor](auto&& in) { return addMetaSignalFromPacket(std::forward<decltype(in)>(in), maxPacketLength, functor); };
+	}
+
 }
 
 namespace gtry::scl::strm
@@ -741,6 +782,39 @@ namespace gtry::scl::strm
 		eop(out) &= ctr.isLast();
 		return out;
 	}
+
+
+	template<StreamSignal BeatStreamT, StreamSignal PacketStreamT>
+	std::tuple<PacketStreamT, BeatStreamT> replicateForEntirePacket(PacketStreamT &&packetStream, BeatStreamT &&beatStream)
+	{
+		BeatStreamT outBeatStream = constructFrom(beatStream);
+		PacketStreamT outPacketStream = constructFrom(packetStream);
+
+		// Stall packet stream if we don't have anything on the beat stream
+		outPacketStream <<= move(packetStream) | stall(!valid(beatStream)); 
+		// Stall the beat stream until the eop of the packet stream. Compose the transfer(packetStream) from the valid of the input and the ready of the output to not have a dependency on valid(beatStream)
+		outBeatStream <<= move(beatStream) | stall(!(valid(packetStream) & ready(outPacketStream) & eop(packetStream)));
+		// But make the beat stream "duplicate" its output for the entire duration of the packet, i.e.
+		valid(outBeatStream) = valid(beatStream) & valid(packetStream);
+
+		return { move(outPacketStream), move(outBeatStream) };
+	}
+
+	template<StreamSignal InStreamT, typename Functor>
+	auto addMetaSignalFromPacket(InStreamT &&inputStream, size_t maxPacketLength, Functor functor)
+	{
+		Area area("addMetaSignalFromPacket", true);
+		HCL_NAMED(inputStream);
+
+		StreamBroadcaster bcast(move(inputStream));
+		auto metaStream = functor(bcast.bcastTo());
+		HCL_NAMED(metaStream);
+
+		auto resultStream = (bcast.bcastTo() | fifo(maxPacketLength)).add(metaStream);
+		HCL_NAMED(resultStream);
+		return resultStream;
+	}
+
 }
 
 
