@@ -151,7 +151,7 @@ namespace gtry::hlim {
 		void inferSignalNames();
 
 		void insertConstUndefinedNodes();
-		void disconnectZeroBitSignalNodes();
+		void disconnectZeroBitConnections();
 		void disconnectZeroBitOutputPins();
 		void optimizeRewireNodes(Subnet& subnet);
 		void cullSequentiallyDuplicatedSignalNodes();

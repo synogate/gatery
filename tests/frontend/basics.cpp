@@ -1672,3 +1672,37 @@ BOOST_FIXTURE_TEST_CASE(simuOnExportOverride, gtry::BoostUnitTestSimulationFixtu
 	design.postprocess();
 	runTest({ 1,1 });
 }
+
+
+
+BOOST_FIXTURE_TEST_CASE(ZeroBitDisconnect, gtry::BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+
+	Bit in = pinIn().setName("in");
+	UInt muxSelect = 0_b;
+
+	Bit out = mux(muxSelect, { in });
+
+	pinOut(out).setName("out");
+
+	addSimulationProcess([=, this]()->SimProcess {
+		std::mt19937 rng = std::mt19937{ 1337 };
+		
+		for ([[maybe_unused]] auto i : gtry::utils::Range(100)) {
+			bool v = rng() & 1;
+			simu(in) = v;
+			co_await AfterClk(clock);
+			BOOST_TEST(simu(out) == v);
+		}
+
+		stopTest();
+	});
+
+	design.postprocess();
+	runTest({ 1,1 });
+}
+
