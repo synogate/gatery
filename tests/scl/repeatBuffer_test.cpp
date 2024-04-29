@@ -264,9 +264,9 @@ BOOST_FIXTURE_TEST_CASE(RepeatBuffer_RvPacketStream, BoostUnitTestSimulationFixt
 		stopTest();
 	});
 
-	design.visualize("before");
+	//design.visualize("before");
 	design.postprocess();
-	design.visualize("after");
+	//design.visualize("after");
 
 	runTest(hlim::ClockRational(20000, 1) / clock.getClk()->absoluteFrequency());
 }
