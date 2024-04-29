@@ -278,12 +278,12 @@ void Circuit::disconnectZeroBitConnections()
 		return constant;
 	};
 
-	for (auto &node : m_nodes) {
-		for (size_t i = 0; i < node->getNumInputPorts(); i++) {
-			auto driver = node->getDriver(i);
+	for (size_t i = 0; i < m_nodes.size(); i++) {
+		for (size_t port = 0; port < m_nodes[i]->getNumInputPorts(); port++) {
+			auto driver = m_nodes[i]->getDriver(port);
 			if (driver.node != nullptr) {
 				if (getOutputConnectionType(driver).type != ConnectionType::DEPENDENCY && getOutputConnectionType(driver).width == 0) {
-					node->rewireInput(i, { .node = buildZeroBitConst(node->getGroup()), .port = 0 });
+					m_nodes[i]->rewireInput(port, { .node = buildZeroBitConst(m_nodes[i]->getGroup()), .port = 0 });
 				}
 			}
 		}

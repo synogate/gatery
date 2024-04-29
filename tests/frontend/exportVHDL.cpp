@@ -393,6 +393,106 @@ BOOST_FIXTURE_TEST_CASE(GenericMemoryExport_Async_16_w_reset, Test_GenericMemory
 
 
 
+
+BOOST_FIXTURE_TEST_CASE(GenericMemoryExport_Depth1_Sync_1_no_reset, Test_GenericMemoryExport)
+{
+	using namespace gtry;
+
+	registerResetType = memoryResetType = gtry::Clock::ResetType::SYNCHRONOUS;	
+	latency = 1;
+	depth = 1;
+
+	execute();
+
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(GenericMemoryExport_Depth1_Sync_1_w_reset, Test_GenericMemoryExport)
+{
+	using namespace gtry;
+
+	registerResetType = memoryResetType = gtry::Clock::ResetType::SYNCHRONOUS;	
+	latency = 1;
+	latencyRegResetValue = 0;
+	depth = 1;
+
+	execute();
+
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"PROCESS\\(sysclk\\)"}));
+	BOOST_TEST(exportContains(std::regex{"IF \\(reset = '1'\\) THEN"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(GenericMemoryExport_Depth1_Async_1_w_reset, Test_GenericMemoryExport)
+{
+	using namespace gtry;
+
+	registerResetType = memoryResetType = gtry::Clock::ResetType::ASYNCHRONOUS;	
+	latency = 1;
+	latencyRegResetValue = 0;
+	depth = 1;
+
+	execute();
+
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"PROCESS\\(sysclk\\)"}));
+	BOOST_TEST(exportContains(std::regex{"PROCESS\\(sysclk, reset\\)"}));
+	BOOST_TEST(exportContains(std::regex{"IF \\(reset = '1'\\) THEN"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(GenericMemoryExport_Depth1_Sync_16_no_reset, Test_GenericMemoryExport)
+{
+	using namespace gtry;
+
+	registerResetType = memoryResetType = gtry::Clock::ResetType::SYNCHRONOUS;	
+	latency = 16;
+	depth = 1;
+
+	execute();
+
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(GenericMemoryExport_Depth1_Sync_16_w_reset, Test_GenericMemoryExport)
+{
+	using namespace gtry;
+
+	registerResetType = memoryResetType = gtry::Clock::ResetType::SYNCHRONOUS;	
+	latency = 16;
+	latencyRegResetValue = 0;
+	depth = 1;
+
+	execute();
+
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"PROCESS\\(sysclk\\)"}));
+	BOOST_TEST(exportContains(std::regex{"IF \\(reset = '1'\\) THEN"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(GenericMemoryExport_Depth1_Async_16_w_reset, Test_GenericMemoryExport)
+{
+	using namespace gtry;
+
+	registerResetType = memoryResetType = gtry::Clock::ResetType::ASYNCHRONOUS;	
+	latency = 16;
+	latencyRegResetValue = 0;
+	depth = 1;
+
+	execute();
+
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"PROCESS\\(sysclk\\)"}));
+	BOOST_TEST(exportContains(std::regex{"PROCESS\\(sysclk, reset\\)"}));
+	BOOST_TEST(exportContains(std::regex{"IF \\(reset = '1'\\) THEN"}));
+}
+
+
+
+
+
+
+
+
 BOOST_FIXTURE_TEST_CASE(unusedNamedSignalVanishes, gtry::GHDLTestFixture)
 {
 	using namespace gtry;
