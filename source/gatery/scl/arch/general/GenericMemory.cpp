@@ -174,6 +174,11 @@ bool EmbeddedMemoryPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 		break;
 	}
 
+	if (request.maxDepth == 1) {
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Not mapping " << memGrp->getMemory() << " to a memory primitive because its depth is one and is better served by a register.");
+		return false;
+	}	
+
 	auto *memChoice = embeddedMems.selectMemFor(nodeGroup, request);
 	if (memChoice == nullptr) {
 		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 

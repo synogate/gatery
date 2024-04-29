@@ -72,6 +72,17 @@ BOOST_FIXTURE_TEST_CASE(scl_ddr_for_clock, TestWithDefaultDevice<Test_ODDR_ForCl
 
 
 
+BOOST_FIXTURE_TEST_CASE(histogram_noAddress, TestWithDefaultDevice<Test_Histogram>)
+{
+	using namespace gtry;
+	numBuckets = 1;
+	bucketWidth = 8_b;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+
+
 
 BOOST_FIXTURE_TEST_CASE(lutram_1, TestWithDefaultDevice<Test_Histogram>)
 {
