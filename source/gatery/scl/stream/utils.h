@@ -259,8 +259,8 @@ namespace gtry::scl::strm
 	/**
 	 * @brief creates a VStream with the payload and valid bits you give it
 	*/
-	template<StreamSignal StreamT>
-	StreamT createVStream(const typename StreamT::Payload& payload, const Bit& validBit) { StreamT ret(payload); valid(ret) = validBit; return ret; }
+	template<Signal Tp>
+	VStream<std::remove_cvref_t<Tp>> createVStream(Tp&& payload, const Bit& validBit) { VStream<std::remove_cvref_t<Tp>> ret(std::forward<Tp>(payload)); valid(ret) = validBit; return ret; }
 
 
 
