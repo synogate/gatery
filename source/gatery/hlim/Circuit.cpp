@@ -267,16 +267,25 @@ void Circuit::inferSignalNames()
 	}
 }
 
-
-void Circuit::disconnectZeroBitSignalNodes()
+void Circuit::disconnectZeroBitConnections()
 {
-	for (size_t i = 0; i < m_nodes.size(); i++) {
-		Node_Signal *signal = dynamic_cast<Node_Signal*>(m_nodes[i].get());
-		if (signal == nullptr)
-			continue;
+	auto buildZeroBitConst = [this](NodeGroup *group) {
+		sim::DefaultBitVectorState undef;
+		undef.resize(0);
+		auto* constant = createNode<Node_Constant>(std::move(undef), ConnectionType{ .type = ConnectionType::BITVEC, .width = 0 });
+		constant->moveToGroup(group);
 
-		if (signal->getOutputConnectionType(0).width == 0) {
-			signal->disconnectInput();
+		return constant;
+	};
+
+	for (size_t i = 0; i < m_nodes.size(); i++) {
+		for (size_t port = 0; port < m_nodes[i]->getNumInputPorts(); port++) {
+			auto driver = m_nodes[i]->getDriver(port);
+			if (driver.node != nullptr) {
+				if (getOutputConnectionType(driver).type != ConnectionType::DEPENDENCY && getOutputConnectionType(driver).width == 0) {
+					m_nodes[i]->rewireInput(port, { .node = buildZeroBitConst(m_nodes[i]->getGroup()), .port = 0 });
+				}
+			}
 		}
 	}
 }
@@ -1629,7 +1638,7 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
 {
 	circuit.insertConstUndefinedNodes();
 	Subnet subnet = Subnet::all(circuit);
-	circuit.disconnectZeroBitSignalNodes();
+	circuit.disconnectZeroBitConnections();
 	circuit.disconnectZeroBitOutputPins();
 	defaultValueResolution(circuit, subnet);
 	circuit.cullUnusedNodes(subnet); // Dirty way of getting rid of default nodes
@@ -1736,7 +1745,7 @@ void DefaultPostprocessing::run(Circuit &circuit) const
 void MinimalPostprocessing::generalOptimization(Circuit& circuit) const
 {
 	Subnet subnet = Subnet::all(circuit);
-	circuit.disconnectZeroBitSignalNodes();
+	circuit.disconnectZeroBitConnections();
 	circuit.disconnectZeroBitOutputPins();
 	defaultValueResolution(circuit, subnet);
 	circuit.cullUnusedNodes(subnet); // Dirty way of getting rid of default nodes

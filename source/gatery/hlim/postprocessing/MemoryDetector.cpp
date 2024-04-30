@@ -1013,13 +1013,6 @@ Node_MemPort *MemoryGroup::findSuitableResetWritePort()
 
 NodePort MemoryGroup::buildResetAddrCounter(Circuit &circuit, size_t width, Clock *resetClock)
 {
-	auto *reg = circuit.createNode<Node_Register>();
-	reg->moveToGroup(m_fixupNodeGroup);
-	reg->recordStackTrace();
-	reg->setClock(resetClock);
-	reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD).insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
-
-
 	sim::DefaultBitVectorState state;
 	state.resize(width);
 	state.setRange(sim::DefaultConfig::DEFINED, 0, width);
@@ -1028,6 +1021,15 @@ NodePort MemoryGroup::buildResetAddrCounter(Circuit &circuit, size_t width, Cloc
 	auto *resetConst = circuit.createNode<Node_Constant>(state, ConnectionType::BITVEC);
 	resetConst->moveToGroup(m_fixupNodeGroup);
 	resetConst->recordStackTrace();
+
+	if (width == 0)
+		return { .node = resetConst, .port = 0ull };
+
+	auto *reg = circuit.createNode<Node_Register>();
+	reg->moveToGroup(m_fixupNodeGroup);
+	reg->recordStackTrace();
+	reg->setClock(resetClock);
+	reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD).insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
 	reg->connectInput(Node_Register::RESET_VALUE, {.node = resetConst, .port = 0ull});
 
 

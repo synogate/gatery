@@ -64,11 +64,11 @@ void GenericMemoryEntity::buildFrom(hlim::NodeGroup *memNodeGrp)
 
 		HCL_ASSERT_HINT(enInput.node == nullptr || enInput == wrEnInput, "For now I don't want to mix read and write ports, so wrEn == en always.");
 
-		if (addrInput.node != nullptr)
+		if (addrInput.node != nullptr && hlim::getOutputConnectionType(addrInput).width > 0)
 			m_inputs.insert(addrInput);
 		if (wrEnInput.node != nullptr)
 			m_inputs.insert(wrEnInput);
-		if (dataInput.node != nullptr)
+		if (dataInput.node != nullptr && hlim::getOutputConnectionType(dataInput).width > 0)
 			m_inputs.insert(dataInput);
 
 		m_inputClocks.insert(wp.node->getClocks()[0]->getClockPinSource());
@@ -78,7 +78,7 @@ void GenericMemoryEntity::buildFrom(hlim::NodeGroup *memNodeGrp)
 		auto enInput = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
 		auto dataOutput = rp.dataOutput;
 
-		if (addrInput.node != nullptr)
+		if (addrInput.node != nullptr && hlim::getOutputConnectionType(addrInput).width > 0)
 			m_inputs.insert(addrInput);
 		if (enInput.node != nullptr)
 			m_inputs.insert(enInput);
@@ -317,7 +317,10 @@ void GenericMemoryEntity::writeWritePorts(std::ostream &stream, unsigned indent,
 		const auto &dataDecl = m_namespaceScope.get(dataPort);
 
 		cf.indent(stream, indent);
-		stream << "memory(to_integer(" << m_namespaceScope.get(addrPort).name << ")) <= ";
+		if (hlim::getOutputConnectionType(addrPort).width > 0)
+			stream << "memory(to_integer(" << m_namespaceScope.get(addrPort).name << ")) <= ";
+		else
+			stream << "memory(0) <= ";
 		if (dataDecl.dataType != VHDLDataType::UNSIGNED) {
 			cf.formatDataType(stream, VHDLDataType::UNSIGNED);
 			stream << '(' << dataDecl.name << ";\n";
@@ -374,7 +377,10 @@ void GenericMemoryEntity::writeReadPorts(std::ostream &stream, unsigned indent, 
 		}
 
 		if (asyncMode || idx == 0) {
-			stream << "memory(to_integer(" << m_namespaceScope.get(addrPort).name << "));\n";
+			if (hlim::getOutputConnectionType(addrPort).width > 0)
+				stream << "memory(to_integer(" << m_namespaceScope.get(addrPort).name << "));\n";
+			else
+				stream << "memory(0);\n";
 		} else {
 			stream  << outputDecl.name << "_outputReg_" << idx-1 << ";\n";
 		}
