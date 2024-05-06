@@ -185,7 +185,7 @@ namespace gtry
 
 		void addResetLogic(std::function<Data(UInt)> address2data) {
 			m_memoryNode->setInitializationNetDataWidth(m_wordWidth);
-			UInt data = pack(address2data(hlim::NodePort{m_memoryNode, (size_t)hlim::Node_Memory::Outputs::INITIALIZATION_ADDR}));
+			UInt data = pack(address2data(SignalReadPort(hlim::NodePort{m_memoryNode, (size_t)hlim::Node_Memory::Outputs::INITIALIZATION_ADDR})));
 			m_memoryNode->rewireInput((size_t)hlim::Node_Memory::Inputs::INITIALIZATION_DATA, data.readPort());
 		}
 
