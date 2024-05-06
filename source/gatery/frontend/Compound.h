@@ -453,12 +453,12 @@ namespace gtry
 	};
 
 	template<typename T>
-	struct VisitCompound<T, std::enable_if_t<boost::hana::Struct<T>::value>>
+	struct VisitCompound<T, std::enable_if_t<boost::hana::Struct<T>::value && !boost::spirit::traits::is_container<T>::value>>
 	{
 		template<CompoundAssignmentVisitor Visitor>
 		void operator () (T& a, const T& b, Visitor& v)
 		{
-			if (v.enterPackStruct(a, b))
+			if (v.enterPackStruct(a))
 				boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto member) {
 					auto& suba = boost::hana::second(member)(a);
 					auto& subb = boost::hana::second(member)(b);
@@ -493,7 +493,7 @@ namespace gtry
 		template<CompoundBinaryVisitor Visitor>
 		void operator () (const T& a, const T& b, Visitor& v)
 		{
-			if (v.enterPackStruct(a, b)) 
+			if (v.enterPackStruct(a)) 
 				boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto member) {
 					auto& suba = boost::hana::second(member)(a);
 					auto& subb = boost::hana::second(member)(b);
