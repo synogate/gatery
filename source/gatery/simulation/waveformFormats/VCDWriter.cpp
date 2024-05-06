@@ -99,6 +99,12 @@ void gtry::sim::VCDWriter::declareReal(std::string_view code, std::string_view l
 	m_File << "$var real 0 " << code << " " << label << " $end\n";
 }
 
+void gtry::sim::VCDWriter::declareString(std::string_view code, std::string_view label)
+{
+	assert(!m_EndDefinitions);
+	m_File << "$var string 0 " << code << " " << label << " $end\n";
+}
+
 gtry::sim::VCDWriter::Scope gtry::sim::VCDWriter::beginDumpVars()
 {
 	assert(!m_EndDefinitions);
@@ -174,6 +180,9 @@ void gtry::sim::VCDWriter::writeString(std::string_view code, std::string_view t
 {
 	assert(m_EndDefinitions);
 	
+	if (text.empty())
+		text = " "; // empty string is not supported by surfer. space is also not supported, but it's better than nothing
+
 	m_File << 's';
 	for (auto c : text)
 		if (c == ' ')

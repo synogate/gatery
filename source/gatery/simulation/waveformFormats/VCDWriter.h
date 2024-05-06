@@ -46,6 +46,7 @@ namespace gtry::sim
 		Scope beginModule(std::string_view name);
 		void declareWire(size_t width, std::string_view code, std::string_view label);
 		void declareReal(std::string_view code, std::string_view label);
+		void declareString(std::string_view code, std::string_view label);
 
 		Scope beginDumpVars();
 		void writeState(std::string_view code, const DefaultBitVectorState& state, size_t offset, size_t size);
