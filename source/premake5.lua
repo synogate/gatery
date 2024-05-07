@@ -168,7 +168,7 @@ project "gatery_core"
     includedirs "%{prj.location}/"
     GateryProjectDefaults()
 
-    Gtry_EmbedResources("gen/res/gtry_resources", "gtry::res", "../data/", "**")
+    Gtry_EmbedResources("gen/res/gtry_resources", "gtry::res", "../", "data/**")
     includedirs "gen/"
 
     filter "system:windows"
