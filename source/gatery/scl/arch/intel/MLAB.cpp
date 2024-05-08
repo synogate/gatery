@@ -116,11 +116,8 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 
 	auto &circuit = DesignScope::get()->getCircuit();
 
-//DesignScope::get()->visualize(std::string("intelLutram")+std::to_string(__LINE__));
 	memGrp->convertToReadBeforeWrite(circuit);
-//DesignScope::get()->visualize(std::string("intelLutram")+std::to_string(__LINE__));
 	memGrp->attemptRegisterRetiming(circuit);
-//DesignScope::get()->visualize(std::string("intelLutram")+std::to_string(__LINE__));
 
 	hlim::Clock *readClock = nullptr;
 	if (!rp.dedicatedReadLatencyRegisters.empty())

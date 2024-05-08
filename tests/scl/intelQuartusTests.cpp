@@ -77,6 +77,7 @@ BOOST_FIXTURE_TEST_CASE(fifoLutram, TestWithAgilexDevice<gtry::scl::IntelQuartus
 	testCompilation();
 	BOOST_TEST(exportContains(std::regex{"altera_mf.altera_mf_components.altdpram"}));
 	BOOST_TEST(exportContains(std::regex{"ram_block_type => \"MLAB\""}));
+	BOOST_TEST(!exportContains(std::regex{"out_conflict_bypass_mux"}));
 	BOOST_TEST(exportContains(std::regex{"read_during_write_mode_mixed_ports => \"DONT_CARE\""}));
 }
 
@@ -99,19 +100,15 @@ BOOST_FIXTURE_TEST_CASE(fifoLutramSingleCycle, TestWithAgilexDevice<gtry::scl::I
 	testCompilation();
 	BOOST_TEST(exportContains(std::regex{"altera_mf.altera_mf_components.altdpram"}));
 	BOOST_TEST(exportContains(std::regex{"ram_block_type => \"MLAB\""}));
-	BOOST_TEST(exportContains(std::regex{"read_during_write_mode_mixed_ports => \"NEW_DATA\""}));
+	// This is also DONT_CARE + hazard logic (for a virtual new_data mode) because the mlab would only be able to do new_data with an output register, but that
+	// is the register needed for retiming the read-port to be on the same cycle as the write.
+	BOOST_TEST(exportContains(std::regex{"out_conflict_bypass_mux"}));
+	BOOST_TEST(exportContains(std::regex{"read_during_write_mode_mixed_ports => \"DONT_CARE\""}));
 }
 
 BOOST_FIXTURE_TEST_CASE(fifoLutramFallthrough, TestWithAgilexDevice<gtry::scl::IntelQuartusTestFixture>)
 {
 	using namespace gtry;
-	/*
-	ALMs used in final placement: 49 (25.5)
-	ALMs used for memory: 10
-	M20Ks: 0
-	Dedicated Logic Registers: 61 (38)
-	*/
-
 
 	Clock clock({
 		.absoluteFrequency = {{500'000'000, 1}},
