@@ -29,7 +29,13 @@ class M20K : public IntelBlockram
 {
 	public:
 		M20K(const IntelDevice &intelDevice);
-
 };
+
+class M20KStratix10Agilex : public M20K 
+{
+	public:
+		M20KStratix10Agilex(const IntelDevice &intelDevice);
+};
+
 
 }
