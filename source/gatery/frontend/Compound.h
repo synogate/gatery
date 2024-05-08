@@ -453,7 +453,7 @@ namespace gtry
 	};
 
 	template<typename T>
-	struct VisitCompound<T, std::enable_if_t<boost::hana::Struct<T>::value && !boost::spirit::traits::is_container<T>::value>>
+	struct VisitCompound<T, std::enable_if_t<boost::hana::Struct<T>::value>>
 	{
 		template<CompoundAssignmentVisitor Visitor>
 		void operator () (T& a, const T& b, Visitor& v)
