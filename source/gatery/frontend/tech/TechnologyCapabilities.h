@@ -35,19 +35,36 @@ enum class Preference {
 template<typename BaseType>
 struct Option {
 	Preference choice = Preference::DONTCARE;
-	BaseType value;
+	BaseType value = 0;
 
-	/// For DONTCARE, SPEED, and AREA
+	Option() = default;
+	Option(Preference choice) { (*this) = choice; }
+	Option(BaseType v) { (*this) = v; }
+	Option(Preference choice, BaseType value) : choice(choice), value(value) { }
+
 	void operator=(Preference choice) { this->choice = choice; }
+	void operator=(BaseType v) { choice = Preference::SPECIFIC_VALUE; value = v; }
 
-	void optimizeDontCare() { choice = Preference::DONTCARE; }
+	bool operator==(BaseType v) const { return choice == Preference::SPECIFIC_VALUE && value == v; }
+
+	void dontCare() { choice = Preference::DONTCARE; }
 	void optimizeSpeed() { choice = Preference::SPEED; }
 	void optimizeArea() { choice = Preference::AREA; }
 
-	void operator=(BaseType v) { choice = Preference::SPECIFIC_VALUE; value = v; }
+	static Option<BaseType> DontCare() { return Preference::DONTCARE; }
+	static Option<BaseType> OptimizeSpeed() { return Preference::SPEED; }
+	static Option<BaseType> OptimizeArea() { return Preference::AREA; }
+
 	void atLeast(BaseType v) { choice = Preference::MIN_VALUE; value = v; }
 	void atMost(BaseType v) { choice = Preference::MAX_VALUE; value = v; }
+	static Option<BaseType> AtLeast(BaseType v) { return Option(Preference::MIN_VALUE, v); }
+	static Option<BaseType> AtMost(BaseType v) { return Option(Preference::MAX_VALUE, v); }
+
+	BaseType resolveSimpleDefault(BaseType defaultValue) const;
+	BaseType resolveToPreferredMinimum(BaseType preferredMinimum) const;
+	std::optional<Option<BaseType>> mergeWith(Option<BaseType> other) const;
 };
+
 
 namespace details {
 	template<typename BaseType>
@@ -138,20 +155,12 @@ class FifoCapabilities : public Capabilities {
 			typename Wrapper<size_t>::wrap readDepth;
 			typename Wrapper<size_t>::wrap writeWidth;
 
-			typename Wrapper<bool>::wrap outputIsFallthrough;
 			typename Wrapper<bool>::wrap singleClock;
 
-			typename Wrapper<bool>::wrap useECCEncoder;
-			typename Wrapper<bool>::wrap useECCDecoder;
-
-			typename Wrapper<size_t>::wrap latency_write_empty;
-			typename Wrapper<size_t>::wrap latency_read_empty;
-			typename Wrapper<size_t>::wrap latency_write_full;
-			typename Wrapper<size_t>::wrap latency_read_full;
-			typename Wrapper<size_t>::wrap latency_write_almostEmpty;
-			typename Wrapper<size_t>::wrap latency_read_almostEmpty;
-			typename Wrapper<size_t>::wrap latency_write_almostFull;
-			typename Wrapper<size_t>::wrap latency_read_almostFull;
+			typename Wrapper<size_t>::wrap latency_writeToEmpty;
+			typename Wrapper<size_t>::wrap latency_readToFull;
+			typename Wrapper<size_t>::wrap latency_writeToAlmostEmpty;
+			typename Wrapper<size_t>::wrap latency_readToAlmostFull;
 		};
 
 		using Request = Settings<details::RequestWrapper>;
@@ -198,5 +207,135 @@ class TechnologyScope : public BaseScope<TechnologyScope> {
 	protected:
 		const TechnologyCapabilities &m_techCaps;
 };
+
+
+
+
+
+
+
+
+
+template<typename BaseType>
+BaseType Option<BaseType>::resolveSimpleDefault(BaseType defaultValue) const {
+	HCL_DESIGNCHECK(choice != Preference::MIN_VALUE && 
+					choice != Preference::MAX_VALUE);
+	if (choice == Preference::SPECIFIC_VALUE)
+		return value;
+	else
+		return defaultValue;
+};
+
+template<typename BaseType>
+BaseType Option<BaseType>::resolveToPreferredMinimum(BaseType preferredMinimum) const {
+	switch (choice) {
+		case Preference::MIN_VALUE: 
+			return std::max<size_t>(value, preferredMinimum);
+		break;
+		case Preference::MAX_VALUE:
+			return std::min<size_t>(value, preferredMinimum);
+		break;
+		case Preference::SPECIFIC_VALUE:
+			return value;
+		break;
+		default:
+			return preferredMinimum;
+	}
+};
+
+template<typename BaseType>
+std::optional<Option<BaseType>> Option<BaseType>::mergeWith(Option<BaseType> other) const {
+	switch (choice) {
+		case Preference::MIN_VALUE: 
+			switch (other.choice) {
+				case Preference::DONTCARE:
+				case Preference::SPEED: 
+				case Preference::AREA:
+					return *this;
+				case Preference::MIN_VALUE: 
+					return Option::AtLeast(std::max(value, other.value));
+				case Preference::MAX_VALUE:
+					if (other.value >= value)
+						return std::min(value, other.value);
+					else
+						return {};
+				case Preference::SPECIFIC_VALUE:
+					if (other.value >= value)
+						return other;
+					else
+						return {};
+			}
+		break;
+		case Preference::MAX_VALUE:
+			switch (other.choice) {
+				case Preference::DONTCARE:
+				case Preference::SPEED: 
+				case Preference::AREA:
+					return *this;
+				case Preference::MIN_VALUE:
+					if (other.value <= value)
+						return std::min(value, other.value);
+					else
+						return {};
+				case Preference::MAX_VALUE:
+					return Option::AtMost(std::min(value, other.value));
+				case Preference::SPECIFIC_VALUE:
+					if (other.value <= value)
+						return other;
+					else
+						return {};
+			}
+		break;
+		case Preference::SPECIFIC_VALUE:
+			switch (other.choice) {
+				case Preference::DONTCARE:
+				case Preference::SPEED: 
+				case Preference::AREA: 
+					return *this;
+				case Preference::SPECIFIC_VALUE: 
+					if (other.value == value)
+						return *this;
+					else
+						return {};
+				case Preference::MIN_VALUE: 
+					if (other.value <= value)
+						return *this;
+					else
+						return {};
+				case Preference::MAX_VALUE: 
+					if (other.value >= value)
+						return *this;
+					else
+						return {};
+			}
+		break;			
+		case Preference::DONTCARE:
+			return other;
+		case Preference::SPEED:
+			switch (other.choice) {
+				case Preference::DONTCARE:
+				case Preference::SPEED:
+					return *this;
+				case Preference::AREA: 
+					return {};
+				case Preference::SPECIFIC_VALUE: 
+				case Preference::MIN_VALUE: 
+				case Preference::MAX_VALUE: 
+					return other;
+			}
+		case Preference::AREA: 
+			switch (other.choice) {
+				case Preference::DONTCARE:
+				case Preference::AREA: 
+					return *this;
+				case Preference::SPEED:
+					return {};
+				case Preference::SPECIFIC_VALUE: 
+				case Preference::MIN_VALUE: 
+				case Preference::MAX_VALUE: 
+					return other;
+			}
+	}
+}
 
 }

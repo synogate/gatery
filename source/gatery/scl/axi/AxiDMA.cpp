@@ -140,12 +140,13 @@ namespace gtry::scl
 		HCL_NAMED(mid);
 
 		if (dataFifoDepth > 1)
-			mid = strm::fifo(move(mid), dataFifoDepth, gtry::scl::FallThrough::on);
+			mid = strm::fifo(move(mid), dataFifoDepth, FifoLatency(0));
 		if (dataFifoDepth > 0)
 			mid = strm::regDownstream(move(mid));
 
 		scl::axiFromStream(move(storeCmd), mid.template remove<scl::Eop>(), axi);
 	}
+
 	AxiTransferReport axiTransferAuditor(const Axi4& streamToSniff, BitWidth bitsPerBurst, BitWidth counterW)
 	{
 		Area area{ "scl_axiTransferAuditor", true };
