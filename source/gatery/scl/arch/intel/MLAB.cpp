@@ -282,8 +282,10 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 
 		HCL_NAMED(rdAddr);
 
-		if (retimeReadPortByOne)
-			rdAddr = reg(rdAddr);
+		if (retimeReadPortByOne) {
+			Clock clock(readClock);
+			rdAddr = reg(rdAddr, RegisterSettings{ .clock = clock });
+		}
 
 		altdpram->setInput(ALTDPRAM::Inputs::IN_RDADDRESS, (BVec) rdAddr(0, addrBits));
 
