@@ -1160,7 +1160,7 @@ namespace gtry::scl::strm
 		IF(transfer(in) & eop(in))
 			sim_assert(packetBitCount >= zext(localCutoff)) << "input packet too small with respect to bit cutoff";
 		UInt bitsLeft = BitWidth::last(maxPacketW.bits());
-		bitsLeft = reg(bitsLeft, maxPacketW.bits());
+		bitsLeft = reg(bitsLeft);
 
 		IF(valid(in) & sop(in))
 			bitsLeft = zext(localCutoff);
@@ -1174,8 +1174,15 @@ namespace gtry::scl::strm
 		valid(ret) &= !drop;
 		eop(ret) |= lastBeat;
 
-		UInt emptyBitsFull = ret->width().bits() - bitsLeft.lower(BitWidth::last(ret->width().bits()));
-		emptyBits(ret) = emptyBitsFull.lower(emptyBits(ret).width());
+		if (utils::isPow2(in->width().bits()))
+		{
+			emptyBits(ret) = (ret->width().bits() - zext(bitCutoff.lower(emptyBits(ret).width()))).lower(-1_b);
+		}
+		else
+		{
+			UInt emptyBitsFull = ret->width().bits() - bitsLeft.lower(BitWidth::last(ret->width().bits()));
+			emptyBits(ret) = emptyBitsFull.lower(emptyBits(ret).width());
+		}
 
 		IF(transfer(ret))
 			bitsLeft -= ret->width().bits();

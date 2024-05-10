@@ -1160,6 +1160,16 @@ BOOST_FIXTURE_TEST_CASE(stream_drop_tail_static_keep_max, dropTailSimulationFixt
 	runTest();
 }
 
+BOOST_FIXTURE_TEST_CASE(stream_drop_tail_static_nonpow2, dropTailSimulationFixture)
+{
+	streamW = 12_b;
+	keep = 64;
+	maxPacketW = 64_b;
+	numPackets = 100;
+	runTest();
+}
+
+
 //should fail
 BOOST_FIXTURE_TEST_CASE(stream_drop_tail_static_small_packet, dropTailSimulationFixture, *boost::unit_test::disabled())
 {
