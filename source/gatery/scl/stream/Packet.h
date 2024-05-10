@@ -1174,7 +1174,8 @@ namespace gtry::scl::strm
 		valid(ret) &= !drop;
 		eop(ret) |= lastBeat;
 
-		emptyBits(ret) = (ret->width().bits() - bitsLeft.lower(BitWidth::last(ret->width().bits()))).lower(-1_b);
+		UInt emptyBitsFull = ret->width().bits() - bitsLeft.lower(BitWidth::last(ret->width().bits()));
+		emptyBits(ret) = emptyBitsFull.lower(emptyBits(ret).width());
 
 		IF(transfer(ret))
 			bitsLeft -= ret->width().bits();

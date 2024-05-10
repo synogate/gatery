@@ -48,7 +48,7 @@ void RunTimeSimulationContext::overrideSignal(const SigHandle &handle, const Def
 		m_sigOverridePinCache[handle.getOutput()] = pin;
 	} else
 		pin = it->second;
-	HCL_DESIGNCHECK_HINT(pin != nullptr, "Only io pin outputs allow run time overrides, but none was found!");
+	HCL_DESIGNCHECK_HINT(pin != nullptr, "Only io pin inputs allow run time overrides, but none was found!");
 	m_simulator->simProcSetInputPin(pin, state);
 }
 
