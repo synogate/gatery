@@ -136,7 +136,7 @@ namespace gtry::scl::strm
 	 * @param bitCutoff Size at which to cut off the packet (size of the resulting packet). Must be stable during sop.
 	*/
 	template<scl::StreamSignal StreamT> requires (std::remove_cvref_t<StreamT>::template has<Empty>())
-	StreamT streamDropTailBytes(StreamT&& in, const UInt& byteCutoff, BitWidth maxPacketW);
+	auto streamDropTailBytes(StreamT&& in, const UInt& byteCutoff, BitWidth maxPacketW);
 }
 
 namespace gtry::scl::strm
@@ -1167,10 +1167,11 @@ namespace gtry::scl::strm
 		HCL_NAMED(bitsLeft);
 
 		Bit lastBeat = bitsLeft <= in->width().bits(); HCL_NAMED(lastBeat);
-		Bit drop = scl::flagInstantReset(lastBeat & transfer(in), valid(in) & sop(in), '0'); HCL_NAMED(drop);
+		Bit drop = scl::flag(transfer(in) & lastBeat, transfer(in) & eop(in), '0'); HCL_NAMED(drop);
 
 		StreamT ret = constructFrom(in);
 		ret <<= move(in);
+		ready(in) |= drop;
 		valid(ret) &= !drop;
 		eop(ret) |= lastBeat;
 
@@ -1192,14 +1193,14 @@ namespace gtry::scl::strm
 	extern template RvPacketStream<BVec, EmptyBits> streamDropTail(RvPacketStream<BVec, EmptyBits> &&in, const UInt& bitCutoff, BitWidth maxPacketW);
 
 	template<scl::StreamSignal StreamT> requires (std::remove_cvref_t<StreamT>::template has<Empty>())
-	StreamT streamDropTailBytes(StreamT&& in, const UInt& byteCutoff, BitWidth maxPacketW) {
+	auto streamDropTailBytes(StreamT&& in, const UInt& byteCutoff, BitWidth maxPacketW) {
 		UInt inEmptyBytes = empty(in);
 		auto inBits = in.template remove<Empty>().template add<EmptyBits>({cat(inEmptyBytes, "3b0")});
 		auto outBits = streamDropTail(move(inBits), cat(byteCutoff, "3b0"), maxPacketW);
 		UInt outEmptyBits = emptyBits(outBits);
 		return outBits.template remove<EmptyBits>().template add<Empty>({outEmptyBits.upper(-3_b)});
 	}
-	extern template RvPacketStream<BVec, Empty> streamDropTailBytes(RvPacketStream<BVec, Empty> &&in, const UInt& byteCutoff, BitWidth maxPacketW);
+	extern template auto streamDropTailBytes(RvPacketStream<BVec, Empty> &&in, const UInt& byteCutoff, BitWidth maxPacketW);
 
 }
 
