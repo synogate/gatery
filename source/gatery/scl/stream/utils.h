@@ -213,8 +213,14 @@ namespace gtry::scl::strm
 	* @param addr the address stream to look up in memory
 	* @param memory - self explanatory
 	*/
-	template<Signal T, Signal ... Meta, StreamSignal StreamT>
-	StreamT lookup(StreamT& addr, Memory<T>& memory);
+	template<Signal T, Signal ... Meta, Signal Tout>
+	auto lookup(Stream<T, Meta...>&& addr, Memory<Tout>& memory);
+
+	template<Signal Tout>
+	inline auto lookup(Memory<Tout>& memory)
+	{
+		return [&memory](auto&& in) { return lookup(std::forward<decltype(in)>(in), memory); };
+	}
 
 	/**
 	* @brief	Puts a register spawner for retiming in the valid and data path.
@@ -694,12 +700,12 @@ namespace gtry::scl::strm
 		return out;
 	}
 
-	template<Signal T, Signal ... Meta, StreamSignal StreamT>
-	StreamT lookup(StreamT& addr, Memory<T>& memory)
+	template<Signal T, Signal ... Meta, Signal Tout>
+	auto lookup(Stream<T, Meta...>&& addr, Memory<Tout>& memory) 
 	{
 		auto out = addr.transform([&](const UInt& address) {
 			return memory[address].read();
-			});
+		});
 		if (memory.readLatencyHint())
 		{
 			for (size_t i = 0; i < memory.readLatencyHint() - 1; ++i)
