@@ -253,6 +253,11 @@ namespace gtry::scl::strm
 		return out;
 	}
 
+	inline auto pipeinput()
+	{
+		return [=](auto&& source) { return pipeinput(std::forward<decltype(source)>(source)); };
+	}
+
 	template<StreamSignal StreamT>
 	Vector<StreamT> serialPushParallelPopBuffer(StreamT&& in, size_t numberOfElements);
 
