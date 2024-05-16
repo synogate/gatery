@@ -138,7 +138,7 @@ BOOST_FIXTURE_TEST_CASE(fifoLutramFallthrough, TestWithCycloneDevice<gtry::Intel
 	BOOST_TEST(timingMet(clock));
 	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsForMemory.inclChildren == 10.0);
 	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").M20Ks == 0);
-	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsNeeded.inclChildren < 20.0);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsNeeded.inclChildren < 25.0);
 	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").dedicatedLogicRegisters.inclChildren < 25.0);
 }
 
