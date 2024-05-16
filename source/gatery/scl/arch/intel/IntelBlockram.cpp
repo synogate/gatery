@@ -82,9 +82,11 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 
 
 	auto &circuit = DesignScope::get()->getCircuit();
-
+//DesignScope::get()->visualize(std::string("intelBRam")+std::to_string(__LINE__));
 	memGrp->convertToReadBeforeWrite(circuit);
+//DesignScope::get()->visualize(std::string("intelBRam")+std::to_string(__LINE__));
 	memGrp->attemptRegisterRetiming(circuit);
+//DesignScope::get()->visualize(std::string("intelBRam")+std::to_string(__LINE__));
 
 	hlim::Clock* writeClock = nullptr;
 	if (memGrp->getWritePorts().size() > 0) {
@@ -150,6 +152,7 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 	memGrp->buildReset(circuit);
 	memGrp->bypassSignalNodes();
 	memGrp->verify();
+//DesignScope::get()->visualize(std::string("intelBRam")+std::to_string(__LINE__));
 
 	auto *altsyncram = DesignScope::createNode<ALTSYNCRAM>(memGrp->getMemory()->getSize());
 	if (memGrp->getMemory()->requiresPowerOnInitialization())
@@ -165,9 +168,10 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 
 	if (readFirst)
 		altsyncram->setupMixedPortRdw(ALTSYNCRAM::RDWBehavior::OLD_DATA);
-	else if (writeFirst)
+	else if (writeFirst) {
+		HCL_ASSERT_HINT(false, "Intel BRAMs do not support write-first!");
 		altsyncram->setupMixedPortRdw(ALTSYNCRAM::RDWBehavior::NEW_DATA_MASKED_UNDEFINED);
-	else
+	} else
 		altsyncram->setupMixedPortRdw(ALTSYNCRAM::RDWBehavior::DONT_CARE);
 
 
@@ -256,6 +260,7 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 
 		altsyncram->attachClock(readClock, (size_t)ALTSYNCRAM::Clocks::CLK_0);	
 	}
+//DesignScope::get()->visualize(std::string("intelBRam")+std::to_string(__LINE__));
 
 	return true;
 }

@@ -36,7 +36,7 @@ test-linux-frontend:
   tags:
     - linux
   script:
-    - build/tests/frontend/unittest_frontend -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/
+    - build/tests/frontend/unittest_frontend -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/ --intelQuartus /opt/intelFPGA_pro/24.1/quartus/bin
 
 test-linux-scl:
   stage: test
@@ -44,7 +44,7 @@ test-linux-scl:
   tags:
     - linux
   script:
-    - build/tests/scl/unittest_scl -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/
+    - build/tests/scl/unittest_scl -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/ --intelQuartus /opt/intelFPGA_pro/24.1/quartus/bin
 
 test-windows-frontend:
   stage: test

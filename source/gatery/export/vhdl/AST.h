@@ -97,6 +97,7 @@ class AST
 		inline CodeFormatting &getCodeFormatting() { return *m_codeFormatting; }
 		inline SynthesisTool &getSynthesisTool() { return *m_synthesisTool; }
 		inline NamespaceScope &getNamespaceScope() { return m_namespaceScope; }
+		inline const NamespaceScope &getNamespaceScope() const { return m_namespaceScope; }
 		inline Hlim2AstMapping &getMapping() { return m_mapping; }
 
 		void distributeToFiles(OutputMode outputMode, std::filesystem::path singleFileName, const std::map<std::string, std::string> &customVhdlFiles);

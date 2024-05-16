@@ -381,6 +381,8 @@ set_global_assignment -name VHDL_INPUT_VERSION VHDL_2008
 set_instance_assignment -name VIRTUAL_PIN ON -to *
 set_global_assignment -name ALLOW_REGISTER_RETIMING OFF
 set_global_assignment -name NUM_PARALLEL_PROCESSORS ALL
+set_global_assignment -name ALLOW_SHIFT_REGISTER_MERGING_ACROSS_HIERARCHIES ALWAYS
+set_global_assignment -name DISABLE_REGISTER_MERGING_ACROSS_HIERARCHIES OFF
 )";
 
 		if (auto *fpga = DesignScope::get()->getTargetTechnology<scl::arch::FPGADevice>()) {

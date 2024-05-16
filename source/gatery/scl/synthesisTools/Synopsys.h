@@ -25,6 +25,11 @@
 
 namespace gtry {
 
+/**
+ * @addtogroup gtry_synthesisTools
+ * @{
+ */
+
 class Synopsys : public SynthesisTool {
 	public:
 		Synopsys();
@@ -37,5 +42,7 @@ class Synopsys : public SynthesisTool {
 		virtual void writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim::Circuit &circuit, std::string_view filename) override { }
 		virtual void writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename) override;
 };
+
+/**@}*/
 
 }
