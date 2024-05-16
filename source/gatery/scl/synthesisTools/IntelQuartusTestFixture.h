@@ -24,14 +24,17 @@
 #include <gatery/export/vhdl/VHDLExport.h>
 #include <gatery/frontend/Clock.h>
 
-#include <boost/filesystem.hpp>
-
 #include <memory>
 #include <functional>
 #include <filesystem>
 #include <regex>
 
-namespace gtry::scl {
+namespace gtry {
+
+/**
+ * @addtogroup gtry_synthesisTools
+ * @{
+ */
 
 	class IntelQuartusGlobalFixture {
 		public:
@@ -39,9 +42,17 @@ namespace gtry::scl {
 			~IntelQuartusGlobalFixture();
 
 			static bool hasIntelQuartus() { return !m_intelQuartusBinPath.empty(); }
-			static const boost::filesystem::path &getIntelQuartusBinPath() { return m_intelQuartusBinPath; }
+			static const std::filesystem::path &getIntelQuartusBinPath() { return m_intelQuartusBinPath; }
+			static const std::filesystem::path &getIntelQuartusBinSynthesizer() { return m_intelQuartusBinSynthesizer; }
+			static const std::filesystem::path &getIntelQuartusBinFitter() { return m_intelQuartusBinFitter; }
+			static const std::filesystem::path &getIntelQuartusBinAssembler() { return m_intelQuartusBinAssembler; }
+			static const std::filesystem::path &getIntelQuartusBinTimingAnalyzer() { return m_intelQuartusBinTimingAnalyzer; }
 		protected:
-			static boost::filesystem::path m_intelQuartusBinPath;
+			static std::filesystem::path m_intelQuartusBinPath;
+			static std::filesystem::path m_intelQuartusBinSynthesizer;
+			static std::filesystem::path m_intelQuartusBinFitter;
+			static std::filesystem::path m_intelQuartusBinAssembler;
+			static std::filesystem::path m_intelQuartusBinTimingAnalyzer;
 	};
 
 	/**
@@ -63,12 +74,81 @@ namespace gtry::scl {
 			bool exportContains(const std::regex &regex);
 
 			vhdl::OutputMode vhdlOutputMode = vhdl::OutputMode::AUTO;
+
+			template<typename T>
+			struct Usage {
+				T inclChildren;
+				T self;
+			};
+
+			struct FitterResourceUtilization {
+				std::string fullHierarchyName;
+				Usage<double> ALMsNeeded;
+				Usage<double> ALMsInFinalPlacement;
+				Usage<double> ALMsRecoverable;
+				Usage<double> ALMsUnavailable;
+				Usage<double> ALMsForMemory;
+				Usage<size_t> combinationalALUTs;
+				Usage<size_t> dedicatedLogicRegisters;
+				Usage<size_t> ioRegisters;
+				size_t blockMemoryBits;
+				size_t M20Ks;
+				size_t DSPsNeeded;
+				size_t DSPsInFinalPlacement;
+				size_t DSPsRecoverable;
+			};
+/*
+			struct FitterRAMSummary {
+				std::string fullHierarchyName;
+				std::string type;
+				std::string mode;
+				std::string ClockMode;
+				size_t portADepth;
+				size_t portBDepth;
+				size_t portBWidth;
+				bool portAInputRegister;
+				bool portAOutputRegister;
+				bool portBInputRegister;
+				bool portBOutputRegister;
+				size_t size;
+				size_t implementationPortADepth;
+				size_t implementationPortAWidth;
+				size_t implementationPortBDepth;
+				size_t implementationPortBWidth;
+				size_t implementationBits;
+				size_t numM20K;
+				size_t numMLAB;
+				std::string mixedPortRDWMode;
+				std::string portA_RDWMode;
+				std::string portB_RDWMode;
+			};
+*/
+			struct TimingAnalysisFMax {
+				double fmax;
+				double fmaxRestricted;
+			};
+
+			const std::map<std::string, IntelQuartusTestFixture::FitterResourceUtilization, std::less<>> &getFitterResourceUtilization();
+//			std::vector<FitterRAMSummary> getFitterRAMSummary();
+
+			FitterResourceUtilization getFitterResourceUtilization(std::string_view instancePath);
+
+			const std::map<std::string, TimingAnalysisFMax> &getTimingAnalysisFmax() const { return m_timingAnalysisFmax; }
+			TimingAnalysisFMax getTimingAnalysisFmax(hlim::Clock *clock) const;
+			inline TimingAnalysisFMax getTimingAnalysisFmax(const gtry::Clock &clock) const { return getTimingAnalysisFmax(clock.getClk()); }
+			bool timingMet(hlim::Clock *clock) const;
+			inline bool timingMet(const gtry::Clock &clock) const { return timingMet(clock.getClk()); }
 		protected:
 			std::filesystem::path m_cwd;
 			std::map<std::string, std::string> m_customVhdlFiles;
 			std::vector<std::filesystem::path> m_generatedSourceFiles;
 
-			void prepRun() override;
+			void writeTimingToCsvTclScript();
+			void parseTimingCsv();
+			std::map<std::string, TimingAnalysisFMax> m_timingAnalysisFmax;
+			std::optional<std::map<std::string, FitterResourceUtilization, std::less<>>> m_resourceUtilization;
 	};
+
+/**@}*/
 
 }

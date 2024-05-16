@@ -33,21 +33,18 @@ using namespace boost::unit_test;
 
 boost::test_tools::assertion_result canRunQuartus(boost::unit_test::test_unit_id)
 {
-//	return gtry::scl::IntelQuartusGlobalFixture::hasIntelQuartus();
-	return true;
+	return gtry::IntelQuartusGlobalFixture::hasIntelQuartus();
 }
 
 
 namespace {
 
 template<class Fixture>
-struct TestWithAgilexDevice : public Fixture
+struct TestWithCycloneDevice : public Fixture
 {
-	TestWithAgilexDevice() {
+	TestWithCycloneDevice() {
 		auto device = std::make_unique<gtry::scl::IntelDevice>();
-		//device->setupMAX10();
-		device->setupAgilex();
-		//AGFB022R25A2E2V
+		device->setupCyclone10();
 		Fixture::design.setTargetTechnology(std::move(device));
 	}
 };
@@ -58,10 +55,9 @@ struct TestWithAgilexDevice : public Fixture
 
 BOOST_AUTO_TEST_SUITE(IntelQuartusTests, * precondition(canRunQuartus))
 
-BOOST_FIXTURE_TEST_CASE(fifoLutram, TestWithAgilexDevice<gtry::scl::IntelQuartusTestFixture>)
+BOOST_FIXTURE_TEST_CASE(fifoLutram, TestWithCycloneDevice<gtry::IntelQuartusTestFixture>)
 {
 	using namespace gtry;
-
 
 	Clock clock({
 		.absoluteFrequency = {{500'000'000, 1}},
@@ -79,9 +75,15 @@ BOOST_FIXTURE_TEST_CASE(fifoLutram, TestWithAgilexDevice<gtry::scl::IntelQuartus
 	BOOST_TEST(exportContains(std::regex{"ram_block_type => \"MLAB\""}));
 	BOOST_TEST(!exportContains(std::regex{"out_conflict_bypass_mux"}));
 	BOOST_TEST(exportContains(std::regex{"read_during_write_mode_mixed_ports => \"DONT_CARE\""}));
+	
+	BOOST_TEST(timingMet(clock));
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsForMemory.inclChildren == 10.0);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").M20Ks == 0);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsNeeded.inclChildren < 20.0);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").dedicatedLogicRegisters.inclChildren < 20.0);
 }
 
-BOOST_FIXTURE_TEST_CASE(fifoLutramSingleCycle, TestWithAgilexDevice<gtry::scl::IntelQuartusTestFixture>)
+BOOST_FIXTURE_TEST_CASE(fifoLutramSingleCycle, TestWithCycloneDevice<gtry::IntelQuartusTestFixture>)
 {
 	using namespace gtry;
 
@@ -104,9 +106,16 @@ BOOST_FIXTURE_TEST_CASE(fifoLutramSingleCycle, TestWithAgilexDevice<gtry::scl::I
 	// is the register needed for retiming the read-port to be on the same cycle as the write.
 	BOOST_TEST(exportContains(std::regex{"out_conflict_bypass_mux"}));
 	BOOST_TEST(exportContains(std::regex{"read_during_write_mode_mixed_ports => \"DONT_CARE\""}));
+
+	BOOST_TEST(timingMet(clock));
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsForMemory.inclChildren == 10.0);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").M20Ks == 0);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsNeeded.inclChildren < 20.0);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").dedicatedLogicRegisters.inclChildren < 25.0);
+
 }
 
-BOOST_FIXTURE_TEST_CASE(fifoLutramFallthrough, TestWithAgilexDevice<gtry::scl::IntelQuartusTestFixture>)
+BOOST_FIXTURE_TEST_CASE(fifoLutramFallthrough, TestWithCycloneDevice<gtry::IntelQuartusTestFixture>)
 {
 	using namespace gtry;
 
@@ -125,9 +134,15 @@ BOOST_FIXTURE_TEST_CASE(fifoLutramFallthrough, TestWithAgilexDevice<gtry::scl::I
 	BOOST_TEST(exportContains(std::regex{"altera_mf.altera_mf_components.altdpram"}));
 	BOOST_TEST(exportContains(std::regex{"ram_block_type => \"MLAB\""}));
 	BOOST_TEST(exportContains(std::regex{"read_during_write_mode_mixed_ports => \"DONT_CARE\""}));
+	
+	BOOST_TEST(timingMet(clock));
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsForMemory.inclChildren == 10.0);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").M20Ks == 0);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsNeeded.inclChildren < 20.0);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").dedicatedLogicRegisters.inclChildren < 25.0);
 }
 
-BOOST_FIXTURE_TEST_CASE(fifoBRam, TestWithAgilexDevice<gtry::scl::IntelQuartusTestFixture>)
+BOOST_FIXTURE_TEST_CASE(fifoBRam, TestWithCycloneDevice<gtry::IntelQuartusTestFixture>)
 {
 	using namespace gtry;
 
@@ -149,15 +164,21 @@ BOOST_FIXTURE_TEST_CASE(fifoBRam, TestWithAgilexDevice<gtry::scl::IntelQuartusTe
 	BOOST_TEST(exportContains(std::regex{"read_during_write_mode_mixed_ports => \"DONT_CARE\""}));
 	BOOST_TEST(exportContains(std::regex{"read_during_write_mode_port_a => \"DONT_CARE\""}));
 	BOOST_TEST(exportContains(std::regex{"read_during_write_mode_port_b => \"DONT_CARE\""}));
+	
+	BOOST_TEST(timingMet(clock));
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsForMemory.inclChildren == 0.0);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").M20Ks == (8*4 + 20-1) / 20);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsNeeded.inclChildren < 25.0);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").dedicatedLogicRegisters.inclChildren < 30.0);
 }
 
-BOOST_FIXTURE_TEST_CASE(fifoBRamFallthrough, TestWithAgilexDevice<gtry::scl::IntelQuartusTestFixture>)
+BOOST_FIXTURE_TEST_CASE(fifoBRamFallthrough, TestWithCycloneDevice<gtry::IntelQuartusTestFixture>)
 {
 	using namespace gtry;
 
 
 	Clock clock({
-		.absoluteFrequency = {{500'000'000, 1}},
+		.absoluteFrequency = {{300'000'000, 1}},
 	});
 	ClockScope clockScope(clock);
 
@@ -174,9 +195,15 @@ BOOST_FIXTURE_TEST_CASE(fifoBRamFallthrough, TestWithAgilexDevice<gtry::scl::Int
 	BOOST_TEST(exportContains(std::regex{"read_during_write_mode_mixed_ports => \"DONT_CARE\""}));
 	BOOST_TEST(exportContains(std::regex{"read_during_write_mode_port_a => \"DONT_CARE\""}));
 	BOOST_TEST(exportContains(std::regex{"read_during_write_mode_port_b => \"DONT_CARE\""}));
+	
+	BOOST_TEST(timingMet(clock));
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsForMemory.inclChildren == 0.0);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").M20Ks == (8*4 + 20-1) / 20);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsNeeded.inclChildren < 30.0);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").dedicatedLogicRegisters.inclChildren < 40.0);
 }
 
-BOOST_FIXTURE_TEST_CASE(fifoBRamLarge, TestWithAgilexDevice<gtry::scl::IntelQuartusTestFixture>)
+BOOST_FIXTURE_TEST_CASE(fifoBRamLarge, TestWithCycloneDevice<gtry::IntelQuartusTestFixture>)
 {
 	using namespace gtry;
 
@@ -199,6 +226,12 @@ BOOST_FIXTURE_TEST_CASE(fifoBRamLarge, TestWithAgilexDevice<gtry::scl::IntelQuar
 	BOOST_TEST(exportContains(std::regex{"read_during_write_mode_mixed_ports => \"DONT_CARE\""}));
 	BOOST_TEST(exportContains(std::regex{"read_during_write_mode_port_a => \"DONT_CARE\""}));
 	BOOST_TEST(exportContains(std::regex{"read_during_write_mode_port_b => \"DONT_CARE\""}));
+	
+	BOOST_TEST(timingMet(clock));
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsForMemory.inclChildren == 0.0);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").M20Ks == (256 + 20-1) / 20);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsNeeded.inclChildren < 25.0);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").dedicatedLogicRegisters.inclChildren < 25.0);
 }
 
 

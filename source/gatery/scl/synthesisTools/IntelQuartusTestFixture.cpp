@@ -25,8 +25,7 @@
 #include <gatery/frontend/SynthesisTool.h>
 #include <gatery/hlim/Circuit.h>
 #include <boost/test/unit_test.hpp>
-
-#include <boost/test/unit_test.hpp>
+#include <boost/algorithm/string.hpp>
 
 #ifdef _WIN32
 #pragma warning(push, 0)
@@ -43,9 +42,13 @@
 
 namespace bp = boost::process;
 
-namespace gtry::scl {
+namespace gtry {
 
-boost::filesystem::path IntelQuartusGlobalFixture::m_intelQuartusBinPath;
+std::filesystem::path IntelQuartusGlobalFixture::m_intelQuartusBinPath;
+std::filesystem::path IntelQuartusGlobalFixture::m_intelQuartusBinSynthesizer;
+std::filesystem::path IntelQuartusGlobalFixture::m_intelQuartusBinFitter;
+std::filesystem::path IntelQuartusGlobalFixture::m_intelQuartusBinAssembler;
+std::filesystem::path IntelQuartusGlobalFixture::m_intelQuartusBinTimingAnalyzer;
 
 
 IntelQuartusGlobalFixture::IntelQuartusGlobalFixture()
@@ -61,6 +64,21 @@ IntelQuartusGlobalFixture::IntelQuartusGlobalFixture()
 	auto&& libEnv = boost::this_process::wenvironment()[L"IntelQuartus_BIN_PATH"];
 	if (!libEnv.empty())
 		m_intelQuartusBinPath = libEnv.to_string();
+
+
+
+	m_intelQuartusBinSynthesizer = m_intelQuartusBinPath / "quartus_syn.exe";
+	if (!std::filesystem::exists(m_intelQuartusBinSynthesizer))
+		m_intelQuartusBinSynthesizer = m_intelQuartusBinPath / "quartus_syn";
+	m_intelQuartusBinFitter = m_intelQuartusBinPath / "quartus_fit.exe";
+	if (!std::filesystem::exists(m_intelQuartusBinFitter))
+		m_intelQuartusBinFitter = m_intelQuartusBinPath / "quartus_fit";
+	m_intelQuartusBinAssembler = m_intelQuartusBinPath / "quartus_asm.exe";
+	if (!std::filesystem::exists(m_intelQuartusBinAssembler))
+		m_intelQuartusBinAssembler = m_intelQuartusBinPath / "quartus_asm";
+	m_intelQuartusBinTimingAnalyzer = m_intelQuartusBinPath / "quartus_sta.exe";
+	if (!std::filesystem::exists(m_intelQuartusBinTimingAnalyzer))
+		m_intelQuartusBinTimingAnalyzer = m_intelQuartusBinPath / "quartus_sta";
 }
 
 IntelQuartusGlobalFixture::~IntelQuartusGlobalFixture()
@@ -110,33 +128,15 @@ void IntelQuartusTestFixture::testCompilation()
 	(*m_vhdlExport)(design.getCircuit());
 
 	m_generatedSourceFiles = SynthesisTool::sourceFiles(*m_vhdlExport, true, false);
-	m_vhdlExport.reset();
-/*
-	boost::filesystem::path ghdlExecutable = bp::search_path("ghdl");
+	
+	BOOST_CHECK(bp::system(IntelQuartusGlobalFixture::getIntelQuartusBinSynthesizer().string(), bp::start_dir(m_cwd.string()), "project", bp::std_out.null()) == 0);
+	BOOST_CHECK(bp::system(IntelQuartusGlobalFixture::getIntelQuartusBinFitter().string(), bp::start_dir(m_cwd.string()), "project", bp::std_out.null()) == 0);
+	BOOST_CHECK(bp::system(IntelQuartusGlobalFixture::getIntelQuartusBinAssembler().string(), bp::start_dir(m_cwd.string()), "project", bp::std_out.null()) == 0);
+	BOOST_CHECK(bp::system(IntelQuartusGlobalFixture::getIntelQuartusBinTimingAnalyzer().string(), bp::start_dir(m_cwd.string()), "project", bp::std_out.null()) == 0);
 
-	for (std::filesystem::path& vhdlFile : m_generatedSourceFiles)
-		BOOST_CHECK(bp::system(ghdlExecutable, bp::start_dir(m_cwd.string()), "-a", "--ieee=synopsys", m_ghdlArgs, vhdlFile.string()) == 0);
-
-//	BOOST_CHECK(bp::system(ghdlExecutable, bp::start_dir(m_cwd.string()), "-a", "--ieee=synopsys", m_ghdlArgs, "design.vhd") == 0);
-	BOOST_CHECK(bp::system(ghdlExecutable, bp::start_dir(m_cwd.string()), "-e", "--ieee=synopsys", m_ghdlArgs, "top") == 0);
-*/
-}
-
-void IntelQuartusTestFixture::prepRun()
-{
-	design.postprocess();
-	BoostUnitTestSimulationFixture::prepRun();
-
-	m_vhdlExport.emplace(m_cwd / "design.vhd");
-	m_vhdlExport->outputMode(vhdlOutputMode);
-	m_vhdlExport->addTestbenchRecorder(getSimulator(), "testbench", true);
-	m_vhdlExport->targetSynthesisTool(new IntelQuartus());
-	m_vhdlExport->writeStandAloneProjectFile("project.qsf");
-	m_vhdlExport->writeConstraintsFile("constraints.sdc");
-	m_vhdlExport->writeClocksFile("clocks.sdc");
-	(*m_vhdlExport)(design.getCircuit());
-
-	//recordVCD("internal.vcd");
+	writeTimingToCsvTclScript();
+	BOOST_CHECK(bp::system(IntelQuartusGlobalFixture::getIntelQuartusBinTimingAnalyzer().string(), bp::start_dir(m_cwd.string()), "-t", "dumpTiming.tcl", bp::std_out.null()) == 0);
+	parseTimingCsv();
 }
 
 bool IntelQuartusTestFixture::exportContains(const std::regex &regex)
@@ -152,5 +152,154 @@ bool IntelQuartusTestFixture::exportContains(const std::regex &regex)
 	}
 	return false;
 }
+
+
+const std::map<std::string, IntelQuartusTestFixture::FitterResourceUtilization, std::less<>> &IntelQuartusTestFixture::getFitterResourceUtilization()
+{
+	if (m_resourceUtilization)
+		return *m_resourceUtilization;
+
+	std::ifstream file((m_cwd / "output_files" / "project.fit.place.rpt").string().c_str(), std::fstream::binary);
+	BOOST_TEST((bool) file);
+	std::stringstream buffer;
+	buffer << file.rdbuf();
+
+
+	std::regex extractSummaryLines{"Fitter Resource Utilization by Entity\\s*;[\r\n]*[-+]*[\r\n]*;[^\r\n]*[\r\n]*[+-]*[\r\n]*([^+-]*)"};
+
+	std::smatch fullMatch;
+	std::string bufferStr = buffer.str();
+	bool matchSuccessfull = std::regex_search(bufferStr, fullMatch, extractSummaryLines);
+	HCL_ASSERT_HINT(matchSuccessfull, "Could not find Fitter Resource Utilization in report, potentially the reporting format changed!");
+	
+	std::string summaryLines = fullMatch[1];
+
+	std::regex extractFields{";([^;]*)" // ; Compilation Hierarchy Node
+							 ";\\s*(\\d*.\\d*)\\s+\\((\\d*.\\d*)\\)\\s*" // ; ALMs needed [=A-B+C]
+							 ";\\s*(\\d*.\\d*)\\s+\\((\\d*.\\d*)\\)\\s*" // ; [A] ALMs used in final placement
+							 ";\\s*(\\d*.\\d*)\\s+\\((\\d*.\\d*)\\)\\s*" // ; [B] Estimate of ALMs recoverable by dense packing
+							 ";\\s*(\\d*.\\d*)\\s+\\((\\d*.\\d*)\\)\\s*" // ; [C] Estimate of ALMs unavailable
+							 ";\\s*(\\d*.\\d*)\\s+\\((\\d*.\\d*)\\)\\s*" // ; ALMs used for memory
+							 ";\\s*(\\d*)\\s+\\((\\d+)\\)\\s*" // ; Combinational ALUTs
+							 ";\\s*(\\d*)\\s+\\((\\d+)\\)\\s*" // ; Dedicated Logic Registers
+							 ";\\s*(\\d*)\\s+\\((\\d+)\\)\\s*" // ; I/O Registers	
+							 ";\\s*(\\d*)\\s*" // ; Block Memory bits
+							 ";\\s*(\\d*)\\s*" // ; M20Ks	
+							 ";\\s*(\\d*)\\s*" // ; DSPs needed	
+							 ";\\s*(\\d*)\\s*" // ; DSPs used	
+							 ";\\s*(\\d*)\\s*" // ; DSPs recoverable	
+							 ";\\s*(\\d*)\\s*" // ; Pins
+							 ";\\s*(\\d*)\\s*" // ; Virtual Pins
+							 ";\\s*(\\d*)\\s+\\((\\d+)\\)\\s*" // ; IO PLLs
+							 ";\\s*([^\\s]*)\\s*" // ; Full name
+							 ";\\s*([^\\s]*)\\s*" // ; Entity Name 
+							 ";\\s*([^\\s]*)\\s*" // ; Library Name
+							 };
+
+	m_resourceUtilization.emplace();
+    for (std::smatch m; std::regex_search(summaryLines, m, extractFields); summaryLines = m.suffix()) {
+		FitterResourceUtilization res;
+
+		res.ALMsNeeded = 		  		{ std::stod(m[2]), std::stod(m[3]) };
+		res.ALMsInFinalPlacement = 		{ std::stod(m[4]), std::stod(m[5]) };
+		res.ALMsRecoverable = 	  		{ std::stod(m[6]), std::stod(m[7]) };
+		res.ALMsUnavailable = 	  		{ std::stod(m[8]), std::stod(m[9]) };
+		res.ALMsForMemory = 	  		{ std::stod(m[10]), std::stod(m[11]) };
+		res.combinationalALUTs =   		{ (size_t) std::stoi(m[12]), (size_t) std::stoi(m[13]) };
+		res.dedicatedLogicRegisters = 	{ (size_t) std::stoi(m[14]), (size_t) std::stoi(m[15]) };
+		res.ioRegisters = 				{ (size_t) std::stoi(m[16]), (size_t) std::stoi(m[17]) };
+
+		res.blockMemoryBits = 			(size_t) std::stoi(m[18]);
+		res.M20Ks = 					(size_t) std::stoi(m[19]);
+		res.DSPsNeeded = 				(size_t) std::stoi(m[20]);
+		res.DSPsInFinalPlacement = 		(size_t) std::stoi(m[21]);
+		res.DSPsRecoverable = 			(size_t) std::stoi(m[22]);
+		res.fullHierarchyName = 		m[27];
+
+		(*m_resourceUtilization)[res.fullHierarchyName] = res;
+    }
+
+	return *m_resourceUtilization;
+}
+
+
+IntelQuartusTestFixture::FitterResourceUtilization IntelQuartusTestFixture::getFitterResourceUtilization(std::string_view instancePath)
+{
+	const auto &utilization = getFitterResourceUtilization();
+	auto it = utilization.find(instancePath);
+	HCL_DESIGNCHECK_HINT(it != utilization.end(), "Could not find specified instance within fitter resoure utilization report!");
+	return it->second;
+}
+
+
+/*
+std::vector<IntelQuartusTestFixture::FitterRAMSummary> IntelQuartusTestFixture::getFitterRAMSummary()
+{
+}
+*/
+
+
+void IntelQuartusTestFixture::writeTimingToCsvTclScript()
+{
+	std::ofstream file((m_cwd / "dumpTiming.tcl").string().c_str(), std::fstream::binary);
+	file << R"Delim(
+project_open project
+
+create_timing_netlist
+read_sdc clocks.sdc
+read_sdc constraints.sdc
+update_timing_netlist
+
+set domain_list [get_clock_fmax_info]
+
+set csvFile [open "timing.csv" w]
+
+foreach domain $domain_list {
+    set name [lindex $domain 0]
+    set fmax [lindex $domain 1]
+    set restricted_fmax [lindex $domain 2]
+
+    puts $csvFile "$name;$fmax;$restricted_fmax"
+}
+
+close $csvFile
+
+project_close
+)Delim";
+}
+
+void IntelQuartusTestFixture::parseTimingCsv()
+{
+	m_timingAnalysisFmax.clear();
+
+	std::ifstream file((m_cwd / "timing.csv").string().c_str(), std::fstream::binary);
+	std::string line;
+	while (std::getline(file, line)) {
+		if (line.empty()) continue;
+
+		std::vector<std::string> elems;
+		boost::split(elems, line, boost::is_any_of(";\r\n"));
+
+		m_timingAnalysisFmax[elems[0]] = TimingAnalysisFMax{
+			.fmax = std::stod(elems[1]),
+			.fmaxRestricted = std::stod(elems[2]),
+		};
+	}
+}
+
+IntelQuartusTestFixture::TimingAnalysisFMax IntelQuartusTestFixture::getTimingAnalysisFmax(hlim::Clock *clock) const
+{
+	const std::string &vhdlName = m_vhdlExport->getAST()->getNamespaceScope().getClock(clock->getClockPinSource()).name;
+	auto it = m_timingAnalysisFmax.find(vhdlName);
+	HCL_DESIGNCHECK_HINT(it != m_timingAnalysisFmax.end(), "Quartus did not report on the timing of the specified clock!");
+	return it->second;
+}
+
+bool IntelQuartusTestFixture::timingMet(hlim::Clock *clock) const
+{
+	auto fmax = getTimingAnalysisFmax(clock);
+	return fmax.fmaxRestricted >= gtry::hlim::toDouble(clock->absoluteFrequency()) * 1e-6;
+}
+
 
 }
