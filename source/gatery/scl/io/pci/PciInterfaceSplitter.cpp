@@ -18,14 +18,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <gatery/scl_pch.h>
 #include "PciInterfaceSplitter.h"
 #include <gatery/scl/stream/StreamDemux.h>
-#include <gatery/scl/stream/StreamArbiter.h>
+#include <gatery/scl/stream/utils.h>
 
 namespace gtry::scl::pci 
 {
 	TlpPacketStream<EmptyBits> interfaceSplitter(CompleterInterface&& compInt, RequesterInterface&& reqInt, TlpPacketStream<EmptyBits, BarInfo>&& rx)
 	{
 		interfaceSplitterRx(move(compInt.request), move(reqInt.completion), move(rx));
-		return interfaceSplitterTx(move(compInt.completion), move(*reqInt.request));
+		return strm::arbitrate(move(compInt.completion), move(*reqInt.request));
 	}
 
 	void interfaceSplitterRx(TlpPacketStream<EmptyBits, BarInfo>&& completerRequest, TlpPacketStream<EmptyBits>&& requesterCompletion, TlpPacketStream<EmptyBits, BarInfo>&& rx)
@@ -43,19 +43,5 @@ namespace gtry::scl::pci
 		HCL_NAMED(completerRequest);
 		requesterCompletion <<= rxDemux.out(1).template remove<BarInfo>();
 		HCL_NAMED(requesterCompletion);
-	}
-
-	TlpPacketStream<EmptyBits> interfaceSplitterTx(TlpPacketStream<EmptyBits>&& completerCompletion, TlpPacketStream<EmptyBits>&& requesterRequest)
-	{
-		Area area{ "scl_interfaceSplitterTx", true };
-
-		HCL_NAMED(completerCompletion);
-		HCL_NAMED(requesterRequest);
-
-		StreamArbiter<TlpPacketStream<EmptyBits>> txArbiter;
-		txArbiter.attach(completerCompletion);
-		txArbiter.attach(requesterRequest);
-		txArbiter.generate();
-		return move(txArbiter.out());
 	}
 }

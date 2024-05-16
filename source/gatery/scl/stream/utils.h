@@ -22,6 +22,7 @@
 #include "metaSignals.h"
 #include "../cdc.h"
 #include "StreamBroadcaster.h"
+#include "StreamArbiter.h"
 
 namespace gtry::scl::strm
 {
@@ -312,6 +313,22 @@ namespace gtry::scl::strm
 		return [maxPacketLength, functor](auto&& in) { return addMetaSignalFromPacket(std::forward<decltype(in)>(in), maxPacketLength, functor); };
 	}
 
+	/**
+	 * @brief Short hand for creating a StreamArbiter. Streams are arbitrated in the order they are passed to the function.
+	 * @param selector Arbitration policy to use. See StreamArbiter for more information.
+	 * @param in1 First stream to arbitrate.
+	 * @param ...inX Any number of additional streams to arbitrate with.
+	 */
+	template<typename Policy, StreamSignal T, StreamSignal... To>
+	T arbitrateWithPolicy(Policy&& selector, T&& in1, To&&... inX);
+
+	/**
+	 * @brief Short hand for creating a StreamArbiter. Streams are arbitrated in the order they are passed to the function. Same as arbitrateWithPolicy, but with ArbiterPolicyLowest policy.
+	 * @param in1 First stream to arbitrate.
+	 * @param ...inX Any number of additional streams to arbitrate with.
+	 */
+	template<StreamSignal T, StreamSignal... To>
+	T arbitrate(T&& in1, To&&... inX);
 }
 
 namespace gtry::scl::strm
@@ -826,6 +843,24 @@ namespace gtry::scl::strm
 		return resultStream;
 	}
 
+	template<typename Policy, StreamSignal T, StreamSignal... To>
+	T arbitrateWithPolicy(Policy&& selector, T&& in1, To&&... inX)
+	{
+		StreamArbiter<T, Policy> arbiter{ move(selector) };
+		arbiter.attach(in1);
+		(arbiter.attach(inX), ...);
+		arbiter.generate();
+
+		T out;
+		out <<= arbiter.out();
+		return out;
+	}
+
+	template<StreamSignal T, StreamSignal... To>
+	T arbitrate(T&& in1, To&&... inX)
+	{
+		return arbitrateWithPolicy(ArbiterPolicyLowest{}, move(in1), move(inX)...);
+	}
 }
 
 
