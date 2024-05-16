@@ -148,7 +148,7 @@ BOOST_FIXTURE_TEST_CASE(fifoBRam, TestWithCycloneDevice<gtry::IntelQuartusTestFi
 
 
 	Clock clock({
-		.absoluteFrequency = {{500'000'000, 1}},
+		.absoluteFrequency = {{400'000'000, 1}},
 	});
 	ClockScope clockScope(clock);
 
