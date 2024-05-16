@@ -324,6 +324,15 @@ bool canBeReplacedWith(const BitVectorState<Config> &vecA, const BitVectorState<
 	return true;
 }
 
+/**
+ * @brief Converts an entire defaultBitVector to a boost::multiprecision::number
+ * @param vec BitVectorState to extract the bits from
+ * @return BigInt boost::multiprecision::number
+*/
+template<typename Config>
+BigInt extractBigInt(const BitVectorState<Config>& vec) {
+	return extractBigInt(vec, 0, vec.size());
+}
 
 /**
  * @brief Extracts a value range of bits from a BitVectorState and converts it as a boost::multiprecision::number to facilitate big int computations.
