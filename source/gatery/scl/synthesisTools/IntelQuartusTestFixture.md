@@ -1,6 +1,7 @@
 @page gtry_scl_intelQuartusTestFixture_page Intel Quartus Test Fixture
 
-Gatery supports a test fixtures for unit tests that check synthesis with Intel Quartus.
+Gatery supports a test fixtures for unit tests that check processing with Intel Quartus.
+After synthesis/place/fit, various results such as resource consumption and fmax can be querried and checked as part of the unit test.
 
 ## Enabling and Locating Quartus
 
