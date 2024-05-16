@@ -2689,6 +2689,127 @@ BOOST_FIXTURE_TEST_CASE(stream_allowance_initial_allowance, BoostUnitTestSimulat
 
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 100, 1'000'000 }));
-} 
+}
 
+BOOST_FIXTURE_TEST_CASE(sequencer_fuzz_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 100'000'000, .memoryResetType = ClockConfig::ResetType::NONE });
+	ClockScope clkScp(clk);
 
+	BitWidth txidW = 6_b;
+
+	scl::RvStream<UInt, scl::TxId> in{ txidW };
+	txid(in) = txidW;
+	pinIn(in, "in");
+
+	scl::RvStream<UInt, scl::TxId> out = move(in) | scl::strm::sequencer();
+	pinOut(out, "out");
+
+	std::vector<size_t> unusedTxId(txidW.count());
+	std::iota(unusedTxId.begin(), unusedTxId.end(), 0);
+
+	addSimulationProcess([&, this]()->SimProcess {
+		std::mt19937 rng{ 5434 };
+		while (true)
+		{
+			while (unusedTxId.size() <= rng() % (txidW.count() / 2))
+				co_await OnClk(clk);
+
+			std::vector<size_t>::iterator it = unusedTxId.begin() + (rng() % unusedTxId.size());
+			simu(*in) = *it;
+			simu(txid(in)) = *it;
+			unusedTxId.erase(it);
+			co_await scl::strm::performTransfer(in, clk);
+		}
+	});
+
+	addSimulationProcess([&, this]()->SimProcess {
+		fork(scl::strm::readyDriverRNG(out, clk, 50));
+
+		for (size_t i = 0;; i++)
+		{
+			co_await scl::strm::performTransferWait(out, clk);
+			size_t id = simu(txid(out));
+			BOOST_TEST(id == i % txidW.count());
+			BOOST_TEST(id == simu(*out));
+			BOOST_TEST((std::find(unusedTxId.begin(), unusedTxId.end(), id) == unusedTxId.end()));
+			unusedTxId.push_back(id);
+		}
+	});
+
+	design.postprocess();
+	runHitsTimeout({ 800, 1'000'000 });
+}
+
+BOOST_FIXTURE_TEST_CASE(sequencer_fill_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 100'000'000, .memoryResetType = ClockConfig::ResetType::NONE });
+	ClockScope clkScp(clk);
+
+	BitWidth txidW = 4_b;
+
+	scl::RvStream<UInt, scl::TxId> in{ txidW };
+	txid(in) = txidW;
+	pinIn(in, "in");
+
+	scl::RvStream<UInt, scl::TxId> out = move(in) | scl::strm::sequencer();
+	pinOut(out, "out");
+
+	addSimulationProcess([&, this]()->SimProcess {
+		for (size_t t = 0; t < 2; ++t)
+		{
+			// send every txid except for the first one
+			for (size_t i = 1; i < txidW.count(); i++)
+			{
+				size_t prime = t ? 6089 : 2539;
+				size_t id = i * prime;
+				simu(*in) = id;
+				simu(txid(in)) = id;
+				co_await scl::strm::performTransfer(in, clk);
+			}
+
+			// send missing txid
+			simu(*in) = 0;
+			simu(txid(in)) = 0;
+			co_await scl::strm::performTransfer(in, clk);
+
+			// wait for flush
+			co_await scl::strm::performTransferWait(out, clk);
+			while (simu(valid(out)) == '1')
+				co_await OnClk(clk);
+		}
+	});
+
+	addSimulationProcess([&, this]()->SimProcess {
+		simu(ready(out)) = '1';
+		for (size_t i = 0; i < txidW.count(); i++)
+		{
+			co_await scl::strm::performTransferWait(out, clk);
+			size_t id = simu(txid(out));
+			BOOST_TEST(id == i);
+			BOOST_TEST(id == simu(*out));
+		}
+
+		simu(ready(out)) = '0';
+
+		// wait until all txids are sent again
+		for (size_t i = 0; i < txidW.count(); i++)
+			co_await performTransferWait(in, clk);
+		while (simu(valid(out)) == '0')
+			co_await OnClk(clk);
+		co_await OnClk(clk);
+
+		simu(ready(out)) = '1';
+		for (size_t i = 0; i < txidW.count(); i++)
+		{
+			co_await scl::strm::performTransferWait(out, clk);
+			size_t id = simu(txid(out));
+			BOOST_TEST(id == i);
+			BOOST_TEST(id == simu(*out));
+		}
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
