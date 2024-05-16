@@ -336,6 +336,7 @@ std::optional<Option<BaseType>> Option<BaseType>::mergeWith(Option<BaseType> oth
 					return other;
 			}
 	}
+	return {};
 }
 
 }
