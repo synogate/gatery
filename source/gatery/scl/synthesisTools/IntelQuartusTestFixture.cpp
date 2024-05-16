@@ -93,8 +93,13 @@ IntelQuartusTestFixture::IntelQuartusTestFixture()
 
 	if (!std::filesystem::create_directories(m_cwd))
 		for (auto&& f : std::filesystem::directory_iterator{ m_cwd })
-			if(f.is_regular_file())
+			if (f.is_regular_file())
 				std::filesystem::remove(f);
+			else if (f.is_directory()) {
+				auto stem = f.path().stem();
+				if (stem != "." && stem != "..")
+					std::filesystem::remove_all(f.path());
+			}
 
 	// Default to cyclone 10 as that is the default device in quartus pro
 	auto device = std::make_unique<gtry::scl::IntelDevice>();
