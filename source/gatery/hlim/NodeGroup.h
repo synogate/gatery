@@ -131,6 +131,15 @@ namespace gtry::hlim {
 
 		static void configTree(utils::ConfigTree config);
 
+		/**
+		 * @brief An alternative way to programatically add settings to the config tree outside of YAML loading. 
+		 * @param instanceFilter Path to the instance to apply the setting to. You can use * to match substings and / to seperate instances. A leading / marks an absolute path. "SipHashRound*" would match all sip hash round instances. 
+					Note that the area name is not the instance name. All instances have a running index suffix.
+		 * @param value The value currently gets converted to a ConfigTree node. That can be interpreted as anything including enums and trees by the Area.
+		 * @warning This function does not do anything if gatery is not compiled with YamlCpp.
+		 */
+		static void configTree(std::string_view instanceFilter, std::string_view attribute, std::string_view value);
+
 		inline Circuit &getCircuit() { return m_circuit; }
 
 		/// Returns an id that is unique to this group within the circuit.

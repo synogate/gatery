@@ -196,7 +196,15 @@ namespace gtry::hlim
 	{
 		ms_config.load(config);
 	}
-	
+
+	void NodeGroup::configTree(std::string_view instanceFilter, std::string_view attribute, std::string_view value)
+	{
+#ifdef USE_YAMLCPP
+		ms_config.add(attribute, instanceFilter, YAML::Load(std::string{ value }));
+		ms_config.finalize();
+#endif
+	}
+
 	void NodeGroupConfig::load(utils::ConfigTree config)
 	{
 #ifdef USE_YAMLCPP
