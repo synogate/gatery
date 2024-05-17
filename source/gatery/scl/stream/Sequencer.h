@@ -1,16 +1,20 @@
-/*
-Synogate Library, a support library for Synogate IP-core generators.
-Copyright (C) 2021 Synogate UG (haftungsbeschraenkt), www.synogate.com
+/*  This file is part of Gatery, a library for circuit design.
+	Copyright (C) 2023 Michael Offel, Andreas Ley
 
-This program is commercial software: you must not copy, modify or
-distribute it without explicit written license by Synogate to do so.
+	Gatery is free software; you can redistribute it and/or
+	modify it under the terms of the GNU Lesser General Public
+	License as published by the Free Software Foundation; either
+	version 3 of the License, or (at your option) any later version.
 
-The full license text for non-commercial use and evaluation can be found in the distribution package of this core.
+	Gatery is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	Lesser General Public License for more details.
 
-This program is distributed WITHOUT ANY WARRANTY; without even the
-implied warranty of MERCHANTABILITY.
+	You should have received a copy of the GNU Lesser General Public
+	License along with this library; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-
 #pragma once
 #include "Stream.h"
 
