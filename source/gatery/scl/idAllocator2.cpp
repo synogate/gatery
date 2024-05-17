@@ -17,7 +17,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include <gatery/scl_pch.h>
 
-#include "IdAllocator.h"
+#include "idAllocator.h"
 
 #include "Fifo.h"
 #include "Counter.h"
