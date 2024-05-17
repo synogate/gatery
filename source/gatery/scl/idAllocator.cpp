@@ -38,7 +38,7 @@ namespace gtry::scl
 		auto in = (RvStream<UInt>)free; // add and ignore ready. fifo cannot overflow.
 		HCL_NAMED(in);
 		sim_assert(ready(in) | !valid(in)) << "freed more id's than we have";
-		auto outFiFo = strm::fifo(move(in), idLimit, FallThrough::off);
+		auto outFiFo = strm::fifo(move(in), idLimit);
 		HCL_NAMED(outFiFo);
 
 		RvStream<UInt> outCounter;
