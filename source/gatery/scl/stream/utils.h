@@ -182,8 +182,16 @@ namespace gtry::scl::strm
 	*/
 	template<StreamSignal T> 
 	T regDecouple(T& stream, const RegisterSettings& settings = {});
+	template<StreamSignal T> 
+	T regDecouple(T&& stream, const RegisterSettings& settings = {}) { return regDecouple(stream, settings); }
 	template<StreamSignal T>
 	T regDecouple(const T& stream, const RegisterSettings& settings = {});
+
+	//untested
+	inline auto regDecouple(const RegisterSettings& settings = {})
+	{
+		return [=](auto&& in) { return regDecouple(std::forward<decltype(in)>(in), settings); };
+	}
 
 	/**
 	* @brief allows to send a request-acknowledge handshaked data across clock domains

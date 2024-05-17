@@ -57,9 +57,9 @@ namespace gtry::scl {
 		size_t maxWriteRequestsInFlight = avmm.maximumPendingWriteTransactions == 0 ? 32 : avmm.maximumPendingWriteTransactions;
 		maxWriteRequestsInFlight = std::min<std::size_t>(ret.a->source.width().count(), maxWriteRequestsInFlight);
 
-		scl::Fifo<TileLinkD> writeRequestFifo{ maxWriteRequestsInFlight , response };
+		scl::Fifo<TileLinkD> writeRequestFifo{ maxWriteRequestsInFlight , response , scl::FifoLatency(1) };
 		HCL_NAMED(writeRequestFifo);
-		scl::Fifo<TileLinkD> readRequestFifo{ maxReadRequestsInFlight , response };
+		scl::Fifo<TileLinkD> readRequestFifo{ maxReadRequestsInFlight , response , scl::FifoLatency(1) };
 		HCL_NAMED(readRequestFifo);
 
 		if (avmm.ready)
@@ -99,7 +99,7 @@ namespace gtry::scl {
 		valid(readData) = responseReady;
 		ready(ret.a) &= ready(readData);
 
-		scl::RvStream<UInt> readDataFifo = strm::fifo(move(readData), maxReadRequestsInFlight, scl::FallThrough::on);
+		scl::RvStream<UInt> readDataFifo = strm::fifo(move(readData), maxReadRequestsInFlight, scl::FifoLatency(0));
 
 		auto readResStalled = strm::stall(move(readResBuffered), !valid(readDataFifo));
 		ready(readDataFifo) = ready(readResStalled);

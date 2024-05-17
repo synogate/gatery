@@ -44,9 +44,9 @@ struct FifoTest
 	FifoTest(Clock& rdClk, Clock& wrClk) : rdClk(rdClk), wrClk(wrClk) {}
 
 	template<typename T = scl::Fifo<UInt>>
-	T create(size_t depth, BitWidth width, bool generate = true)
+	T create(size_t depth, BitWidth width, bool generate = true, scl::FifoLatency latency = scl::FifoLatency(1))
 	{
-		T fifo{ depth, UInt{ width } };
+		T fifo{ depth, UInt{ width }, latency};
 		actualDepth = fifo.depth();
 
 		{
@@ -560,7 +560,7 @@ BOOST_FIXTURE_TEST_CASE(DualClockFifo, BoostUnitTestSimulationFixture)
 	HCL_NAMED(wrClock);
  
 	FifoTest fifo{ rdClock, wrClock };
-	auto&& uut = fifo.create(16, 8_b);
+	auto&& uut = fifo.create(16, 8_b, true, scl::FifoLatency::DontCare());
 
 	size_t actualDepth = fifo.actualDepth;
 

@@ -32,6 +32,12 @@ M20K::M20K(const IntelDevice &intelDevice) : IntelBlockram(intelDevice)
 	m_desc.addressBits = 14; // 16384
 }
 
+M20KStratix10Agilex::M20KStratix10Agilex(const IntelDevice &intelDevice) : M20K(intelDevice)
+{
+	m_desc.memoryName = "M20K";
+	m_desc.addressBits = 11; // 2048
+	m_supportsCoherentReadMode = true;
+}
 
 #if 0
 

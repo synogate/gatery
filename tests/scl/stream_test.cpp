@@ -353,14 +353,14 @@ BOOST_FIXTURE_TEST_CASE(stream_reg_chaining, StreamTransferFixture)
 	runTicks(m_clock.getClk(), 1024);
 }
 
-BOOST_FIXTURE_TEST_CASE(stream_fifo, StreamTransferFixture)
+BOOST_FIXTURE_TEST_CASE(stream_fifo_0, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
 	scl::RvStream<UInt> in{ .data = 10_b };
 	In(in);
 
-	scl::RvStream<UInt> out = scl::strm::fifo(move(in));
+	scl::RvStream<UInt> out = scl::strm::fifo(move(in), 16, scl::FifoLatency(0));
 	Out(out);
 
 	transfers(500);
@@ -370,6 +370,43 @@ BOOST_FIXTURE_TEST_CASE(stream_fifo, StreamTransferFixture)
 	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
+
+BOOST_FIXTURE_TEST_CASE(stream_fifo_1, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::RvStream<UInt> in{ .data = 10_b };
+	In(in);
+
+	scl::RvStream<UInt> out = scl::strm::fifo(move(in), 16, scl::FifoLatency(1));
+	Out(out);
+
+	transfers(500);
+	simulateTransferTest(in, out);
+
+	//recordVCD("stream_fifo.vcd");
+	design.postprocess();
+	runTicks(m_clock.getClk(), 1024);
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_fifo_2, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::RvStream<UInt> in{ .data = 10_b };
+	In(in);
+
+	scl::RvStream<UInt> out = scl::strm::fifo(move(in), 16, scl::FifoLatency(2));
+	Out(out);
+
+	transfers(500);
+	simulateTransferTest(in, out);
+
+	//recordVCD("stream_fifo.vcd");
+	design.postprocess();
+	runTicks(m_clock.getClk(), 1024);
+}
+
 BOOST_FIXTURE_TEST_CASE(streamArbiter_low1, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
@@ -1785,7 +1822,7 @@ BOOST_FIXTURE_TEST_CASE(stream_shift_right_better_rework_playground, stream_shif
 	numPackets = 10;
 	waitBetweenPackets = 0;
 	size_t offset = 0;
-	size_t packetSize = 12;
+	//size_t packetSize = 12;
 	getPacketSize = [&]() { return 20; };//return (rng() & 0x3F) + 1; };//1 to 64
 	getShiftAmt = [&]() { return offset++; };// rng() & 0xF;}; //0 to 15
 

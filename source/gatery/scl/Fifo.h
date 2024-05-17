@@ -46,6 +46,13 @@ namespace gtry::scl
 		bool val = false;
 	};
 
+	/**
+	* @brief Fallthrough-ness in the gatery sense means the ability to bypass the fifo entirely when it is empty, 
+	* resulting in no additional cycles of latency in this specific case. A non-fallthrough fifo systematically 
+	* adds at least one cycle of latency between the input and the output of the fifo.
+	*/
+	using FifoLatency = Option<size_t>;
+
 	template<Signal TData>
 	class Fifo
 	{
@@ -53,10 +60,10 @@ namespace gtry::scl
 		Fifo() : m_area("scl_fifo") { m_area.template createMetaInfo<FifoMeta>(); }
 		Fifo(const Fifo&) = delete;
 		Fifo(Fifo&&) = default;
-		explicit Fifo(size_t minDepth, const TData& ref = TData{}) : Fifo() { setup(minDepth, std::move(ref)); }
+		explicit Fifo(size_t minDepth, const TData& ref = TData{}, FifoLatency latency = FifoLatency::DontCare()) : Fifo() { setup(minDepth, std::move(ref), latency); }
 		~Fifo() noexcept(false);
 
-		void setup(size_t minDepth, const TData& ref = TData{});
+		void setup(size_t minDepth, const TData& ref = TData{}, FifoLatency latency = FifoLatency::DontCare());
 		virtual void generate();
 
 		size_t depth();
@@ -74,14 +81,16 @@ namespace gtry::scl
 		Bit almostEmpty(const UInt& level);
 
 	protected:
-		virtual void initialFifoSelection(size_t minDepth, const TData& ref);
+		virtual void initialFifoSelection(size_t minDepth, const TData& ref, FifoLatency latencyWriteToRead);
 		virtual void finalFifoSelection();
 
 		virtual void generateCdc(const UInt& pushPut, UInt& pushGet, UInt& popPut, const UInt& popGet);
-		virtual UInt generatePush(Memory<TData>& mem, const UInt& getAddr);
-		virtual UInt generatePop(const Memory<TData>& mem, const UInt& putAddr);
+		virtual UInt generatePush(Memory<TData>& mem, UInt getAddr);
+		virtual UInt generatePop(const Memory<TData>& mem, UInt putAddr);
 
 		Area m_area;
+
+		Option<size_t> m_latencyWriteToRead;
 
 		std::optional<Clock> m_pushClock;
 		Bit m_pushFull;
@@ -94,7 +103,6 @@ namespace gtry::scl
 		Bit m_popValid;
 		TData m_peekData;
 		UInt m_popSize;
-
 	private:
 		bool m_hasSetup = false;
 		TrueAfterMove m_hasGenerate;
@@ -115,7 +123,7 @@ namespace gtry::scl
 	}
 
 	template<Signal TData>
-	inline void Fifo<TData>::setup(size_t minDepth, const TData& ref)
+	inline void Fifo<TData>::setup(size_t minDepth, const TData& ref, FifoLatency latency)
 	{
 		HCL_DESIGNCHECK_HINT(!m_hasSetup, "fifo already initialized");
 		m_hasSetup = true;
@@ -125,7 +133,7 @@ namespace gtry::scl
 		m_pushData = dontCare(ref);
 
 		auto scope = m_area.enter();
-		initialFifoSelection(minDepth, ref);
+		initialFifoSelection(minDepth, ref, latency);
 
 		m_peekData = constructFrom(ref);
 		HCL_NAMED(m_peekData);
@@ -207,7 +215,7 @@ namespace gtry::scl
 	}
 
 	template<Signal TData>
-	inline void Fifo<TData>::initialFifoSelection(size_t minDepth, const TData& ref)
+	inline void Fifo<TData>::initialFifoSelection(size_t minDepth, const TData& ref, FifoLatency latencyWriteToRead)
 	{
 		auto wordWidth = width(ref);
 
@@ -215,6 +223,11 @@ namespace gtry::scl
 		fifoRequest.readDepth.atLeast(minDepth);
 		fifoRequest.readWidth = wordWidth.value;
 		fifoRequest.writeWidth = wordWidth.value;
+		m_latencyWriteToRead = latencyWriteToRead;
+		fifoRequest.latency_writeToEmpty = m_latencyWriteToRead;
+		fifoRequest.latency_readToFull = m_latencyWriteToRead;
+		fifoRequest.latency_writeToAlmostEmpty = m_latencyWriteToRead;
+		fifoRequest.latency_readToAlmostFull = m_latencyWriteToRead;		
 
 		FifoCapabilities::Choice choice = TechnologyScope::getCap<FifoCapabilities>().select(fifoRequest);
 		HCL_DESIGNCHECK_HINT(utils::isPow2(choice.readDepth), "The SCL fifo implementation only works for power of 2 depths!");
@@ -233,37 +246,32 @@ namespace gtry::scl
 		fifoRequest.readWidth = meta->fifoChoice.readWidth;
 		fifoRequest.writeWidth = meta->fifoChoice.writeWidth;
 
+		// default to the user requested latency
+		fifoRequest.latency_writeToEmpty = m_latencyWriteToRead;
+		fifoRequest.latency_readToFull = m_latencyWriteToRead;
+		fifoRequest.latency_writeToAlmostEmpty = m_latencyWriteToRead;
+		fifoRequest.latency_readToAlmostFull = m_latencyWriteToRead;
 
-		// defaults
-		fifoRequest.outputIsFallthrough = true;
 		fifoRequest.singleClock = true;
-		fifoRequest.useECCEncoder = false;
-		fifoRequest.useECCDecoder = false;
-		fifoRequest.latency_write_empty = 1;
-		fifoRequest.latency_read_empty = 1;
-		fifoRequest.latency_write_full = 1;
-		fifoRequest.latency_read_full = 1;
-		fifoRequest.latency_write_almostEmpty = 1;
-		fifoRequest.latency_read_almostEmpty = 1;
-		fifoRequest.latency_write_almostFull = 1;
-		fifoRequest.latency_read_almostFull = 1;
-
 
 		if (m_pushClock->getClk()->getClockPinSource() != m_popClock->getClk()->getClockPinSource() ||
 			m_pushClock->getClk()->getTriggerEvent() != m_popClock->getClk()->getTriggerEvent()) {
 
 			// For now, don't differentiate between phase aligned integer multiples and completely unrelated clocks
 
-			fifoRequest.outputIsFallthrough = false;
 			fifoRequest.singleClock = false;
-			fifoRequest.latency_write_empty.atLeast(4);
-			fifoRequest.latency_read_empty = 1;
-			fifoRequest.latency_write_full = 1;
-			fifoRequest.latency_read_full.atLeast(4);
-			fifoRequest.latency_write_almostEmpty.atLeast(4);
-			fifoRequest.latency_read_almostEmpty = 1;
-			fifoRequest.latency_write_almostFull = 1;
-			fifoRequest.latency_read_almostFull.atLeast(4);
+
+			auto latency = FifoLatency::AtLeast(4).mergeWith(m_latencyWriteToRead);
+
+			if (!latency) {
+				dbg::log(dbg::LogMessage(m_area.getNodeGroup()) << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_DESIGN << "The scl clock domain crossing fifo implementation requires at least four cycles of latency.");
+				HCL_DESIGNCHECK_HINT(false, "The scl clock domain crossing fifo implementation requires at least four cycles of latency.");
+			} else {
+				fifoRequest.latency_writeToEmpty = *latency;
+				fifoRequest.latency_readToFull = *latency;
+				fifoRequest.latency_writeToAlmostEmpty = *latency;
+				fifoRequest.latency_readToAlmostFull = *latency;
+			}
 		}
 
 
@@ -291,7 +299,7 @@ namespace gtry::scl
 		Memory<TData> mem{ depth(), m_peekData };
 		mem.setType(MemType::DONT_CARE, 1);
 		mem.setName("scl_fifo_memory");
-		if (!meta->fifoChoice.singleClock)
+		if (meta->fifoChoice.latency_writeToEmpty > 1)
 			mem.noConflicts();
 
 
@@ -308,16 +316,16 @@ namespace gtry::scl
 
 		if (meta->fifoChoice.singleClock)
 		{
-			HCL_DESIGNCHECK_HINT(meta->fifoChoice.latency_read_full == meta->fifoChoice.latency_read_almostFull, 
+			HCL_DESIGNCHECK_HINT(meta->fifoChoice.latency_readToFull == meta->fifoChoice.latency_readToAlmostFull, 
 				"Technology mapping yielded invalid choice, only supporting equal latencies for latency_read_full and latency_read_almostFull.");
 			pushGet = popGet;
-			for ([[maybe_unused]] auto i : utils::Range(meta->fifoChoice.latency_read_full-1))
+			for ([[maybe_unused]] auto i : utils::Range(meta->fifoChoice.latency_readToFull-1))
 				pushGet = reg(pushGet, 0);
 
-			HCL_DESIGNCHECK_HINT(meta->fifoChoice.latency_write_empty == meta->fifoChoice.latency_write_almostEmpty, 
+			HCL_DESIGNCHECK_HINT(meta->fifoChoice.latency_writeToEmpty == meta->fifoChoice.latency_writeToAlmostEmpty, 
 				"Technology mapping yielded invalid choice, only supporting equal latencies for latency_write_empty and latency_write_almostEmpty.");
 			popPut = pushPut;
-			for ([[maybe_unused]] auto i : utils::Range(meta->fifoChoice.latency_write_empty-1))
+			for ([[maybe_unused]] auto i : utils::Range(meta->fifoChoice.latency_writeToEmpty-1))
 				popPut = reg(popPut, 0);
 		} else {
 			generateCdc(pushPut, pushGet, popPut, popGet);
@@ -332,22 +340,25 @@ namespace gtry::scl
 		auto scope = m_area.enter("scl_fifo_cdc");
 		auto* meta = dynamic_cast<FifoMeta*>(m_area.metaInfo());
 
-		HCL_DESIGNCHECK_HINT(meta->fifoChoice.latency_read_full == meta->fifoChoice.latency_read_almostFull, 
+		HCL_DESIGNCHECK_HINT(meta->fifoChoice.latency_readToFull == meta->fifoChoice.latency_readToAlmostFull, 
 			"Technology mapping yielded invalid choice, only supporting equal latencies for latency_read_full and latency_read_almostFull.");
-		HCL_DESIGNCHECK_HINT(meta->fifoChoice.latency_read_full >= 4, 
+		HCL_DESIGNCHECK_HINT(meta->fifoChoice.latency_readToFull >= 4, 
 			"Insufficient latency_read_full chosen by technology mapping to build proper synchronizer chain.");
-		pushGet = synchronizeGrayCode(popGet, ConstUInt(0, popGet.width()), *m_popClock, *m_pushClock, {.outStages = meta->fifoChoice.latency_read_full-2, .inStage = true});
+		pushGet = synchronizeGrayCode(popGet, ConstUInt(0, popGet.width()), *m_popClock, *m_pushClock, {.outStages = meta->fifoChoice.latency_readToFull-2, .inStage = true});
 
-		HCL_DESIGNCHECK_HINT(meta->fifoChoice.latency_write_empty == meta->fifoChoice.latency_write_almostEmpty, 
+		HCL_DESIGNCHECK_HINT(meta->fifoChoice.latency_writeToEmpty == meta->fifoChoice.latency_writeToAlmostEmpty, 
 			"Technology mapping yielded invalid choice, only supporting equal latencies for latency_write_empty and latency_write_almostEmpty.");
-		HCL_DESIGNCHECK_HINT(meta->fifoChoice.latency_write_empty >= 4, 
+		HCL_DESIGNCHECK_HINT(meta->fifoChoice.latency_writeToEmpty >= 4, 
 			"Insufficient latency_write_empty chosen by technology mapping to build proper synchronizer chain.");
-		popPut = synchronizeGrayCode(pushPut, ConstUInt(0, popGet.width()), *m_pushClock, *m_popClock, {.outStages = meta->fifoChoice.latency_write_empty-2, .inStage = true});
+		popPut = synchronizeGrayCode(pushPut, ConstUInt(0, popGet.width()), *m_pushClock, *m_popClock, {.outStages = meta->fifoChoice.latency_writeToEmpty-2, .inStage = true});
 	}
 
 	template<Signal TData>
-	inline UInt Fifo<TData>::generatePush(Memory<TData>& mem, const UInt& get)
+	inline UInt Fifo<TData>::generatePush(Memory<TData>& mem, UInt get)
 	{
+		Area area("pushManagement", true);
+		HCL_NAMED(get);
+
 		HCL_NAMED(m_pushValid);
 		HCL_NAMED(m_pushData);
 
@@ -355,12 +366,12 @@ namespace gtry::scl
 
 		UInt put = get.width();
 		put = reg(put, 0);
+		HCL_NAMED(put);
 
 		IF(m_pushValid)
-		{
 			mem[put(0, -1_b)] = m_pushData;
-			put += 1;
-		}
+
+		put += m_pushValid;
 
 		m_pushSize = put - get;
 		m_pushFull = reg(put.msb() != get.msb() & put(0, -1_b) == get(0, -1_b), '0');
@@ -372,16 +383,19 @@ namespace gtry::scl
 	}
 
 	template<Signal TData>
-	inline UInt Fifo<TData>::generatePop(const Memory<TData>& mem, const UInt& put)
+	inline UInt Fifo<TData>::generatePop(const Memory<TData>& mem, UInt put)
 	{
+		Area area("popManagement", true);
+		HCL_NAMED(put);
+
 		HCL_NAMED(m_popValid);
 		ClockScope clkScope(*m_popClock);
 
 		UInt get = put.width();
 		get = reg(get, 0);
 
-		IF(m_popValid)
-			get += 1;
+		get += m_popValid;
+		HCL_NAMED(get);
 		
 		m_peekData = reg(mem[get(0, -1_b)], { .allowRetimingBackward = true });
 
@@ -394,15 +408,7 @@ namespace gtry::scl
 		return get;
 	}
 
-	/**
-	* @brief Fallthrough-ness in the gatery sense means the ability to bypass the fifo entirely when it is empty, 
-	* resulting in no additional cycles of latency in this specific case. A non-fallthrough fifo systematically 
-	* adds at least one cycle of latency between the input and the output of the fifo.
-	*/
-	enum class FallThrough {
-		off,
-		on,
-	};
+
 }
 
 

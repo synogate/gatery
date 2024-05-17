@@ -33,22 +33,30 @@ namespace gtry::scl::strm {
 	* @return connected stream
 	*/
 	//template<Signal T, StreamSignal StreamT>
-	//StreamT fifo(StreamT&& in, Fifo<T>& instance, FallThrough fallThrough = FallThrough::off);
+	//StreamT fifo(StreamT&& in, Fifo<T>& instance, FifoLatency fifoLatency = FallThrough::off);
+
 
 	/**
 	* @brief Create a FIFO for buffering.
 	* @param in The input stream.
 	* @param minDepth The FIFO can hold at least that many data beats.
 	The actual amount depends on the available target architecture.
-	* @param fallThrough allow data to flow past the fifo in the same cycle when it's empty.
+	* @param fifoLatency The number of cycles from data being input to the same data being visible and retrievable from the output, can be zero for a fallthrough fifo.
 	* @return connected stream
 	*/
 	template<StreamSignal StreamT>
-	StreamT fifo(StreamT&& in, size_t minDepth = 16, FallThrough fallThrough = FallThrough::off);
+	StreamT fifo(StreamT&& in, size_t minDepth = 16, FifoLatency fifoLatency = FifoLatency::DontCare());
 
-	inline auto fifo(size_t minDepth = 16, FallThrough fallThrough = FallThrough::off)
+	/**
+	* @brief Create a FIFO for buffering.
+	* @param minDepth The FIFO can hold at least that many data beats.
+	The actual amount depends on the available target architecture.
+	* @param fifoLatency The number of cycles from data being input to the same data being visible and retrievable from the output, can be zero for a fallthrough fifo.
+	* @return connected stream
+	*/
+	inline auto fifo(size_t minDepth = 16, FifoLatency fifoLatency = FifoLatency::DontCare())
 	{
-		return [=](auto&& in) { return fifo(std::forward<decltype(in)>(in), minDepth, fallThrough); };
+		return [=](auto&& in) { return fifo(std::forward<decltype(in)>(in), minDepth, fifoLatency); };
 	}
 
 	/**
@@ -84,20 +92,24 @@ namespace gtry::scl::strm {
 	 * see: https://www.synopsys.com/dw/dwtb/dwc_fifo_size/dwc_fifo_size.html#:~:text=%22Store%20and%20Forward%22%20works%20as,system%20or%20a%20DMA%20controller.
 	 * @param in Input Stream.
 	 * @param minElements minimum amount of elements needed to be stored in the FIFO
+ 	* @param fifoLatency The number of cycles from data being input to the same data being visible and retrievable from the output, can be zero for a fallthrough fifo.
 	 * @return 
 	*/
-	template<StreamSignal StreamT> auto storeForwardFifo(StreamT& in, size_t minElements);
+	template<StreamSignal StreamT> auto storeForwardFifo(StreamT& in, size_t minElements, FifoLatency fifoLatency = FifoLatency::DontCare());
 }
 
 
 namespace gtry::scl::strm {
 
 	template<StreamSignal StreamT>
-	StreamT fifo(StreamT&& in, Fifo<StreamData<StreamT>>& instance, FallThrough fallThrough)
+	StreamT fifo(StreamT&& in_, Fifo<StreamData<StreamT>>& instance, FifoLatency fifoLatency)
 	{
 		StreamT ret = pop(instance);
 
-		if (fallThrough == FallThrough::on) 
+		StreamT in = constructFrom(in_);
+		in <<= in_;
+
+		if (fifoLatency == 0) 
 		{
 			IF(!valid(ret))
 			{
@@ -115,22 +127,24 @@ namespace gtry::scl::strm {
 	}
 
 	template<StreamSignal StreamT>
-	inline StreamT fifo(StreamT&& in, size_t minDepth, FallThrough fallThrough)
+	inline StreamT fifo(StreamT&& in, size_t minDepth, FifoLatency fifoLatency)
 	{
-		Fifo<StreamData<StreamT>> inst{ minDepth, in.removeFlowControl() };
-		StreamT ret = fifo(move(in), inst, fallThrough);
+		// This is a workaround until we properly move the fifoLatency == 0 case into the fifo implementation.
+		Fifo<StreamData<StreamT>> inst{ minDepth, in.removeFlowControl(), fifoLatency == 0 ? FifoLatency(1) : fifoLatency };
+		StreamT ret = fifo(move(in), inst, fifoLatency);
 		inst.generate();
 
 		return ret;
 	}
 
 	template<StreamSignal StreamT>
-	auto storeForwardFifo(StreamT& in, size_t minElements)
+	auto storeForwardFifo(StreamT& in, size_t minElements, FifoLatency fifoLatency)
 	{
 		TransactionalFifo fifo(minElements, in
 			.removeFlowControl()
 			.template remove<Error>()
-			.template remove<Sop>());
+			.template remove<Sop>(),
+			fifoLatency);
 
 		pushStoreForward(fifo, in);
 
