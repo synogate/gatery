@@ -177,6 +177,61 @@ BOOST_FIXTURE_TEST_CASE(idalloc_fuzzing, idAllocatorTestFixture) {
 	BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
 }
 
+BOOST_FIXTURE_TEST_CASE(idAllocator_test, ClockedTest)
+{
+	size_t numIds = 7;
+
+	auto in = std::make_shared<scl::VStream<UInt>>(4_b);
+	auto out = std::make_shared<scl::RvStream<UInt>>(scl::idAllocator(*in, numIds));
+
+	pinIn(*in, "in");
+	pinOut(*out, "out");
+
+	addSimulationProcess([=, this]()->SimProcess {
+		simu(valid(*in)) = '0';
+		simu(ready(*out)) = '0';
+		co_await OnClk(clock());
+
+		// lets allocate numIds ids
+		simu(ready(*out)) = '1';
+		co_await OnClk(clock());
+
+		for (size_t i = 0; i < numIds; ++i)
+		{
+			BOOST_TEST(simu(valid(*out)) == '1');
+			BOOST_TEST(simu(**out) == i);
+			co_await OnClk(clock());
+		}
+		BOOST_TEST(simu(valid(*out)) == '0');
+		simu(ready(*out)) = '0';
+
+		// free ids in reverse order 
+		simu(valid(*in)) = '1';
+		for (size_t i = 0; i < numIds; ++i)
+		{
+			simu(**in) = numIds - 1 - i;
+			co_await OnClk(clock());
+		}
+		simu(valid(*in)) = '0';
+
+		// allocate and check again
+		simu(ready(*out)) = '1';
+		co_await OnClk(clock());
+
+		for (size_t i = 0; i < numIds; ++i)
+		{
+			BOOST_TEST(simu(valid(*out)) == '1');
+			BOOST_TEST(simu(**out) == numIds - 1 - i);
+			co_await OnClk(clock());
+		}
+		BOOST_TEST(simu(valid(*out)) == '0');
+		simu(ready(*out)) = '0';
+
+		co_await OnClk(clock());
+		stopTest();
+	});
+}
+
 BOOST_FIXTURE_TEST_CASE(id_allocator_in_order, BoostUnitTestSimulationFixture)
 {
 	Clock clk({ .absoluteFrequency = 100'000'000 });
