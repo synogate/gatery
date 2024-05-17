@@ -29,11 +29,20 @@ namespace gtry::scl::strm {
 	*			For clock domain crossing you should use gtry::connect.
 	* @param in The input stream.
 	* @param instance The FIFO to use.
-	* @param fallThrough allow data to flow past the fifo in the same cycle when it's empty. See Fallthrough struct
+	* @param fifoLatency The number of cycles from data being input to the same data being visible and retrievable from the output, can be zero for a fallthrough fifo.
 	* @return connected stream
 	*/
-	//template<Signal T, StreamSignal StreamT>
-	//StreamT fifo(StreamT&& in, Fifo<T>& instance, FifoLatency fifoLatency = FallThrough::off);
+	template<StreamSignal StreamT>
+	StreamT fifo(StreamT&& in_, Fifo<StreamData<StreamT>>& instance, FifoLatency fifoLatency);
+
+	/**
+	 * @brief pipeable version of fifo with instance
+	*/
+	template<StreamSignal StreamT>
+	inline auto fifo(Fifo<StreamT>& instance, FifoLatency fifoLatency)
+	{
+		return [=, &instance](auto&& in) { return fifo(std::forward<decltype(in)>(in), instance, fifoLatency); };
+	}
 
 
 	/**
