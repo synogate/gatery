@@ -17,7 +17,7 @@
 */
 #include "scl/pch.h"
 
-#include <gatery/scl/IdAllocator.h>
+#include <gatery/scl/idAllocator.h>
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/data/dataset.hpp>
