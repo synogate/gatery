@@ -99,6 +99,7 @@ gtry::scl::SpiMaster& gtry::scl::SpiMaster::pin(std::string clock, std::string m
 	misoBuf.pin(miso);
 	misoBuf.pullup(true);
 	m_in = misoBuf.I();
+	m_in.simulationOverride('1');
 
 	pinOut(m_clk, "DBG_CLK");
 	//pinOut(m_out, "DBG_MOSI");
