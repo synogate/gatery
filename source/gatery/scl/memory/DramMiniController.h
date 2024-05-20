@@ -40,6 +40,7 @@ namespace gtry::scl::sdram
 
 	scl::TileLinkUL miniController(PhyInterface& dramIo, MiniControllerConfig cfg = {});
 	scl::TileLinkUL miniControllerMappedMemory(PhyInterface& dramIo, BitWidth sourceW = 0_b);
+	void miniControllerSimulation(PhyInterface& dramIo);
 
 	struct PhyGateMateDDR2Config
 	{

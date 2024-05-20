@@ -120,8 +120,14 @@ namespace gtry::scl::sdram
 		std::shared_ptr<SdramTimer> m_timer;
 	};
 
+	enum class Standard
+	{
+		sdram,
+		ddr2,
+	};
+
 	void checkModuleTiming(const CommandBus& cmd, const Timings& timing);
-	BVec moduleSimulation(const CommandBus& cmd);
+	VStream<BVec> moduleSimulation(const CommandBus& cmd, Standard standard = Standard::sdram);
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::sdram::Controller::BankState, rowActive, activeRow);

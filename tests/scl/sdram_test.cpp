@@ -45,7 +45,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 	};
 	pinIn(bus, "SDRAM");
 
-	BVec dq = moduleSimulation(bus);
+	BVec dq = *moduleSimulation(bus);
 	pinOut(dq).setName("SDRAM_DQ_OUT");
 
 	addSimulationProcess([=, this]()->SimProcess {
@@ -428,7 +428,7 @@ public:
 		pinOut(bus.dq).setName(prefix + "DQ_OUT");
 		pinOut(outEnable).setName(prefix + "DQ_OUT_EN");
 
-		BVec moduleData = scl::sdram::moduleSimulation(bus);
+		BVec moduleData = *scl::sdram::moduleSimulation(bus);
 		HCL_NAMED(moduleData);
 
 		m_dataIn = ConstBVec(moduleData.width());

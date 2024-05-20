@@ -17,6 +17,7 @@
 */
 #include "gatery/scl_pch.h"
 #include "DramMiniController.h"
+#include "sdram.h"
 
 #include <gatery/scl/arch/colognechip/io.h>
 #include <gatery/scl/arch/colognechip/SpecialFunction.h>
@@ -148,7 +149,7 @@ namespace gtry::scl::sdram
 		Bit refreshReq;
 		IF(refreshInterval.isLast())
 			refreshReq = '1';
-		refreshReq = reg(refreshReq);
+		refreshReq = reg(refreshReq, '0');
 		HCL_NAMED(refreshReq);
 
 		IF(state.current() == State::Idle)
@@ -244,6 +245,15 @@ namespace gtry::scl::sdram
 
 		HCL_NAMED(tl);
 		return tl;
+	}
+
+	void miniControllerSimulation(PhyInterface& dramIo)
+	{
+		scl::VStream<BVec> outData = moduleSimulation(dramIo.cmd, Standard::ddr2);
+		pinOut(*outData, "DRAM_SIMU_DQ");
+
+		dramIo.dqReadValid.simulationOverride(valid(outData));
+		dramIo.dqIn.simulationOverride(*outData);
 	}
 
 	PhyInterface phyGateMateDDR2(PhyGateMateDDR2Config cfg)
