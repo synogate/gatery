@@ -20,6 +20,22 @@
 
 namespace gtry::scl
 {
+	/**
+	 * @brief Delay the input Signal by delay cycles. Possible implementations are shift registers or flip-flops.
+	 * @param delay Number of cycles to delay the signal.
+	 * @return Delayed signals.
+	 */
+	template<typename Signal>
+	Signal delay(Signal signal, unsigned delay);
+
+	/**
+	 * @brief Delay the input Signal by delay cycles. This version allows for combinatorical change of delay.
+	 * @param delay Number of cycles to delay the signal. Any change is reflected on the output immediately.
+	 * @return Delayed signals.
+	 */
+	template<typename Signal>
+	Signal delay(Signal signal, const UInt& delay);
+
 	template<Signal TSig>
 	class ShiftReg
 	{
@@ -50,6 +66,24 @@ namespace gtry::scl
 
 namespace gtry::scl
 {
+	template<typename Signal>
+	Signal delay(Signal signal, unsigned delay) {
+		for ([[maybe_unused]] auto i : utils::Range(delay))
+			signal = reg(signal);
+		return signal;
+	}
+
+	template<typename Signal>
+	Signal delay(Signal signal, const UInt& delay)
+	{
+		Area ent{ "scl_delay", true };
+		std::vector<Signal> chain(delay.width().count());
+		chain[0] = signal;
+		for (size_t i = 1; i < chain.size(); ++i)
+			chain[i] = reg(chain[i - 1]);
+		return mux(delay, chain);
+	}
+
 	template<Signal TSig>
 	inline ShiftReg<TSig>& ShiftReg<TSig>::in(const TSig& signal)
 	{
