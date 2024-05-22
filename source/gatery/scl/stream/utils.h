@@ -174,6 +174,11 @@ namespace gtry::scl::strm
 	template<scl::StreamSignal TStream>
 	TStream dropPacket(TStream&& in, Bit drop);
 
+	inline auto dropPacket(Bit drop)
+	{
+		return [=](auto&& in) { return dropPacket(std::forward<decltype(in)>(in), drop); };
+	}
+
 	/**
 	* @brief Puts a register in the ready, valid and data path.
 	* @param stream Source stream
