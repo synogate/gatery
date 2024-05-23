@@ -22,8 +22,18 @@ namespace gtry {
 	using namespace std::chrono;
 	using picoseconds = std::chrono::duration<long long, std::pico>;
 
-	[[nodiscard]] constexpr picoseconds operator""_ps(unsigned long long _Val) noexcept
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4455) // we want to introduce a used defined literal which does not start with underscore. MSVC does not like that.
+#endif
+
+	[[nodiscard]] inline constexpr picoseconds operator""ps(unsigned long long _Val) noexcept
 	{
 		return picoseconds(_Val);
 	}
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
 }
