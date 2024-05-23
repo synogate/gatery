@@ -41,10 +41,10 @@ namespace gtry {
 
 	class BaseBitVectorDefault {
 		public:
-			BaseBitVectorDefault(const BaseBitVector& rhs);
-			BaseBitVectorDefault(std::int64_t value);
-			BaseBitVectorDefault(std::uint64_t value);
-			BaseBitVectorDefault(std::string_view);
+			explicit BaseBitVectorDefault(const BaseBitVector& rhs);
+			explicit BaseBitVectorDefault(std::int64_t value);
+			explicit BaseBitVectorDefault(std::uint64_t value);
+			explicit BaseBitVectorDefault(std::string_view);
 
 			hlim::NodePort getNodePort() const { return m_nodePort; }
 		protected:
