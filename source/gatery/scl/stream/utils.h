@@ -419,7 +419,7 @@ namespace gtry::scl::strm
 			Bit valid_reg;
 			auto dsSig = constructFrom(copy(downstream(in)));
 
-			IF(!valid_reg | ready(in))
+			IF(ready(in))
 			{
 				valid_reg = valid(in);
 				dsSig = downstream(in);
