@@ -243,7 +243,12 @@ namespace gtry::scl::strm
 		auto [result, duplicated] = replicateForEntirePacket(move(*this), move(stream));
 		ready(duplicated) = '1';
 
-		return result.template add<std::remove_cvref_t<decltype(*duplicated)>>(move(*duplicated));
+		auto out = result.template add<std::remove_cvref_t<decltype(*duplicated)>>(move(*duplicated));
+
+		if constexpr (has<Error>() && out.template has<Error>())
+			error(out) |= error(duplicated);
+
+		return out;
 	}
 
 

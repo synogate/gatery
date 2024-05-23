@@ -317,7 +317,6 @@ namespace gtry::scl
 			(!Stream<gtry::Vector<BVec>, MetaOutput...>::template has<Ready>() || Stream<BVec, MetaInput...>::template has<Ready>()) && // Backpressure on output requires backpressure on input
 			Stream<gtry::Vector<BVec>, MetaOutput...>::template has<Valid>() && // The output stream is invalid until the header has been fully extracted
 			Stream<gtry::Vector<BVec>, MetaOutput...>::template has<Error>() && // The output stream must report on packets being too short
-			!Stream<BVec, MetaInput...>::template has<Error>() && // The input stream must no have an error field (since we don't react to it)
 			Stream<BVec, MetaInput...>::template has<Eop>() // The input must be a packet stream
 		)
 	inline void extractFields(Stream<gtry::Vector<BVec>, MetaOutput...> &output, Stream<BVec, MetaInput...> &packetStream, const std::span<Field> fields)
@@ -351,6 +350,8 @@ namespace gtry::scl
 		// to determine when to extract fields from the stream
 		scl::Counter beatCount(lastHeaderBeat+2);
 
+		Reg<Bit> packetError('0');
+		packetError.setName("packetError");
 		Reg<Bit> fieldsExtracted('0');
 		fieldsExtracted.setName("fieldsExtracted");
 		Reg<Bit> outputValid('0');
@@ -398,6 +399,7 @@ namespace gtry::scl
 			// and can continue if or once the output has been transfered.
 			IF (eop(packetStream)) {
 				packetFullyIngested = '1';
+				packetError = error(packetStream);
 
 				// If we have not extracted the header by now, mark the output as valid
 				// nontheless and set the error flag.
@@ -417,7 +419,7 @@ namespace gtry::scl
 
 		// If we ran out of packets before the last header field, we become valid without having extracted everything.
 		// In this case, set the error flag.
-		error(output) = outputValid.combinatorial() & !fieldsExtracted.combinatorial();
+		error(output) = packetError.combinatorial() | !fieldsExtracted.combinatorial();
 		valid(output) = outputValid.combinatorial();
 
 		// If we transfer the output, it is no longer valid
