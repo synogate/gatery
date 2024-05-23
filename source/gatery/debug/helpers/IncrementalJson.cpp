@@ -67,7 +67,6 @@ void IncrementalArray::startAppending()
 {
 	// Remove closing ']'
 	m_stream.seekp(-1, std::ios_base::cur);
-	std::filesystem::resize_file(m_filename, m_stream.tellp());
 }
 
 void IncrementalArray::endAppending()
