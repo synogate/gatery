@@ -147,7 +147,7 @@ namespace gtry {
 	SignalType& operator -= (SignalType& lhs, const Bit& rhs) { return lhs = sub(lhs, rhs); }
 
 
-	inline UInt add(const UInt& lhs, const UInt& rhs, const Bit carryIn) { return makeNode(hlim::Node_Arithmetic::ADD, { lhs, rhs }, carryIn); }
+	inline UInt addC(const UInt& lhs, const UInt& rhs, const Bit carryIn) { return makeNode(hlim::Node_Arithmetic::ADD, { lhs, rhs }, carryIn); }
 
 	/**@}*/
 }

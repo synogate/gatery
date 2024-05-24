@@ -1108,7 +1108,7 @@ BOOST_FIXTURE_TEST_CASE(testCarryAddSingleLine, gtry::GHDLTestFixture)
 	UInt b = pinIn(8_b).setName("b");
 	Bit c = pinIn().setName("carry");
 
-	UInt out = add(a, b, c);
+	UInt out = addC(a, b, c);
 
 	pinOut(out).setName("out");
 
