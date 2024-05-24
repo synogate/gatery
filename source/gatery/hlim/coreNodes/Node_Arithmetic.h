@@ -31,7 +31,7 @@ class Node_Arithmetic : public Node<Node_Arithmetic>
 			REM
 		};
 
-		Node_Arithmetic(Op op);
+		Node_Arithmetic(Op op, size_t operands = 2);
 
 		void connectInput(size_t operand, const NodePort &port);
 		void disconnectInput(size_t operand);

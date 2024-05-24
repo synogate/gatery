@@ -364,21 +364,24 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentati
 	if (arithmeticNode != nullptr) {
 		BitWidth expectedResultWidth{ arithmeticNode->getOutputConnectionType(0).width };
 
-		BitWidth leftOpWidth{ hlim::getOutputWidth(arithmeticNode->getDriver(0)) };
-		BitWidth rightOpWidth{ hlim::getOutputWidth(arithmeticNode->getDriver(0)) };
+		BitWidth firstOpWidth{ hlim::getOutputWidth(arithmeticNode->getDriver(0)) };
 
 		BitWidth vhdlExpectedWidth;
 		switch (arithmeticNode->getOp()) {
 			case hlim::Node_Arithmetic::ADD:
-				HCL_ASSERT_HINT(leftOpWidth == rightOpWidth, "Unequal operand widths in addition!");
-				vhdlExpectedWidth = leftOpWidth;
+				for (size_t i = 1; i < arithmeticNode->getNumInputPorts(); i++)
+					HCL_ASSERT_HINT(firstOpWidth == BitWidth{ hlim::getOutputWidth(arithmeticNode->getDriver(i)) }, "Unequal operand widths in addition!");
+				vhdlExpectedWidth = firstOpWidth;
 			break;
 			case hlim::Node_Arithmetic::SUB:
-				HCL_ASSERT_HINT(leftOpWidth == rightOpWidth, "Unequal operand widths in subtraction!");
-				vhdlExpectedWidth = leftOpWidth;
+				for (size_t i = 1; i < arithmeticNode->getNumInputPorts(); i++)
+					HCL_ASSERT_HINT(firstOpWidth == BitWidth{ hlim::getOutputWidth(arithmeticNode->getDriver(i)) }, "Unequal operand widths in subtraction!");
+				vhdlExpectedWidth = firstOpWidth;
 			break;
 			case hlim::Node_Arithmetic::MUL:
-				vhdlExpectedWidth = leftOpWidth + rightOpWidth;
+				vhdlExpectedWidth = firstOpWidth;
+				for (size_t i = 1; i < arithmeticNode->getNumInputPorts(); i++)
+					vhdlExpectedWidth += BitWidth{ hlim::getOutputWidth(arithmeticNode->getDriver(i)) };
 			break;
 //			case hlim::Node_Arithmetic::DIV: stream << " / "; break;
 //			case hlim::Node_Arithmetic::REM: stream << " MOD "; break;
@@ -398,16 +401,18 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentati
 			stream << "resize(";
 
 		formatExpression(stream, indentation, comments, arithmeticNode->getDriver(0), dependentInputs, VHDLDataType::UNSIGNED);
-		switch (arithmeticNode->getOp()) {
-			case hlim::Node_Arithmetic::ADD: stream << " + "; break;
-			case hlim::Node_Arithmetic::SUB: stream << " - "; break;
-			case hlim::Node_Arithmetic::MUL: stream << " * "; break;
-			case hlim::Node_Arithmetic::DIV: stream << " / "; break;
-			case hlim::Node_Arithmetic::REM: stream << " MOD "; break;
-			default:
-				HCL_ASSERT_HINT(false, "Unhandled operation!");
-		};
-		formatExpression(stream, indentation, comments, arithmeticNode->getDriver(1), dependentInputs, VHDLDataType::UNSIGNED);
+		for (size_t i = 1; i < arithmeticNode->getNumInputPorts(); i++) {
+			switch (arithmeticNode->getOp()) {
+				case hlim::Node_Arithmetic::ADD: stream << " + "; break;
+				case hlim::Node_Arithmetic::SUB: stream << " - "; break;
+				case hlim::Node_Arithmetic::MUL: stream << " * "; break;
+				case hlim::Node_Arithmetic::DIV: stream << " / "; break;
+				case hlim::Node_Arithmetic::REM: stream << " MOD "; break;
+				default:
+					HCL_ASSERT_HINT(false, "Unhandled operation!");
+			};
+			formatExpression(stream, indentation, comments, arithmeticNode->getDriver(i), dependentInputs, VHDLDataType::UNSIGNED);
+		}
 
 		if (resultRequiresTruncation)
 			stream << ", " << expectedResultWidth.bits() << ')';
