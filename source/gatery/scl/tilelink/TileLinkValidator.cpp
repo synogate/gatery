@@ -436,7 +436,7 @@ namespace gtry::scl
 			const size_t size = simu(d->size);
 			const size_t source = simu(d->source);
 			const size_t sink = simu(d->sink);
-			const bool error = (bool)simu(d->error);
+			const char error = simu(d->error);
 
 			for (size_t i = 0; i < burstBeats; ++i)
 			{
