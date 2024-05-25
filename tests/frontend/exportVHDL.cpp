@@ -1097,6 +1097,25 @@ BOOST_FIXTURE_TEST_CASE(ZeroBitDisconnect, gtry::GHDLTestFixture)
 }
 
 
+BOOST_FIXTURE_TEST_CASE(testCarryAddSingleLine, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
 
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+
+	UInt a = pinIn(8_b).setName("a");
+	UInt b = pinIn(8_b).setName("b");
+	Bit c = pinIn().setName("carry");
+
+	UInt out = addC(a, b, c);
+
+	pinOut(out).setName("out");
+
+	//design.visualize("before");
+	testCompilation();
+	//design.visualize("after");
+	//BOOST_TEST(exportContains(std::regex{"CASE UNSIGNED\\(selector\\) IS"}));
+}
 
 BOOST_AUTO_TEST_SUITE_END()

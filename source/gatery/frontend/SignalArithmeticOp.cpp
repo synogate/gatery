@@ -24,12 +24,24 @@
 namespace gtry {
 
 
-	SignalReadPort makeNode(hlim::Node_Arithmetic op, NormalizedWidthOperands ops)
+	SignalReadPort makeNode(hlim::Node_Arithmetic::Op op, NormalizedWidthOperands ops)
 	{
 		hlim::Node_Arithmetic* node = DesignScope::createNode<hlim::Node_Arithmetic>(op);
 		node->recordStackTrace();
 		node->connectInput(0, ops.lhs);
 		node->connectInput(1, ops.rhs);
+		
+		return SignalReadPort(node);
+	}
+
+	SignalReadPort makeNode(hlim::Node_Arithmetic::Op op, NormalizedWidthOperands ops, const Bit &carry)
+	{
+		UInt zextCarry = zext(carry, ops.lhs.width());
+		hlim::Node_Arithmetic* node = DesignScope::createNode<hlim::Node_Arithmetic>(op, 3);
+		node->recordStackTrace();
+		node->connectInput(0, ops.lhs);
+		node->connectInput(1, ops.rhs);
+		node->connectInput(2, zextCarry.readPort());
 		
 		return SignalReadPort(node);
 	}

@@ -42,7 +42,8 @@ namespace gtry {
 	 * @{
 	 */
 
-	SignalReadPort makeNode(hlim::Node_Arithmetic op, NormalizedWidthOperands ops);
+	SignalReadPort makeNode(hlim::Node_Arithmetic::Op op, NormalizedWidthOperands ops);
+	SignalReadPort makeNode(hlim::Node_Arithmetic::Op op, NormalizedWidthOperands ops, const Bit &carry);
 
 
 	/// Adds two SInt values (signals or literals/SInt-convertibles)
@@ -144,6 +145,9 @@ namespace gtry {
 	/// Subtracts a bit, which gets zero extended implicitely, from an arithmetic signal
 	template<ArithmeticSignal SignalType> 
 	SignalType& operator -= (SignalType& lhs, const Bit& rhs) { return lhs = sub(lhs, rhs); }
+
+
+	inline UInt addC(const UInt& lhs, const UInt& rhs, const Bit carryIn) { return makeNode(hlim::Node_Arithmetic::ADD, { lhs, rhs }, carryIn); }
 
 	/**@}*/
 }
