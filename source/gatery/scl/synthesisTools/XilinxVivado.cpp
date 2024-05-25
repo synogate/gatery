@@ -112,6 +112,9 @@ void XilinxVivado::resolveAttributes(const hlim::SignalAttributes &attribs, hlim
 		resolvedAttribs.insert({"DONT_TOUCH", {"string", "\"true\""}});
 	}
 
+	if(attribs.dont_touch)
+		resolvedAttribs.insert({"DONT_TOUCH", {"string", *attribs.dont_touch ? "\"true\"" : "\"false\""} });
+
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }
 

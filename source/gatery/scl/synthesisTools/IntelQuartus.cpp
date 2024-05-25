@@ -125,6 +125,9 @@ void IntelQuartus::resolveAttributes(const hlim::SignalAttributes &attribs, hlim
 	if (attribs.allowFusing && !*attribs.allowFusing)
 		resolvedAttribs.insert({"adv_netlist_opt_allowed", {"boolean", "false"}});
 
+	if (attribs.dont_touch)
+		resolvedAttribs.insert({ "keep", {"boolean", *attribs.dont_touch ? "true" : "false"}});
+
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }
 
