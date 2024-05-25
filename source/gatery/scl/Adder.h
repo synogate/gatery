@@ -77,5 +77,5 @@ namespace gtry::scl
 	};
 
 	std::tuple<UInt, UInt> add(const UInt& a, const UInt& b, const Bit& cin = '0');
-
+	std::tuple<UInt, UInt> addCarrySave(const UInt& a, const UInt& b, const UInt& c);
 }
