@@ -212,7 +212,7 @@ void Node_Arithmetic::assertValidity() const
 std::string Node_Arithmetic::getInputName(size_t idx) const
 {
 	std::string name("a");
-	name[0] += idx;
+	name[0] += (char)idx;
 	return name;
 }
 
