@@ -42,6 +42,8 @@ IntelBlockram::IntelBlockram(const IntelDevice &intelDevice) : m_intelDevice(int
 
 bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 {
+	return false;
+
 	auto *memGrp = dynamic_cast<hlim::MemoryGroup*>(nodeGroup->getMetaInfo());
 	if (memGrp == nullptr) return false;
 	if (memGrp->getMemory()->type() == hlim::Node_Memory::MemType::EXTERNAL) {
@@ -108,10 +110,8 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 	}
 
 	hlim::NodePort readEnable;
-	if (rp.dedicatedReadLatencyRegisters.front()->hasEnable()) {
+	if (rp.dedicatedReadLatencyRegisters.front()->hasEnable())
 		readEnable = rp.dedicatedReadLatencyRegisters.front()->getDriver((size_t)hlim::Node_Register::Input::ENABLE);
-		return false;
-	}
 
 
 	for (auto reg : rp.dedicatedReadLatencyRegisters) {
