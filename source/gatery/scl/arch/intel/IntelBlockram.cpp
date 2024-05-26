@@ -108,8 +108,10 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 	}
 
 	hlim::NodePort readEnable;
-	if (rp.dedicatedReadLatencyRegisters.front()->hasEnable())
+	if (rp.dedicatedReadLatencyRegisters.front()->hasEnable()) {
 		readEnable = rp.dedicatedReadLatencyRegisters.front()->getDriver((size_t)hlim::Node_Register::Input::ENABLE);
+		return false;
+	}
 
 
 	for (auto reg : rp.dedicatedReadLatencyRegisters) {
