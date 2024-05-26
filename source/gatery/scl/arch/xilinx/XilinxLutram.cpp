@@ -77,6 +77,16 @@ bool XilinxLutram::apply(hlim::NodeGroup *nodeGroup) const
 	auto &circuit = DesignScope::get()->getCircuit();
 	memGrp->convertToReadBeforeWrite(circuit);
 	memGrp->attemptRegisterRetiming(circuit);
+
+	const auto &rp = memGrp->getReadPorts().front();
+	if (rp.dedicatedReadLatencyRegisters.front()->hasEnable()) {
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because read enables are not implemented yet.");
+		return false;
+	}
+
+
 	memGrp->resolveWriteOrder(circuit);
 	memGrp->updateNoConflictsAttrib();
 	memGrp->buildReset(circuit);

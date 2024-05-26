@@ -330,6 +330,17 @@ BOOST_FIXTURE_TEST_CASE(blockram_2, TestWithDefaultDevice<Test_Histogram>)
 	BOOST_TEST(exportContains(std::regex{"altsyncram"}));
 }
 
+BOOST_FIXTURE_TEST_CASE(blockram_2_cycle_latency, TestWithDefaultDevice<Test_Histogram>)
+{
+	using namespace gtry;
+	numBuckets = 5;
+	twoCycleLatencyBRam = true;
+	iterationFactor = 4;
+	bucketWidth = 64_b;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"altsyncram"}));
+}
+
 
 BOOST_FIXTURE_TEST_CASE(external_high_latency, TestWithDefaultDevice<Test_Histogram>)
 {
@@ -432,6 +443,24 @@ BOOST_FIXTURE_TEST_CASE(sdp_dualclock_large, TestWithDefaultDevice<Test_SDP_Dual
 	BOOST_TEST(exportContains(std::regex{"altsyncram"}));
 }
 
+
+/*
+BOOST_FIXTURE_TEST_CASE(readEnable, TestWithDefaultDevice<Test_ReadEnable>)
+{
+	using namespace gtry;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"altdpram"}));
+	BOOST_TEST(exportContains(std::regex{"ram_block_type => \"MLAB\""}));
+}
+*/
+
+BOOST_FIXTURE_TEST_CASE(readEnable_bram_2Cycle, TestWithDefaultDevice<Test_ReadEnable>)
+{
+	using namespace gtry;
+	twoCycleLatencyBRam = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"altsyncram"}));
+}
 
 
 BOOST_AUTO_TEST_SUITE_END()

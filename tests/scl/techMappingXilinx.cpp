@@ -1050,4 +1050,21 @@ BOOST_FIXTURE_TEST_CASE(sdp_dualclock_large, TestWithDefaultDevice<Test_SDP_Dual
 }
 
 
+/*
+BOOST_FIXTURE_TEST_CASE(readEnable, TestWithDefaultDevice<Test_ReadEnable>)
+{
+	using namespace gtry;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"RAM64M8"}));
+}
+*/
+
+BOOST_FIXTURE_TEST_CASE(readEnable_bram_2Cycle, TestWithDefaultDevice<Test_ReadEnable>)
+{
+	using namespace gtry;
+	twoCycleLatencyBRam = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"RAMB18E2_inst : UNISIM.VCOMPONENTS.RAMB18E2"}));
+}
+
 BOOST_AUTO_TEST_SUITE_END()

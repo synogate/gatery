@@ -108,10 +108,9 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 	}
 
 	hlim::NodePort readEnable;
-	if (rp.dedicatedReadLatencyRegisters.front()->hasEnable()) {
+	if (rp.dedicatedReadLatencyRegisters.front()->hasEnable())
 		readEnable = rp.dedicatedReadLatencyRegisters.front()->getDriver((size_t)hlim::Node_Register::Input::ENABLE);
-		return false;
-	}
+
 
 	for (auto reg : rp.dedicatedReadLatencyRegisters) {
 		if (reg->hasResetValue()) {
@@ -185,9 +184,9 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 	// TODO: Also don't enable this if the InternalOutputRegister needs an enable
 	useInternalOutputRegister = false;
 
-	size_t numExternalOutputRegisters = rp.dedicatedReadLatencyRegisters.size()-1;
+	size_t externalOutputRegistersStart = 1;
 	if (useInternalOutputRegister) 
-		numExternalOutputRegisters--;
+		externalOutputRegistersStart++;
 
 	if (memGrp->getWritePorts().size() > 0) {
 		auto &wp = memGrp->getWritePorts().front();
@@ -225,11 +224,12 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 			{
 				Clock clock(readClock);
 				ClockScope cscope(clock);
-				for ([[maybe_unused]] auto i : utils::Range(numExternalOutputRegisters)) 
-					if (useInternalOutputRegister)
-						readData = reg(readData);
-					else
-						readData = reg(readData, zext(BVec(0))); // reset first register to prevent MnK merge. reset others to prevent ALM split.
+				for (auto i : utils::Range(externalOutputRegistersStart, rp.dedicatedReadLatencyRegisters.size())) 
+					ENIF (getBitBefore({.node = rp.dedicatedReadLatencyRegisters[i], .port = (size_t)hlim::Node_Register::ENABLE}, '1'))
+						if (useInternalOutputRegister)
+							readData = reg(readData);
+						else
+							readData = reg(readData, zext(BVec(0))); // reset first register to prevent MnK merge. reset others to prevent ALM split.
 			}
 			data.exportOverride(readData);
 
@@ -252,11 +252,12 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 		{
 			Clock clock(readClock);
 			ClockScope cscope(clock);
-			for ([[maybe_unused]] auto i : utils::Range(numExternalOutputRegisters)) 
-				if (useInternalOutputRegister)
-					readData = reg(readData);
-				else
-					readData = reg(readData, zext(BVec(0))); // reset first register to prevent MnK merge. reset others to prevent ALM split.
+			for (auto i : utils::Range(externalOutputRegistersStart, rp.dedicatedReadLatencyRegisters.size())) 
+				ENIF (getBitBefore({.node = rp.dedicatedReadLatencyRegisters[i], .port = (size_t)hlim::Node_Register::ENABLE}, '1'))
+					if (useInternalOutputRegister)
+						readData = reg(readData);
+					else
+						readData = reg(readData, zext(BVec(0))); // reset first register to prevent MnK merge. reset others to prevent ALM split.
 		}
 		data.exportOverride(readData);
 

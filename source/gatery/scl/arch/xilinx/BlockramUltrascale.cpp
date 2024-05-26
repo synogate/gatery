@@ -122,10 +122,6 @@ bool BlockramUltrascale::apply(hlim::NodeGroup *nodeGroup) const
 		return false;
 	}
 
-	hlim::NodePort readEnable;
-	if (rp.dedicatedReadLatencyRegisters.front()->hasEnable())
-		readEnable = rp.dedicatedReadLatencyRegisters.front()->getDriver((size_t)hlim::Node_Register::Input::ENABLE);
-
 	for (auto reg : rp.dedicatedReadLatencyRegisters) {
 		if (reg->hasResetValue()) {
 			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
@@ -133,14 +129,14 @@ bool BlockramUltrascale::apply(hlim::NodeGroup *nodeGroup) const
 					<< " because one of its output registers has a reset value.");
 			return false;
 		}
-
+/*
 		if (reg->hasEnable()) {
 			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 					<< " because one of its output registers has an enable.");
 			return false;
 		}
-
+*/
 		if (readClock != reg->getClocks()[0]) {
 			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
@@ -246,7 +242,7 @@ void BlockramUltrascale::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
 	auto &rp = memGrp->getReadPorts().front();
 	for (auto reg : rp.dedicatedReadLatencyRegisters) {
 		HCL_ASSERT(!reg->hasResetValue());
-		HCL_ASSERT(!reg->hasEnable());
+//		HCL_ASSERT(!reg->hasEnable());
 	}
 
 	GroupScope scope(nodeGroup->getParent());
@@ -296,7 +292,7 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
 	bram->setupPortA(rdPortSetup);
 
 	UInt rdAddr = (UInt) getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
-	Bit rdEn = getBitBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::enable}, '1');
+	Bit rdEn = getBitBefore({.node = rp.dedicatedReadLatencyRegisters[0], .port = (size_t)hlim::Node_Register::ENABLE}, '1');
 
 	bram->connectAddressPortA(rdAddr);
 	bram->setInput(RAMBxE2::Inputs::IN_EN_A_RD_EN, rdEn);
@@ -310,7 +306,8 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
 	for (size_t i = 1; i < rp.dedicatedReadLatencyRegisters.size(); i++) {
 		auto &reg = rp.dedicatedReadLatencyRegisters[i];
 		Clock clock(reg->getClocks()[0]);
-		readData = clock(readData);
+		ENIF (getBitBefore({.node = reg, .port = (size_t)hlim::Node_Register::ENABLE}, '1'))
+			readData = clock(readData);
 		attribute(readData, {.allowFusing = false});
 	}		
 

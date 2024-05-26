@@ -173,5 +173,17 @@ BOOST_FIXTURE_TEST_CASE(external_high_latency, TestWithDefaultDevice<Test_Histog
 }
 
 
+BOOST_FIXTURE_TEST_CASE(readEnable, TestWithDefaultDevice<Test_ReadEnable>)
+{
+	using namespace gtry;
+	execute();
+}
+
+BOOST_FIXTURE_TEST_CASE(readEnable_bram_2Cycle, TestWithDefaultDevice<Test_ReadEnable>)
+{
+	using namespace gtry;
+	twoCycleLatencyBRam = true;
+	execute();
+}
 
 BOOST_AUTO_TEST_SUITE_END()
