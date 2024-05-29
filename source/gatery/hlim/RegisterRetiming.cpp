@@ -40,6 +40,8 @@
 #include "supportNodes/Node_RegSpawner.h"
 #include "supportNodes/Node_RetimingBlocker.h"
 #include "supportNodes/Node_NegativeRegister.h"
+#include "supportNodes/Node_Attributes.h"
+#include "supportNodes/Node_SignalTap.h"
 #include "../utils/Enumerate.h"
 #include "../utils/Zip.h"
 #include <gatery/debug/DebugInterface.h>
@@ -1377,7 +1379,8 @@ std::optional<BackwardRetimingPlan> determineAreaToBeRetimedBackward(Circuit &ci
 		}
 
 		// We can not retime nodes with a side effect
-		if (node->hasSideEffects()) {
+		if (node->hasSideEffects() 
+			&& !dynamic_cast<Node_Attributes*>(node) && !dynamic_cast<Node_SignalTap*>(node)) { // Attrib hotfix
 			if (!failureIsError) return {};
 
 #ifdef DEBUG_OUTPUT
