@@ -296,6 +296,7 @@ namespace gtry
 	{
 		hlim::SignalAttributes att;
 		att.userDefinedVendorAttributes["xilinx"]["mark_debug"] = { .type = "string", .value = "\"true\"" };
+		att.userDefinedVendorAttributes["intel_quartus"]["preserve"] = { .type = "boolean", .value = "true" };
 		attribute((ElementarySignal&)signal, att);
 
 		auto *node = DesignScope::createNode<hlim::Node_SignalTap>();
