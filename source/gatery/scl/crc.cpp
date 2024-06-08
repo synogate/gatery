@@ -131,3 +131,27 @@ gtry::UInt gtry::scl::CrcState::checksum() const
 
 	return res;
 }
+
+namespace gtry::scl
+{
+	uint8_t simu_crc5_usb(uint16_t data, size_t bits)
+	{
+		uint8_t remainder = 0x1F;
+		for (size_t b = 0; b < bits; ++b)
+		{
+			const uint8_t dataBit = (data >> b) & 1;
+			remainder = (remainder >> 1) ^ ((remainder & 1) != dataBit ? 0b10100 : 0);
+		}
+		return remainder ^ 0x1F;
+	}
+
+	bool simu_crc5_usb_verify(uint16_t data)
+	{
+		return simu_crc5_usb(data, 16) == 0x19;
+	}
+
+	uint16_t simu_crc5_usb_generate(uint16_t data)
+	{
+		return data | (uint16_t(simu_crc5_usb(data, 11)) << 11);
+	}
+}
