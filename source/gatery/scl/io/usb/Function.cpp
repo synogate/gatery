@@ -356,6 +356,12 @@ void gtry::scl::usb::Function::generateInitialFsm()
 	m_configuration = reg(m_configuration, 0);
 	HCL_NAMED(m_configuration);
 
+	IF(m_state.next() == State::sendDataPid)
+	{
+		m_descAddressActive = m_descAddress;
+		m_descLengthActive = m_descLength;
+	}
+
 	IF(m_state.current() == State::sendDataPid)
 	{
 		IF(m_rxIdle)
@@ -367,9 +373,6 @@ void gtry::scl::usb::Function::generateInitialFsm()
 			IF(m_phy.tx.ready)
 				m_state = m_sendDataState;
 		}
-
-		m_descAddressActive = m_descAddress;
-		m_descLengthActive = m_descLength;
 	}
 	m_nextOutDataPid = reg(m_nextOutDataPid, 0);
 	HCL_NAMED(m_nextOutDataPid);
