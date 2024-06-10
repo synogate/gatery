@@ -37,25 +37,6 @@ namespace gtry::scl::usb
 		UInt wLength = 16_b;
 	};
 
-	enum class SetupRequest
-	{
-		GET_STATUS = 0,
-		CLEAR_FEATURE = 1,
-		SET_FEATURE = 3,
-		SET_ADDRESS = 5,
-		GET_DESCRIPTOR = 6,
-		SET_DESCRIPTOR = 7,
-		GET_CONFIGURATION = 8,
-		SET_CONFIGURATION = 9,
-	};
-
-	enum class Handshake
-	{
-		ACK,
-		NAK,
-		STALL,
-	};
-
 	class Function
 	{
 		enum class State
