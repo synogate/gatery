@@ -75,7 +75,7 @@ namespace gtry::scl::usb
 	public:
 		virtual SimProcess deviceReset() = 0;
 		virtual SimProcess send(std::span<const std::byte> data) = 0;
-		virtual SimFunction<std::vector<std::byte>> receive(size_t timeoutCycles = 16) = 0;
+		virtual SimFunction<std::vector<std::byte>> receive(size_t timeoutCycles = 5) = 0;
 
 		SimProcess sendToken(Pid pid, uint16_t data);
 		SimProcess sendToken(Pid pid, size_t address, size_t endPoint);

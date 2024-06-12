@@ -27,6 +27,7 @@
 #include <gatery/scl/crc.h>
 #include <gatery/scl/io/usb/SimuPhy.h>
 #include <gatery/scl/io/usb/Function.h>
+#include <gatery/scl/io/usb/GpioPhy.h>
 
 using namespace boost::unit_test;
 using namespace gtry;
@@ -68,7 +69,10 @@ public:
 
 	virtual void setupPhy(usb::Function& func)
 	{
-		m_host = &func.setup<usb::SimuPhy>();
+		if (m_useSimuPhy)
+			m_host = &func.setup<usb::SimuPhy>();
+		else
+			m_host = &func.setup<usb::GpioPhy>();
 	}
 
 	virtual void pin(usb::Function& func)
@@ -300,6 +304,7 @@ public:
 	}
 
 protected:
+	bool m_useSimuPhy = true;
 	std::optional<usb::Function> m_func;
 	usb::SimuHostBase* m_host = nullptr;
 
@@ -310,7 +315,10 @@ protected:
 
 BOOST_FIXTURE_TEST_CASE(usb_windows_discovery, UsbFixture)
 {
-	Clock clock({ .absoluteFrequency = 12'000'000 });
+	// uncomment to enable full gpiophy simulation
+	//m_useSimuPhy = false;
+
+	Clock clock({ .absoluteFrequency = 12'000'000 * (m_useSimuPhy ? 1 : 4) });
 	ClockScope clkScp(clock);
 
 	setupFunction();
@@ -319,9 +327,6 @@ BOOST_FIXTURE_TEST_CASE(usb_windows_discovery, UsbFixture)
 		co_await OnClk(clock);
 
 		co_await m_host->sendToken(usb::Pid::sof, 0x2CD);
-		co_await OnClk(clock);
-		co_await OnClk(clock);
-		BOOST_TEST(simu(m_func->frameId()) == 0x2CD);
 
 		sim::SimulationContext::current()->onDebugMessage(nullptr, "ask for the first 64b of the descriptor");
 		co_await transferSetup({ .value = uint16_t(DeviceDescriptor::TYPE) << 8, .length = 64 });
@@ -346,9 +351,6 @@ BOOST_FIXTURE_TEST_CASE(usb_windows_discovery, UsbFixture)
 		BOOST_TEST(simu(m_func->configuration()) == 0);
 
 		co_await controlSetAddress(5);
-		co_await OnClk(clock);
-		co_await OnClk(clock);
-		BOOST_TEST(simu(m_func->deviceAddress()) == m_functionAddress);
 
 		co_await readDescriptor(DeviceDescriptor::TYPE, 0, 18);
 		std::vector<std::byte> confDescPrefix = co_await readDescriptor(ConfigurationDescriptor::TYPE, 0, 9);
@@ -363,7 +365,6 @@ BOOST_FIXTURE_TEST_CASE(usb_windows_discovery, UsbFixture)
 		BOOST_TEST(confDesc.size() == confDescSize);
 
 		co_await controlSetConfiguration(1);
-		BOOST_TEST(simu(m_func->configuration()) == 1);
 
 		sim::SimulationContext::current()->onDebugMessage(nullptr, "transfer out");
 		const char testString[] = "Hello World!!!";
@@ -372,6 +373,10 @@ BOOST_FIXTURE_TEST_CASE(usb_windows_discovery, UsbFixture)
 		std::vector<std::byte> dataIn = co_await transferIn(1);
 		BOOST_TEST(dataIn.empty());
 
+		BOOST_TEST(simu(m_func->frameId()) == 0x2CD);
+		BOOST_TEST(simu(m_func->configuration()) == 1);
+		BOOST_TEST(simu(m_func->deviceAddress()) == m_functionAddress);
+
 		co_await OnClk(clock);
 		co_await OnClk(clock);
 		stopTest();
@@ -379,4 +384,58 @@ BOOST_FIXTURE_TEST_CASE(usb_windows_discovery, UsbFixture)
 
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(usb_phy_gpio_fuzz, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 12'000'000 * 4 });
+	ClockScope clkScp(clock);
+
+	GpioPhy phy1;
+	phy1.setup();
+	phy1.tx().valid = '0';
+	phy1.tx().error = '0';
+
+	pinOut(phy1.rx(), "rx");
+
+	std::queue<std::vector<std::byte>> packets;
+
+	addSimulationProcess([&]() -> SimProcess {
+		co_await OnClk(clock);
+
+		std::mt19937 rng{ 220620 };
+		for (size_t i = 0;; ++i)
+		{
+			std::vector<std::byte> packet(rng() % 70 + 1);
+			for (std::byte& b : packet)
+				b = std::byte(rng());
+			packets.push(packet);
+			co_await phy1.send(packet, {1, 12'000'000 - 120'000});
+		}
+	});
+
+	addSimulationProcess([&]() -> SimProcess {
+		co_await OnClk(clock);
+
+		for (size_t i = 0; i < 4; ++i)
+		{
+			std::vector<std::byte> packet;
+			while(true) 
+			{
+				if (simu(phy1.rx().valid) == '1')
+					packet.push_back(std::byte(simu(phy1.rx().data).value()));
+				if (simu(phy1.rx().eop) == '1')
+					break;
+				co_await OnClk(clock);
+			}
+			BOOST_TEST((!packets.empty() && packet == packets.front()));
+			packets.pop();
+			co_await OnClk(clock);
+		}
+
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1 }));
 }

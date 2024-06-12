@@ -91,22 +91,15 @@ gtry::Bit gtry::scl::usb::GpioPhy::setup(OpMode mode)
 
 	Bit dEn, dpOut, dnOut, dpIn, dnIn;
 
-	Clock usbPinClock({.absoluteFrequency = hlim::ClockRational{ 12'000'000 } });
+	Clock usbPinClock({.absoluteFrequency = hlim::ClockRational{12'000'000}, .name = "usbclk" });
 	{
 		Bit dpOut_cdc = allowClockDomainCrossing(dpOut, m_clock, usbPinClock);
 		Bit dnOut_cdc = allowClockDomainCrossing(dnOut, m_clock, usbPinClock);
 		Bit dEn_cdc = allowClockDomainCrossing(dEn, m_clock, usbPinClock);
 
 		ClockScope scope(usbPinClock);
-		dpIn = tristatePin(dpOut_cdc, dEn_cdc).setName("USB_DP");
-		dnIn = tristatePin(dnOut_cdc, dEn_cdc).setName("USB_DN");
+		std::tie(dpIn, dnIn) = pin({ dpOut_cdc, dnOut_cdc }, dEn_cdc);
 	}
-
-	DesignScope::get()->getCircuit().addSimulationProcess([=]() -> SimProcess {
-		simu(dpIn) = '1';
-		simu(dnIn) = '0';
-		co_return;
-	});
 
 	VStream<UInt> lineIn = recoverDataDifferential(
 		usbPinClock,
@@ -171,6 +164,132 @@ gtry::scl::usb::PhyTxStream& gtry::scl::usb::GpioPhy::tx()
 gtry::scl::usb::PhyRxStream& gtry::scl::usb::GpioPhy::rx()
 {
 	return m_rx;
+}
+
+gtry::SimProcess gtry::scl::usb::GpioPhy::deviceReset()
+{
+	simu(get<0>(*m_pins)) = '0';
+	simu(get<1>(*m_pins)) = '0';
+	co_await WaitFor({ 512, 12'000'000 });
+	simu(get<0>(*m_pins)) = '1';
+	co_await WaitFor({   2, 12'000'000 });
+}
+
+gtry::SimProcess gtry::scl::usb::GpioPhy::send(std::span<const std::byte> data)
+{
+	return send(data, { 1, 12'000'000 });
+}
+
+gtry::SimFunction<std::vector<std::byte>> gtry::scl::usb::GpioPhy::receive(size_t timeoutCycles)
+{
+	hlim::ClockRational baudRate{ 1, 12'000'000 };
+
+	// wait for preamble
+	size_t timeout = 0;
+	while(lineState() != K)
+	{
+		if(timeout++ == timeoutCycles)
+			co_return std::vector<std::byte>{};
+
+		co_await WaitFor(baudRate);
+	}
+
+	std::vector<std::byte> data;
+	uint8_t dataByte = 0;
+	uint8_t bitCounter = 0;
+	size_t stuffBitCounter = 0;
+	Symbol last = J;
+	do
+	{
+		Symbol current = lineState();
+		uint8_t bit = current == last ? 1 : 0;
+
+		dataByte |= bit << bitCounter;
+		if (++bitCounter == 8)
+		{
+			data.push_back(std::byte(dataByte));
+			dataByte = 0;
+			bitCounter = 0;
+		}
+
+		if (current == last && ++stuffBitCounter == 6)
+		{
+			co_await WaitFor(baudRate);
+			current = lineState();
+			HCL_ASSERT_HINT(current != last, "stuff error");
+		}
+		if(current != last)
+			stuffBitCounter = 0;
+
+		last = current;
+		co_await WaitFor(baudRate);
+
+	} while (lineState() != SE0);
+
+	HCL_ASSERT_HINT(bitCounter == 0, "incomplete byte");
+	HCL_ASSERT_HINT(!data.empty() && data[0] == std::byte(0x80), "preamble missing");
+
+	while (lineState() != J)
+		co_await WaitFor(baudRate);
+	co_await WaitFor(baudRate);
+
+	if (!data.empty())
+		data.erase(data.begin());
+	co_return data;
+}
+
+gtry::SimProcess gtry::scl::usb::GpioPhy::send(std::span<const std::byte> packet, hlim::ClockRational baudRate)
+{
+	size_t bitStuffCounter = 0;
+	co_await send(0x80, bitStuffCounter);
+
+	for (std::byte b : packet)
+		co_await send(static_cast<uint8_t>(b), bitStuffCounter, baudRate);
+
+	simu(get<0>(*m_pins)) = '0';
+	simu(get<1>(*m_pins)) = '0';
+	co_await WaitFor(baudRate);
+	co_await WaitFor(baudRate);
+	simu(get<0>(*m_pins)) = '1';
+	co_await WaitFor(baudRate);
+	co_await WaitFor(baudRate);
+}
+
+gtry::SimProcess gtry::scl::usb::GpioPhy::send(uint8_t byte, size_t& bitStuffCounter, hlim::ClockRational baudRate)
+{
+	auto swapLine = [&]() {
+		simu(get<0>(*m_pins)) = !simu(get<0>(*m_pins)).value();
+		simu(get<1>(*m_pins)) = !simu(get<1>(*m_pins)).value();
+		bitStuffCounter = 0;
+	};
+
+	for (size_t i = 0; i < 8; ++i)
+	{
+		if ((byte & 1) == 0)
+			swapLine();
+		else
+			bitStuffCounter++;
+
+		byte >>= 1;
+		co_await WaitFor(baudRate);
+
+		if (bitStuffCounter == 6)
+		{
+			swapLine();
+			co_await WaitFor(baudRate);
+		}
+	}
+}
+
+gtry::scl::usb::GpioPhy::Symbol gtry::scl::usb::GpioPhy::lineState() const
+{
+	if (simu(get<0>(*m_pins)) == '1' && simu(get<1>(*m_pins)) == '0')
+		return J;
+	if (simu(get<0>(*m_pins)) == '0' && simu(get<1>(*m_pins)) == '1')
+		return K;
+	if (simu(get<0>(*m_pins)) == '0' && simu(get<1>(*m_pins)) == '0')
+		return SE0;
+	return undefined;
 }
 
 void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
@@ -274,4 +393,23 @@ void gtry::scl::usb::GpioPhy::generateRx(const VStream<UInt>& in)
 	m_rx.eop = edgeFalling(m_status.rxActive) & rxDataActive;
 	m_rx.error = '0';
 	HCL_NAMED(m_rx);
+}
+
+std::tuple<gtry::Bit, gtry::Bit> gtry::scl::usb::GpioPhy::pin(std::tuple<Bit, Bit> out, Bit en)
+{
+	m_pins = std::tuple<TristatePin, TristatePin>{
+		tristatePin(get<0>(out), en).setName("USB_DP"),
+		tristatePin(get<1>(out), en).setName("USB_DN")
+	};
+
+	DesignScope::get()->getCircuit().addSimulationProcess([pins = *m_pins]() -> SimProcess {
+		simu(get<0>(pins)) = '1';
+		simu(get<1>(pins)) = '0';
+		co_return;
+	});
+
+	return {
+		get<0>(*m_pins),
+		get<1>(*m_pins)
+	};
 }

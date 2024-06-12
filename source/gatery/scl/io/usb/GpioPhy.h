@@ -17,12 +17,13 @@
 */
 #pragma once
 #include "Phy.h"
+#include "SimuPhy.h"
 
 #include "../../stream/Stream.h"
 
 namespace gtry::scl::usb
 {
-	class GpioPhy : public Phy
+	class GpioPhy : public Phy, public SimuHostBase
 	{
 	public:
 		GpioPhy();
@@ -34,14 +35,30 @@ namespace gtry::scl::usb
 		virtual PhyTxStream& tx() override;
 		virtual PhyRxStream& rx() override;
 
+		// simulation helper
+
+		virtual SimProcess deviceReset() override;
+		virtual SimProcess send(std::span<const std::byte> data) override;
+		virtual SimFunction<std::vector<std::byte>> receive(size_t timeoutCycles) override;
+
+		SimProcess send(std::span<const std::byte> packet, hlim::ClockRational baudRate);
+		SimProcess send(uint8_t byte, size_t& bitStuffCounter, hlim::ClockRational baudRate = { 1, 12'000'000 });
+
+		enum Symbol { J, K, SE0, undefined };
+		Symbol lineState() const;
+
 	protected:
 		virtual void generateTx(Bit& en, Bit& p, Bit& n);
 		virtual void generateRx(const VStream<UInt>& in);
+
+		virtual std::tuple<Bit, Bit> pin(std::tuple<Bit, Bit> out, Bit en);
 
 	private:
 		Clock m_clock;
 		PhyRxStatus m_status;
 		PhyTxStream m_tx;
 		PhyRxStream m_rx;
+
+		std::optional<std::tuple<TristatePin, TristatePin>> m_pins;
 	};
 }
