@@ -77,24 +77,32 @@ public:
 
 	virtual void pin(usb::Function& func)
 	{
-		pinOut(func.frameId(), "frameId");
-		pinOut(func.deviceAddress(), "deviceAddress");
-		pinOut(func.configuration(), "configuration");
+		PinNodeParameter simpin{ .simulationOnlyPin = true };
 
-		func.rx().ready = '1';
-		pinOut(func.rx(), "rx");
+		if(m_pinStatusRegister)
+		{
+			pinOut(func.frameId(), "frameId", simpin);
+			pinOut(func.deviceAddress(), "deviceAddress", simpin);
+			pinOut(func.configuration(), "configuration", simpin);
+		}
 
-		pinOut(func.tx().ready, "tx_ready");
-		pinOut(func.tx().commit, "tx_commit");
-		pinOut(func.tx().rollback, "tx_rollback");
-		pinIn(func.tx().valid, "tx_valid");
-		pinIn(func.tx().endPoint, "tx_endPoint");
-		pinIn(func.tx().data, "tx_data");
+		if (m_pinApplicationInterface)
+		{
+			func.rx().ready = '1';
+			pinOut(func.rx(), "rx", simpin);
 
-		addSimulationProcess([&]() -> SimProcess {
-			simu(func.tx().valid) = '0';
-			co_await OnClk(func.clock());
-		});
+			pinOut(func.tx().ready, "tx_ready", simpin);
+			pinOut(func.tx().commit, "tx_commit", simpin);
+			pinOut(func.tx().rollback, "tx_rollback", simpin);
+			pinIn(func.tx().valid, "tx_valid", simpin);
+			pinIn(func.tx().endPoint, "tx_endPoint", simpin);
+			pinIn(func.tx().data, "tx_data", simpin);
+
+			addSimulationProcess([&]() -> SimProcess {
+				simu(func.tx().valid) = '0';
+				co_await OnClk(func.clock());
+			});
+		}
 	}
 
 	SimFunction<std::optional<Pid>> receivePid(size_t timeoutCycles = 16)
@@ -293,6 +301,56 @@ public:
 		co_return data;
 	}
 
+	SimProcess testWindowsDeviceDiscovery()
+	{
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "ask for the first 64b of the descriptor");
+		co_await transferSetup({ .value = uint16_t(DeviceDescriptor::TYPE) << 8, .length = 64 });
+
+		auto checkDevDescriptor = [&](const std::vector<std::byte>& data) {
+			BOOST_TEST(data.size() == sizeof(usb::DeviceDescriptor) + 2);
+
+			if (data.size() >= 2)
+			{
+				BOOST_TEST(uint8_t(data[0]) == sizeof(usb::DeviceDescriptor) + 2);
+				BOOST_TEST(uint8_t(data[1]) == usb::DeviceDescriptor::TYPE);
+
+				if (data.size() >= sizeof(usb::DeviceDescriptor) + 2)
+					BOOST_TEST(!memcmp(data.data() + 2, m_func->descriptor().device(), sizeof(usb::DeviceDescriptor)));
+			}
+			};
+		checkDevDescriptor(co_await transferIn(0));
+
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "reset device");
+		co_await m_host->deviceReset();
+		if (m_pinStatusRegister)
+		{
+			BOOST_TEST(simu(m_func->deviceAddress()) == 0);
+			BOOST_TEST(simu(m_func->configuration()) == 0);
+		}
+
+		co_await controlSetAddress(5);
+
+		co_await readDescriptor(DeviceDescriptor::TYPE, 0, 18);
+		std::vector<std::byte> confDescPrefix = co_await readDescriptor(ConfigurationDescriptor::TYPE, 0, 9);
+		BOOST_TEST(confDescPrefix.size() == 9);
+
+		std::vector<std::byte> confDesc = co_await readDescriptor(ConfigurationDescriptor::TYPE, 0, 255);
+		BOOST_TEST(confDesc.size() >= 9);
+		BOOST_TEST(!memcmp(confDesc.data(), confDescPrefix.data(), confDescPrefix.size()));
+
+		const DescriptorEntry& confDescEntry = descriptor(ConfigurationDescriptor::TYPE);
+		const size_t confDescSize = confDescEntry.data[2] | (confDescEntry.data[3] << 8);
+		BOOST_TEST(confDesc.size() == confDescSize);
+
+		co_await controlSetConfiguration(1);
+
+		if (m_pinStatusRegister)
+		{
+			BOOST_TEST(simu(m_func->configuration()) == 1);
+			BOOST_TEST(simu(m_func->deviceAddress()) == m_functionAddress);
+		}
+	}
+
 	const usb::DescriptorEntry& descriptor(size_t type, size_t index = 0)
 	{ 
 		for (const usb::DescriptorEntry& d : m_func->descriptor().entries())
@@ -305,6 +363,9 @@ public:
 
 protected:
 	bool m_useSimuPhy = true;
+	bool m_pinApplicationInterface = true;
+	bool m_pinStatusRegister = true;
+
 	std::optional<usb::Function> m_func;
 	usb::SimuHostBase* m_host = nullptr;
 
@@ -327,62 +388,79 @@ BOOST_FIXTURE_TEST_CASE(usb_windows_discovery, UsbFixture)
 		co_await OnClk(clock);
 
 		co_await m_host->sendToken(usb::Pid::sof, 0x2CD);
+		co_await testWindowsDeviceDiscovery();
+		BOOST_TEST(simu(m_func->frameId()) == 0x2CD);
 
-		sim::SimulationContext::current()->onDebugMessage(nullptr, "ask for the first 64b of the descriptor");
-		co_await transferSetup({ .value = uint16_t(DeviceDescriptor::TYPE) << 8, .length = 64 });
-
-		auto checkDevDescriptor = [&](const std::vector<std::byte>& data) {
-			BOOST_TEST(data.size() == sizeof(usb::DeviceDescriptor) + 2);
-
-			if (data.size() >= 2)
-			{
-				BOOST_TEST(uint8_t(data[0]) == sizeof(usb::DeviceDescriptor) + 2);
-				BOOST_TEST(uint8_t(data[1]) == usb::DeviceDescriptor::TYPE);
-
-				if (data.size() >= sizeof(usb::DeviceDescriptor) + 2)
-					BOOST_TEST(!memcmp(data.data() + 2, m_func->descriptor().device(), sizeof(usb::DeviceDescriptor)));
-			}
-		};
-		checkDevDescriptor(co_await transferIn(0));
-
-		sim::SimulationContext::current()->onDebugMessage(nullptr, "reset device");
-		co_await m_host->deviceReset();
-		BOOST_TEST(simu(m_func->deviceAddress()) == 0);
-		BOOST_TEST(simu(m_func->configuration()) == 0);
-
-		co_await controlSetAddress(5);
-
-		co_await readDescriptor(DeviceDescriptor::TYPE, 0, 18);
-		std::vector<std::byte> confDescPrefix = co_await readDescriptor(ConfigurationDescriptor::TYPE, 0, 9);
-		BOOST_TEST(confDescPrefix.size() == 9);
-
-		std::vector<std::byte> confDesc = co_await readDescriptor(ConfigurationDescriptor::TYPE, 0, 255);
-		BOOST_TEST(confDesc.size() >= 9);
-		BOOST_TEST(!memcmp(confDesc.data(), confDescPrefix.data(), confDescPrefix.size()));
-
-		const DescriptorEntry& confDescEntry = descriptor(ConfigurationDescriptor::TYPE);
-		const size_t confDescSize = confDescEntry.data[2] | (confDescEntry.data[3] << 8);
-		BOOST_TEST(confDesc.size() == confDescSize);
-
-		co_await controlSetConfiguration(1);
-
+		// send data
 		sim::SimulationContext::current()->onDebugMessage(nullptr, "transfer out");
 		const char testString[] = "Hello World!!!";
-		co_await transferOut(1, std::as_bytes(std::span(testString)));
+		std::optional<Pid> pid = co_await transferOut(1, std::as_bytes(std::span(testString)));
+		BOOST_TEST((pid && *pid == Pid::ack));
 
+		// receive nothing
 		std::vector<std::byte> dataIn = co_await transferIn(1);
 		BOOST_TEST(dataIn.empty());
 
-		BOOST_TEST(simu(m_func->frameId()) == 0x2CD);
-		BOOST_TEST(simu(m_func->configuration()) == 1);
-		BOOST_TEST(simu(m_func->deviceAddress()) == m_functionAddress);
-
-		co_await OnClk(clock);
-		co_await OnClk(clock);
 		stopTest();
 	});
 
 	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(usb_loopback_cyc10, UsbFixture, *boost::unit_test::disabled())
+{
+	m_useSimuPhy = false;
+	m_pinApplicationInterface = false;
+	m_pinStatusRegister = false;
+
+	auto device = std::make_unique<scl::IntelDevice>();
+	device->setupDevice("10CL025YU256C8G");
+	design.setTargetTechnology(std::move(device));
+
+	Clock clk12{ ClockConfig{
+		.absoluteFrequency = 12'000'000,
+		.name = "CLK12M",
+		.resetType = ClockConfig::ResetType::NONE
+	} };
+
+	auto* pll2 = DesignScope::get()->createNode<scl::arch::intel::ALTPLL>();
+	pll2->setClock(0, clk12);
+	Clock clock = pll2->generateOutClock(0, 4, 1, 50, 0);
+	ClockScope clkScp(clock);
+
+	setupFunction();
+	{
+		scl::TransactionalFifo<scl::usb::Function::StreamData> loopbackFifo{ 256 };
+		m_func->attachRxFifo(loopbackFifo, 1 << 1);
+		m_func->attachTxFifo(loopbackFifo, 1 << 1);
+		loopbackFifo.generate();
+	}
+
+	addSimulationProcess([&]() -> SimProcess {
+		co_await OnClk(clock);
+		co_await testWindowsDeviceDiscovery();
+
+		// send data
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "transfer out");
+		const char testString[] = "Hello World!!!";
+		std::vector<std::byte> dataIn((const std::byte*)testString, (const std::byte*)testString + sizeof(testString));
+		std::optional<Pid> pid = co_await transferOut(1, dataIn);
+		BOOST_TEST((pid && *pid == Pid::ack));
+
+		// receive nothing
+		std::vector<std::byte> dataOut = co_await transferIn(1);
+		BOOST_TEST(dataIn == dataOut);
+
+		stopTest();
+	});
+
+	design.postprocess();
+
+	vhdl::VHDLExport vhdl("synthesis_projects/usb_loopback_cyc10/usb_loopback_cyc10.vhd");
+	vhdl.targetSynthesisTool(new IntelQuartus());
+	vhdl(design.getCircuit());
+
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000 }));
 }
 
