@@ -171,6 +171,7 @@ namespace gtry::hlim {
 		void removeConstSelectMuxes(Subnet& subnet);
 		void moveClockDriversToTop();
 		void ensureNoLiteralComparison();
+		void ensureChildNotReadingTristatePin();
 		void removeDisabledWritePorts(Subnet& subnet);
 
 		void removeFalseLoops();

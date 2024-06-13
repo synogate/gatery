@@ -1118,4 +1118,75 @@ BOOST_FIXTURE_TEST_CASE(testCarryAddSingleLine, gtry::GHDLTestFixture)
 	//BOOST_TEST(exportContains(std::regex{"CASE UNSIGNED\\(selector\\) IS"}));
 }
 
+BOOST_FIXTURE_TEST_CASE(tristateBit, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+	
+	UInt value = pinIn(10_b).setName("value");
+	Bit enable = pinIn().setName("enable");
+	UInt readback;
+	{
+		Area area("area", true);
+		readback = tristatePin(value, enable).setName("tristatePin");
+		readback = readback + 1;
+	}
+	pinOut(readback).setName("readback");
+
+	//design.visualize("before");
+	testCompilation();
+	//design.visualize("after");
+	BOOST_TEST(exportContains(std::regex{"\\(UNSIGNED\\(tristatePin\\) \\+ \"0000000001\"\\);"}));
+}
+
+
+BOOST_FIXTURE_TEST_CASE(tristateBitIntoSubEntity, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+	
+	UInt value = pinIn(10_b).setName("value");
+	Bit enable = pinIn().setName("enable");
+	UInt readback;
+	readback = tristatePin(value, enable).setName("tristatePin");
+	{
+		Area area("area", true);
+		readback = readback + 1;
+	}
+	pinOut(readback).setName("readback");
+
+	//design.visualize("before");
+	testCompilation();
+	//design.visualize("after");
+	BOOST_TEST(exportContains(std::regex{"s_tristatePin_2 <= UNSIGNED\\(tristatePin\\);"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(tristateBitIntoParent, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+	
+	UInt value = pinIn(10_b).setName("value");
+	Bit enable = pinIn().setName("enable");
+	UInt readback;
+	{
+		Area area("area", true);
+		readback = tristatePin(value, enable).setName("tristatePin");
+	}
+	readback = readback + 1;
+	pinOut(readback).setName("readback");
+
+	//design.visualize("before");
+	testCompilation();
+	//design.visualize("after");
+	BOOST_TEST(exportContains(std::regex{"out_tristatePin <= UNSIGNED\\(tristatePin_2\\);"}));
+}
+
+
 BOOST_AUTO_TEST_SUITE_END()
