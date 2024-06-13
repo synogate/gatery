@@ -1541,6 +1541,40 @@ void Circuit::ensureNoLiteralComparison()
 	}
 }
 
+void Circuit::ensureChildNotReadingTristatePin()
+{
+	for (auto idx : utils::Range(m_nodes.size())) {
+		auto node = m_nodes[idx].get();
+		auto *pin = dynamic_cast<Node_Pin*>(node);
+
+		if (pin == nullptr) continue;
+		if (!pin->isInputPin() && pin->isOutputPin()) continue;
+
+		bool anyDrivenInChild = false;
+		for (const auto &driven : pin->getDirectlyDriven(0))
+			if (driven.node->getGroup()->isChildOf(pin->getGroup())) {
+				anyDrivenInChild = true;
+				break;
+			}
+
+		if (anyDrivenInChild) {
+			auto driven = pin->getDirectlyDriven(0);
+
+			auto *sigNode = createNode<Node_Signal>();
+			sigNode->moveToGroup(pin->getGroup());
+			sigNode->connectInput({ .node = pin, .port = 0 });
+			sigNode->setName(pin->getName());
+
+			for (auto d : driven)
+				d.node->rewireInput(d.port, {.node = sigNode, .port = 0ull});
+
+			dbg::log(dbg::LogMessage(node->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING 
+					<< "Inserting named signal " << sigNode << " after tristate pin " << pin << " for vhdl export because the pin is read in a sub entity."
+			);
+		}
+	}
+}
+
 void Circuit::removeDisabledWritePorts(Subnet &subnet)
 {
 	for (unsigned i = 0; i < m_nodes.size(); i++) {
@@ -1716,6 +1750,7 @@ void DefaultPostprocessing::exportPreparation(Circuit &circuit) const
 	circuit.ensureSignalNodePlacement();
 	circuit.ensureMultiDriverNodePlacement();
 	circuit.ensureNoLiteralComparison();
+	circuit.ensureChildNotReadingTristatePin();
 	circuit.inferSignalNames();
 }
 
@@ -1780,6 +1815,7 @@ void MinimalPostprocessing::exportPreparation(Circuit& circuit) const
 	circuit.ensureSignalNodePlacement();
 	circuit.ensureMultiDriverNodePlacement();
 	circuit.ensureNoLiteralComparison();
+	circuit.ensureChildNotReadingTristatePin();
 	circuit.inferSignalNames();
 }
 
