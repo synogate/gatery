@@ -64,6 +64,7 @@ public:
 		desc.add(scl::usb::InterfaceAssociationDescriptor{});
 		scl::usb::virtualCOMsetup(func, 1, 2);
 
+		desc.changeMaxPacketSize(m_maxPacketLength);
 		desc.finalize();
 	}
 
@@ -167,6 +168,27 @@ public:
 		co_await m_host->sendToken(tokenPid, m_functionAddress, endPoint);
 		co_await m_host->sendData(dataPid, data);
 		co_return co_await receivePid();
+	}
+
+	SimFunction<size_t> transferOutBatch(size_t endPoint, std::span<const std::byte> data)
+	{
+		Pid dataPid = Pid::data0;
+		size_t sent = 0;
+		while (sent < data.size())
+		{
+			std::span<const std::byte> packet = data.subspan(sent, std::min<size_t>(data.size() - sent, m_maxPacketLength));
+			std::optional<Pid> pid = co_await transferOut(endPoint, packet, dataPid);
+			if (!pid || *pid == Pid::stall)
+				break;
+			if(*pid == Pid::ack)
+			{
+				sent += packet.size();
+				dataPid = dataPid == Pid::data0 ? Pid::data1 : Pid::data0;
+			}
+			else
+				BOOST_TEST((*pid == Pid::nak));
+		}
+		co_return sent;
 	}
 
 	SimFunction<bool> transferSetup(usb::SimSetupPacket packet)
@@ -307,7 +329,7 @@ public:
 		co_await transferSetup({ .value = uint16_t(DeviceDescriptor::TYPE) << 8, .length = 64 });
 
 		auto checkDevDescriptor = [&](const std::vector<std::byte>& data) {
-			BOOST_TEST(data.size() == sizeof(usb::DeviceDescriptor) + 2);
+			BOOST_TEST(data.size() == std::min<size_t>(sizeof(usb::DeviceDescriptor) + 2, m_maxPacketLength));
 
 			if (data.size() >= 2)
 			{
@@ -413,6 +435,7 @@ BOOST_FIXTURE_TEST_CASE(usb_loopback_cyc10, UsbFixture, *boost::unit_test::disab
 	m_useSimuPhy = false;
 	m_pinApplicationInterface = false;
 	m_pinStatusRegister = false;
+	m_maxPacketLength = 8;
 
 	auto device = std::make_unique<scl::IntelDevice>();
 	device->setupDevice("10CL025YU256C8G");
@@ -445,11 +468,11 @@ BOOST_FIXTURE_TEST_CASE(usb_loopback_cyc10, UsbFixture, *boost::unit_test::disab
 		sim::SimulationContext::current()->onDebugMessage(nullptr, "transfer out");
 		const char testString[] = "Hello World!!!";
 		std::vector<std::byte> dataIn((const std::byte*)testString, (const std::byte*)testString + sizeof(testString));
-		std::optional<Pid> pid = co_await transferOut(1, dataIn);
-		BOOST_TEST((pid && *pid == Pid::ack));
+		std::optional<size_t> sentLen = co_await transferOutBatch(1, dataIn);
+		BOOST_TEST((sentLen && *sentLen == dataIn.size()));
 
 		// receive nothing
-		std::vector<std::byte> dataOut = co_await transferIn(1);
+		std::vector<std::byte> dataOut = co_await transferInBatch(1, 255);
 		BOOST_TEST(dataIn == dataOut);
 
 		stopTest();
