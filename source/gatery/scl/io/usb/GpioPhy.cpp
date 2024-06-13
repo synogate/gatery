@@ -99,6 +99,8 @@ gtry::Bit gtry::scl::usb::GpioPhy::setup(OpMode mode)
 
 		ClockScope scope(usbPinClock);
 		std::tie(dpIn, dnIn) = pin({ dpOut_cdc, dnOut_cdc }, dEn_cdc);
+		HCL_NAMED(dpIn);
+		HCL_NAMED(dnIn);
 	}
 
 	VStream<UInt> lineIn = recoverDataDifferential(
