@@ -1285,6 +1285,74 @@ void MemoryGroup::giveName(Circuit &circuit, NodePort &nodePort, std::string nam
 	sig->moveToGroup(m_fixupNodeGroup);
 }
 
+void MemoryGroup::emulateResetOfOutputRegisters(Circuit &circuit)
+{
+	for (auto &rp : m_readPorts)
+		if (rp.dedicatedReadLatencyRegisters.size() == 1)
+			emulateResetOfFirstReadPortOutputRegister(circuit, rp);
+}
+
+void MemoryGroup::emulateResetOfFirstReadPortOutputRegister(Circuit &circuit, MemoryGroup::ReadPort &rp)
+{
+	auto *reg = rp.dedicatedReadLatencyRegisters.front().get();
+	if (reg->getNonSignalDriver(Node_Register::RESET_VALUE).node == nullptr) 
+		return;
+
+	dbg::log(dbg::LogMessage(m_nodeGroup) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Emulating reset logic for output register " << reg);
+
+	lazyCreateFixupNodeGroup();
+
+	auto *clockDomain = reg->getClocks()[0];
+	
+	auto *resetPin = circuit.createNode<Node_ClkRst2Signal>();
+	resetPin->moveToGroup(m_fixupNodeGroup);
+	resetPin->recordStackTrace();
+	resetPin->setClock(clockDomain);
+
+	bool resetHighActive = clockDomain->getRegAttribs().resetActive == RegisterAttributes::Active::HIGH;
+
+	sim::DefaultBitVectorState state;
+	state.resize(1);
+	state.setRange(sim::DefaultConfig::DEFINED, 1, 1);
+	state.clearRange(sim::DefaultConfig::VALUE, resetHighActive?1:0, 1);
+
+	auto *resetConst = circuit.createNode<Node_Constant>(state, ConnectionType::BOOL);
+	resetConst->moveToGroup(m_fixupNodeGroup);
+	resetConst->recordStackTrace();
+
+
+	auto *regReset = circuit.createNode<Node_Register>();
+	regReset->recordStackTrace();
+	regReset->setClock(clockDomain);
+	regReset->connectInput(Node_Register::DATA, {.node = resetPin, .port = 0 });
+	regReset->connectInput(Node_Register::RESET_VALUE, {.node = resetConst, .port = 0 });
+	regReset->connectInput(Node_Register::ENABLE, reg->getDriver(Node_Register::ENABLE));
+	regReset->moveToGroup(m_fixupNodeGroup);
+	regReset->setComment("This register was created to create a delayed reset for use in emulating the reset of a memory output register.");
+
+
+	auto driven = reg->getDirectlyDriven(0);
+
+	auto *muxNode = circuit.createNode<Node_Multiplexer>(2);
+	muxNode->recordStackTrace();
+	muxNode->moveToGroup(m_fixupNodeGroup);
+	muxNode->connectSelector({ .node = regReset, .port = 0 });
+	if (resetHighActive) {
+		muxNode->connectInput(0, { .node = reg, .port =  0ull });
+		muxNode->connectInput(1, reg->getDriver(Node_Register::RESET_VALUE));
+	} else {
+		muxNode->connectInput(0, reg->getDriver(Node_Register::RESET_VALUE));
+		muxNode->connectInput(1, { .node = reg, .port =  0ull });
+	}
+	muxNode->setComment("Emulate the reset of a memory output register.");
+
+	for (auto d : driven)
+		d.node->rewireInput(d.port, { .node = muxNode, .port = 0 });
+
+	reg->disconnectInput(Node_Register::RESET_VALUE);
+}
+
+
 
 Memory2VHDLPattern::Memory2VHDLPattern()
 {
@@ -1305,6 +1373,7 @@ bool Memory2VHDLPattern::attemptApply(Circuit &circuit, hlim::NodeGroup *nodeGro
 	memoryGroup->resolveWriteOrder(circuit);
 	memoryGroup->updateNoConflictsAttrib();
 	memoryGroup->buildReset(circuit);
+	memoryGroup->emulateResetOfOutputRegisters(circuit);
 	memoryGroup->bypassSignalNodes();
 	memoryGroup->verify();
 	if (memoryGroup->getMemory()->type() == Node_Memory::MemType::EXTERNAL) {
