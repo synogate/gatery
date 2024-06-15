@@ -20,6 +20,7 @@
 #include <boost/test/data/dataset.hpp>
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
+#include <boost/crc.hpp>
 
 #include <gatery/simulation/waveformFormats/VCDSink.h>
 #include <gatery/export/vhdl/VHDLExport.h>
@@ -630,4 +631,248 @@ BOOST_FIXTURE_TEST_CASE(usb_phy_gpio_fuzz, BoostUnitTestSimulationFixture)
 
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 1, 1 }));
+}
+
+namespace gtry::scl::usb
+{
+	class CombinedBitCrc
+	{
+	public:
+		enum Mode {
+			crc5, crc16
+		};
+
+		CombinedBitCrc(Bit in, Enum<Mode> mode, Bit reset, Bit shiftOut)
+		{
+			HCL_NAMED(m_state);
+			m_state = reg(m_state);
+			m_state |= reset;
+
+			Bit div = in ^ m_state.lsb();
+			div &= !shiftOut;
+			HCL_NAMED(div);
+			m_state = cat(div, m_state.upper(-1_b));
+
+			IF(mode == crc5)
+			{
+				m_state[2] ^= div;
+				m_state[4] = div;
+			}
+			ELSE
+			{
+				m_state[0] ^= div;
+				m_state[13] ^= div;
+			}
+
+			m_match5 = m_state.lower(5_b) == 6;
+			HCL_NAMED(m_match5);
+			m_match16 = m_state == 0xB001;
+			HCL_NAMED(m_match16);
+			m_match = mux(mode == crc5, { m_match16, m_match5 });
+			HCL_NAMED(m_match);
+			m_out = ~m_state.lsb();
+			HCL_NAMED(m_out);
+
+			m_ent.leave();
+		}
+
+		const Bit& out() const { return m_out; }
+		const Bit& match() const { return m_match; } // depending on mode
+		const Bit& match5() const { return m_match5; }
+		const Bit& match16() const { return m_match16; }
+
+	private:
+		Area m_ent = Area{ "CombinedBitCrc", true };
+		UInt m_state = 16_b;
+		Bit m_match5;
+		Bit m_match16;
+		Bit m_match;
+		Bit m_out;
+	};
+}
+
+BOOST_FIXTURE_TEST_CASE(usb_bit_crc5_rx_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	Bit in = pinIn().setName("in");
+	Bit reset = pinIn().setName("reset");
+	CombinedBitCrc crc(in, CombinedBitCrc::crc5, reset, '0');
+	pinOut(crc.match(), "match");
+
+	addSimulationProcess([&]() -> SimProcess {
+		const uint16_t data[] = {
+			// |<crc>|< 11b data >|
+			{ 0b11101'000'00000001 },
+			{ 0b11101'111'00010101 },
+			{ 0b00111'101'00111010 },
+			{ 0b01110'010'01110000 },
+		};
+
+		for (size_t j = 0; j < sizeof(data) / sizeof(*data); ++j)
+		{
+			sim::SimulationContext::current()->onDebugMessage(nullptr, "vector " + std::to_string(j));
+
+			for (size_t i = 0; i < 16; ++i)
+			{
+				simu(reset) = i == 0;
+				simu(in) = ((data[j] >> i) & 1) ? '1' : '0';
+				co_await WaitFor({ 0, 1 });
+				BOOST_TEST(simu(crc.match5()) == (i == 15));
+
+				co_await OnClk(clock);
+			}
+		}
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(usb_bit_crc16_rx_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	Bit in = pinIn().setName("in");
+	Bit reset = pinIn().setName("reset");
+	CombinedBitCrc crc(in, CombinedBitCrc::crc16, reset, '0');
+	pinOut(crc.match(), "match");
+
+	addSimulationProcess([&]() -> SimProcess {
+		std::mt19937 rng{ 202201 };
+
+		for (size_t j = 0; j < 3; ++j)
+		{
+			sim::SimulationContext::current()->onDebugMessage(nullptr, "vector " + std::to_string(j));
+
+			std::vector<std::uint8_t> msg(j*2);
+			for (std::uint8_t& it : msg) it = uint8_t(rng());
+
+			size_t crc_ref = boost::crc<16, 0x8005, 0xFFFF, 0xFFFF, true, true>(msg.data(), msg.size());
+			msg.push_back(uint8_t(crc_ref & 0xFF));
+			msg.push_back(uint8_t(crc_ref >> 8));
+
+			for (size_t i = 0; i < msg.size(); ++i)
+			{
+				for (size_t k = 0; k < 8; ++k)
+				{
+					simu(reset) = i == 0 && k == 0;
+					simu(in) = ((msg[i] >> k) & 1) ? '1' : '0';
+					co_await WaitFor({ 0, 1 });
+					BOOST_TEST(simu(crc.match16()) == (i == msg.size() - 1 && k == 7));
+
+					co_await OnClk(clock);
+				}
+			}
+		}
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(usb_bit_crc5_tx_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	Bit in = pinIn().setName("in");
+	Bit reset = pinIn().setName("reset");
+	Bit shiftOut = pinIn().setName("shiftOut");
+	CombinedBitCrc crc(in, CombinedBitCrc::crc5, reset, shiftOut);
+	pinOut(crc.out(), "out");
+
+	addSimulationProcess([&]() -> SimProcess {
+		const uint16_t data[] = {
+			// |<crc>|< 11b data >|
+			{ 0b11101'000'00000001 },
+			{ 0b11101'111'00010101 },
+			{ 0b00111'101'00111010 },
+			{ 0b01110'010'01110000 },
+		};
+
+		for (size_t j = 0; j < sizeof(data) / sizeof(*data); ++j)
+		{
+			sim::SimulationContext::current()->onDebugMessage(nullptr, "vector " + std::to_string(j));
+
+			simu(shiftOut) = '0';
+			for (size_t i = 0; i < 11; ++i)
+			{
+				simu(reset) = i == 0;
+				simu(in) = ((data[j] >> i) & 1) ? '1' : '0';
+				co_await OnClk(clock);
+			}
+
+			simu(shiftOut) = '1';
+			for (size_t i = 0; i < 5; ++i)
+			{
+				size_t bit = (data[j] >> 11 >> i) & 1;
+				BOOST_TEST(simu(crc.out()) == (bit == 1));
+				if(i != 4)
+					co_await OnClk(clock);
+			}
+		}
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(usb_bit_crc16_tx_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	Bit in = pinIn().setName("in");
+	Bit reset = pinIn().setName("reset");
+	Bit shiftOut = pinIn().setName("shiftOut");
+	CombinedBitCrc crc(in, CombinedBitCrc::crc16, reset, shiftOut);
+	pinOut(crc.out(), "out");
+
+	addSimulationProcess([&]() -> SimProcess {
+		std::mt19937 rng{ 202201 };
+
+		for (size_t j = 0; j < 3; ++j)
+		{
+			sim::SimulationContext::current()->onDebugMessage(nullptr, "vector " + std::to_string(j));
+
+			std::vector<std::uint8_t> msg(j * 2);
+			for (std::uint8_t& it : msg) it = uint8_t(rng());
+
+			simu(shiftOut) = '0';
+			simu(reset) = '1';
+			for (size_t i = 0; i < msg.size(); ++i)
+			{
+				for (size_t k = 0; k < 8; ++k)
+				{
+					//simu(reset) = i == 0 && k == 0;
+					simu(in) = ((msg[i] >> k) & 1) ? '1' : '0';
+					co_await OnClk(clock);
+					simu(reset) = '0';
+				}
+			}
+
+			size_t crc_ref = boost::crc<16, 0x8005, 0xFFFF, 0xFFFF, true, true>(msg.data(), msg.size());
+			simu(shiftOut) = '1';
+			co_await WaitFor({ 0, 1 });
+			for (size_t i = 0; i < 16; ++i)
+			{
+				size_t bit = (crc_ref >> i) & 1;
+				BOOST_TEST(simu(crc.out()) == (bit == 1));
+
+				if(i != 15)
+					co_await OnClk(clock);
+				simu(reset) = '0';
+			}
+		}
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
