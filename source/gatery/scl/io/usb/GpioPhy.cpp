@@ -302,6 +302,13 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 	m_tx.ready = ready(txStream);
 
 	auto txPacketStream = addEopDeferred(txStream, edgeFalling(valid(txStream)));
+
+#if 0 // use this to inject random tx errors
+	IF(transfer(txPacketStream))
+		IF(Counter{45}.isLast())
+			*txPacketStream ^= Counter{ 8_b }.value();
+#endif
+
 	HCL_NAMED(txPacketStream);
 	auto txPreambledStream = strm::insertBeat(move(txPacketStream), 0, 0x80u);
 	HCL_NAMED(txPreambledStream);
