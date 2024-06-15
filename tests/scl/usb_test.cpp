@@ -430,7 +430,23 @@ BOOST_FIXTURE_TEST_CASE(usb_windows_discovery, UsbFixture)
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000 }));
 }
 
-BOOST_FIXTURE_TEST_CASE(usb_loopback_cyc10, UsbFixture, *boost::unit_test::disabled())
+class SingleEndpointUsbFixture : public UsbFixture
+{
+public:
+	virtual void setupDescriptor(usb::Function& func)
+	{
+		// this is a minimal descriptor for a single cdc com port
+		usb::Descriptor& desc = func.descriptor();
+		desc.add(scl::usb::DeviceDescriptor{.Class = scl::usb::ClassCode::Communications_and_CDC_Control});
+		desc.add(scl::usb::ConfigurationDescriptor{});
+		scl::usb::virtualCOMsetup(func, 0, 1, 2);
+
+		desc.changeMaxPacketSize(m_maxPacketLength);
+		desc.finalize();
+	}
+};
+
+BOOST_FIXTURE_TEST_CASE(usb_loopback_cyc10, SingleEndpointUsbFixture, *boost::unit_test::disabled())
 {
 	m_useSimuPhy = false;
 	m_pinApplicationInterface = false;
@@ -455,25 +471,40 @@ BOOST_FIXTURE_TEST_CASE(usb_loopback_cyc10, UsbFixture, *boost::unit_test::disab
 	setupFunction();
 	{
 		scl::TransactionalFifo<scl::usb::Function::StreamData> loopbackFifo{ 256 };
-		m_func->attachRxFifo(loopbackFifo, 1 << 1);
+		//m_func->attachRxFifo(loopbackFifo, 1 << 1);
+		m_func->rx().ready = '1';
 		m_func->attachTxFifo(loopbackFifo, 1 << 1);
+
+		IF(scl::Counter(64).isLast() & !loopbackFifo.full())
+			loopbackFifo.push({ .data = scl::Counter(8_b).value(), .endPoint = 1});
+
 		loopbackFifo.generate();
 	}
 
 	addSimulationProcess([&]() -> SimProcess {
 		co_await OnClk(clock);
-		co_await testWindowsDeviceDiscovery();
+		//co_await testWindowsDeviceDiscovery();
+		co_await controlSetConfiguration(1);
 
-		// send data
-		sim::SimulationContext::current()->onDebugMessage(nullptr, "transfer out");
-		const char testString[] = "Hello World!!!";
-		std::vector<std::byte> dataIn((const std::byte*)testString, (const std::byte*)testString + sizeof(testString));
-		std::optional<size_t> sentLen = co_await transferOutBatch(1, dataIn);
-		BOOST_TEST((sentLen && *sentLen == dataIn.size()));
+		co_await WaitFor({ 20, 1'000'000 });
 
-		// receive nothing
-		std::vector<std::byte> dataOut = co_await transferInBatch(1, 255);
-		BOOST_TEST(dataIn == dataOut);
+		//std::vector<std::byte> dataFirstIn = co_await transferInBatch(1, 255);
+		//std::cout << "dataFirstIn " << dataFirstIn.size() << "\n";
+
+		// receive a packet but do not ack
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "data 1");
+		co_await m_host->sendToken(Pid::in, m_functionAddress, 1);
+		std::vector<std::byte> data = co_await m_host->receive();
+
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "control");
+		co_await controlTransferOut({
+			.direction = usb::EndpointDirection::out,
+			.request = usb::SetupRequest::CLEAR_FEATURE,
+			.index = 0x81
+		});
+
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "data 2");
+		std::vector<std::byte> data2 = co_await transferIn(1);
 
 		stopTest();
 	});
@@ -484,6 +515,66 @@ BOOST_FIXTURE_TEST_CASE(usb_loopback_cyc10, UsbFixture, *boost::unit_test::disab
 	vhdl.targetSynthesisTool(new IntelQuartus());
 	vhdl(design.getCircuit());
 
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(usb_resend_setup_interrupted, UsbFixture, *boost::unit_test::disabled())
+{
+	m_pinApplicationInterface = false;
+	m_pinStatusRegister = false;
+
+	Clock clock({ .absoluteFrequency = 12'000'000 * (m_useSimuPhy ? 1 : 4) });
+	ClockScope clkScp(clock);
+
+	setupFunction();
+	{
+		scl::TransactionalFifo<scl::usb::Function::StreamData> loopbackFifo{ 256 };
+		//m_func->attachRxFifo(loopbackFifo, 1 << 1);
+		m_func->rx().ready = '1';
+		m_func->attachTxFifo(loopbackFifo, 1 << 1);
+
+		scl::Counter ctr{ 256 };
+		scl::Counter character{ 256 };
+		IF(ctr.isLast() & !loopbackFifo.full())
+		{
+			loopbackFifo.push({ .data = zext(character.value(), 8_b), .endPoint = 1 });
+			character.inc();
+		}
+
+		loopbackFifo.generate();
+	}
+
+	addSimulationProcess([&]() -> SimProcess {
+		co_await OnClk(clock);
+		co_await controlSetConfiguration(1);
+
+		co_await WaitFor({ 20, 1'000'000 });
+
+		// receive a packet but do not ack
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "data 1");
+		co_await m_host->sendToken(Pid::in, m_functionAddress, 1);
+		std::vector<std::byte> data1 = co_await m_host->receive();
+		BOOST_TEST(data1.size() > 3);
+
+		// interrupt by control transfer which changes the endpoint
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "control");
+		co_await controlTransferOut({
+			.direction = usb::EndpointDirection::out,
+			.request = usb::SetupRequest::CLEAR_FEATURE,
+			.index = 0x81
+		});
+
+		co_await WaitFor({ 20, 1'000'000 });
+
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "data 2");
+		co_await m_host->sendToken(Pid::in, m_functionAddress, 1);
+		std::vector<std::byte> data2 = co_await m_host->receive();
+		BOOST_TEST(data1 == data2);
+
+		stopTest();
+	});
+
+	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000 }));
 }
 

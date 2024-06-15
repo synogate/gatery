@@ -17,6 +17,7 @@
 */
 #include "gatery/scl_pch.h"
 #include "Function.h"
+#include "SimuPhy.h"
 
 #include "../../Counter.h"
 #include "../../utils/OneHot.h"
@@ -53,6 +54,7 @@ void gtry::scl::usb::Function::setup(Phy& phy)
 	if (DeviceDescriptor* dev = m_descriptor.device())
 		m_maxPacketSize = dev->MaxPacketSize;
 	m_packetLen = BitWidth::last(m_maxPacketSize);
+	m_packetLenTxLimit = BitWidth::last(m_maxPacketSize);
 
 	generateFunctionReset();
 	generateDescriptorRom();
@@ -175,6 +177,44 @@ void gtry::scl::usb::Function::generateInitialFsm()
 {
 	const PhyRxStream& rx = m_phy.rx;
 
+	Bit ackExpected;
+	ackExpected = reg(ackExpected, '0');
+	HCL_NAMED(ackExpected);
+
+	m_tx.commit = '0';
+	m_tx.rollback = '0';
+
+	IF(ackExpected & rx.sop & rx.valid)
+	{
+		IF(!rx.error & rx.data.lower(4_b) == size_t(Pid::ack))
+		{
+			m_nextOutDataPid ^= m_endPointMask;
+
+			// commit progress
+			m_descAddress = m_descAddressActive;
+			m_descLength = m_descLengthActive;
+			m_address = m_newAddress;
+
+			IF(m_endPoint != 0)
+				m_packetLenTxLimit = m_maxPacketSize;
+
+			m_tx.commit = '1';
+		}
+		ELSE
+		{
+			m_tx.rollback = '1';
+		}
+		ackExpected = '0';
+	}
+
+	m_packetLenTxLimit = reg(m_packetLenTxLimit, m_maxPacketSize);
+	HCL_NAMED(m_packetLenTxLimit);
+
+	m_endPoint = reg(m_endPoint);
+	HCL_NAMED(m_endPoint);
+	m_endPointMask = reg(m_endPointMask);
+	HCL_NAMED(m_endPointMask);
+
 	IF(m_state.current() == State::waitForToken)
 	{
 		IF(rx.eop & !rx.error)
@@ -193,23 +233,25 @@ void gtry::scl::usb::Function::generateInitialFsm()
 					m_endPoint = token.endPoint;
 					m_endPointMask = scl::decoder(m_endPoint);
 
-					IF(m_pid.upper(2_b) == 3) // setup
+					IF(m_endPoint == 0)
 					{
-						m_state = State::waitForSetup;
-						m_nextOutDataPid |= m_endPointMask;
-						m_nextInDataPid &= ~m_endPointMask;
+						IF(m_pid.upper(2_b) == 3) // setup
+						{
+							m_state = State::waitForSetup;
+							m_nextOutDataPid.lsb() = '1';
+							m_nextInDataPid.lsb() = '0';
+						}
+						IF(m_pid.upper(2_b) == 2) // in setup
+						{
+							m_state = State::sendDataPid;
+							m_sendDataState = State::sendSetupData;
+						}
+						IF(m_pid.upper(2_b) == 0) // out setup
+						{
+							m_state = State::recvSetupData;
+						}
 					}
-					IF(m_pid.upper(2_b) == 2 & m_endPoint == 0) // in setup
-					{
-						m_state = State::sendDataPid;
-						m_sendDataState = State::sendSetupData;
-					}
-					IF(m_pid.upper(2_b) == 0 & m_endPoint == 0) // out setup
-					{
-						m_state = State::recvSetupData;
-					}
-
-					IF(m_endPoint != 0)
+					ELSE
 					{
 						IF(m_pid.upper(2_b) == 2) // in
 						{
@@ -232,10 +274,6 @@ void gtry::scl::usb::Function::generateInitialFsm()
 			}
 		}
 	}
-	m_endPoint = reg(m_endPoint);
-	HCL_NAMED(m_endPoint);
-	m_endPointMask = reg(m_endPointMask);
-	HCL_NAMED(m_endPointMask);
 
 	m_frameId = reg(m_frameId);
 	HCL_NAMED(m_frameId);
@@ -266,6 +304,15 @@ void gtry::scl::usb::Function::generateInitialFsm()
 
 					IF(setup.request == (size_t)SetupRequest::CLEAR_FEATURE)
 					{
+						IF(setup.wValue == 0)
+						{
+							Bit direction = setup.wIndex[7];
+							UInt endPointIndex = setup.wIndex.lower(4_b);
+							IF(direction)
+								m_nextInDataPid[endPointIndex] = '0';
+							ELSE
+								m_nextOutDataPid[endPointIndex] = '0';
+						}
 						sendHandshake(Handshake::ACK);
 					}
 
@@ -403,7 +450,8 @@ void gtry::scl::usb::Function::generateInitialFsm()
 		}
 		ELSE
 		{
-			m_state = State::waitForSetupAck;
+			ackExpected = '1';
+			m_state = State::waitForToken;
 		}
 	}
 
@@ -413,7 +461,7 @@ void gtry::scl::usb::Function::generateInitialFsm()
 	{
 		PhyTxStream& tx = m_phy.tx;
 
-		IF(m_tx.valid & m_tx.endPoint == m_endPoint & m_packetLen != m_maxPacketSize)
+		IF(m_tx.valid & m_tx.endPoint == m_endPoint & m_packetLen != m_packetLenTxLimit)
 		{
 			m_tx.ready = tx.ready;
 			tx.valid = '1';
@@ -421,7 +469,9 @@ void gtry::scl::usb::Function::generateInitialFsm()
 		}
 		ELSE
 		{
-			m_state = State::waitForSetupAck;
+			m_packetLenTxLimit = m_packetLen;
+			ackExpected = '1';
+			m_state = State::waitForToken;
 		}
 	}
 
@@ -469,31 +519,6 @@ void gtry::scl::usb::Function::generateInitialFsm()
 		}
 	}
 
-	m_tx.commit = '0';
-	m_tx.rollback = '0';
-	IF(m_state.current() == State::waitForSetupAck)
-	{
-		IF(m_phy.rx.eop)
-		{
-			m_state = State::waitForToken;
-
-			IF(!m_phy.rx.error & m_pid == 2) // ack
-			{
-				m_nextOutDataPid ^= m_endPointMask;
-
-				// commit progress
-				m_descAddress = m_descAddressActive;
-				m_descLength = m_descLengthActive;
-				m_address = m_newAddress;
-
-				m_tx.commit = '1';
-			}
-			ELSE
-			{
-				m_tx.rollback = '1';
-			}
-		}
-	}
 	HCL_NAMED(m_tx);
 	m_tx.valid = '0';
 	m_tx.data = ConstUInt(8_b);

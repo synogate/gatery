@@ -46,7 +46,6 @@ namespace gtry::scl::usb
 			sendSetupData,
 			recvSetupData,
 			sendDataPid,
-			waitForSetupAck,
 			ack,
 
 			// used to CDC debugging
@@ -151,6 +150,7 @@ namespace gtry::scl::usb
 		UInt m_pid = 4_b;
 		UInt m_packetData = 8 * 8_b;
 		UInt m_packetLen;
+		UInt m_packetLenTxLimit;
 		size_t m_maxPacketSize = 8;
 
 		UInt m_sendHandshake = 2_b;
