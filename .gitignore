@@ -29,3 +29,8 @@ Makefile
 test_export
 
 source/gen/
+/tests/**/db
+/tests/**/incremental_db
+/tests/**/output_files
+/tests/**/*.vhd
+
