@@ -20,5 +20,6 @@
 
 namespace gtry::scl::usb
 {
-	void virtualCOMsetup(Function& func, uint8_t interfaceNumber, uint8_t endPoint, boost::optional<Bit&> dtr = {}, boost::optional<Bit&> rts = {});
+	// The notification endpoint is optional but Linux does not accept the device without it. It works under windows.
+	void virtualCOMsetup(Function& func, uint8_t interfaceNumber, uint8_t endPoint, std::optional<uint8_t> notificationEndPoint = {}, boost::optional<Bit&> dtr = {}, boost::optional<Bit&> rts = {});
 }

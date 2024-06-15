@@ -18,7 +18,7 @@
 #include "gatery/scl_pch.h"
 #include "CommunicationsDeviceClass.h"
 
-void gtry::scl::usb::virtualCOMsetup(Function& func, uint8_t interfaceNumber, uint8_t endPoint, boost::optional<Bit&> dtr, boost::optional<Bit&> rts)
+void gtry::scl::usb::virtualCOMsetup(Function& func, uint8_t interfaceNumber, uint8_t endPoint, std::optional<uint8_t> notificationEndPoint, boost::optional<Bit&> dtr, boost::optional<Bit&> rts)
 {
 	// CDC Interface
 	func.descriptor().add(InterfaceDescriptor{
@@ -36,11 +36,14 @@ void gtry::scl::usb::virtualCOMsetup(Function& func, uint8_t interfaceNumber, ui
 	// CDC - Union Functional Descriptor (Interface 0 and 1 are a union)
 	func.descriptor().add(std::vector<uint8_t>{ 0x05, 0x24, 0x06, interfaceNumber, uint8_t(interfaceNumber + 1) });
 
-	// optional notification endpoint
-	//func.descriptor().add(EndpointDescriptor{
-	//	.Address = 0x82, // IN 2
-	//	.Attributes = 3, // Interrupt
-	//});
+	if(notificationEndPoint)
+	{
+		// optional notification endpoint
+		func.descriptor().add(EndpointDescriptor{
+			.Address = EndpointAddress::create(*notificationEndPoint, EndpointDirection::in),
+			.Attributes = 3, // Interrupt
+		});
+	}
 
 	// Data Interface
 	func.descriptor().add(InterfaceDescriptor{
@@ -62,17 +65,14 @@ void gtry::scl::usb::virtualCOMsetup(Function& func, uint8_t interfaceNumber, ui
 			handled = '1';
 		}
 
-		if (dtr || rts)
+		IF(setup.request == 0x22 & setup.requestType == 0x21 & setup.wIndex == interfaceNumber)
 		{
-			IF(setup.request == 0x22 & setup.requestType == 0x21 & setup.wIndex == interfaceNumber)
-			{
-				// accept SET_LINE_CONTROL_STATE
-				if (dtr)
-					*dtr = setup.wValue[0];
-				if (rts)
-					*rts = setup.wValue[1];
-				handled = '1';
-			}
+			// accept SET_LINE_CONTROL_STATE
+			if (dtr)
+				*dtr = setup.wValue[0];
+			if (rts)
+				*rts = setup.wValue[1];
+			handled = '1';
 		}
 
 		return handled;
