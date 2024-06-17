@@ -648,29 +648,29 @@ namespace gtry::scl::usb
 			m_state = reg(m_state);
 			m_state |= reset;
 
-			Bit div = in ^ m_state.lsb();
+			Bit out = m_state.lsb();
+			IF(mode == crc5)
+				out = m_state[16 - 5];
+
+			Bit div = in ^ out;
 			div &= !shiftOut;
 			HCL_NAMED(div);
 			m_state = cat(div, m_state.upper(-1_b));
+			m_state[0] ^= div;
+			m_state[13] ^= div;
 
-			IF(mode == crc5)
-			{
-				m_state[2] ^= div;
-				m_state[4] = div;
-			}
-			ELSE
-			{
-				m_state[0] ^= div;
-				m_state[13] ^= div;
-			}
-
-			m_match5 = m_state.lower(5_b) == 6;
+			m_match5 = m_state.upper(5_b) == 6;
 			HCL_NAMED(m_match5);
 			m_match16 = m_state == 0xB001;
 			HCL_NAMED(m_match16);
 			m_match = mux(mode == crc5, { m_match16, m_match5 });
 			HCL_NAMED(m_match);
-			m_out = ~m_state.lsb();
+
+			// this is the same as out, but with maybe inverted lsb so we cannot use out directly
+			m_out = m_state.lsb();
+			IF(mode == crc5)
+				m_out = m_state[16 - 5];
+			m_out = !m_out;
 			HCL_NAMED(m_out);
 
 			m_ent.leave();
