@@ -111,14 +111,10 @@ public:
 	{
 		std::vector<std::byte> data = co_await m_host->receive(timeoutCycles);
 		BOOST_TEST(data.size() == 1);
+		checkPacketBitErrors(data);
 
 		if (data.size() == 1)
-		{
-			uint8_t pid = uint8_t(data[0]) & 0xF;
-			uint8_t pidCheck = uint8_t(data[0]) >> 4;
-			BOOST_TEST(pid == (pidCheck ^ 0xF));
-			co_return (Pid)(pid);
-		}
+			co_return (Pid)(uint8_t(data[0]) & 0xF);
 		co_return std::nullopt;
 	}
 
@@ -127,28 +123,51 @@ public:
 		co_await m_host->sendToken(Pid::in, m_functionAddress, endPoint);
 
 		std::vector<std::byte> data = co_await m_host->receive();
-		BOOST_TEST((data.size() == 1 || data.size() >= 3));
-
-		if (data.size() >= 1)
-		{
-			uint8_t pid = uint8_t(data[0]) & 0xF;
-			uint8_t pidCheck = uint8_t(data[0]) >> 4;
-			BOOST_TEST(pid == (pidCheck ^ 0xF));
-
-			if (data.size() == 1)
-				BOOST_TEST(pid == uint8_t(Pid::nak));
-			else
-				// TODO: check which one is expected
-				BOOST_TEST((pid == uint8_t(Pid::data0) || pid == uint8_t(Pid::data1)));
-		}
+		checkPacketBitErrors(data);
 
 		if(data.size() >= 3)
 		{
 			co_await m_host->sendHandshake(Pid::ack);
 			co_return std::vector<std::byte>(data.begin() + 1, data.end() - 2);
 		}
-
 		co_return std::vector<std::byte>{};
+	}
+
+	void checkPacketBitErrors(std::span<const std::byte> packet)
+	{
+		BOOST_TEST((packet.size() == 1 || packet.size() >= 3));
+
+		if (packet.size() >= 1)
+		{
+			uint8_t pid = uint8_t(packet[0]) & 0xF;
+			uint8_t pidCheck = uint8_t(packet[0]) >> 4;
+			BOOST_TEST(pid == (pidCheck ^ 0xF));
+
+			if (packet.size() == 1)
+				BOOST_TEST(((pid == uint8_t(Pid::nak)) | (pid == uint8_t(Pid::ack))));
+			else
+				// TODO: check which one is expected
+				BOOST_TEST((pid == uint8_t(Pid::data0) || pid == uint8_t(Pid::data1)));
+		}
+
+		if (packet.size() >= 3)
+		{
+			switch (uint8_t(packet[0]) & 0x3)
+			{
+			case 0b01: // token
+				BOOST_TEST(packet.size() == 3);
+				BOOST_TEST(simu_crc5_usb_verify(uint16_t(packet[1]) | (uint16_t(packet[2]) << 8)));
+				break;
+			case 0b11: // data
+			{
+				std::span<const std::byte> checkedData = packet.subspan(1);
+				size_t crcCheck = boost::crc<16, 0x8005, 0xFFFF, 0xFFFF, true, true>(checkedData.data(), checkedData.size());
+				BOOST_TEST(crcCheck == 0x4FFE);
+				break;
+			}
+			default:;
+			}
+		}
 	}
 
 	SimFunction<std::vector<std::byte>> transferInBatch(size_t endPoint, size_t length)
@@ -631,59 +650,6 @@ BOOST_FIXTURE_TEST_CASE(usb_phy_gpio_fuzz, BoostUnitTestSimulationFixture)
 
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 1, 1 }));
-}
-
-namespace gtry::scl::usb
-{
-	class CombinedBitCrc
-	{
-	public:
-		enum Mode {
-			crc5, crc16
-		};
-
-		CombinedBitCrc(Bit in, Enum<Mode> mode, Bit reset, Bit shiftOut)
-		{
-			HCL_NAMED(m_state);
-			m_state = reg(m_state);
-			m_state |= reset;
-
-			Bit out = m_state.lsb();
-			IF(mode == crc5)
-				out = m_state[16 - 5];
-			m_out = !out;
-			HCL_NAMED(m_out);
-
-			Bit div = in ^ out;
-			div &= !shiftOut;
-			HCL_NAMED(div);
-			m_state = cat(div, m_state.upper(-1_b));
-			m_state[0] ^= div;
-			m_state[13] ^= div;
-
-			m_match5 = m_state.upper(5_b) == 6;
-			HCL_NAMED(m_match5);
-			m_match16 = m_state == 0xB001;
-			HCL_NAMED(m_match16);
-			m_match = mux(mode == crc5, { m_match16, m_match5 });
-			HCL_NAMED(m_match);
-
-			m_ent.leave();
-		}
-
-		const Bit& out() const { return m_out; }
-		const Bit& match() const { return m_match; } // depending on mode
-		const Bit& match5() const { return m_match5; }
-		const Bit& match16() const { return m_match16; }
-
-	private:
-		Area m_ent = Area{ "CombinedBitCrc", true };
-		UInt m_state = 16_b;
-		Bit m_match5;
-		Bit m_match16;
-		Bit m_match;
-		Bit m_out;
-	};
 }
 
 BOOST_FIXTURE_TEST_CASE(usb_bit_crc5_rx_test, BoostUnitTestSimulationFixture)
