@@ -142,6 +142,7 @@ gtry::Bit gtry::scl::usb::GpioPhy::setup(OpMode mode)
 	HCL_NAMED(seenSE0);
 	HCL_NAMED(m_status);
 
+	generateCrc();
 	generateRx(lineInDecoded);
 	generateTx(dEn, dpOut, dnOut);
 
@@ -314,7 +315,7 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 	HCL_NAMED(txPreambledStream);
 	auto txBitVecStream = strm::reduceWidth(move(txPreambledStream), 1_b);
 	HCL_NAMED(txBitVecStream);
-	auto txBitStream = txBitVecStream.transform([](const UInt& in) { return in.lsb(); });
+	auto txBitStream = generateTxCrcAppend(txBitVecStream.transform([](const UInt& in) { return in.lsb(); }));
 	HCL_NAMED(txBitStream);
 	auto txStuffedStream = bitStuff(txBitStream, 6);
 	nrzi(txStuffedStream);
@@ -386,9 +387,10 @@ void gtry::scl::usb::GpioPhy::generateRx(const VStream<UInt>& in)
 		IF(transfer(in) & *in == 0)
 			state = end;
 
-		IF(state.current() != data)
+		IF(state.current() != data | *in == 0)
 			valid(inBit) = '0';
 	}
+	HCL_NAMED(inBit);
 
 	VStream<UInt> lineInWord = strm::extendWidth(move(inBit), 8_b, !m_status.rxActive);
 
@@ -400,8 +402,113 @@ void gtry::scl::usb::GpioPhy::generateRx(const VStream<UInt>& in)
 	m_rx.data = *lineInWord;
 
 	m_rx.eop = edgeFalling(m_status.rxActive) & rxDataActive;
-	m_rx.error = '0';
+	m_rx.error = m_rx.eop & !m_crcMatch;
 	HCL_NAMED(m_rx);
+
+	IF(m_status.rxActive)
+	{
+		IF(m_rx.valid & m_rx.sop)
+		{
+			m_crcMode = CombinedBitCrc::Mode::crc5;
+			IF(m_rx.data[1])
+				m_crcMode = CombinedBitCrc::Mode::crc16;
+		}
+		Bit firstBitAfterPid;
+		firstBitAfterPid = flag(m_rx.valid & m_rx.sop, firstBitAfterPid & transfer(inBit));
+		m_crcReset = firstBitAfterPid;
+		m_crcIn = inBit->lsb();
+		m_crcEn = transfer(inBit);
+	}
+}
+
+void gtry::scl::usb::GpioPhy::generateCrc()
+{
+	m_crcMode = reg(m_crcMode);
+	HCL_NAMED(m_crcMode);
+	HCL_NAMED(m_crcEn);
+	HCL_NAMED(m_crcIn);
+	HCL_NAMED(m_crcOut);
+	HCL_NAMED(m_crcMatch);
+	HCL_NAMED(m_crcReset);
+	HCL_NAMED(m_crcShiftOut);
+
+	ENIF(m_crcEn)
+	{
+		CombinedBitCrc crc{ m_crcIn, m_crcMode, m_crcReset, m_crcShiftOut };
+		m_crcOut = crc.out();
+		m_crcMatch = reg(crc.match());
+	}
+	m_crcEn = '0';
+	m_crcReset = '0';
+	m_crcIn = 'X';
+	m_crcShiftOut = '0';
+}
+
+gtry::scl::RvPacketStream<gtry::Bit> gtry::scl::usb::GpioPhy::generateTxCrcAppend(RvPacketStream<Bit> in)
+{
+	Area scope{ "generateTxCrcAppend", true };
+	HCL_NAMED(in);
+
+	enum State { prefix, data, crc };
+	Reg<Enum<State>> state{ prefix };
+	state.setName("state");
+
+	Counter bitCounter{ 16 };
+
+	Bit appendCrc;
+	appendCrc = reg(appendCrc);
+	HCL_NAMED(appendCrc);
+
+	RvPacketStream<Bit> out;
+	IF(transfer(out))
+		bitCounter.inc();
+	out <<= in;
+
+	IF(state.current() == prefix)
+	{
+		IF(bitCounter.value() == 8 + 0)
+			appendCrc = *in;
+
+		IF(valid(in))
+			m_crcMode = CombinedBitCrc::Mode::crc16;
+
+		eop(out) &= !appendCrc;
+		IF(transfer(in) & appendCrc & bitCounter.isLast())
+		{
+			state = data;
+			IF(eop(in))
+				state = crc;
+		}
+	}
+
+	Bit firstDataBit = flag(state.current() == prefix, state.current() != prefix & transfer(out));
+	HCL_NAMED(firstDataBit);
+
+	IF(state.current() == data)
+	{
+		bitCounter.reset();
+		m_crcReset = firstDataBit;
+		m_crcEn = transfer(in);
+		m_crcIn = *in;
+		eop(out) = '0';
+		IF(transfer(in) & eop(in))
+			state = crc;
+	}
+
+	IF(state.current() == crc)
+	{
+		valid(out) = '1';
+		*out = m_crcOut;
+		m_crcReset = firstDataBit;
+		m_crcEn = transfer(out);
+		m_crcShiftOut = '1';
+		eop(out) = bitCounter.isLast();
+		IF(transfer(out) & eop(out))
+			state = prefix;
+	}
+
+	HCL_NAMED(out);
+	return out;
 }
 
 std::tuple<gtry::Bit, gtry::Bit> gtry::scl::usb::GpioPhy::pin(std::tuple<Bit, Bit> out, Bit en)
