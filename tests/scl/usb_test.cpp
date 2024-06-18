@@ -651,6 +651,8 @@ namespace gtry::scl::usb
 			Bit out = m_state.lsb();
 			IF(mode == crc5)
 				out = m_state[16 - 5];
+			m_out = !out;
+			HCL_NAMED(m_out);
 
 			Bit div = in ^ out;
 			div &= !shiftOut;
@@ -665,13 +667,6 @@ namespace gtry::scl::usb
 			HCL_NAMED(m_match16);
 			m_match = mux(mode == crc5, { m_match16, m_match5 });
 			HCL_NAMED(m_match);
-
-			// this is the same as out, but with maybe inverted lsb so we cannot use out directly
-			m_out = m_state.lsb();
-			IF(mode == crc5)
-				m_out = m_state[16 - 5];
-			m_out = !m_out;
-			HCL_NAMED(m_out);
 
 			m_ent.leave();
 		}
@@ -810,10 +805,9 @@ BOOST_FIXTURE_TEST_CASE(usb_bit_crc5_tx_test, BoostUnitTestSimulationFixture)
 			simu(shiftOut) = '1';
 			for (size_t i = 0; i < 5; ++i)
 			{
+				co_await OnClk(clock);
 				size_t bit = (data[j] >> 11 >> i) & 1;
 				BOOST_TEST(simu(crc.out()) == (bit == 1));
-				if(i != 4)
-					co_await OnClk(clock);
 			}
 		}
 		stopTest();
@@ -862,11 +856,9 @@ BOOST_FIXTURE_TEST_CASE(usb_bit_crc16_tx_test, BoostUnitTestSimulationFixture)
 			co_await WaitFor({ 0, 1 });
 			for (size_t i = 0; i < 16; ++i)
 			{
+				co_await OnClk(clock);
 				size_t bit = (crc_ref >> i) & 1;
 				BOOST_TEST(simu(crc.out()) == (bit == 1));
-
-				if(i != 15)
-					co_await OnClk(clock);
 				simu(reset) = '0';
 			}
 		}
