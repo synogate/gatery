@@ -37,7 +37,20 @@ void gtry::scl::usb::Function::setup(Phy& phy)
 
 	phy.rx().valid.resetValue('0');
 	phy.rx().eop.resetValue('0');
-	m_phy.checkRxAppendTx(phy.tx(), gtry::reg(phy.rx()));
+	if (phy.supportCrc())
+	{
+		m_phy.rx = gtry::reg(phy.rx());
+
+		m_phy.tx.ready = phy.tx().ready;
+		phy.tx().valid = m_phy.tx.valid;
+		phy.tx().error = m_phy.tx.error;
+		phy.tx().data = m_phy.tx.data;
+	}
+	else
+	{
+		m_phy.checkRxAppendTx(phy.tx(), gtry::reg(phy.rx()));
+	}
+
 	m_rxStatus = gtry::reg(phy.status());
 	m_clock = phy.clock();
 
