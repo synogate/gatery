@@ -18,8 +18,25 @@
 #pragma once
 
 #include <gatery/frontend.h>
+#include "../stream/strm.h"
 
-namespace gtry::scl {
+namespace gtry::scl 
+{
+	struct UartConfig
+	{
+		// the smallest baud generator step is 2^x which reduces complexity and baud rate precision for very small or non-standard baud rates
+		size_t baudGeneratorLogStepSize = 7;
+	};
+
+	VStream<BVec> uartRx(Bit rx, UInt baudRate, UartConfig cfg = {});
+	Bit uartTx(RvStream<BVec> data, UInt baudRate, UartConfig cfg = {});
+
+	inline auto uartTx(UInt baudRate, UartConfig cfg = {})
+	{
+		return [=](auto&& in) { return uartTx(std::forward<decltype(in)>(in), baudRate, cfg); };
+	}
+
+	Bit baudRateGenerator(Bit setToHalf, UInt baudRate, size_t baudGeneratorLogStepSize);
 
 struct UART
 {
