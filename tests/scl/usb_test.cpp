@@ -538,7 +538,7 @@ BOOST_FIXTURE_TEST_CASE(usb_loopback_cyc10, SingleEndpointUsbFixture, *boost::un
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000 }));
 }
 
-BOOST_FIXTURE_TEST_CASE(usb_resend_setup_interrupted, UsbFixture, *boost::unit_test::disabled())
+BOOST_FIXTURE_TEST_CASE(usb_resend_setup_interrupted, UsbFixture)
 {
 	m_pinApplicationInterface = false;
 	m_pinStatusRegister = false;
