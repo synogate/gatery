@@ -86,6 +86,11 @@ void gtry::scl::usb::Function::addClassSetupHandler(std::function<Bit(const Setu
 	m_classHandler.push_back(handler);
 }
 
+void gtry::scl::usb::Function::addClassDataHandler(std::function<void(const BVec&)> handler)
+{
+	m_classDataHandler.push_back(handler);
+}
+
 void gtry::scl::usb::Function::attachRxFifo(TransactionalFifo<StreamData>& fifo, uint16_t endPointMask)
 {
 	auto scope = m_area.enter("RxFifoInterface");
@@ -545,6 +550,9 @@ void gtry::scl::usb::Function::generateInitialFsm()
 
 			IF(!m_phy.rx.error & m_pid.lower(2_b) == 3) // data pid
 			{
+				for (auto& h : m_classDataHandler)
+					h((BVec)m_packetData);
+
 				sendHandshake(Handshake::ACK);
 			}
 		}

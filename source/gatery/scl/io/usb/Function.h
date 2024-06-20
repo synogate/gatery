@@ -89,6 +89,7 @@ namespace gtry::scl::usb
 
 		Descriptor& descriptor() { return m_descriptor; }
 		void addClassSetupHandler(std::function<Bit(const SetupPacket&)> handler);
+		void addClassDataHandler(std::function<void(const BVec&)> handler);
 		
 		void setup(Phy& phy);
 
@@ -135,6 +136,7 @@ namespace gtry::scl::usb
 
 		Descriptor m_descriptor;
 		std::vector<std::function<Bit(const SetupPacket&)>> m_classHandler;
+		std::vector<std::function<void(const BVec&)>> m_classDataHandler;
 
 		Reg<Enum<State>> m_state;
 		UInt m_address = 7_b;

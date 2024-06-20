@@ -29,6 +29,7 @@
 #include <gatery/scl/io/usb/SimuPhy.h>
 #include <gatery/scl/io/usb/Function.h>
 #include <gatery/scl/io/usb/GpioPhy.h>
+#include <gatery/scl/io/uart.h>
 
 using namespace boost::unit_test;
 using namespace gtry;
@@ -42,6 +43,9 @@ public:
 	virtual void setupFunction()
 	{
 		m_func.emplace();
+		for (const auto& handler : m_setupCallback)
+			handler(*m_func);
+
 		setupDescriptor(*m_func);
 		setupPhy(*m_func);
 		pin(*m_func);
@@ -413,6 +417,8 @@ protected:
 
 	uint8_t m_functionAddress = 0;
 	uint8_t m_maxPacketLength = 64;
+
+	std::list<std::function<void(Function&)>> m_setupCallback;
 };
 
 
@@ -532,6 +538,112 @@ BOOST_FIXTURE_TEST_CASE(usb_loopback_cyc10, SingleEndpointUsbFixture, *boost::un
 	design.postprocess();
 
 	vhdl::VHDLExport vhdl("synthesis_projects/usb_loopback_cyc10/usb_loopback_cyc10.vhd");
+	vhdl.targetSynthesisTool(new IntelQuartus());
+	vhdl(design.getCircuit());
+
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(usb_to_uart_cyc1000, SingleEndpointUsbFixture, *boost::unit_test::disabled())
+{
+	m_useSimuPhy = false;
+	m_pinApplicationInterface = false;
+	m_pinStatusRegister = false;
+	m_maxPacketLength = 8;
+
+	auto device = std::make_unique<scl::IntelDevice>();
+	device->setupDevice("10CL025YU256C8G");
+	design.setTargetTechnology(std::move(device));
+
+	Clock clk12{ ClockConfig{
+		.absoluteFrequency = 12'000'000,
+		.name = "CLK12M",
+		.resetType = ClockConfig::ResetType::NONE
+	} };
+
+	auto* pll2 = DesignScope::get()->createNode<scl::arch::intel::ALTPLL>();
+	pll2->setClock(0, clk12);
+	Clock clock = pll2->generateOutClock(0, 4, 1, 50, 0);
+	ClockScope clkScp(clock);
+
+	UInt baudRate = BitWidth::last(hlim::ceil(ClockScope::getClk().absoluteFrequency()));
+	UInt led = 8_b;
+	led = reg(led, 0);
+	pinOut(led, "LED");
+
+	enum class SetupClassRequest { none, SET_LINE_CODING };
+	Reg<Enum<SetupClassRequest>> setupClassRequest{ SetupClassRequest::none };
+
+	m_setupCallback.push_back([&](Function& func) {
+		func.addClassSetupHandler([&](const SetupPacket& setup) -> Bit {
+			Bit handled = '0';
+			setupClassRequest = SetupClassRequest::none;
+
+			// SET_LINE_CODING
+			IF(setup.request == 0x20 & setup.requestType == 0x21 & setup.wIndex == 0)
+			{
+				setupClassRequest = SetupClassRequest::SET_LINE_CODING;
+				handled = '1';
+			}
+
+			// SET_LINE_CONTROL_STATE
+			IF(setup.request == 0x22 & setup.requestType == 0x21 & setup.wIndex == 0)
+			{
+				led.lower(2_b) = setup.wValue.lower(2_b);
+				handled = '1';
+			}
+
+			return handled;
+		});
+
+		func.addClassDataHandler([&](const BVec& packet) {
+			IF(setupClassRequest.current() == SetupClassRequest::SET_LINE_CODING)
+			{
+				baudRate = (UInt)packet.lower(baudRate.width());
+			}
+		});
+
+		led.msb() = func.configuration().lsb();
+	});
+
+	baudRate = reg(baudRate, 115'200);
+	HCL_NAMED(baudRate);
+
+	setupFunction();
+	{
+		scl::TransactionalFifo<scl::usb::Function::StreamData> host2uartFifo{ 16 };
+		m_func->attachRxFifo(host2uartFifo, 1 << 1);
+		Bit tx = strm::pop(host2uartFifo)
+			.transform([](const scl::usb::Function::StreamData& in) { return (BVec)in.data; })
+			| scl::uartTx(baudRate);
+		pinOut(reg(tx, '1'), "TX");
+		host2uartFifo.generate();
+	}
+	{
+		scl::TransactionalFifo<scl::usb::Function::StreamData> uart2hostFifo{ 8 };
+
+		Bit rx;
+		scl::uartRx(reg(rx, '1'), baudRate)
+			.transform([](const BVec& in) { return scl::usb::Function::StreamData{ .data = (UInt)in, .endPoint = 1 }; })
+			.add(Ready{})
+			| strm::push(uart2hostFifo);
+		pinIn(rx, "RX");
+
+		m_func->attachTxFifo(uart2hostFifo, 1 << 1);
+		uart2hostFifo.generate();
+	}
+
+	addSimulationProcess([&]() -> SimProcess {
+		co_await OnClk(clock);
+		//co_await testWindowsDeviceDiscovery();
+		co_await controlSetConfiguration(1);
+
+		stopTest();
+	});
+
+	design.postprocess();
+
+	vhdl::VHDLExport vhdl("synthesis_projects/usb_to_uart_cyc1000/usb_to_uart_cyc1000.vhd");
 	vhdl.targetSynthesisTool(new IntelQuartus());
 	vhdl(design.getCircuit());
 
