@@ -21,6 +21,6 @@
 namespace gtry::scl
 {
 	VStream<UInt> recoverDataDifferential(const gtry::Clock &signalClock, Bit p, Bit n);
-	VStream<UInt> recoverDataDifferentialEqualSamplingDirty(const gtry::Clock &signalClock, Bit p, Bit n);
+	VStream<UInt> recoverDataDifferentialEqualsamplingDirty(const gtry::Clock &signalClock, Bit p, Bit n);
 	VStream<UInt> recoverDataDifferentialOversampling(const gtry::Clock &signalClock, Bit p, Bit n);
 }
