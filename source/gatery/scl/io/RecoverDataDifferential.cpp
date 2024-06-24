@@ -32,13 +32,11 @@ namespace gtry::scl {
 		HCL_DESIGNCHECK_HINT(samplesRatio.denominator() == 1, "clock must be divisible by signalClock");
 		const size_t samples = samplesRatio.numerator();
 
-		ioP.resetValue('0');
-		ioN.resetValue('1');
-
-		VStream<UInt> out;
-
 		HCL_DESIGNCHECK_HINT(samples >= 3, "we need at least 3 samples per cycle to recover data with the current oversampling method");
 
+
+		ioP.resetValue('0');
+		ioN.resetValue('1');
 		// avoid meta stable inputs
 		Bit p = synchronize(ioP, signalClock, ClockScope::getClk(), { .outStages = 3, .inStage = false }); HCL_NAMED(p);
 		Bit n = synchronize(ioN, signalClock, ClockScope::getClk(), { .outStages = 3, .inStage = false }); HCL_NAMED(n);
