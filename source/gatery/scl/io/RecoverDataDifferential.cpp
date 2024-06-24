@@ -21,30 +21,22 @@
 #include "../Counter.h"
 
 namespace gtry::scl {
-	VStream<UInt> recoverDataDifferentialOverSampling(const Clock& signalClock, Bit ioP, Bit ioN) {
+	VStream<UInt> recoverDataDifferentialOversampling(const Clock& signalClock, Bit ioP, Bit ioN) {
 		Area area{ "scl_recoverDataDifferentialOversampling", true };
 		ioP.resetValue('0');
 		ioN.resetValue('1');
 
-	auto scope = Area{ "scl_recoverDataDifferential" }.enter();
+		auto scope = Area{ "scl_recoverDataDifferential" }.enter();
 
-	const auto samplesRatio = ClockScope::getClk().absoluteFrequency() / signalClock.absoluteFrequency();
-	HCL_DESIGNCHECK_HINT(samplesRatio.denominator() == 1, "clock must be divisible by signalClock");
-	const size_t samples = samplesRatio.numerator();
+		const auto samplesRatio = ClockScope::getClk().absoluteFrequency() / signalClock.absoluteFrequency();
+		HCL_DESIGNCHECK_HINT(samplesRatio.denominator() == 1, "clock must be divisible by signalClock");
+		const size_t samples = samplesRatio.numerator();
 
-	ioP.resetValue('0');
-	ioN.resetValue('1');
+		ioP.resetValue('0');
+		ioN.resetValue('1');
 
-	VStream<UInt> out;
-	if(samples == 1) { //"dirty" method
-		// avoid meta stable inputs with dirty synchronizer
-		Bit p = reg(allowClockDomainCrossing(ioP, signalClock, ClockScope::getClk())); HCL_NAMED(p);
-		Bit n = reg(allowClockDomainCrossing(ioN, signalClock, ClockScope::getClk())); HCL_NAMED(n);
+		VStream<UInt> out;
 
-		*out = cat(n, p);
-		valid(out) = '1';
-	}
-	else {
 		HCL_DESIGNCHECK_HINT(samples >= 3, "we need at least 3 samples per cycle to recover data with the current oversampling method");
 
 		// avoid meta stable inputs
@@ -67,7 +59,7 @@ namespace gtry::scl {
 		return out;
 	}
 
-	VStream<UInt> recoverDataDifferentialEqualSamplingDirty(const Clock& signalClock, Bit ioP, Bit ioN) {
+	VStream<UInt> recoverDataDifferentialEqualsamplingDirty(const Clock& signalClock, Bit ioP, Bit ioN) {
 		Area area{ "scl_recoverDataDifferentialEqualSamplingDirty", true };
 
 		ioP.resetValue('0');
@@ -78,6 +70,7 @@ namespace gtry::scl {
 
 		return { cat(n,p), Valid{'1'} };
 	}
+
 	VStream<UInt> recoverDataDifferential(const Clock& signalClock, Bit ioP, Bit ioN)
 	{
 		const auto samplesRatio = ClockScope::getClk().absoluteFrequency() / signalClock.absoluteFrequency();
@@ -86,9 +79,9 @@ namespace gtry::scl {
 
 		VStream<UInt> out;
 		if (samples == 1)
-			return recoverDataDifferentialEqualSamplingDirty(signalClock, ioP, ioN);
+			return recoverDataDifferentialEqualsamplingDirty(signalClock, ioP, ioN);
 		else
-			return recoverDataDifferentialOverSampling(signalClock, ioP, ioN);
+			return recoverDataDifferentialOversampling(signalClock, ioP, ioN);
 
 	}
 }
