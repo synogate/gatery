@@ -204,7 +204,7 @@ void gtry::scl::usb::Function::generateInitialFsm()
 
 	IF(ackExpected & rx.sop & rx.valid)
 	{
-		IF(!rx.error & rx.data.lower(4_b) == size_t(Pid::ack))
+		IF(rx.data == 0xD2) // ack
 		{
 			m_nextOutDataPid ^= m_endPointMask;
 
