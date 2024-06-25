@@ -397,12 +397,13 @@ void gtry::scl::usb::GpioPhy::generateRx(const VStream<UInt>& in)
 	Bit rxDataActive = flag(valid(lineInWord), !m_status.rxActive);
 	HCL_NAMED(rxDataActive);
 	m_rx.valid = valid(lineInWord);
-
 	m_rx.sop = !rxDataActive;
 	m_rx.data = *lineInWord;
 
 	m_rx.eop = edgeFalling(m_status.rxActive) & rxDataActive;
-	m_rx.error = m_rx.eop & !m_crcMatch;
+	Bit requireCrcCheck = flag(m_rx.valid & m_rx.sop & m_rx.data.lower(2_b) != "b10", m_rx.eop);
+	HCL_NAMED(requireCrcCheck);
+	m_rx.error = m_rx.eop & (!m_crcMatch & requireCrcCheck);
 	HCL_NAMED(m_rx);
 
 	IF(m_status.rxActive)
