@@ -30,6 +30,29 @@ namespace gtry::scl::usb
 		void appendTx(PhyTxStream& tx);
 
 	};
+
+	class CombinedBitCrc
+	{
+	public:
+		enum Mode {
+			crc5, crc16
+		};
+
+		CombinedBitCrc(Bit in, Enum<Mode> mode, Bit reset, Bit shiftOut);
+
+		const Bit& out() const { return m_out; }
+		const Bit& match() const { return m_match; } // depending on mode
+		const Bit& match5() const { return m_match5; }
+		const Bit& match16() const { return m_match16; }
+
+	private:
+		Area m_ent = Area{ "CombinedBitCrc", true };
+		UInt m_state = 16_b;
+		Bit m_match5;
+		Bit m_match16;
+		Bit m_match;
+		Bit m_out;
+	};
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::usb::CrcHandler, tx, rx);

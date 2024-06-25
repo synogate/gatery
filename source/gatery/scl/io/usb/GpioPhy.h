@@ -18,7 +18,9 @@
 #pragma once
 #include "Phy.h"
 #include "SimuPhy.h"
+#include "CrcHandler.h"
 
+#include "../../Counter.h"
 #include "../../stream/Stream.h"
 
 namespace gtry::scl::usb
@@ -35,6 +37,8 @@ namespace gtry::scl::usb
 		virtual PhyTxStream& tx() override;
 		virtual PhyRxStream& rx() override;
 
+		virtual bool supportCrc() const { return true; }
+
 		// simulation helper
 
 		virtual SimProcess deviceReset() override;
@@ -50,6 +54,8 @@ namespace gtry::scl::usb
 	protected:
 		virtual void generateTx(Bit& en, Bit& p, Bit& n);
 		virtual void generateRx(const VStream<UInt>& in);
+		virtual void generateCrc();
+		virtual RvPacketStream<Bit> generateTxCrcAppend(RvPacketStream<Bit> in);
 
 		virtual std::tuple<Bit, Bit> pin(std::tuple<Bit, Bit> out, Bit en);
 
@@ -58,6 +64,14 @@ namespace gtry::scl::usb
 		PhyRxStatus m_status;
 		PhyTxStream m_tx;
 		PhyRxStream m_rx;
+
+		Bit m_crcEn;
+		Bit m_crcIn;
+		Bit m_crcOut;
+		Bit m_crcMatch;
+		Bit m_crcReset;
+		Bit m_crcShiftOut;
+		Enum<CombinedBitCrc::Mode> m_crcMode;
 
 		std::optional<std::tuple<TristatePin, TristatePin>> m_pins;
 	};

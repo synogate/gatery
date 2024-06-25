@@ -18,6 +18,8 @@
 #include "gatery/scl_pch.h"
 #include "uart.h"
 
+#include "../Adder.h"
+
 namespace gtry::scl {
 
 UART::Stream UART::receive(Bit rx)
@@ -209,6 +211,117 @@ Bit UART::send(Stream &stream)
 	return tx;
 }
 
+	Bit uartTx(RvStream<BVec> data, UInt baudRate, UartConfig cfg)
+	{
+		Area entity("scl_uartTx", true);
+		HCL_NAMED(data);
 
+		Bit baud = baudRateGenerator('0', baudRate, cfg.baudGeneratorLogStepSize);
+		HCL_NAMED(baud);
 
+		// the counter has 4 phases: 6 = wait for in data, 7 = start bit, 8-15 = data bits, 0-1 = stop bit
+		// this is done to be able to reduce the mux for selecting a data bit
+		// but we need to skip bits 2-6
+		Counter bitCounter(16, 4);
+
+		ready(data) = '0';
+		IF(valid(data) & baud)
+		{
+			bitCounter.inc();
+			IF(bitCounter.value() == 1)
+			{
+				ready(data) = '1';
+				bitCounter.load(6);
+			}
+		}
+
+		ready(data) = baud & bitCounter.isLast();
+
+		Bit out = '1';
+		IF(bitCounter.value() == 7)
+			out = '0'; // start bit
+		IF(bitCounter.value().msb())
+			out = mux(bitCounter.value().lower(-1_b), *data);
+
+		HCL_NAMED(out);
+		return out;
+	}
+
+	VStream<BVec> uartRx(Bit rx, UInt baudRate, UartConfig cfg)
+	{
+		Area entity("scl_uartRx", true);
+		HCL_NAMED(rx);
+
+		Bit baudReset;
+		Bit baud = baudRateGenerator(baudReset, baudRate, cfg.baudGeneratorLogStepSize);
+		HCL_NAMED(baud);
+
+		enum State { wait, start, data, stop };
+		Reg<Enum<State>> state{ wait };
+		state.setName("state");
+
+		baudReset = '0';
+		IF(state.current() == wait)
+		{
+			IF(edgeFalling(rx))
+			{
+				baudReset = '1';
+				state = start;
+			}
+		}
+
+		IF(baud & state.current() == start)
+		{
+			IF(rx == '0')
+				state = data;
+			ELSE
+				state = wait;
+		}
+
+		VStream<BVec> out = strm::createVStream<BVec>(8_b, '0');
+		IF(baud & state.current() == data)
+		{
+			Counter bitCounter(8);
+			(*out)[bitCounter.value()] = rx;
+			IF(bitCounter.isLast())
+			{
+				state = stop;
+				valid(out) = '1';
+			}
+		}
+		out = reg(out);
+		HCL_NAMED(out);
+
+		IF(baud & state.current() == stop)
+		{
+			IF(rx == '1')
+				state = wait;
+		}
+
+		return out;
+	}
+
+	Bit baudRateGenerator(Bit setToHalf, UInt baudRate, size_t baudGeneratorLogStepSize)
+	{
+		Area entity("scl_baudRateGenerator", true);
+		HCL_NAMED(setToHalf);
+		HCL_NAMED(baudRate);
+
+		uint64_t cyclesPerSecond = hlim::ceil(ClockScope::getClk().absoluteFrequency()) >> baudGeneratorLogStepSize;
+		UInt baudCounter = BitWidth::count(cyclesPerSecond);
+		IF(setToHalf)
+			baudCounter = cyclesPerSecond / 2;
+		baudCounter = reg(baudCounter, 0);
+		HCL_NAMED(baudCounter);
+
+		UInt sum = zext(baudCounter, +1_b) + zext(baudRate.upper(-BitWidth{ baudGeneratorLogStepSize }));
+		baudCounter = sum.lower(-1_b);
+
+		Bit out = (sum >= cyclesPerSecond) & !setToHalf;
+		HCL_NAMED(out);
+
+		IF(out)
+			baudCounter -= cyclesPerSecond;
+		return out;
+	}
 }

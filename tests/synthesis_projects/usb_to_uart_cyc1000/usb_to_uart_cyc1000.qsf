@@ -1,0 +1,31 @@
+
+set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
+set_global_assignment -name VHDL_INPUT_VERSION VHDL_2008
+set_global_assignment -name ALLOW_REGISTER_RETIMING OFF
+set_global_assignment -name NUM_PARALLEL_PROCESSORS ALL
+set_global_assignment -name DEVICE 10CL025YU256C8G
+set_global_assignment -name FAMILY "Cyclone 10 LP"
+set_global_assignment -name TOP_LEVEL_ENTITY top
+set_global_assignment -name SDC_FILE usb_to_uart_cyc1000.sdc
+set_global_assignment -name VHDL_FILE usb_to_uart_cyc1000.vhd
+
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to *
+
+set_location_assignment PIN_M2 -to CLK12M
+
+set_location_assignment PIN_M6 -to LED[0]
+set_location_assignment PIN_T4 -to LED[1]
+set_location_assignment PIN_T3 -to LED[2]
+set_location_assignment PIN_R3 -to LED[3]
+set_location_assignment PIN_T2 -to LED[4]
+set_location_assignment PIN_R4 -to LED[5]
+set_location_assignment PIN_N5 -to LED[6]
+set_location_assignment PIN_N3 -to LED[7]
+
+set_location_assignment PIN_F13 -to USB_DP
+set_location_assignment PIN_D15 -to USB_DN
+set_instance_assignment -name CURRENT_STRENGTH_NEW 8MA -to USB_D*
+
+# BDBUS0 = TX / BDBUS1 = RX
+set_location_assignment PIN_R7 -to RX
+set_location_assignment PIN_T7 -to TX

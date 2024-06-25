@@ -116,7 +116,82 @@ BOOST_FIXTURE_TEST_CASE(SimProc_Basics, BoostUnitTestSimulationFixture)
 	runTicks(clock.getClk(), 500);
 }
 
+BOOST_FIXTURE_TEST_CASE(io_uart_loopback, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
 
+	Clock clock({ .absoluteFrequency = 1'200'000 });
+	ClockScope clkScp(clock);
+
+	scl::RvStream<BVec> dataIn{ 8_b };
+	pinIn(dataIn, "dataIn");
+
+	UInt baudRate = 18_b;
+	pinIn(baudRate, "baudRate");
+
+	Bit uartLine = scl::uartTx(move(dataIn), baudRate);
+	pinOut(uartLine, "uartLine");
+
+	scl::VStream<BVec> dataOut = scl::uartRx(uartLine, baudRate);
+	pinOut(dataOut, "dataOut");
+
+	uint8_t step = 15;
+	addSimulationProcess([&]()->SimProcess {
+		simu(valid(dataIn)) = '0';
+		co_await WaitFor({ 10, 1'000'000 });
+
+		for (uint8_t i = 0;; i += step)
+		{
+			simu(*dataIn) = i;
+			co_await performTransfer(dataIn, clock);
+			co_await OnClk(clock);
+			co_await OnClk(clock);
+		}
+	});
+
+	addSimulationProcess([&]()->SimProcess {
+		simu(baudRate) = 115'200;
+
+		for (size_t i = 0; i < 256; i += step)
+		{
+			co_await performTransferWait(dataOut, clock);
+			BOOST_TEST(simu(*dataOut) == i);
+		}
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 2, 1'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(io_uart_fifo_cyc1000, BoostUnitTestSimulationFixture, *boost::unit_test::disabled())
+{
+	using namespace gtry;
+
+	auto device = std::make_unique<scl::IntelDevice>();
+	device->setupDevice("10CL025YU256C8G");
+	design.setTargetTechnology(std::move(device));
+
+	Clock clock{ ClockConfig{
+		.absoluteFrequency = 12'000'000,
+		.name = "CLK12M",
+		.resetType = ClockConfig::ResetType::NONE
+	} };
+	ClockScope clkScp(clock);
+
+	size_t baudRate = 115'200;
+	Bit rx = pinIn().setName("RX");
+	Bit tx = scl::uartRx(reg(rx, '1'), baudRate).add(scl::Ready{}) 
+		| scl::strm::fifo(256) 
+		| scl::uartTx(baudRate);
+	pinOut(tx, "TX");
+
+	design.postprocess();
+
+	vhdl::VHDLExport vhdl("synthesis_projects/io_uart_fifo_cyc1000/io_uart_fifo_cyc1000.vhd");
+	vhdl.targetSynthesisTool(new IntelQuartus());
+	vhdl(design.getCircuit());
+}
 
 void setup_recoverDataDifferential(hlim::ClockRational actualBusClockFrequency, size_t chipMultiplier, BoostUnitTestSimulationFixture &fixture)
 {

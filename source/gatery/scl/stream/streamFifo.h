@@ -85,6 +85,10 @@ namespace gtry::scl::strm {
 	template<StreamSignal StreamT>
 	void push(Fifo<StreamData<StreamT>>& fifo, StreamT&& in);
 
+	template<Signal T>
+	inline auto push(Fifo<T>& fifo) { return [&](auto&& in) { return push(fifo, std::forward<decltype(in)>(in)); };	}
+
+
 	template<StreamSignal T>
 	using StreamDataNoError = decltype(std::declval<T>().removeFlowControl().template remove<Error>());
 

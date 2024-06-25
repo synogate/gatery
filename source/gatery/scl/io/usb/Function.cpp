@@ -37,7 +37,20 @@ void gtry::scl::usb::Function::setup(Phy& phy)
 
 	phy.rx().valid.resetValue('0');
 	phy.rx().eop.resetValue('0');
-	m_phy.checkRxAppendTx(phy.tx(), gtry::reg(phy.rx()));
+	if (phy.supportCrc())
+	{
+		m_phy.rx = gtry::reg(phy.rx());
+
+		m_phy.tx.ready = phy.tx().ready;
+		phy.tx().valid = m_phy.tx.valid;
+		phy.tx().error = m_phy.tx.error;
+		phy.tx().data = m_phy.tx.data;
+	}
+	else
+	{
+		m_phy.checkRxAppendTx(phy.tx(), gtry::reg(phy.rx()));
+	}
+
 	m_rxStatus = gtry::reg(phy.status());
 	m_clock = phy.clock();
 
@@ -71,6 +84,11 @@ void gtry::scl::usb::Function::setup(Phy& phy)
 void gtry::scl::usb::Function::addClassSetupHandler(std::function<Bit(const SetupPacket&)> handler)
 {
 	m_classHandler.push_back(handler);
+}
+
+void gtry::scl::usb::Function::addClassDataHandler(std::function<void(const BVec&)> handler)
+{
+	m_classDataHandler.push_back(handler);
 }
 
 void gtry::scl::usb::Function::attachRxFifo(TransactionalFifo<StreamData>& fifo, uint16_t endPointMask)
@@ -532,6 +550,9 @@ void gtry::scl::usb::Function::generateInitialFsm()
 
 			IF(!m_phy.rx.error & m_pid.lower(2_b) == 3) // data pid
 			{
+				for (auto& h : m_classDataHandler)
+					h((BVec)m_packetData);
+
 				sendHandshake(Handshake::ACK);
 			}
 		}
