@@ -356,6 +356,7 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 
 void gtry::scl::usb::GpioPhy::generateRx(const VStream<UInt>& in)
 {
+	setName(*in, "in_to_preamble");
 	VStream<UInt> inBit = in.transform([](const UInt& in) {
 		return in(0, 1_b);
 	});
@@ -363,7 +364,7 @@ void gtry::scl::usb::GpioPhy::generateRx(const VStream<UInt>& in)
 	// find end of preamble
 	{
 		enum State {
-			idle, preamble, data, end
+			idle, waitForLock, preambleFirst, preambleSecond, data, end
 		};
 		Reg<Enum<State>> state{ idle };
 		state.setName("state");
@@ -371,9 +372,23 @@ void gtry::scl::usb::GpioPhy::generateRx(const VStream<UInt>& in)
 		IF(state.current() == idle)
 		{
 			IF(transfer(in) & *in == "b10")
-				state = preamble;
+				state = waitForLock;
 		}
-		IF(state.current() == preamble)
+		
+		IF(state.current() == waitForLock)
+		{
+			IF(transfer(in))
+				IF(Counter{ 4 }.isLast())
+					state = preambleFirst;
+		}
+		IF(state.current() == preambleFirst)
+		{
+			IF(transfer(in) & *in == "b10")
+				state = preambleSecond;
+			IF(transfer(in) & *in != "b10")
+				state = idle;
+		}
+		IF(state.current() == preambleSecond)
 		{
 			IF(transfer(in) & *in == "b01")
 				state = data;
