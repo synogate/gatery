@@ -421,10 +421,13 @@ RvStream<BVec> BitBangEngine::generate(RvStream<BVec> command, size_t numIo)
 	return out;
 }
 
+void gtry::scl::BitBangEngine::Io::pin(std::string prefix)
+{
+	in = tristatePin(iobufOut(), iobufEnable()).setName(prefix);
+}
+
 void gtry::scl::BitBangEngine::pin(std::string prefix)
 {
 	for (size_t i = 0; i < m_io.size(); ++i)
-	{
-		m_io[i].in = tristatePin(m_io[i].iobufOut(), m_io[i].iobufEnable()).setName(prefix + std::to_string(i));
-	}
+		m_io[i].pin(prefix + std::to_string(i));
 }

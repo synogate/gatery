@@ -33,6 +33,7 @@ namespace gtry::scl
 
 			Bit iobufEnable() const { return mux(openDrain, { en, en & !out }); }
 			Bit iobufOut() const { return mux(openDrain, { out, Bit{'0'} }); }
+			void pin(std::string name);
 		};
 
 		enum class Command : uint8_t
