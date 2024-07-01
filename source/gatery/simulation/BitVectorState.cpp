@@ -68,6 +68,17 @@ DefaultBitVectorState createDefinedRandomDefaultBitVectorState(std::size_t bitWi
 	return state;
 }
 
+ExtendedBitVectorState createExtendedBitVectorState(std::size_t bitWidth, const void *data) 
+{
+	BitVectorState<ExtendedConfig> state;
+	state.resize(bitWidth);
+	state.setRange(ExtendedConfig::DEFINED, 0, bitWidth);
+	memcpy(state.data(ExtendedConfig::VALUE), data, (bitWidth + 7) / 8);
+	state.clearRange(ExtendedConfig::DONT_CARE, 0, bitWidth);
+	state.clearRange(ExtendedConfig::HIGH_IMPEDANCE, 0, bitWidth);
+	return state;
+}
+
 bool operator==(const DefaultBitVectorState &lhs, std::span<const std::byte> rhs)
 {
 	if (lhs.size() != rhs.size() * 8)
@@ -253,6 +264,51 @@ DefaultBitVectorState parseBitVector(std::string_view value)
 	return ret;
 }
 
+
+
+ExtendedBitVectorState parseExtendedBit(char value)
+{
+	HCL_DESIGNCHECK(value == '0' || value == '1' || value == 'x' || value == 'X' || value == '-' || value == 'z' || value == 'Z');
+
+	sim::ExtendedBitVectorState ret;
+	ret.resize(1);
+	ret.set(sim::ExtendedConfig::DEFINED, 0, false);
+	ret.set(sim::ExtendedConfig::DONT_CARE, 0, false);
+	ret.set(sim::ExtendedConfig::HIGH_IMPEDANCE, 0, false);
+	switch (value) {
+		case '0':
+		case '1':
+			ret.set(sim::ExtendedConfig::VALUE, 0, value != '0');
+			ret.set(sim::ExtendedConfig::DEFINED, 0, true);
+		break;
+		case '-':
+			ret.set(sim::ExtendedConfig::DONT_CARE, 0, true);
+		break;
+		case 'x':
+		case 'X':
+			//ret.set(sim::ExtendedConfig::DEFINED, 0, false);
+		break;
+		case 'z':
+		case 'Z':
+			ret.set(sim::ExtendedConfig::HIGH_IMPEDANCE, 0, true);
+		break;
+		default:
+			HCL_DESIGNCHECK_HINT(false, "Invalid character!");
+	}
+	return ret;
+}
+
+ExtendedBitVectorState parseExtendedBit(bool value)
+{
+	sim::ExtendedBitVectorState ret;
+	ret.resize(1);
+	ret.set(sim::ExtendedConfig::VALUE, 0, value);
+	ret.set(sim::ExtendedConfig::DEFINED, 0, true);
+	ret.set(sim::ExtendedConfig::DONT_CARE, 0, false);
+	ret.set(sim::ExtendedConfig::HIGH_IMPEDANCE, 0, false);
+	return ret;
+}
+
 ExtendedBitVectorState parseExtendedBitVector(std::string_view value)
 {
 	using namespace boost::spirit::x3;
@@ -267,6 +323,7 @@ ExtendedBitVectorState parseExtendedBitVector(std::string_view value)
 			ret.setRange(sim::ExtendedConfig::VALUE, 0, width, false);
 			ret.setRange(sim::ExtendedConfig::DEFINED, 0, width, true);
 			ret.setRange(sim::ExtendedConfig::DONT_CARE, 0, width, false);
+			ret.setRange(sim::ExtendedConfig::HIGH_IMPEDANCE, 0, width, false);
 		}
 	};
 
@@ -284,6 +341,7 @@ ExtendedBitVectorState parseExtendedBitVector(std::string_view value)
 		{
 			uint8_t value = 0;
 			uint8_t dont_care = 0;
+			uint8_t high_impedance = 0;
 			uint8_t defined = 0xFF;
 			if (num[i] >= '0' && num[i] <= '9')
 				value = num[i] - '0';
@@ -293,6 +351,8 @@ ExtendedBitVectorState parseExtendedBitVector(std::string_view value)
 				value = num[i] - 'A' + 10;
 			else if (num[i] == '-')
 				dont_care = 0xFF;
+			else if (num[i] == 'z' || num[i] == 'Z')
+				high_impedance = 0xFF;
 			else
 				defined = 0;
 
@@ -300,6 +360,7 @@ ExtendedBitVectorState parseExtendedBitVector(std::string_view value)
 			ret.insertNonStraddling(sim::ExtendedConfig::VALUE, dstIdx * bps, bps, value);
 			ret.insertNonStraddling(sim::ExtendedConfig::DEFINED, dstIdx * bps, bps, defined);
 			ret.insertNonStraddling(sim::ExtendedConfig::DONT_CARE, dstIdx * bps, bps, dont_care);
+			ret.insertNonStraddling(sim::ExtendedConfig::HIGH_IMPEDANCE, dstIdx * bps, bps, high_impedance);
 		}
 	};
 
@@ -320,9 +381,9 @@ ExtendedBitVectorState parseExtendedBitVector(std::string_view value)
 	try {
 		parse(value.begin(), value.end(),
 			(-uint_)[parseWidth] > (
-				(char_('x') > (*char_("0-9a-fA-FxX\\-"))[std::bind(parseHex, 4, std::placeholders::_1)]) |
-				(char_('o') > (*char_("0-7xX\\-"))[std::bind(parseHex, 3, std::placeholders::_1)]) |
-				(char_('b') > (*char_("0-1xX\\-"))[std::bind(parseHex, 1, std::placeholders::_1)]) |
+				(char_('x') > (*char_("0-9a-fA-FxXzZ\\-"))[std::bind(parseHex, 4, std::placeholders::_1)]) |
+				(char_('o') > (*char_("0-7xXzZ\\-"))[std::bind(parseHex, 3, std::placeholders::_1)]) |
+				(char_('b') > (*char_("0-1xXzZ\\-"))[std::bind(parseHex, 1, std::placeholders::_1)]) |
 				(char_('d') > (*char_("0-9"))[parseDec])
 			) > eoi
 		);
@@ -349,5 +410,41 @@ DefaultBitVectorState parseBitVector(uint64_t value, size_t width)
 	return ret;
 }
 
+BitVectorState<ExtendedConfig> convertToExtended(const BitVectorState<DefaultConfig> &src)
+{
+	HCL_ASSERT(DefaultConfig::NUM_BITS_PER_BLOCK == ExtendedConfig::NUM_BITS_PER_BLOCK);
+
+	BitVectorState<ExtendedConfig> result;
+	result.resize(src.size());
+
+	for (size_t offset = 0; offset < src.size(); offset += ExtendedConfig::NUM_BITS_PER_BLOCK) {
+		size_t chunkSize = std::min<size_t>(ExtendedConfig::NUM_BITS_PER_BLOCK, src.size()-offset);
+		result.insert(ExtendedConfig::VALUE, offset, chunkSize, src.extract(DefaultConfig::VALUE, offset, chunkSize));
+		result.insert(ExtendedConfig::DEFINED, offset, chunkSize, src.extract(DefaultConfig::DEFINED, offset, chunkSize));
+	}
+	return result;
+}
+
+std::optional<BitVectorState<DefaultConfig>> tryConvertToDefault(const BitVectorState<ExtendedConfig> &src)
+{
+	HCL_ASSERT(DefaultConfig::NUM_BITS_PER_BLOCK == ExtendedConfig::NUM_BITS_PER_BLOCK);
+	for (size_t offset = 0; offset < src.size(); offset += ExtendedConfig::NUM_BITS_PER_BLOCK) {
+		size_t chunkSize = std::min<size_t>(ExtendedConfig::NUM_BITS_PER_BLOCK, src.size()-offset);
+
+		if (src.extract(ExtendedConfig::DONT_CARE, offset, chunkSize)) return {};
+		if (src.extract(ExtendedConfig::HIGH_IMPEDANCE, offset, chunkSize)) return {};
+	}
+
+	std::optional<BitVectorState<DefaultConfig>> result;
+	result.emplace();
+	result->resize(src.size());
+
+	for (size_t offset = 0; offset < src.size(); offset += ExtendedConfig::NUM_BITS_PER_BLOCK) {
+		size_t chunkSize = std::min<size_t>(ExtendedConfig::NUM_BITS_PER_BLOCK, src.size()-offset);
+		result->insert(DefaultConfig::VALUE, offset, chunkSize, src.extract(ExtendedConfig::VALUE, offset, chunkSize));
+		result->insert(DefaultConfig::DEFINED, offset, chunkSize, src.extract(ExtendedConfig::DEFINED, offset, chunkSize));
+	}
+	return result;
+}
 
 }

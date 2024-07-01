@@ -244,7 +244,7 @@ class ReferenceSimulator : public Simulator
 
 		virtual bool simulationIsShuttingDown() const override { return m_simulationIsShuttingDown; }
 
-		virtual void simProcSetInputPin(hlim::Node_Pin *pin, const DefaultBitVectorState &state) override;
+		virtual void simProcSetInputPin(hlim::Node_Pin *pin, const ExtendedBitVectorState &state) override;
 		virtual void simProcOverrideRegisterOutput(hlim::Node_Register *reg, const DefaultBitVectorState &state) override;
 
 		virtual bool outputOptimizedAway(const hlim::NodePort &nodePort) override;

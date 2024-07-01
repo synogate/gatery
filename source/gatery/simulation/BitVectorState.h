@@ -59,9 +59,11 @@ struct ExtendedConfig
 		VALUE,
 		DEFINED,
 		DONT_CARE,
+		HIGH_IMPEDANCE,
 		NUM_PLANES
 	};
 };
+
 
 template<class Config>
 class BitVectorState
@@ -423,6 +425,8 @@ using ExtendedBitVectorState = BitVectorState<ExtendedConfig>;
 DefaultBitVectorState parseBit(char value);
 DefaultBitVectorState parseBit(bool value);
 DefaultBitVectorState parseBitVector(std::string_view);
+ExtendedBitVectorState parseExtendedBit(char value);
+ExtendedBitVectorState parseExtendedBit(bool value);
 ExtendedBitVectorState parseExtendedBitVector(std::string_view);
 DefaultBitVectorState parseBitVector(uint64_t value, size_t width);
 
@@ -560,6 +564,9 @@ inline DefaultBitVectorState createDefaultBitVectorState(std::span<const std::by
 DefaultBitVectorState createDefaultBitVectorState(std::size_t bitWidth, size_t value);
 DefaultBitVectorState createRandomDefaultBitVectorState(std::size_t bitWidth, std::mt19937 &rng);
 DefaultBitVectorState createDefinedRandomDefaultBitVectorState(std::size_t bitWidth, std::mt19937& rng);
+
+ExtendedBitVectorState createExtendedBitVectorState(std::size_t bitWidth, const void *data);
+inline ExtendedBitVectorState createExtendedBitVectorState(std::span<const std::byte> data) { return createExtendedBitVectorState(data.size() * 8, data.data()); }
 
 bool operator==(const DefaultBitVectorState &lhs, std::span<const std::byte> rhs);
 inline bool operator!=(const DefaultBitVectorState &lhs, std::span<const std::byte> rhs) { return !(lhs == rhs); }
@@ -768,6 +775,12 @@ inline bool BitVectorState<ExtendedConfig>::compareRange(size_t dstOffset, const
 
 		auto dont_care = a_dont_care | b_dont_care;
 
+		auto a_high_impedance = src.extract(ExtendedConfig::HIGH_IMPEDANCE, srcOffset + offset, chunkSize);
+		auto b_high_impedance = extract(ExtendedConfig::HIGH_IMPEDANCE, dstOffset + offset, chunkSize);
+
+		if ((a_high_impedance ^ b_high_impedance) & ~dont_care)
+			return false;
+
 		if ((a_defined ^ b_defined) & ~dont_care)
 			return false;
 
@@ -906,7 +919,7 @@ BitVectorState<Config>::range(typename Config::Plane plane, size_t offset, size_
 template<class Config>
 inline bool BitVectorState<Config>::operator==(const BitVectorState& o) const
 {
-	if (size() != o.size())
+	if (size() != o.size())	
 		return false;
 
 	for (size_t p = 0; p < m_values.size(); ++p)
@@ -930,5 +943,9 @@ void BitVectorState<Config>::append(const BitVectorState<Config> &src)
 extern template class BitVectorState<DefaultConfig>;
 extern template class BitVectorState<ExtendedConfig>;
 
+
+
+BitVectorState<ExtendedConfig> convertToExtended(const BitVectorState<DefaultConfig> &src);
+std::optional<BitVectorState<DefaultConfig>> tryConvertToDefault(const BitVectorState<ExtendedConfig> &src);
 
 }

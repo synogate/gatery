@@ -59,7 +59,7 @@ class FileBasedTestbenchRecorder : public BaseTestbenchRecorder
 		virtual void onWarning(const hlim::BaseNode *src, std::string msg) override;
 		virtual void onAssert(const hlim::BaseNode *src, std::string msg) override;
 		*/
-		virtual void onSimProcOutputOverridden(const hlim::NodePort &output, const sim::DefaultBitVectorState &state) override;
+		virtual void onSimProcOutputOverridden(const hlim::NodePort &output, const sim::ExtendedBitVectorState &state) override;
 		virtual void onSimProcOutputRead(const hlim::NodePort &output, const sim::DefaultBitVectorState &state) override;
 
 	protected:

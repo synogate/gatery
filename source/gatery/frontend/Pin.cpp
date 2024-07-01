@@ -67,8 +67,9 @@ namespace gtry
 
 
 
-	BaseTristatePin::BaseTristatePin(hlim::NodePort nodePort, std::string name, const Bit& outputEnable) {
+	BaseTristatePin::BaseTristatePin(hlim::NodePort nodePort, std::string name, const Bit& outputEnable, const PinNodeParameter& params) {
 		m_pinNode = DesignScope::createNode<hlim::Node_Pin>(true, true, true);
+		m_pinNode->setPinNodeParameter(params);
 		m_pinNode->connect(nodePort);
 		m_pinNode->connectEnable(outputEnable.readPort());
 		m_pinNode->setName(std::move(name));
@@ -76,7 +77,7 @@ namespace gtry
 			m_pinNode->setClockDomain(ClockScope::getClk().getClk());
 	}
 
-	TristatePin::TristatePin(const Bit& bit, const Bit& outputEnable) : BaseTristatePin(bit.readPort(), std::string(bit.getName()), outputEnable)
+	TristatePin::TristatePin(const Bit& bit, const Bit& outputEnable, const PinNodeParameter& params) : BaseTristatePin(bit.readPort(), std::string(bit.getName()), outputEnable, params)
 	{
 
 	}

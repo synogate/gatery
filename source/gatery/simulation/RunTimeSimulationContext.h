@@ -35,7 +35,7 @@ class RunTimeSimulationContext : public SimulationContext {
 	public:
 		RunTimeSimulationContext(Simulator *simulator);
 
-		virtual void overrideSignal(const SigHandle &handle, const DefaultBitVectorState &state) override;
+		virtual void overrideSignal(const SigHandle &handle, const ExtendedBitVectorState &state) override;
 		virtual void overrideRegister(const SigHandle &handle, const DefaultBitVectorState &state) override;
 		virtual void getSignal(const SigHandle &handle, DefaultBitVectorState &state) override;
 

@@ -20,11 +20,19 @@
 #include "../Node.h"
 #include "../ClockRational.h"
 
+
+namespace gtry::sim {
+	struct ExtendedConfig;
+	using ExtendedBitVectorState = BitVectorState<ExtendedConfig>;
+}
+
+
 namespace gtry::hlim {
 
 	class Node_Pin : public Node<Node_Pin>
 	{
 		public:
+
 			Node_Pin(bool inputPin, bool outputPin, bool hasOutputEnable);
 
 			void connect(const NodePort &port);
@@ -44,7 +52,8 @@ namespace gtry::hlim {
 			virtual bool hasSideEffects() const override { return true; }
 			virtual std::vector<size_t> getInternalStateSizes() const override;
 
-			bool setState(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const sim::DefaultBitVectorState &newState);
+			bool setState(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const sim::ExtendedBitVectorState &newState);
+			virtual void simulatePowerOn(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const override;
 			virtual void simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const override;
 
 			virtual std::string getTypeName() const override;
@@ -73,6 +82,14 @@ namespace gtry::hlim {
 				bool delaySpecifiedElsewhere = false;
 				/// Whether or not this pin is only placed to attach simulation processes and not to be exported as a top level port map signal.
 				bool simulationOnlyPin = false;
+
+				enum class HighImpedanceValue {
+					UNDEFINED,
+					PULL_UP,
+					PULL_DOWN,
+				};
+				/// The value that is read from this pin if no-one is driving it.
+				HighImpedanceValue highImpedanceValue = HighImpedanceValue::UNDEFINED;
 			};
 
 			inline PinNodeParameter getPinNodeParameter() const { return m_param; }
