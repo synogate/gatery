@@ -226,9 +226,10 @@ void setup_recoverDataDifferential(hlim::ClockRational actualBusClockFrequency, 
 
 	scl::VStream<Bit, scl::SingleEnded> patch = scl::recoverDataDifferential(busClock, ioP, ioN);
 
-	scl::VStream<gtry::UInt> stream(2_b);
+	scl::VStream<gtry::UInt> stream("2b0");
 	stream->lsb() = *patch & !patch.template get<scl::SingleEnded>().zero;
 	stream->msb() = !*patch & !patch.template get<scl::SingleEnded>().zero;
+	valid(stream) = valid(patch);
 
 	auto streamValid = valid(stream);
 	pinOut(streamValid, "out_valid");
@@ -262,10 +263,13 @@ void setup_recoverDataDifferential(hlim::ClockRational actualBusClockFrequency, 
 			size_t burstLength = randomBurstLength(rng);
 			for ([[maybe_unused]] auto i : gtry::utils::Range(burstLength)) {
 
-				std::pair<bool, bool> beat = {
-					randomUniform(rng) > bitDist,
-					randomUniform(rng) < bitDist,
-				};
+				std::pair<bool, bool> beat;
+				do {
+					 beat = {
+						randomUniform(rng) > bitDist,
+						randomUniform(rng) < bitDist,
+					};
+				} while (beat == std::make_pair(true, true));
 
 				simu(ioP) = beat.first;
 				simu(ioN) = beat.second;
@@ -275,7 +279,8 @@ void setup_recoverDataDifferential(hlim::ClockRational actualBusClockFrequency, 
 			}
 			// Ensure a clock edge after every at most 6 bits
 			auto beat = dataStream.back();
-			beat.first = !beat.first;
+			if(beat != std::make_pair(false, false))
+				beat.first = !beat.first;
 			beat.second = !beat.second;
 			simu(ioP) = beat.first;
 			simu(ioN) = beat.second;
