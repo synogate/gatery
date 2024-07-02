@@ -45,6 +45,7 @@ class SigHandle {
 		void operator=(std::string_view v);
 		void operator=(char v);
 		void operator=(const DefaultBitVectorState &state);
+		void operator=(const ExtendedBitVectorState &state);
 		template<std::same_as<sim::BigInt> BigInt_> // prevent conversion
 		void operator=(const BigInt_ &v) { assign(v); }
 
@@ -87,6 +88,7 @@ class SigHandle {
 		std::vector<T> toVector() const;
 
 		void invalidate();
+		void stopDriving();
 		bool allDefined() const;
 		std::uint64_t defined() const;
 		std::uint64_t value() const;

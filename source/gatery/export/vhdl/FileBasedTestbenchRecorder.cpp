@@ -429,7 +429,7 @@ void FileBasedTestbenchRecorder::onReset(const hlim::Clock *clock, bool resetAss
 	m_phases.back().resetOverrides[rootEntity->getNamespaceScope().getReset((hlim::Clock *) clock).name] = resetAsserted?"1":"0";
 }
 
-void FileBasedTestbenchRecorder::onSimProcOutputOverridden(const hlim::NodePort &output, const sim::DefaultBitVectorState &state)
+void FileBasedTestbenchRecorder::onSimProcOutputOverridden(const hlim::NodePort &output, const sim::ExtendedBitVectorState &state)
 {
 	const auto *pin = dynamic_cast<const hlim::Node_Pin*>(output.node);
 	HCL_ASSERT(pin);

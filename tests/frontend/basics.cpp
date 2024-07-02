@@ -1500,6 +1500,132 @@ BOOST_FIXTURE_TEST_CASE(tristateBit, gtry::BoostUnitTestSimulationFixture)
 	runTest({ 1,1 });
 }
 
+struct TristateHighImpedance : public gtry::BoostUnitTestSimulationFixture
+{
+	gtry::PinNodeParameter::HighImpedanceValue highImpedanceValue = gtry::PinNodeParameter::HighImpedanceValue::UNDEFINED;
+
+	void execute() {
+		using namespace gtry;
+
+		Clock clock({ .absoluteFrequency = 10'000 });
+		ClockScope clockScope(clock);
+		
+		UInt value = pinIn(10_b).setName("value");
+		Bit enable = pinIn().setName("enable");
+		auto tsPin = tristatePin(value, enable, { .highImpedanceValue = highImpedanceValue }).setName("tristatePin");
+		UInt readbackValue = tsPin;
+		auto readback = pinOut(readbackValue).setName("readback");
+
+		addSimulationProcess([=, this]()->SimProcess {
+
+			auto verifyHighImpedance = [&]{
+				switch (highImpedanceValue) {
+					case gtry::PinNodeParameter::HighImpedanceValue::UNDEFINED:
+						BOOST_TEST(!simu(readback).allDefined());
+					break;
+					case gtry::PinNodeParameter::HighImpedanceValue::PULL_UP:
+						BOOST_TEST(simu(readback) == "10b1111111111");
+					break;
+					case gtry::PinNodeParameter::HighImpedanceValue::PULL_DOWN:
+						BOOST_TEST(simu(readback) == "10b0000000000");
+					break;
+				}
+			};
+
+
+			simu(value) = 10;
+			simu(enable) = '1';
+
+			co_await AfterClk(clock);
+
+			BOOST_TEST(simu(readback) == 10);
+			BOOST_TEST(simu(readback).allDefined());
+
+			co_await AfterClk(clock);
+
+			simu(enable) = '0';
+
+			co_await AfterClk(clock);
+
+			verifyHighImpedance();
+
+			co_await AfterClk(clock);
+
+			simu(enable).invalidate();
+
+			co_await AfterClk(clock);
+
+			BOOST_TEST(!simu(readback).allDefined());
+
+			co_await AfterClk(clock);
+
+			simu(enable) = '1';
+			simu(value).invalidate();
+
+			co_await AfterClk(clock);
+
+			BOOST_TEST(!simu(readback).allDefined());
+
+			co_await AfterClk(clock);
+
+			simu(enable) = '0';
+			simu(value) = 10;
+			simu(tsPin) = 42;
+
+			co_await AfterClk(clock);
+
+			BOOST_TEST(simu(readback) == 42);
+
+			co_await AfterClk(clock);
+
+			simu(tsPin) = "10bzzzzzzzzzz";
+
+			co_await AfterClk(clock);
+
+			verifyHighImpedance();
+
+			co_await AfterClk(clock);
+
+			simu(tsPin) = 42;
+
+			co_await AfterClk(clock);
+
+			BOOST_TEST(simu(readback) == 42);
+
+			co_await AfterClk(clock);
+
+			simu(tsPin).stopDriving();
+			co_await AfterClk(clock);
+
+			verifyHighImpedance();
+
+
+			stopTest();
+		});
+
+		design.postprocess();
+		runTest({ 1,1 });
+	}
+}; 
+
+BOOST_FIXTURE_TEST_CASE(tristateBitHZ_Undefined, TristateHighImpedance)
+{
+	highImpedanceValue = gtry::PinNodeParameter::HighImpedanceValue::UNDEFINED;
+	execute();
+}
+
+BOOST_FIXTURE_TEST_CASE(tristateBitHZ_PullUp, TristateHighImpedance)
+{
+	highImpedanceValue = gtry::PinNodeParameter::HighImpedanceValue::PULL_UP;
+	execute();
+}
+
+BOOST_FIXTURE_TEST_CASE(tristateBitHZ_PullDown, TristateHighImpedance)
+{
+	highImpedanceValue = gtry::PinNodeParameter::HighImpedanceValue::PULL_DOWN;
+	execute();
+}
+
 
 
 BOOST_FIXTURE_TEST_CASE(testUndefinedDontCareComparison, gtry::BoostUnitTestSimulationFixture)

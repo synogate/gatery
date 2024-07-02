@@ -994,7 +994,7 @@ void ReferenceSimulator::advance(hlim::ClockRational seconds)
 }
 
 
-void ReferenceSimulator::simProcSetInputPin(hlim::Node_Pin *pin, const DefaultBitVectorState &state)
+void ReferenceSimulator::simProcSetInputPin(hlim::Node_Pin *pin, const ExtendedBitVectorState &state)
 {
 	HCL_DESIGNCHECK_HINT(!m_readOnlyMode, "Can not change simulation states after waiting for WaitStable");
 
@@ -1014,7 +1014,7 @@ void ReferenceSimulator::simProcOverrideRegisterOutput(hlim::Node_Register *reg,
 	HCL_ASSERT(it != m_program.m_stateMapping.outputToOffset.end());
 	if (reg->overrideOutput(m_dataState.signalState, it->second, state)) {
 		m_stateNeedsReevaluating = true; // Only mark state as dirty if the value of the pin was actually changed.
-		m_callbackDispatcher.onSimProcOutputOverridden({.node=reg, .port=0}, state);
+		m_callbackDispatcher.onSimProcOutputOverridden({.node=reg, .port=0}, convertToExtended(state));
 	}
 }
 

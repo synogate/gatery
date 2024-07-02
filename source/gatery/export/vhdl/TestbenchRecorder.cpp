@@ -200,7 +200,7 @@ void TestbenchRecorder::onReset(const hlim::Clock *clock, bool resetAsserted)
 		m_phases.back().resetOverrides[rst] = assignment.str();
 }
 
-void TestbenchRecorder::onSimProcOutputOverridden(const hlim::NodePort &output, const sim::DefaultBitVectorState &state)
+void TestbenchRecorder::onSimProcOutputOverridden(const hlim::NodePort &output, const sim::ExtendedBitVectorState &state)
 {
 	const auto *pin = dynamic_cast<const hlim::Node_Pin*>(output.node);
 	HCL_ASSERT(pin);

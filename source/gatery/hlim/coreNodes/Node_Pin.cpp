@@ -78,17 +78,76 @@ std::vector<size_t> Node_Pin::getInternalStateSizes() const
 {
 	if (!m_isInputPin) return {};
 
-	return {getOutputConnectionType(0).width};
+	return { getOutputConnectionType(0).width };
 }
 
-bool Node_Pin::setState(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const sim::DefaultBitVectorState &newState)
+bool Node_Pin::setState(sim::DefaultBitVectorState &state, const size_t *internalOffsets, const sim::ExtendedBitVectorState &newState)
 {
 	HCL_ASSERT(m_isInputPin);
 	HCL_ASSERT(newState.size() == getOutputConnectionType(0).width);
+#if 0
 	bool equal = state.compareRange(internalOffsets[0], newState, 0, newState.size());
 	if (!equal)
 		state.copyRange(internalOffsets[0], newState, 0, newState.size());
 	return !equal;
+#else
+	bool equal = true;
+	for (size_t i = 0; i < newState.size(); i++) {
+		bool newValue = false;
+		bool newDefined = false;
+		HCL_DESIGNCHECK_HINT(!newState.get(sim::ExtendedConfig::DONT_CARE, i), "Can not set DONT_CARE to a pin. You either meant to compare, or you wanted Z (high impedance).");
+		if (newState.get(sim::ExtendedConfig::HIGH_IMPEDANCE, i)) {
+			switch (m_param.highImpedanceValue) {
+				case PinNodeParameter::HighImpedanceValue::UNDEFINED:
+					newDefined = false;
+				break;
+				case PinNodeParameter::HighImpedanceValue::PULL_UP:
+					newValue = true;
+					newDefined = true;
+				break;
+				case PinNodeParameter::HighImpedanceValue::PULL_DOWN:
+					newValue = false;
+					newDefined = true;
+				break;
+			}
+		} else {
+			newValue = newState.get(sim::ExtendedConfig::VALUE, i);
+			newDefined = newState.get(sim::ExtendedConfig::DEFINED, i);
+		}
+		bool oldValue = state.get(sim::DefaultConfig::VALUE, internalOffsets[0] + i);
+		bool oldDefined = state.get(sim::DefaultConfig::DEFINED, internalOffsets[0] + i);
+
+		if (oldDefined != newDefined) 
+			equal = false;
+
+		if ((oldValue != newValue) && oldDefined)
+			equal = false;
+
+		state.set(sim::DefaultConfig::VALUE, internalOffsets[0] + i, newValue);
+		state.set(sim::DefaultConfig::DEFINED, internalOffsets[0] + i, newDefined);
+	}
+	return !equal;
+#endif
+}
+
+void Node_Pin::simulatePowerOn(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets) const
+{
+	if (!m_isInputPin) return;
+
+	size_t size = getOutputConnectionType(0).width;
+	switch (m_param.highImpedanceValue) {
+		case PinNodeParameter::HighImpedanceValue::UNDEFINED:
+			state.clearRange(sim::DefaultConfig::DEFINED, internalOffsets[0], size);
+		break;
+		case PinNodeParameter::HighImpedanceValue::PULL_UP:
+			state.setRange(sim::DefaultConfig::DEFINED, internalOffsets[0], size);
+			state.setRange(sim::DefaultConfig::VALUE, internalOffsets[0], size);
+		break;
+		case PinNodeParameter::HighImpedanceValue::PULL_DOWN:
+			state.setRange(sim::DefaultConfig::DEFINED, internalOffsets[0], size);
+			state.clearRange(sim::DefaultConfig::VALUE, internalOffsets[0], size);
+		break;
+	}
 }
 
 void Node_Pin::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const

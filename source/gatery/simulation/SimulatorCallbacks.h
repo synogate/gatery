@@ -104,7 +104,7 @@ class SimulatorCallbacks
 		 * @param output The signal that is overridden.
 		 * @param state The new value.
 		 */
-		virtual void onSimProcOutputOverridden(const hlim::NodePort &output, const DefaultBitVectorState &state) { }
+		virtual void onSimProcOutputOverridden(const hlim::NodePort &output, const ExtendedBitVectorState &state) { }
 
 		/**
 		 * @brief Called when a signal is read by a simulation process.
