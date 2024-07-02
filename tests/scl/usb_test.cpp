@@ -31,6 +31,7 @@
 #include <gatery/scl/io/usb/GpioPhy.h>
 #include <gatery/scl/io/uart.h>
 
+#include <gatery/scl/io/bypassableDelayChain.h>
 using namespace boost::unit_test;
 using namespace gtry;
 using namespace gtry::scl;
