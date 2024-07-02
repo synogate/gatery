@@ -102,7 +102,7 @@ gtry::Bit gtry::scl::usb::GpioPhy::setup(OpMode mode)
 		HCL_NAMED(dnIn);
 	}
 
-	VStream<Bit, SingleEnded> lineIn = recoverDataDifferentialEqualsamplingCyclone10(
+	VStream<Bit, SingleEnded> lineIn = recoverDataDifferential(
 		usbPinClock,
 		dpIn, dnIn
 	);
@@ -127,20 +127,8 @@ gtry::Bit gtry::scl::usb::GpioPhy::setup(OpMode mode)
 	VStream<Bit, SingleEnded> lineInDecoded = decodeNRZI(lineIn, 6);
 	HCL_NAMED(lineInDecoded);
 
-	m_status.rxActive = reg(m_status.rxActive, '0');
-	IF(valid(lineInDecoded) & *lineInDecoded == '0')
-		m_status.rxActive = '1';
 
-	Bit seenSE0;
-	seenSE0 = reg(seenSE0, '0');
-	IF(valid(lineInDecoded) & lineInDecoded.template get<SingleEnded>().zero)
-		seenSE0 = '1';
-	IF(valid(lineInDecoded) & *lineInDecoded == '1' & seenSE0)
-	{
-		seenSE0 = '0';
-		m_status.rxActive = '0';
-	}
-	HCL_NAMED(seenSE0);
+	m_status.rxActive = flagInstantSet(valid(lineInDecoded), valid(lineInDecoded) & lineInDecoded.template get<SingleEnded>().zero, '0');
 	HCL_NAMED(m_status);
 
 	generateCrc();
@@ -192,8 +180,10 @@ gtry::SimFunction<std::vector<std::byte>> gtry::scl::usb::GpioPhy::receive(size_
 	size_t timeout = 0;
 	while(lineState() != K)
 	{
-		if(timeout++ == timeoutCycles)
+		if (timeout++ == timeoutCycles) {
+			sim::SimulationContext::current()->onWarning(nullptr, "client response timed out.");
 			co_return std::vector<std::byte>{};
+		}
 
 		co_await WaitFor(baudRate);
 	}
@@ -299,6 +289,7 @@ gtry::scl::usb::GpioPhy::Symbol gtry::scl::usb::GpioPhy::lineState() const
 void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 {
 	HCL_NAMED(m_tx);
+	setName(en, "tx_enable");
 	RvStream<UInt> txStream{ m_tx.data };
 	valid(txStream) = m_tx.valid;
 	m_tx.ready = ready(txStream);
@@ -329,7 +320,14 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 		txTimer.reset();
 	ready(txStuffedStream) = txTimer.isLast();
 
-	en = valid(txStuffedStream);
+
+	Counter txWaitTimer{ hlim::floor(m_clock.absoluteFrequency() / hlim::ClockRational{ 12'000'000 }) * 2};
+	Bit wait = flagInstantSet(edgeRising(valid(txStuffedStream)), txWaitTimer.isLast(), '0');
+	IF(wait)
+		txWaitTimer.inc();
+	ready(txStuffedStream) &= !wait;
+
+	en = valid(txStuffedStream) & !wait;
 	p = *txStuffedStream;
 	n = !p;
 
@@ -357,7 +355,6 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 
 void gtry::scl::usb::GpioPhy::generateRx(const VStream<Bit, SingleEnded>& in)
 {
-	setName(*in, "in_bit");
 	Bit se0 = in.template get<SingleEnded>().zero;
 	HCL_NAMED(se0);
 
@@ -370,7 +367,7 @@ void gtry::scl::usb::GpioPhy::generateRx(const VStream<Bit, SingleEnded>& in)
 	// find end of preamble
 	{
 		enum State {
-			idle, waitForLock, preambleFirst, preambleSecond, data, end
+			idle, waitForLock, preambleFirst, preambleSecond, data
 		};
 		Reg<Enum<State>> state{ idle };
 		state.setName("preamble_detection_state");
@@ -399,18 +396,14 @@ void gtry::scl::usb::GpioPhy::generateRx(const VStream<Bit, SingleEnded>& in)
 			IF(transfer(in) & *in == '1')
 				state = data;
 		}
-		IF(state.current() == end)
-		{
-			IF(transfer(in) & *in == '1')
-				state = idle;
-		}
 
 		IF(transfer(in) & se0)
-			state = end;
+			state = idle;
 
-		IF(state.current() != data | se0)
+		IF(state.current() != data | (transfer(in) & se0))
 			valid(inBit) = '0';
 	}
+	setName(inBit, "in_bit_masked");
 
 	VStream<UInt, SingleEnded> lineInWord = strm::extendWidth(move(inBit), 8_b, !m_status.rxActive);
 	HCL_NAMED(lineInWord);

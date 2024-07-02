@@ -41,13 +41,11 @@ namespace gtry::scl {
 		HCL_NAMED(n);
 
 		Counter phaseCounter{ samples };
-		phaseCounter.inc();
 
 		// sample data based on clock estimate
 		VStream<Bit, SingleEnded> out; 
 		*out = p;
 		valid(out) = phaseCounter.isLast();
-		out.template get<SingleEnded>().zero = p == '0' & n == '0';
 
 		// recover clock and shift sample point
 		IF(p != reg(p, '1') | n != reg(n, '0'))
@@ -55,6 +53,10 @@ namespace gtry::scl {
 			phaseCounter.load((samples + 1) / 2);
 			valid(out) = '0'; // prevent double sampling
 		}
+
+		Bit se0 = p == '0' & n == '0';
+
+		out.template get<SingleEnded>().zero = se0;
 		HCL_NAMED(out);
 		return out;
 	}
@@ -65,13 +67,18 @@ namespace gtry::scl {
 		ioP.resetValue('0');
 		ioN.resetValue('1');
 
-		Bit p = reg(allowClockDomainCrossing(ioP, signalClock, ClockScope::getClk())); HCL_NAMED(p);
-		//Bit n = reg(allowClockDomainCrossing(ioN, signalClock, ClockScope::getClk())); HCL_NAMED(n);
+		Bit p = allowClockDomainCrossing(ioP, signalClock, ClockScope::getClk());
+		Bit n = allowClockDomainCrossing(ioN, signalClock, ClockScope::getClk());
+
+		Bit se0 = detectSingleEnded({ p, n }, '0');
+
+		p = reg(p); HCL_NAMED(p);
+		n = reg(n); HCL_NAMED(n);
 
 		VStream<Bit, SingleEnded> out;
 		*out = p;
-		valid(out) = '1';
-		out.template get<SingleEnded>().zero = detectSingleEnded({ ioP,ioN }, '0');
+		valid(out) = !reg(se0);
+		out.template get<SingleEnded>().zero = se0;
 
 		return out;
 	}
@@ -118,6 +125,7 @@ namespace gtry::scl {
 		*out = p;
 		valid(out) = '1';
 		out.template get<SingleEnded>().zero = resetDelay;
+		valid(out) = !reg(resetDelay);
 
 		return out;
 	}
