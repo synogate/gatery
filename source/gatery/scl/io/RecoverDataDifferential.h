@@ -20,8 +20,14 @@
 
 namespace gtry::scl
 {
-	VStream<UInt> recoverDataDifferentialOversampling(const gtry::Clock &signalClock, Bit p, Bit n);
-	VStream<UInt> recoverDataDifferentialEqualsamplingDirty(const gtry::Clock &signalClock, Bit p, Bit n);
-	VStream<UInt> recoverDataDifferentialEqualsamplingCyclone10(const gtry::Clock &signalClock, Bit p, Bit n);
-	VStream<UInt> recoverDataDifferential(const gtry::Clock &signalClock, Bit p, Bit n);
+	struct SingleEnded {
+		Bit zero;
+	};
+
+	VStream<Bit, SingleEnded> recoverDataDifferentialOversampling(const gtry::Clock &signalClock, Bit p, Bit n);
+	VStream<Bit, SingleEnded> recoverDataDifferentialEqualsamplingDirty(const gtry::Clock &signalClock, Bit p, Bit n);
+	VStream<Bit, SingleEnded> recoverDataDifferentialEqualsamplingCyclone10(const gtry::Clock &signalClock, Bit p, Bit n);
+	VStream<Bit, SingleEnded> recoverDataDifferential(const gtry::Clock &signalClock, Bit p, Bit n);
 }
+
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::SingleEnded, zero);

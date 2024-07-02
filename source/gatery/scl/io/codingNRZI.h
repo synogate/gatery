@@ -17,10 +17,35 @@
 */
 #pragma once
 #include "../stream/Stream.h"
+#include "../Counter.h"
 
 namespace gtry::scl
 {
-	VStream<UInt> decodeNRZI(const VStream<UInt>& in, size_t stuffBitInterval = 0);
+	template<Signal ...MetaT>
+	VStream<Bit, MetaT...> decodeNRZI(const VStream<Bit, MetaT...>& in, size_t stuffBitInterval)
+	{
+		auto scope = Area{ "scl_decodeNRZI" }.enter();
+		auto out = in;
+
+		// decode differential signals only
+		IF(valid(in))
+		{
+			(*out) = (*in) == reg((*in), '0');
+
+			if(stuffBitInterval)
+			{
+				Counter stuffCounter{ stuffBitInterval + 1 };
+				stuffCounter.inc();
+				IF(stuffCounter.isLast())
+					valid(out) = '0';
+				IF((*out) == '0')
+					stuffCounter.reset();
+			}
+		}
+		HCL_NAMED(out);
+		return out;
+	}
+
 	VStream<UInt> encodeNRZI(const VStream<UInt>& in, size_t stuffBitInterval = 0);
 }
 

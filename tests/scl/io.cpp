@@ -224,7 +224,11 @@ void setup_recoverDataDifferential(hlim::ClockRational actualBusClockFrequency, 
 		ioN = pinIn().setName("D_minus");
 	}
 
-	scl::VStream<gtry::UInt> stream = scl::recoverDataDifferential(busClock, ioP, ioN);
+	scl::VStream<Bit, scl::SingleEnded> patch = scl::recoverDataDifferential(busClock, ioP, ioN);
+
+	scl::VStream<gtry::UInt> stream(2_b);
+	stream->lsb() = *patch & !patch.template get<scl::SingleEnded>().zero;
+	stream->msb() = !*patch & !patch.template get<scl::SingleEnded>().zero;
 
 	auto streamValid = valid(stream);
 	pinOut(streamValid, "out_valid");

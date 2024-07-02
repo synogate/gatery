@@ -946,3 +946,109 @@ BOOST_FIXTURE_TEST_CASE(usb_bit_crc16_tx_test, BoostUnitTestSimulationFixture)
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
+
+BOOST_FIXTURE_TEST_CASE(cyc10_pin_delay_tester, SingleEndpointUsbFixture, *boost::unit_test::disabled())
+{
+
+	auto device = std::make_unique<scl::IntelDevice>();
+	device->setupDevice("10CL025YU256C8G");
+	design.setTargetTechnology(std::move(device));
+
+	Clock clk12{ ClockConfig{
+		.absoluteFrequency = 12'000'000,
+		.name = "CLK12M",
+		.resetType = ClockConfig::ResetType::NONE
+	} };
+
+	auto* pll2 = DesignScope::get()->createNode<scl::arch::intel::ALTPLL>();
+	pll2->setClock(0, clk12);
+	Clock clock = pll2->generateOutClock(0, 16, 1, 50, 0);
+	ClockScope clkScp(clock);
+
+	Bit tx;
+	tx = reg(tx, '0');
+	Counter delayCtr{ 8_b };
+	
+	IF(delayCtr.isFirst())
+		tx = !tx;
+	
+	Bit rx = reg(bypassableDelayChain(tx, 1, cyclone10PinDelay, gateryMux2, 10), '0');
+
+	HCL_NAMED(tx);
+	HCL_NAMED(rx);
+	IF(tx != rx)
+		delayCtr.inc();
+
+	Counter idleCtr{ 12'000'000 * 16 };
+
+	IF(tx != rx)
+		idleCtr.reset();
+	ELSE{
+		IF(idleCtr.isLast())
+			delayCtr.reset();
+	}
+
+	pinOut(delayCtr.value(), "LED");
+	design.postprocess();
+
+	vhdl::VHDLExport vhdl("synthesis_projects/cyc10_pin_delay_tester/cyc10_pin_delay_tester.vhd");
+	vhdl.targetSynthesisTool(new IntelQuartus());
+	vhdl(design.getCircuit());
+
+	runFixedLengthTest({ 100, 1'000'000 });
+}
+
+
+BOOST_FIXTURE_TEST_CASE(usb_hi_speed_register_delay_tester, SingleEndpointUsbFixture, *boost::unit_test::disabled())
+{
+	//this test is really useless...but served as a learning for multi-outputs on plls
+	//it's also wrong now... had to change something 
+	auto device = std::make_unique<scl::IntelDevice>();
+	device->setupDevice("10CL025YU256C8G");
+	design.setTargetTechnology(std::move(device));
+
+	Clock clk12{ ClockConfig{
+		.absoluteFrequency = 12'000'000,
+		.name = "CLK12M",
+		.resetType = ClockConfig::ResetType::NONE
+	} };
+
+	auto* pll2 = DesignScope::get()->createNode<scl::arch::intel::ALTPLL>();
+	pll2->setClock(0, clk12);
+	Clock clock = pll2->generateOutClock(0, 8, 1, 50, 0);
+	ClockScope clkScp(clock);
+
+	Bit tx;
+	tx = reg(tx, '0');
+	Counter delayCtr{ 8_b };
+
+	IF(delayCtr.isFirst())
+		tx = !tx;
+
+	Clock fastClk = pll2->generateOutClock(1, 32, 1, 50, 0);
+
+	Bit rx = reg(bypassableDelayChain(tx, 1, fastRegisterChainDelay, gateryMux2, 30), '0');
+
+	HCL_NAMED(tx);
+	HCL_NAMED(rx);
+	IF(tx != rx)
+		delayCtr.inc();
+
+	Counter idleCtr{ 12'000'000 * 8 };
+
+	IF(tx != rx)
+		idleCtr.reset();
+	ELSE{
+		IF(idleCtr.isLast())
+		delayCtr.reset();
+	}
+
+	pinOut(delayCtr.value(), "LED");
+	design.postprocess();
+
+	vhdl::VHDLExport vhdl("synthesis_projects/cyc10_reg_delay_tester/cyc10_reg_delay_tester.vhd");
+	vhdl.targetSynthesisTool(new IntelQuartus());
+	vhdl(design.getCircuit());
+
+	runFixedLengthTest({ 1, 1'000'000 });
+}

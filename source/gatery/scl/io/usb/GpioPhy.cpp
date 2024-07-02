@@ -19,7 +19,6 @@
 #include "GpioPhy.h"
 
 #include <gatery/scl/io/codingNRZI.h>
-#include <gatery/scl/io/RecoverDataDifferential.h>
 #include <gatery/scl/stream/utils.h>
 #include <gatery/scl/stream/Packet.h>
 #include <gatery/scl/flag.h>
@@ -103,7 +102,7 @@ gtry::Bit gtry::scl::usb::GpioPhy::setup(OpMode mode)
 		HCL_NAMED(dnIn);
 	}
 
-	VStream<UInt> lineIn = recoverDataDifferential(
+	VStream<Bit, SingleEnded> lineIn = recoverDataDifferentialEqualsamplingCyclone10(
 		usbPinClock,
 		dpIn, dnIn
 	);
@@ -112,8 +111,10 @@ gtry::Bit gtry::scl::usb::GpioPhy::setup(OpMode mode)
 	IF(dEn)
 		valid(lineIn) = '0';
 
-	IF(valid(lineIn))
-		m_status.lineState = lineIn->lower(2_b);
+	IF(valid(lineIn)) {
+		m_status.lineState.lsb() = *lineIn & !lineIn.template get<scl::SingleEnded>().zero;
+		m_status.lineState.msb() = !*lineIn & !lineIn.template get<scl::SingleEnded>().zero;
+	}
 	m_status.lineState = reg(m_status.lineState);
 	m_status.sessEnd = '0';
 	m_status.sessValid = '0';
@@ -123,18 +124,18 @@ gtry::Bit gtry::scl::usb::GpioPhy::setup(OpMode mode)
 	m_status.id = '0';
 	m_status.altInt = '0';
 
-	VStream<UInt> lineInDecoded = decodeNRZI(lineIn, 6);
+	VStream<Bit, SingleEnded> lineInDecoded = decodeNRZI(lineIn, 6);
 	HCL_NAMED(lineInDecoded);
 
 	m_status.rxActive = reg(m_status.rxActive, '0');
-	IF(valid(lineInDecoded) & lineInDecoded->at(0) == '0' & lineInDecoded->at(1) == '1')
+	IF(valid(lineInDecoded) & *lineInDecoded == '0')
 		m_status.rxActive = '1';
 
 	Bit seenSE0;
 	seenSE0 = reg(seenSE0, '0');
-	IF(valid(lineInDecoded) & lineInDecoded->at(0) == '0' & lineInDecoded->at(1) == '0')
+	IF(valid(lineInDecoded) & lineInDecoded.template get<SingleEnded>().zero)
 		seenSE0 = '1';
-	IF(valid(lineInDecoded) & lineInDecoded->at(0) == '1' & lineInDecoded->at(1) == '0' & seenSE0)
+	IF(valid(lineInDecoded) & *lineInDecoded == '1' & seenSE0)
 	{
 		seenSE0 = '0';
 		m_status.rxActive = '0';
@@ -354,11 +355,16 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 	}
 }
 
-void gtry::scl::usb::GpioPhy::generateRx(const VStream<UInt>& in)
+void gtry::scl::usb::GpioPhy::generateRx(const VStream<Bit, SingleEnded>& in)
 {
-	setName(*in, "in_to_preamble");
-	VStream<UInt> inBit = in.transform([](const UInt& in) {
-		return in(0, 1_b);
+	setName(*in, "in_bit");
+	Bit se0 = in.template get<SingleEnded>().zero;
+	HCL_NAMED(se0);
+
+	VStream<UInt, SingleEnded> inBit = in.transform([](const Bit& in)->UInt{
+		UInt ret = 1_b;
+		ret.lsb() = in;
+		return ret;
 	});
 
 	// find end of preamble
@@ -367,47 +373,47 @@ void gtry::scl::usb::GpioPhy::generateRx(const VStream<UInt>& in)
 			idle, waitForLock, preambleFirst, preambleSecond, data, end
 		};
 		Reg<Enum<State>> state{ idle };
-		state.setName("state");
-
+		state.setName("preamble_detection_state");
+		
 		IF(state.current() == idle)
 		{
-			IF(transfer(in) & *in == "b10")
+			IF(transfer(in) & *in == '0')
 				state = waitForLock;
 		}
 		
 		IF(state.current() == waitForLock)
 		{
 			IF(transfer(in))
-				IF(Counter{ 4 }.isLast())
+				IF(Counter{ 2 }.isLast())
 					state = preambleFirst;
 		}
 		IF(state.current() == preambleFirst)
 		{
-			IF(transfer(in) & *in == "b10")
+			IF(transfer(in) & *in == '0')
 				state = preambleSecond;
-			IF(transfer(in) & *in != "b10")
+			IF(transfer(in) & *in != '0')
 				state = idle;
 		}
 		IF(state.current() == preambleSecond)
 		{
-			IF(transfer(in) & *in == "b01")
+			IF(transfer(in) & *in == '1')
 				state = data;
 		}
 		IF(state.current() == end)
 		{
-			IF(transfer(in) & *in == "b01")
+			IF(transfer(in) & *in == '1')
 				state = idle;
 		}
 
-		IF(transfer(in) & *in == 0)
+		IF(transfer(in) & se0)
 			state = end;
 
-		IF(state.current() != data | *in == 0)
+		IF(state.current() != data | se0)
 			valid(inBit) = '0';
 	}
-	HCL_NAMED(inBit);
 
-	VStream<UInt> lineInWord = strm::extendWidth(move(inBit), 8_b, !m_status.rxActive);
+	VStream<UInt, SingleEnded> lineInWord = strm::extendWidth(move(inBit), 8_b, !m_status.rxActive);
+	HCL_NAMED(lineInWord);
 
 	Bit rxDataActive = flag(valid(lineInWord), !m_status.rxActive);
 	HCL_NAMED(rxDataActive);

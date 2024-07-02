@@ -24,7 +24,7 @@
 #include <gatery/scl/arch/intel/ALTPLL.h>
 
 namespace gtry::scl {
-	VStream<UInt> recoverDataDifferentialOversampling(const Clock& signalClock, Bit ioP, Bit ioN) {
+	VStream<Bit, SingleEnded> recoverDataDifferentialOversampling(const Clock& signalClock, Bit ioP, Bit ioN) {
 		auto scope = Area{ "scl_recoverDataDifferential" }.enter();
 
 		const auto samplesRatio = ClockScope::getClk().absoluteFrequency() / signalClock.absoluteFrequency();
@@ -44,10 +44,10 @@ namespace gtry::scl {
 		phaseCounter.inc();
 
 		// sample data based on clock estimate
-		VStream<UInt> out{
-			cat(n, p),
-			Valid{ phaseCounter.isLast() }
-		};
+		VStream<Bit, SingleEnded> out; 
+		*out = p;
+		valid(out) = phaseCounter.isLast();
+		out.template get<SingleEnded>().zero = p == '0' & n == '0';
 
 		// recover clock and shift sample point
 		IF(p != reg(p, '1') | n != reg(n, '0'))
@@ -59,19 +59,24 @@ namespace gtry::scl {
 		return out;
 	}
 
-	VStream<UInt> recoverDataDifferentialEqualsamplingDirty(const Clock& signalClock, Bit ioP, Bit ioN) {
+	VStream<Bit, SingleEnded> recoverDataDifferentialEqualsamplingDirty(const Clock& signalClock, Bit ioP, Bit ioN) {
 		Area area{ "scl_recoverDataDifferentialEqualsamplingDirty", true };
 
 		ioP.resetValue('0');
 		ioN.resetValue('1');
 
 		Bit p = reg(allowClockDomainCrossing(ioP, signalClock, ClockScope::getClk())); HCL_NAMED(p);
-		Bit n = reg(allowClockDomainCrossing(ioN, signalClock, ClockScope::getClk())); HCL_NAMED(n);
+		//Bit n = reg(allowClockDomainCrossing(ioN, signalClock, ClockScope::getClk())); HCL_NAMED(n);
 
-		return { cat(n,p), Valid{'1'} };
+		VStream<Bit, SingleEnded> out;
+		*out = p;
+		valid(out) = '1';
+		out.template get<SingleEnded>().zero = detectSingleEnded({ ioP,ioN }, '0');
+
+		return out;
 	}
 
-	VStream<UInt> recoverDataDifferentialEqualsamplingCyclone10(const Clock& signalClock, Bit ioP, Bit ioN) {
+	VStream<Bit, SingleEnded> recoverDataDifferentialEqualsamplingCyclone10(const Clock& signalClock, Bit ioP, Bit ioN) {
 		Area area{ "scl_recoverDataDifferentialEqualsamplingCyclone10", true };
 
 		Clock logicClk = ClockScope::getClk();
@@ -82,7 +87,6 @@ namespace gtry::scl {
 		p = allowClockDomainCrossing(ioP, signalClock, logicClk);	setName(ioP, "in_p_pin"); tap(ioP);
 		n = allowClockDomainCrossing(ioN, signalClock, logicClk);	setName(ioN, "in_n_pin"); tap(ioN);
 
-		Bit resetDelay = detectSingleEnded({ p, n }, '0'); HCL_NAMED(resetDelay); tap(resetDelay);
 
 		BitWidth delayW = 4_b;
 		UInt delay = delayW;
@@ -97,7 +101,7 @@ namespace gtry::scl {
 			delay = allowClockDomainCrossing(delay, logicClk, fastClk);
 			p = allowClockDomainCrossing(ioP, signalClock, fastClk);	setName(p, "in_p_pin"); tap(p);
 			n = allowClockDomainCrossing(ioN, signalClock, fastClk);	setName(n, "in_n_pin"); tap(n);
-			
+
 			p = delayChainWithTaps(p, delay, fastRegisterChainDelay, 1); setName(p, "in_p_delayed"); tap(p);
 			n = delayChainWithTaps(n, delay, fastRegisterChainDelay, 1); setName(n, "in_n_delayed"); tap(n);
 
@@ -105,21 +109,26 @@ namespace gtry::scl {
 			n = allowClockDomainCrossing(n, fastClk, logicClk);
 		}
 
+		Bit resetDelay = detectSingleEnded({ p, n }, '0'); HCL_NAMED(resetDelay); tap(resetDelay);
 		delay = setDelay(analyzePhase(p), resetDelay, delayW); HCL_NAMED(delay); tap(delay);
 
 		p = reg(p, '0'); HCL_NAMED(p); //temporary: should be removed because there is no cyclic dependency through the pins ( normally )
-		n = reg(n, '1'); HCL_NAMED(n); //temporary: should be removed because there is no cyclic dependency through the pins ( normally )
 
-		return { cat(n,p), Valid{'1'} };
+		VStream<Bit, SingleEnded> out;
+		*out = p;
+		valid(out) = '1';
+		out.template get<SingleEnded>().zero = resetDelay;
+
+		return out;
 	}
 
-	VStream<UInt> recoverDataDifferential(const Clock& signalClock, Bit ioP, Bit ioN)
+	VStream<Bit, SingleEnded> recoverDataDifferential(const Clock& signalClock, Bit ioP, Bit ioN)
 	{
 		const auto samplesRatio = ClockScope::getClk().absoluteFrequency() / signalClock.absoluteFrequency();
 		HCL_DESIGNCHECK_HINT(samplesRatio.denominator() == 1, "clock must be divisible by signalClock");
 		const size_t samples = samplesRatio.numerator();
 
-		VStream<UInt> out;
+		VStream<Bit, SingleEnded> out;
 		if (samples == 1)
 			return recoverDataDifferentialEqualsamplingDirty(signalClock, ioP, ioN);
 		else

@@ -19,6 +19,7 @@
 #include "Phy.h"
 #include "SimuPhy.h"
 #include "CrcHandler.h"
+#include <gatery/scl/io/RecoverDataDifferential.h>
 
 #include "../../Counter.h"
 #include "../../stream/Stream.h"
@@ -53,7 +54,7 @@ namespace gtry::scl::usb
 
 	protected:
 		virtual void generateTx(Bit& en, Bit& p, Bit& n);
-		virtual void generateRx(const VStream<UInt>& in);
+		virtual void generateRx(const VStream<Bit, SingleEnded>& in);
 		virtual void generateCrc();
 		virtual RvPacketStream<Bit> generateTxCrcAppend(RvPacketStream<Bit> in);
 

@@ -65,15 +65,6 @@ namespace gtry::scl {
 			ret = PhaseCommand::delay;
 		}
 
-#if 0
-		ELSE IF(samples[1] != samples[3]) {
-			IF(samples[1] != samples[2])
-				ret = PhaseCommand::delay;
-			ELSE
-				ret = PhaseCommand::anticipate;
-		}
-#endif
-
 		HCL_NAMED(ret);
 		return ret;
 	}
@@ -93,10 +84,10 @@ namespace gtry::scl {
 		DifPair cdcInput = allowClockDomainCrossing(input, ClockScope::getClk(), fallingEdgeTriggerClk);
 
 		std::array<DifPair, 2> samples;
-		samples[0] = reg(cdcInput, RegisterSettings{ .clock = fallingEdgeTriggerClk });
-		samples[1] = reg(input);
+		samples[0] = reg(input);
+		samples[1] = reg(cdcInput, RegisterSettings{ .clock = fallingEdgeTriggerClk });
 
-		samples[0] = allowClockDomainCrossing(samples[0], fallingEdgeTriggerClk, ClockScope::getClk());
+		samples[1] = allowClockDomainCrossing(samples[1], fallingEdgeTriggerClk, ClockScope::getClk());
 
 		Bit se = samples[0].n == polarity & samples[0].p == polarity & samples[1].n == polarity & samples[1].p == polarity;
 		HCL_NAMED(se);
