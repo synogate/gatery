@@ -2,6 +2,7 @@
 
 Submodules:
 - @subpage gtry_frontend_logging_page
+- @subpage gtry_frontend_simulation_processes_page
 - @subpage gtry_frontend_retiming_page
 
 See @ref gtry_frontend

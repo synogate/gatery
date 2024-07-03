@@ -40,7 +40,7 @@ class SimulationContext {
 		virtual ~SimulationContext();
 
 		virtual void overrideRegister(const SigHandle &handle, const DefaultBitVectorState &state) = 0;
-		virtual void overrideSignal(const SigHandle &handle, const DefaultBitVectorState &state) = 0;
+		virtual void overrideSignal(const SigHandle &handle, const ExtendedBitVectorState &state) = 0;
 		virtual void getSignal(const SigHandle &handle, DefaultBitVectorState &state) = 0;
 
 		virtual void onDebugMessage(const hlim::BaseNode *src, std::string msg) = 0;
