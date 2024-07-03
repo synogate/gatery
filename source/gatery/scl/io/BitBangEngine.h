@@ -33,7 +33,7 @@ namespace gtry::scl
 
 			Bit iobufEnable() const { return mux(openDrain, { en, en & !out }); }
 			Bit iobufOut() const { return mux(openDrain, { out, Bit{'0'} }); }
-			void pin(std::string name);
+			void pin(std::string name, PinNodeParameter param = {});
 		};
 
 		enum class Command : uint8_t
@@ -98,7 +98,7 @@ namespace gtry::scl
 		RvStream<BVec> generate(RvStream<BVec> command, size_t numIo = 14);
 		Io& io(size_t index) { return m_io.at(index); }
 
-		void pin(std::string prefix);
+		void pin(std::string prefix, PinNodeParameter param = {});
 
 	private:
 		Vector<Io> m_io;
