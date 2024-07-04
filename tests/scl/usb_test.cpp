@@ -31,7 +31,7 @@
 #include <gatery/scl/io/usb/GpioPhy.h>
 #include <gatery/scl/io/uart.h>
 
-#include <gatery/scl/io/bypassableDelayChain.h>
+#include <gatery/scl/io/dynamicDelay.h>
 using namespace boost::unit_test;
 using namespace gtry;
 using namespace gtry::scl;
@@ -1019,6 +1019,8 @@ BOOST_FIXTURE_TEST_CASE(usb_bit_crc16_tx_test, BoostUnitTestSimulationFixture)
 
 BOOST_FIXTURE_TEST_CASE(cyc10_pin_delay_tester, SingleEndpointUsbFixture, *boost::unit_test::disabled())
 {
+	//this test serves as a testbench to display the delay
+	// obtained by using the pins of a cyclone 10 device on the leds of the board
 
 	auto device = std::make_unique<scl::IntelDevice>();
 	device->setupDevice("10CL025YU256C8G");
@@ -1042,14 +1044,20 @@ BOOST_FIXTURE_TEST_CASE(cyc10_pin_delay_tester, SingleEndpointUsbFixture, *boost
 	IF(delayCtr.isFirst())
 		tx = !tx;
 	
-	Bit rx = reg(bypassableDelayChain(tx, 1, cyclone10PinDelay, gateryMux2, 10), '0');
+
+	PinDelay generator(4ns);
+	Bit rx = reg(delayChainWithTaps(tx, 7, generator), '0');
 
 	HCL_NAMED(tx);
 	HCL_NAMED(rx);
 	IF(tx != rx)
 		delayCtr.inc();
 
-	Counter idleCtr{ 12'000'000 * 16 };
+	UInt idleTime = 12'000'000 * 16;
+	UInt simIdleTime = constructFrom(idleTime);
+	simIdleTime = 12'000'000 * 16 / 1'000'000;
+	idleTime.simulationOverride(simIdleTime);
+	Counter idleCtr{ idleTime };
 
 	IF(tx != rx)
 		idleCtr.reset();
@@ -1071,8 +1079,8 @@ BOOST_FIXTURE_TEST_CASE(cyc10_pin_delay_tester, SingleEndpointUsbFixture, *boost
 
 BOOST_FIXTURE_TEST_CASE(usb_hi_speed_register_delay_tester, SingleEndpointUsbFixture, *boost::unit_test::disabled())
 {
-	//this test is really useless...but served as a learning for multi-outputs on plls
-	//it's also wrong now... had to change something 
+	//this test is currently untested but also serves a questionable purpose since the delay
+	// of a fast register chain delay is fully computable
 	auto device = std::make_unique<scl::IntelDevice>();
 	device->setupDevice("10CL025YU256C8G");
 	design.setTargetTechnology(std::move(device));
@@ -1097,7 +1105,18 @@ BOOST_FIXTURE_TEST_CASE(usb_hi_speed_register_delay_tester, SingleEndpointUsbFix
 
 	Clock fastClk = pll2->generateOutClock(1, 32, 1, 50, 0);
 
-	Bit rx = reg(bypassableDelayChain(tx, 1, fastRegisterChainDelay, gateryMux2, 30), '0');
+	Bit rx;
+	{
+		ClockScope fastScp(clkScp);
+		Bit cdcTx = allowClockDomainCrossing(tx, clock, fastClk);
+		auto regChain = [](Bit in) -> Bit {
+			for (size_t i = 0; i < 30; i++)
+				in = reg(in, '0');
+			return in;
+		};
+		rx = delayChainWithTaps(tx, 1, regChain);
+	}
+	rx = reg(allowClockDomainCrossing(rx, fastClk, clock));
 
 	HCL_NAMED(tx);
 	HCL_NAMED(rx);
