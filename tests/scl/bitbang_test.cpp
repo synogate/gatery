@@ -722,7 +722,7 @@ BOOST_FIXTURE_TEST_CASE(bitbang_clock_stratching_spi_test, BoostUnitTestSimulati
 				simu(engine.io(0).in) = '0';
 				for (size_t i = 0; i < 4; ++i)
 					co_await OnClk(clock);
-				simu(engine.io(0).in) = '1';
+				simu(engine.io(0).in) = 'z';
 				co_await OnClk(clock);
 			}
 		});
@@ -774,7 +774,7 @@ BOOST_FIXTURE_TEST_CASE(bitbang_clock_stratching_i2c_test, BoostUnitTestSimulati
 				simu(engine.io(0).in) = '0';
 				for (size_t i = 0; i < 4; ++i)
 					co_await OnClk(clock);
-				simu(engine.io(0).in) = '1';
+				simu(engine.io(0).in) = 'z';
 				co_await OnClk(clock);
 			}
 		});
