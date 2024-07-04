@@ -17,17 +17,11 @@
 */
 #pragma once
 #include "../stream/Stream.h"
+#include "differential.h"
 
 namespace gtry::scl
 {
-	struct SingleEnded {
-		Bit zero;
-	};
-
 	VStream<Bit, SingleEnded> recoverDataDifferentialOversampling(const gtry::Clock &signalClock, Bit p, Bit n);
 	VStream<Bit, SingleEnded> recoverDataDifferentialEqualsamplingDirty(const gtry::Clock &signalClock, Bit p, Bit n);
-	VStream<Bit, SingleEnded> recoverDataDifferentialEqualsamplingCyclone10(const gtry::Clock &signalClock, Bit p, Bit n);
 	VStream<Bit, SingleEnded> recoverDataDifferential(const gtry::Clock &signalClock, Bit p, Bit n);
 }
-
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::SingleEnded, zero);

@@ -17,15 +17,16 @@
 */
 #include "gatery/scl_pch.h"
 #include "RecoverDataDifferential.h"
+#include "differential.h"
 #include "../cdc.h"
 #include "../Counter.h"
-#include "bypassableDelayChain.h"
-#include "usb/usbAdjustPhase.h"
+#include <gatery/scl/stream/utils.h>
+#include <gatery/scl/arch/intel/recoverDataDifferential.h>
 #include <gatery/scl/arch/intel/ALTPLL.h>
 
 namespace gtry::scl {
 	VStream<Bit, SingleEnded> recoverDataDifferentialOversampling(const Clock& signalClock, Bit ioP, Bit ioN) {
-		auto scope = Area{ "scl_recoverDataDifferential" }.enter();
+		auto scope = Area{ "scl_recoverDataDifferential_oversampling" }.enter();
 
 		const auto samplesRatio = ClockScope::getClk().absoluteFrequency() / signalClock.absoluteFrequency();
 		HCL_DESIGNCHECK_HINT(samplesRatio.denominator() == 1, "clock must be divisible by signalClock");
@@ -41,11 +42,12 @@ namespace gtry::scl {
 		HCL_NAMED(n);
 
 		Counter phaseCounter{ samples };
+		
+		Bit se0 = p == '0' & n == '0';
 
 		// sample data based on clock estimate
-		VStream<Bit, SingleEnded> out; 
-		*out = p;
-		valid(out) = phaseCounter.isLast();
+		VStream<Bit, SingleEnded> out = strm::createVStream(p, phaseCounter.isLast())
+			.add(SingleEnded{.zero = se0});
 
 		// recover clock and shift sample point
 		IF(p != reg(p, '1') | n != reg(n, '0'))
@@ -53,16 +55,15 @@ namespace gtry::scl {
 			phaseCounter.load((samples + 1) / 2);
 			valid(out) = '0'; // prevent double sampling
 		}
+		Bit validMaskExtraSe0 = flag(valid(out) & se0, !(valid(out) & se0));
+		valid(out) &= !validMaskExtraSe0;
 
-		Bit se0 = p == '0' & n == '0';
-
-		out.template get<SingleEnded>().zero = se0;
 		HCL_NAMED(out);
 		return out;
 	}
 
 	VStream<Bit, SingleEnded> recoverDataDifferentialEqualsamplingDirty(const Clock& signalClock, Bit ioP, Bit ioN) {
-		Area area{ "scl_recoverDataDifferentialEqualsamplingDirty", true };
+		Area area{ "scl_recoverDataDifferential_equalsampling_dirty", true };
 
 		ioP.resetValue('0');
 		ioN.resetValue('1');
@@ -75,70 +76,35 @@ namespace gtry::scl {
 		p = reg(p); HCL_NAMED(p);
 		n = reg(n); HCL_NAMED(n);
 
-		VStream<Bit, SingleEnded> out;
-		*out = p;
-		valid(out) = !reg(se0);
-		out.template get<SingleEnded>().zero = se0;
-
-		return out;
-	}
-
-	VStream<Bit, SingleEnded> recoverDataDifferentialEqualsamplingCyclone10(const Clock& signalClock, Bit ioP, Bit ioN) {
-		Area area{ "scl_recoverDataDifferentialEqualsamplingCyclone10", true };
-
-		Clock logicClk = ClockScope::getClk();
-
-		Bit p;
-		Bit n;
-
-		p = allowClockDomainCrossing(ioP, signalClock, logicClk);	setName(ioP, "in_p_pin"); tap(ioP);
-		n = allowClockDomainCrossing(ioN, signalClock, logicClk);	setName(ioN, "in_n_pin"); tap(ioN);
-
-
-		BitWidth delayW = 4_b;
-		UInt delay = delayW;
-		{
-			auto* pll = dynamic_cast<arch::intel::ALTPLL*> (DesignScope::get()->getCircuit().findFirstNodeByName("ALTPLL"));
-			HCL_DESIGNCHECK_HINT(pll != nullptr, "there is no altera pll in your design.");
-			Clock fastClk = pll->generateOutClock(1, 16, 1, 50, 0); //creates a ~<400MHz clock
-
-			Clock samplingClock = pll->generateOutClock(2, 16, 1, 50, 0); //creates a 100MHz
-			ClockScope fastScp(fastClk);
-
-			delay = allowClockDomainCrossing(delay, logicClk, fastClk);
-			p = allowClockDomainCrossing(ioP, signalClock, fastClk);	setName(p, "in_p_pin"); tap(p);
-			n = allowClockDomainCrossing(ioN, signalClock, fastClk);	setName(n, "in_n_pin"); tap(n);
-
-			p = delayChainWithTaps(p, delay, fastRegisterChainDelay, 1); setName(p, "in_p_delayed"); tap(p);
-			n = delayChainWithTaps(n, delay, fastRegisterChainDelay, 1); setName(n, "in_n_delayed"); tap(n);
-
-			p = allowClockDomainCrossing(p, fastClk, logicClk);
-			n = allowClockDomainCrossing(n, fastClk, logicClk);
-		}
-
-		Bit resetDelay = detectSingleEnded({ p, n }, '0'); HCL_NAMED(resetDelay); tap(resetDelay);
-		delay = setDelay(analyzePhase(p), resetDelay, delayW); HCL_NAMED(delay); tap(delay);
-
-		p = reg(p, '0'); HCL_NAMED(p); //temporary: should be removed because there is no cyclic dependency through the pins ( normally )
-
-		VStream<Bit, SingleEnded> out;
-		*out = p;
-		valid(out) = '1';
-		out.template get<SingleEnded>().zero = resetDelay;
-		valid(out) = !reg(resetDelay);
+		VStream<Bit, SingleEnded> out = strm::createVStream(p, '1').add(SingleEnded{ .zero = se0 });
+		valid(out) &= !flag(se0, !se0);
 
 		return out;
 	}
 
 	VStream<Bit, SingleEnded> recoverDataDifferential(const Clock& signalClock, Bit ioP, Bit ioN)
 	{
+		auto scope = Area{ "scl_recoverDataDifferential" }.enter();
+
 		const auto samplesRatio = ClockScope::getClk().absoluteFrequency() / signalClock.absoluteFrequency();
 		HCL_DESIGNCHECK_HINT(samplesRatio.denominator() == 1, "clock must be divisible by signalClock");
 		const size_t samples = samplesRatio.numerator();
 
-		VStream<Bit, SingleEnded> out;
-		if (samples == 1)
+		if (samples == 1) {
+			//check if there is a config and use that
+			if (auto config = scope.config("version")) {
+				if(config.as<std::string>() == "dirty")
+					return recoverDataDifferentialEqualsamplingDirty(signalClock, ioP, ioN);
+				if(config.as<std::string>() == "altera")
+					return recoverDataDifferentialEqualsamplingAltera(signalClock, ioP, ioN);
+			}
+			
+			//choose clean version if altera pll is found, otherwise use dirty version.
+			auto* pll = dynamic_cast<arch::intel::ALTPLL*> (DesignScope::get()->getCircuit().findFirstNodeByName("ALTPLL"));
+			if (pll != nullptr)
+				return recoverDataDifferentialEqualsamplingAltera(signalClock, ioP, ioN);
 			return recoverDataDifferentialEqualsamplingDirty(signalClock, ioP, ioN);
+		}
 		else
 			return recoverDataDifferentialOversampling(signalClock, ioP, ioN);
 
