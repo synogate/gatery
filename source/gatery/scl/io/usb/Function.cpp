@@ -273,15 +273,8 @@ void gtry::scl::usb::Function::generateInitialFsm()
 					{
 						IF(m_pid.upper(2_b) == 2) // in
 						{
-							IF(m_tx.valid & m_tx.endPoint == m_endPoint)
-							{
-								m_sendDataState = State::sendData;
-								m_state = State::sendDataPid;
-							}
-							ELSE
-							{
-								sendHandshake(Handshake::NAK);
-							}
+							m_sendDataState = State::sendData;
+							m_state = State::sendDataPid;
 						}
 						IF(m_pid.upper(2_b) == 0) // out
 						{
