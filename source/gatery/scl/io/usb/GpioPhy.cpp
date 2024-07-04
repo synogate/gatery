@@ -355,13 +355,8 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 
 void gtry::scl::usb::GpioPhy::generateRx(const VStream<Bit, SingleEnded>& in)
 {
-	Bit se0 = in.template get<SingleEnded>().zero;
-	HCL_NAMED(se0);
-
 	VStream<UInt, SingleEnded> inBit = in.transform([](const Bit& in)->UInt{
-		UInt ret = 1_b;
-		ret.lsb() = in;
-		return ret;
+		return zext(in, 1_b);
 	});
 
 	// find end of preamble
@@ -396,6 +391,9 @@ void gtry::scl::usb::GpioPhy::generateRx(const VStream<Bit, SingleEnded>& in)
 			IF(transfer(in) & *in == '1')
 				state = data;
 		}
+
+		Bit se0 = in.template get<SingleEnded>().zero;
+		HCL_NAMED(se0);
 
 		IF(transfer(in) & se0)
 			state = idle;
