@@ -632,6 +632,7 @@ BOOST_FIXTURE_TEST_CASE(bitbang_fast_bangmode_test, BoostUnitTestSimulationFixtu
 
 		std::vector<uint8_t> commands = {
 			(uint8_t)BitBangEngine::Command::set_byte0,	0x00, 0x0F,
+			(uint8_t)BitBangEngine::Command::set_clock_div, 0x01, 0x00,
 		};
 		for (size_t i = 0; i < 32; ++i)
 			commands.push_back(uint8_t(0xC0 | i));
@@ -645,6 +646,149 @@ BOOST_FIXTURE_TEST_CASE(bitbang_fast_bangmode_test, BoostUnitTestSimulationFixtu
 		co_await OnClk(clock);
 		stopTest();
 		});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 10, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(bitbang_open_drain_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 12'000'000 });
+	ClockScope clkScp(clock);
+
+	RvStream<BVec> command{ 8_b };
+	pinIn(command, "command");
+
+	BitBangEngine engine;
+	RvStream<BVec> result = engine
+		.generate(move(command), 5);
+
+	engine.pin("io");
+	pinOut(result, "result");
+
+	addSimulationProcess([&]()->SimProcess {
+		simu(ready(result)) = '1';
+
+		std::vector<uint8_t> commands = {
+			(uint8_t)BitBangEngine::Command::set_byte0,	0x33, 0x0F,
+			(uint8_t)BitBangEngine::Command::set_open_drain, 0x06, 0x00,
+		};
+		co_await strm::sendPacket(command, strm::SimPacket(commands), clock);
+
+		co_await OnClk(clock);
+		BOOST_TEST(simu(engine.io(0).in) == '1');
+		BOOST_TEST(!simu(engine.io(1).in).defined());
+		BOOST_TEST(simu(engine.io(2).in) == '0');
+		BOOST_TEST(simu(engine.io(3).in) == '0');
+		BOOST_TEST(!simu(engine.io(4).in).defined());
+
+
+		co_await OnClk(clock);
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 10, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(bitbang_clock_stratching_spi_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 12'000'000 });
+	ClockScope clkScp(clock);
+
+	RvStream<BVec> command{ 8_b };
+	pinIn(command, "command");
+
+	BitBangEngine engine;
+	RvStream<BVec> result = engine
+		.generate(move(command), 3);
+
+	engine.pin("io", { .highImpedanceValue = PinNodeParameter::HighImpedanceValue::PULL_UP });
+	pinOut(result, "result");
+
+	addSimulationProcess([&]()->SimProcess {
+		simu(ready(result)) = '1';
+
+		std::vector<uint8_t> commands = {
+			(uint8_t)BitBangEngine::Command::set_byte0,	0x03, 0x03,
+			(uint8_t)BitBangEngine::Command::set_open_drain, 0x03, 0x00,
+			(uint8_t)BitBangEngine::Command::loopback_enable,
+			(uint8_t)0x33, 0x07, 0x5A,
+		};
+
+		fork([&]()->SimProcess {
+			while (true)
+			{
+				simu(engine.io(0).in) = '0';
+				for (size_t i = 0; i < 4; ++i)
+					co_await OnClk(clock);
+				simu(engine.io(0).in) = 'z';
+				co_await OnClk(clock);
+			}
+		});
+
+		fork(strm::sendPacket(command, strm::SimPacket(commands), clock));
+
+		for (size_t i = 0; i < 5 * 8; ++i)
+			co_await OnClk(clock);
+		co_await performTransferWait(result, clock);
+		BOOST_TEST(simu(*result) == 0x5A);
+
+		co_await OnClk(clock);
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 10, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(bitbang_clock_stratching_i2c_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 12'000'000 });
+	ClockScope clkScp(clock);
+
+	RvStream<BVec> command{ 8_b };
+	pinIn(command, "command");
+
+	BitBangEngine engine;
+	RvStream<BVec> result = engine
+		.generate(move(command), 3);
+
+	engine.pin("io", { .highImpedanceValue = PinNodeParameter::HighImpedanceValue::PULL_UP });
+	pinOut(result, "result");
+
+	addSimulationProcess([&]()->SimProcess {
+		simu(ready(result)) = '1';
+
+		std::vector<uint8_t> commands = {
+			(uint8_t)BitBangEngine::Command::set_byte0,	0x03, 0x03,
+			(uint8_t)BitBangEngine::Command::set_open_drain, 0x03, 0x00,
+			(uint8_t)BitBangEngine::Command::loopback_enable,
+			(uint8_t)BitBangEngine::Command::threephase_clock_enable,
+			(uint8_t)0x33, 0x07, 0x5A,
+		};
+
+		fork([&]()->SimProcess {
+			while (true)
+			{
+				simu(engine.io(0).in) = '0';
+				for (size_t i = 0; i < 4; ++i)
+					co_await OnClk(clock);
+				simu(engine.io(0).in) = 'z';
+				co_await OnClk(clock);
+			}
+		});
+
+		fork(strm::sendPacket(command, strm::SimPacket(commands), clock));
+
+		for (size_t i = 0; i < 5 * 8; ++i)
+			co_await OnClk(clock);
+		co_await performTransferWait(result, clock);
+		BOOST_TEST(simu(*result) == 0x5A);
+
+		co_await OnClk(clock);
+		stopTest();
+	});
 
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 10, 1'000'000 }));

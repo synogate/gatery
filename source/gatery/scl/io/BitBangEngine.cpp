@@ -60,6 +60,8 @@ RvStream<BVec> BitBangEngine::generate(RvStream<BVec> command, size_t numIo)
 	config.idleClockState.resetValue('0');
 
 	UInt bitLength = 2 * command->width() + 3_b + 1_b;
+	UInt clockDiv = 2 * command->width() + 1_b;
+	Bit tick = Counter{ clockDiv }.isLast();		HCL_NAMED(tick);
 
 	ready(command) = '0';
 	IF(state.current() == CmdState::idle & valid(command) & ready(out))
@@ -168,13 +170,19 @@ RvStream<BVec> BitBangEngine::generate(RvStream<BVec> command, size_t numIo)
 		}
 		ELSE IF((*command)(5, 2_b) == 2) // synogate fast bit bang mode
 		{
-			for (size_t i = 0; i < std::min<size_t>(4, m_io.size()); ++i)
-				m_io[i].out = (*command)[i];
+			ready(command) = '0';
+			IF(tick)
+			{
+				for (size_t i = 0; i < std::min<size_t>(4, m_io.size()); ++i)
+					m_io[i].out = (*command)[i];
 
-			*out = 0;
-			for(size_t i = 0; i < std::min<size_t>(8, m_io.size()); ++i)
-				out->at(i) = m_io[i].in;
-			valid(out) = command->at(4);
+				*out = 0;
+				for(size_t i = 0; i < std::min<size_t>(8, m_io.size()); ++i)
+					out->at(i) = m_io[i].in;
+
+				ready(command) = '1';
+				valid(out) = command->at(4);
+			}
 		}
 		ELSE
 		{
@@ -237,7 +245,6 @@ RvStream<BVec> BitBangEngine::generate(RvStream<BVec> command, size_t numIo)
 	UInt cmdInc = zext((UInt)*command, +1_b) + carryIn;
 	HCL_NAMED(cmdInc);
 
-	UInt clockDiv = 2 * command->width() + 1_b;
 
 	IF(state.current() == CmdState::inc_bits & valid(command))
 	{
@@ -275,7 +282,6 @@ RvStream<BVec> BitBangEngine::generate(RvStream<BVec> command, size_t numIo)
 
 	if (hasSerialEngine)
 	{
-		Bit tick = Counter{ clockDiv }.isLast();		HCL_NAMED(tick);
 		Bit setupEdge = '0';
 		Bit captureEdge = '0';
 		Bit toggleClock = '0';
@@ -295,30 +301,30 @@ RvStream<BVec> BitBangEngine::generate(RvStream<BVec> command, size_t numIo)
 
 			IF(state.current() == CmdState::clock_setup & !waitForData & !waitForReady)
 			{
-				setupEdge = config.shiftOut;
-				captureEdge = config.shiftIn & !config.captureEdge;
-				state = CmdState::clock_wait;
-				IF(!config.clockThreePhase)
+				Bit clockDidToggle = clkIo ? (!clkIo->en | (clkIo->out == clkIo->in)) : Bit{ '1' };
+				HCL_NAMED(clockDidToggle);
+				IF(clockDidToggle)
 				{
-					toggleClock = '1';
-					state = CmdState::clock_active;
+					setupEdge = config.shiftOut;
+					captureEdge = config.shiftIn & !config.captureEdge;
+					state = CmdState::clock_wait;
+					IF(!config.clockThreePhase)
+					{
+						toggleClock = '1';
+						state = CmdState::clock_active;
+					}
 				}
 			}
 
 			IF(state.current() == CmdState::clock_active & !waitForReady)
 			{
-				Bit clockDidToggle = clkIo ? (!clkIo->en | (clkIo->out == clkIo->in)) : Bit{ '1' };
-				HCL_NAMED(clockDidToggle);
-				IF(clockDidToggle)
-				{
-					captureEdge = config.shiftIn & config.captureEdge;
-					toggleClock = '1';
-					state = CmdState::clock_setup;
+				captureEdge = config.shiftIn & config.captureEdge;
+				toggleClock = '1';
+				state = CmdState::clock_setup;
 
-					bitLength -= 1;
-					IF(lastEdge)
-						state = CmdState::idle;
-				}
+				bitLength -= 1;
+				IF(lastEdge)
+					state = CmdState::idle;
 			}
 
 			IF(state.current() == CmdState::clock_wait)
@@ -421,10 +427,13 @@ RvStream<BVec> BitBangEngine::generate(RvStream<BVec> command, size_t numIo)
 	return out;
 }
 
-void gtry::scl::BitBangEngine::pin(std::string prefix)
+void gtry::scl::BitBangEngine::Io::pin(std::string prefix, PinNodeParameter param)
+{
+	in = tristatePin(iobufOut(), iobufEnable(), param).setName(prefix);
+}
+
+void gtry::scl::BitBangEngine::pin(std::string prefix, PinNodeParameter param)
 {
 	for (size_t i = 0; i < m_io.size(); ++i)
-	{
-		m_io[i].in = tristatePin(m_io[i].iobufOut(), m_io[i].iobufEnable()).setName(prefix + std::to_string(i));
-	}
+		m_io[i].pin(prefix + std::to_string(i), param);
 }

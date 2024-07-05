@@ -1,0 +1,60 @@
+
+set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
+set_global_assignment -name VHDL_INPUT_VERSION VHDL_2008
+set_global_assignment -name ALLOW_REGISTER_RETIMING OFF
+set_global_assignment -name NUM_PARALLEL_PROCESSORS ALL
+set_global_assignment -name DEVICE 10M50DAF484C6GES
+set_global_assignment -name FAMILY "MAX 10"
+set_global_assignment -name TOP_LEVEL_ENTITY top
+set_global_assignment -name SDC_FILE usb_to_bitbang_max10deca.sdc
+set_global_assignment -name VHDL_FILE usb_to_bitbang_max10deca.vhd
+
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to *
+set_global_assignment -name ENABLE_OCT_DONE OFF
+set_global_assignment -name ENABLE_CONFIGURATION_PINS OFF
+set_global_assignment -name ENABLE_BOOT_SEL_PIN OFF
+
+set_location_assignment PIN_M8 -to CLK50M
+set_instance_assignment -name IO_STANDARD "2.5 V" -to CLK50M
+
+set_location_assignment PIN_C7 -to LED[0]
+set_location_assignment PIN_C8 -to LED[1]
+set_location_assignment PIN_A6 -to LED[2]
+set_location_assignment PIN_B7 -to LED[3]
+set_location_assignment PIN_C4 -to LED[4]
+set_location_assignment PIN_A5 -to LED[5]
+set_location_assignment PIN_B4 -to LED[6]
+set_location_assignment PIN_C5 -to LED[7]
+set_instance_assignment -name IO_STANDARD "1.2 V" -to LED*
+
+# LM71
+#set_location_assignment PIN_AA1 -to SCL
+#set_location_assignment PIN_Y2 -to MOSI
+#set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to MOSI
+#set_location_assignment PIN_AB4 -to CS
+#set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to CS
+
+# HDC1000
+#set_location_assignment PIN_Y10 -to SCL
+#set_location_assignment PIN_AA10 -to MOSI
+#set_location_assignment PIN_AB9 -to CS
+
+# LIS2DH12
+set_location_assignment PIN_B5 -to SCL
+set_instance_assignment -name IO_STANDARD "1.2 V" -to SCL
+set_location_assignment PIN_C6 -to MOSI
+set_instance_assignment -name IO_STANDARD "1.2 V" -to MOSI
+set_location_assignment PIN_D5 -to MISO
+set_instance_assignment -name IO_STANDARD "1.2 V" -to MISO
+set_location_assignment PIN_E9 -to CS
+set_instance_assignment -name IO_STANDARD "1.2 V" -to CS
+
+# oscilloscope probes
+set_location_assignment PIN_U15 -to DBG_SCL
+set_location_assignment PIN_R13 -to DBG_MOSI
+set_location_assignment PIN_W14 -to DBG_MISO
+set_location_assignment PIN_Y17 -to DBG_CS
+
+set_location_assignment PIN_W18 -to USB_DP
+set_location_assignment PIN_Y18 -to USB_DN
+set_instance_assignment -name CURRENT_STRENGTH_NEW 8MA -to USB_D*

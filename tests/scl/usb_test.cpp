@@ -30,6 +30,7 @@
 #include <gatery/scl/io/usb/Function.h>
 #include <gatery/scl/io/usb/GpioPhy.h>
 #include <gatery/scl/io/uart.h>
+#include <gatery/scl/io/BitBangEngine.h>
 
 #include <gatery/scl/io/dynamicDelay.h>
 using namespace boost::unit_test;
@@ -714,6 +715,101 @@ BOOST_FIXTURE_TEST_CASE(usb_to_uart_cyc1000, SingleEndpointUsbFixture, *boost::u
 	design.postprocess();
 
 	vhdl::VHDLExport vhdl("synthesis_projects/usb_to_uart_cyc1000/usb_to_uart_cyc1000.vhd");
+	vhdl.targetSynthesisTool(new IntelQuartus());
+	vhdl(design.getCircuit());
+
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(usb_to_bitbang_max10deca, SingleEndpointUsbFixture, *boost::unit_test::disabled())
+{
+	m_useSimuPhy = false;
+	m_pinApplicationInterface = false;
+	m_pinStatusRegister = false;
+	m_maxPacketLength = 8;
+
+	auto device = std::make_unique<scl::IntelDevice>();
+	device->setupDevice("10M50DAF672I6");
+	design.setTargetTechnology(std::move(device));
+
+	Clock clk50{ ClockConfig{
+		.absoluteFrequency = 50'000'000,
+		.name = "CLK50M",
+		.resetType = ClockConfig::ResetType::NONE
+	} };
+
+	auto* pll2 = DesignScope::get()->createNode<scl::arch::intel::ALTPLL>();
+	pll2->setClock(0, clk50);
+	Clock clock = pll2->generateOutClock(0, 24, 25, 50, 0);
+	ClockScope clkScp(clock);
+
+	UInt baudRate = BitWidth::last(hlim::ceil(ClockScope::getClk().absoluteFrequency()));
+	UInt led = 8_b;
+	led = reg(led, 0);
+	pinOut(led, "LED");
+
+	
+	setupFunction();
+	BitBangEngine bitbang;
+	{
+		scl::TransactionalFifo<scl::usb::Function::StreamData> host2uartFifo{ 16 };
+		m_func->attachRxFifo(host2uartFifo, 1 << 1);
+		scl::TransactionalFifo<scl::usb::Function::StreamData> uart2hostFifo{ 16 };
+		m_func->attachTxFifo(uart2hostFifo, 1 << 1);
+		
+		RvStream<BVec> command = strm::pop(host2uartFifo)
+			.transform([](const scl::usb::Function::StreamData& in) { return (BVec)in.data; });
+
+		bitbang.generate(move(command), 16)
+			.transform([](const BVec& d) { return usb::Function::StreamData{ .data = (UInt)d, .endPoint = 1 }; })
+			| strm::push(uart2hostFifo);
+
+		bitbang.io(0).pin("SCL");
+		bitbang.io(1).pin("MOSI");
+		bitbang.io(2).pin("MISO");
+		bitbang.io(3).pin("CS");
+
+		pinOut(bitbang.io(0).in, "DBG_SCL");
+		pinOut(bitbang.io(1).in, "DBG_MOSI");
+		pinOut(bitbang.io(2).in, "DBG_MISO");
+		pinOut(bitbang.io(3).in, "DBG_CS");
+
+		for (size_t i = 0; i < 8; ++i)
+			led[i] = bitbang.io(i+8).out;
+
+		host2uartFifo.generate();
+		uart2hostFifo.generate();
+	}
+
+	addSimulationProcess([&]() -> SimProcess {
+		simu(bitbang.io(2).in) = '1';
+
+		co_await OnClk(clock);
+		//co_await testWindowsDeviceDiscovery();
+		co_await controlSetConfiguration(1);
+
+		std::vector<uint8_t> commands = {
+			// spi setup
+			0x80, 0x00, 0x00, 0x82, 0x00, 0x00, 0x9e, 0x00, 0x00, 0x8d, 0x85, 0x86, 0x00, 0x00, 0x80, 0x0b, 0x0b, 0x86, 0x02, 0x00,
+			// spi transfer, send a command byte and receive 8 bytes of data
+			0xc1, 0x13, 0x07, 0xdf, 0xc1, 0x23, 0x3f, 0xc9,
+		};
+		co_await this->transferOutBatch(1, std::as_bytes(std::span(commands)));
+
+		std::vector<std::byte> result = co_await this->transferInBatch(1, 64);
+		BOOST_TEST(result.size() == 8);
+		for (size_t i = 0; i < result.size(); ++i)
+			BOOST_TEST((result[i] == std::byte(0xFF)));
+
+		for(size_t i = 0; i < 128; ++i)
+			co_await OnClk(clock);
+
+		stopTest();
+	});
+
+	design.postprocess();
+
+	vhdl::VHDLExport vhdl("synthesis_projects/usb_to_bitbang_max10deca/usb_to_bitbang_max10deca.vhd");
 	vhdl.targetSynthesisTool(new IntelQuartus());
 	vhdl(design.getCircuit());
 
