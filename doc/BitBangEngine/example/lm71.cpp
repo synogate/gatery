@@ -2,11 +2,17 @@
 #include <iostream>
 #include <fstream>
 
+#ifdef _WIN32
+static std::string g_device_path = bitbang::find_device_path(0x1D50, 0x0000);
+#else
+static const char* g_device_path = "/dev/ttyACM0";
+#endif
+
 int main()
 {
 	try {
 		boost::asio::io_service io;
-		boost::asio::serial_port serial = bitbang::device_open(io, "COM15"); // Change to your COM port device name (COM0, /dev/acm0, /dev/ttyUSB0, etc)
+		boost::asio::serial_port serial = bitbang::device_open(io, g_device_path);
 
 		size_t spiMode = 0;
 		bitbang::threewire::setup(serial, spiMode, 1'000'000);

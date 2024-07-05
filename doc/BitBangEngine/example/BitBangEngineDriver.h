@@ -232,6 +232,49 @@ namespace bitbang
 		device_flush(ctx, serial);
 		return serial;
 	}
+
+#ifdef _WIN32
+	std::string find_device_path(uint16_t vid, uint16_t pid)
+	{
+		std::string name;
+		std::string regPath = std::format("SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{:04X}&PID_{:04X}", vid, pid);
+
+		HKEY hUSB;
+		if (RegOpenKeyA(HKEY_LOCAL_MACHINE, regPath.c_str(), &hUSB) != ERROR_SUCCESS)
+			return "COM1";
+
+		char subkeyName[256];
+		DWORD index = 0;
+		while (RegEnumKeyA(hUSB, index++, subkeyName, sizeof(subkeyName)) == ERROR_SUCCESS)
+		{
+			std::string regSubPath = std::string(subkeyName) + "\\Device Parameters";
+			DWORD len = sizeof(subkeyName);
+			if (RegGetValueA(hUSB, regSubPath.c_str(), "PortName", RRF_RT_REG_SZ, NULL, subkeyName, &len) == ERROR_SUCCESS)
+			{
+				try {
+					boost::asio::io_service io;
+					boost::asio::serial_port serial(io, subkeyName);
+				}
+				catch (const boost::system::system_error& e) {
+					if (e.code().value() != 2) // keep if not file not found to improve error message for user
+						name = subkeyName;
+					continue;
+				}
+				name = subkeyName;
+				break;
+			}
+		}
+
+		RegCloseKey(hUSB);
+		if (name.empty())
+		{
+			std::cerr << "no device found\n";
+			return "COM1";
+		}
+		return name;
+	}
+#endif
+
 }
 
 namespace bitbang::spi
