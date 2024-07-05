@@ -225,7 +225,7 @@ namespace bitbang
 
 		// set magic baud rate and parity to signal to the device that it should enter bitbang mode
 		// otherwise it is in simple uart mode
-		serial.set_option(boost::asio::serial_port::baud_rate(5760));
+		serial.set_option(boost::asio::serial_port::baud_rate(57600));
 		serial.set_option(boost::asio::serial_port::parity(boost::asio::serial_port::parity::even));
 
 		// make sure command fifo is empty

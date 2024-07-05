@@ -41,9 +41,9 @@ void lis2dh13_i2c(boost::asio::serial_port& serial)
 		}
 
 		std::cout << " length: " << std::inner_product(acceleration.begin(), acceleration.end(), acceleration.begin(), 0.);
-		std::cout << '\r';
+		std::cout << '\r' << std::flush;
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(250));
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
 	}
 }
 
@@ -79,9 +79,9 @@ void lis2dh13_spi(boost::asio::serial_port& serial)
 		}
 
 		std::cout << " length: " << std::inner_product(acceleration.begin(), acceleration.end(), acceleration.begin(), 0.);
-		std::cout << '\r';
+		std::cout << '\r' << std::flush;
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(250));
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
 	}
 }
 
@@ -114,9 +114,9 @@ void lis2dh13_threewire(boost::asio::serial_port& serial)
 		}
 
 		std::cout << " length: " << std::inner_product(acceleration.begin(), acceleration.end(), acceleration.begin(), 0.);
-		std::cout << '\r';
+		std::cout << '\r' << std::flush;
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(250));
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
 	}
 }
 
