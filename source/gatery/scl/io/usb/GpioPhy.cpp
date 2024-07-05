@@ -298,6 +298,7 @@ gtry::scl::usb::GpioPhy::Symbol gtry::scl::usb::GpioPhy::lineState() const
 void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 {
 	HCL_NAMED(m_tx);
+	//tap(m_tx);
 	RvStream<UInt> txStream{ m_tx.data };
 	valid(txStream) = m_tx.valid;
 	m_tx.ready = ready(txStream);
@@ -405,6 +406,7 @@ void gtry::scl::usb::GpioPhy::generateRx(const VStream<UInt>& in)
 	HCL_NAMED(requireCrcCheck);
 	m_rx.error = m_rx.eop & (!m_crcMatch & requireCrcCheck);
 	HCL_NAMED(m_rx);
+	//tap(m_rx);
 
 	IF(m_status.rxActive)
 	{

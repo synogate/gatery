@@ -199,6 +199,10 @@ void gtry::scl::usb::Function::generateInitialFsm()
 	ackExpected = reg(ackExpected, '0');
 	HCL_NAMED(ackExpected);
 
+	Bit incompleteTransfer;
+	incompleteTransfer = reg(incompleteTransfer, '0');
+	HCL_NAMED(incompleteTransfer);
+
 	m_tx.commit = '0';
 	m_tx.rollback = '0';
 
@@ -273,7 +277,7 @@ void gtry::scl::usb::Function::generateInitialFsm()
 					{
 						IF(m_pid.upper(2_b) == 2) // in
 						{
-							IF(m_tx.valid & m_tx.endPoint == m_endPoint)
+							IF(incompleteTransfer | (m_tx.valid & m_tx.endPoint == m_endPoint))
 							{
 								m_sendDataState = State::sendData;
 								m_state = State::sendDataPid;
@@ -478,8 +482,8 @@ void gtry::scl::usb::Function::generateInitialFsm()
 	IF(m_state.current() == State::sendData)
 	{
 		PhyTxStream& tx = m_phy.tx;
-
-		IF(m_tx.valid & m_tx.endPoint == m_endPoint & m_packetLen != m_packetLenTxLimit)
+		Bit lenghtLimitReached = m_packetLen == m_packetLenTxLimit;
+		IF(m_tx.valid & m_tx.endPoint == m_endPoint & !lenghtLimitReached)
 		{
 			m_tx.ready = tx.ready;
 			tx.valid = '1';
@@ -487,6 +491,7 @@ void gtry::scl::usb::Function::generateInitialFsm()
 		}
 		ELSE
 		{
+			incompleteTransfer = lenghtLimitReached;
 			m_packetLenTxLimit = m_packetLen;
 			ackExpected = '1';
 			m_state = State::waitForToken;
