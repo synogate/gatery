@@ -104,7 +104,7 @@ namespace gtry::scl::usb
 	class SimuHostController
 	{
 	public:
-		SimuHostController(SimuBusBase& bus, Descriptor* descriptor);
+		SimuHostController(SimuBusBase& bus, const Descriptor& descriptor);
 
 		uint8_t functionAddress() const { return m_functionAddress; }
 		void functionAddress(uint8_t address) { m_functionAddress = address; }
@@ -138,7 +138,7 @@ namespace gtry::scl::usb
 	private:
 		Clock m_clock = ClockScope::getClk();
 		SimuBusBase& m_bus;
-		Descriptor* m_descriptor = nullptr;
+		Descriptor m_descriptor;
 		uint8_t m_functionAddress = 0;
 		uint8_t m_maxPacketLength = 64;
 	};

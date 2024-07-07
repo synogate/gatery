@@ -156,9 +156,9 @@ namespace gtry::scl::usb
 		co_return std::vector<std::byte>{};
 	}
 	
-	SimuHostController::SimuHostController(SimuBusBase& bus, Descriptor* descriptor) : m_bus(bus), m_descriptor(descriptor) {
-		if (descriptor)
-			m_maxPacketLength = descriptor->device()->MaxPacketSize;
+	SimuHostController::SimuHostController(SimuBusBase& bus, const Descriptor& descriptor) : m_bus(bus), m_descriptor(descriptor) {
+		if(m_descriptor.device())
+			m_maxPacketLength = m_descriptor.device()->MaxPacketSize;
 	}
 	
 	SimFunction<std::optional<Pid>> SimuHostController::receivePid(size_t timeoutCycles)
@@ -376,23 +376,20 @@ namespace gtry::scl::usb
 		{
 			HCL_ASSERT(uint8_t(data[1]) == type);
 
-			if (m_descriptor)
+			bool firstDescFound = false;
+			std::span<const std::byte> checkRange = data;
+			for (const DescriptorEntry& d : m_descriptor.entries())
 			{
-				bool firstDescFound = false;
-				std::span<const std::byte> checkRange = data;
-				for (const DescriptorEntry& d : m_descriptor->entries())
+				if (firstDescFound || index == d.index && type == d.type())
 				{
-					if (firstDescFound || index == d.index && type == d.type())
-					{
-						firstDescFound = true;
+					firstDescFound = true;
 
-						size_t checkLen = std::min(checkRange.size(), d.data.size());
-						HCL_ASSERT(!memcmp(d.data.data(), checkRange.data(), checkLen));
-						checkRange = checkRange.subspan(checkLen);
+					size_t checkLen = std::min(checkRange.size(), d.data.size());
+					HCL_ASSERT(!memcmp(d.data.data(), checkRange.data(), checkLen));
+					checkRange = checkRange.subspan(checkLen);
 
-						if (checkRange.empty() || type != ConfigurationDescriptor::TYPE)
-							break;
-					}
+					if (checkRange.empty() || type != ConfigurationDescriptor::TYPE)
+						break;
 				}
 			}
 		}
@@ -413,8 +410,8 @@ namespace gtry::scl::usb
 				HCL_ASSERT(uint8_t(data[0]) == sizeof(usb::DeviceDescriptor) + 2);
 				HCL_ASSERT(uint8_t(data[1]) == usb::DeviceDescriptor::TYPE);
 
-				if (m_descriptor && data.size() >= sizeof(usb::DeviceDescriptor) + 2)
-					HCL_ASSERT(!memcmp(data.data() + 2, m_descriptor->device(), sizeof(usb::DeviceDescriptor)))
+				if (m_descriptor.device() && data.size() >= sizeof(usb::DeviceDescriptor) + 2)
+					HCL_ASSERT(!memcmp(data.data() + 2, m_descriptor.device(), sizeof(usb::DeviceDescriptor)))
 			}
 		};
 		checkDevDescriptor(co_await transferIn(0));
@@ -432,24 +429,20 @@ namespace gtry::scl::usb
 		HCL_ASSERT(confDesc.size() >= 9);
 		HCL_ASSERT(!memcmp(confDesc.data(), confDescPrefix.data(), confDescPrefix.size()));
 
-		if (m_descriptor)
-		{
-			const DescriptorEntry& confDescEntry = descriptor(ConfigurationDescriptor::TYPE);
-			const size_t confDescSize = confDescEntry.data[2] | (confDescEntry.data[3] << 8);
-			HCL_ASSERT(confDesc.size() == confDescSize);
-		}
+		const DescriptorEntry& confDescEntry = descriptor(ConfigurationDescriptor::TYPE);
+		const size_t confDescSize = confDescEntry.data[2] | (confDescEntry.data[3] << 8);
+		HCL_ASSERT(confDesc.size() == confDescSize);
 
 		co_await controlSetConfiguration(1);
 	}
 	
 	const usb::DescriptorEntry& SimuHostController::descriptor(size_t type, size_t index)
 	{
-		if(m_descriptor)
-			for (const usb::DescriptorEntry& d : m_descriptor->entries())
-			{
-				if (d.type() == type && d.index == index)
-					return d;
-			}
+		for (const usb::DescriptorEntry& d : m_descriptor.entries())
+		{
+			if (d.type() == type && d.index == index)
+				return d;
+		}
 		throw std::runtime_error("descriptor not found");
 	}
 }
