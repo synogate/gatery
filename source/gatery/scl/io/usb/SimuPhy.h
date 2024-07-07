@@ -70,20 +70,15 @@ namespace gtry::scl::usb
 		nyet	= 0b0110,
 	};
 
-	class SimuHostBase
+	class SimuBusBase
 	{
 	public:
 		virtual SimProcess deviceReset() = 0;
 		virtual SimProcess send(std::span<const std::byte> data) = 0;
 		virtual SimFunction<std::vector<std::byte>> receive(size_t timeoutCycles = 5) = 0;
-
-		SimProcess sendToken(Pid pid, uint16_t data);
-		SimProcess sendToken(Pid pid, size_t address, size_t endPoint);
-		SimProcess sendData(Pid pid, std::span<const std::byte> data);
-		SimProcess sendHandshake(Pid pid);
 	};
 
-	class SimuPhy : public Phy, public SimuHostBase
+	class SimuPhy : public Phy, public SimuBusBase
 	{
 	public:
 		SimuPhy(std::string pinPrefix = "simu_usb_");
@@ -109,19 +104,42 @@ namespace gtry::scl::usb
 	class SimuHostController
 	{
 	public:
-		SimuHostController(SimuHostBase& host) : m_host(host) {}
+		SimuHostController(SimuBusBase& bus, Descriptor* descriptor);
 
+		uint8_t functionAddress() const { return m_functionAddress; }
 		void functionAddress(uint8_t address) { m_functionAddress = address; }
 
+		SimuBusBase& bus() { return m_bus; }
+
+		SimProcess sendToken(Pid pid, uint16_t data);
+		SimProcess sendToken(Pid pid, size_t address, size_t endPoint);
+		SimProcess sendData(Pid pid, std::span<const std::byte> data);
+		SimProcess sendHandshake(Pid pid);
 		SimFunction<std::optional<Pid>> receivePid(size_t timeoutCycles = 16);
-		SimFunction<bool> transferSetup(SimSetupPacket packet);
+
 		SimFunction<std::vector<std::byte>> transferIn(size_t endPoint);
+		SimFunction<std::vector<std::byte>> transferInBatch(size_t endPoint, size_t length);
+		SimFunction<std::optional<Pid>> transferOut(size_t endPoint, std::span<const std::byte> data, Pid dataPid = Pid::data0, Pid tokenPid = Pid::out);
+		SimFunction<size_t> transferOutBatch(size_t endPoint, std::span<const std::byte> data);
+		SimFunction<bool> transferSetup(usb::SimSetupPacket packet);
+
+		SimFunction<bool> controlTransferOut(usb::SimSetupPacket packet, std::span<const std::byte> data = {});
+		SimFunction<std::vector<std::byte>> controlTransferIn(usb::SimSetupPacket packet);
+		SimFunction<bool> controlSetAddress(uint8_t newAddress);
+		SimFunction<bool> controlSetConfiguration(uint8_t configuration);
+
+		SimFunction<std::vector<std::byte>> readDescriptor(uint16_t type, uint8_t index, uint16_t length);
+		SimProcess testWindowsDeviceDiscovery();
+
+	protected:
+		void checkPacketBitErrors(std::span<const std::byte> packet);
+		const usb::DescriptorEntry& descriptor(size_t type, size_t index = 0);
 
 	private:
 		Clock m_clock = ClockScope::getClk();
-		SimuHostBase& m_host;
-
+		SimuBusBase& m_bus;
+		Descriptor* m_descriptor = nullptr;
 		uint8_t m_functionAddress = 0;
-		std::mt19937 m_rng;
+		uint8_t m_maxPacketLength = 64;
 	};
 }

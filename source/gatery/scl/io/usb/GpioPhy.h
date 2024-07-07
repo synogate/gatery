@@ -25,7 +25,7 @@
 
 namespace gtry::scl::usb
 {
-	class GpioPhy : public Phy, public SimuHostBase
+	class GpioPhy : public Phy, public SimuBusBase
 	{
 	public:
 		GpioPhy();
