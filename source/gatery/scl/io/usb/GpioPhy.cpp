@@ -428,6 +428,7 @@ void gtry::scl::usb::GpioPhy::generateRx(const VStream<Bit, SingleEnded>& in)
 	HCL_NAMED(requireCrcCheck);
 	m_rx.error = m_rx.eop & (!m_crcMatch & requireCrcCheck);
 	HCL_NAMED(m_rx);
+	//tap(m_rx);
 
 	IF(m_status.rxActive)
 	{

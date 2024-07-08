@@ -1,6 +1,12 @@
-#include "BitBangEngineDriver.h"
 #include <iostream>
+#include "BitBangEngineDriver.h"
 #include <numeric>
+
+#ifdef _WIN32
+static std::string g_device_path = bitbang::find_device_path(0x1D50, 0x0000);
+#else
+static const char* g_device_path = "/dev/ttyACM0";
+#endif
 
 //                                    TEMP_CFG_REG|CTRLREG1| 2      | 3      | 4      | 5      | 6      | REFCAP
 static const uint64_t lis2dh13_config = 0b11000000'11100111'00000000'00000000'10000000'00000000'00000000'00000000;
@@ -41,9 +47,9 @@ void lis2dh13_i2c(boost::asio::serial_port& serial)
 		}
 
 		std::cout << " length: " << std::inner_product(acceleration.begin(), acceleration.end(), acceleration.begin(), 0.);
-		std::cout << '\r';
+		std::cout << '\r' << std::flush;
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(250));
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
 	}
 }
 
@@ -79,9 +85,9 @@ void lis2dh13_spi(boost::asio::serial_port& serial)
 		}
 
 		std::cout << " length: " << std::inner_product(acceleration.begin(), acceleration.end(), acceleration.begin(), 0.);
-		std::cout << '\r';
+		std::cout << '\r' << std::flush;
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(250));
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
 	}
 }
 
@@ -114,9 +120,9 @@ void lis2dh13_threewire(boost::asio::serial_port& serial)
 		}
 
 		std::cout << " length: " << std::inner_product(acceleration.begin(), acceleration.end(), acceleration.begin(), 0.);
-		std::cout << '\r';
+		std::cout << '\r' << std::flush;
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(250));
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
 	}
 }
 
@@ -124,7 +130,7 @@ int main()
 {
 	try {
 		boost::asio::io_service io;
-		boost::asio::serial_port serial = bitbang::device_open(io, "COM15"); // Change to your COM port device name (COM0, /dev/acm0, /dev/ttyUSB0, etc)
+		boost::asio::serial_port serial = bitbang::device_open(io, g_device_path);
 
 		//lis2dh13_i2c(serial);
 		lis2dh13_spi(serial);

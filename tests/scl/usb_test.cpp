@@ -51,6 +51,8 @@ public:
 		setupDescriptor(*m_func);
 		setupPhy(*m_func);
 		pin(*m_func);
+
+		m_controller.emplace(*m_host, &m_func->descriptor());
 	}
 	
 	virtual void setupDescriptor(usb::Function& func)
@@ -113,314 +115,16 @@ public:
 		}
 	}
 
-	SimFunction<std::optional<Pid>> receivePid(size_t timeoutCycles = 16)
-	{
-		std::vector<std::byte> data = co_await m_host->receive(timeoutCycles);
-		BOOST_TEST(data.size() == 1);
-		checkPacketBitErrors(data);
-
-		if (data.size() == 1)
-			co_return (Pid)(uint8_t(data[0]) & 0xF);
-		co_return std::nullopt;
-	}
-
-	SimFunction<std::vector<std::byte>> transferIn(size_t endPoint)
-	{
-		co_await m_host->sendToken(Pid::in, m_functionAddress, endPoint);
-
-		std::vector<std::byte> data = co_await m_host->receive();
-		checkPacketBitErrors(data);
-
-		if(data.size() >= 3)
-		{
-			co_await m_host->sendHandshake(Pid::ack);
-			co_return std::vector<std::byte>(data.begin() + 1, data.end() - 2);
-		}
-		co_return std::vector<std::byte>{};
-	}
-
-	void checkPacketBitErrors(std::span<const std::byte> packet)
-	{
-		BOOST_TEST((packet.size() == 1 || packet.size() >= 3));
-
-		if (packet.size() >= 1)
-		{
-			uint8_t pid = uint8_t(packet[0]) & 0xF;
-			uint8_t pidCheck = uint8_t(packet[0]) >> 4;
-			BOOST_TEST(pid == (pidCheck ^ 0xF));
-
-			if (packet.size() == 1)
-				BOOST_TEST(((pid == uint8_t(Pid::nak)) | (pid == uint8_t(Pid::ack))));
-			else
-				// TODO: check which one is expected
-				BOOST_TEST((pid == uint8_t(Pid::data0) || pid == uint8_t(Pid::data1)));
-		}
-
-		if (packet.size() >= 3)
-		{
-			switch (uint8_t(packet[0]) & 0x3)
-			{
-			case 0b01: // token
-				BOOST_TEST(packet.size() == 3);
-				BOOST_TEST(simu_crc5_usb_verify(uint16_t(packet[1]) | (uint16_t(packet[2]) << 8)));
-				break;
-			case 0b11: // data
-			{
-				std::span<const std::byte> checkedData = packet.subspan(1);
-				size_t crcCheck = boost::crc<16, 0x8005, 0xFFFF, 0xFFFF, true, true>(checkedData.data(), checkedData.size());
-				BOOST_TEST(crcCheck == 0x4FFE);
-				break;
-			}
-			default:;
-			}
-		}
-	}
-
-	SimFunction<std::vector<std::byte>> transferInBatch(size_t endPoint, size_t length)
-	{
-		std::vector<std::byte> ret;
-		while (true)
-		{
-			std::vector<std::byte> packet = co_await transferIn(endPoint);
-			ret.insert(ret.end(), packet.begin(), packet.end());
-
-			if (packet.size() != m_maxPacketLength || ret.size() >= length)
-				co_return ret;
-		}
-	}
-
-	SimFunction<std::optional<Pid>> transferOut(size_t endPoint, std::span<const std::byte> data, Pid dataPid = Pid::data0, Pid tokenPid = Pid::out)
-	{
-		co_await m_host->sendToken(tokenPid, m_functionAddress, endPoint);
-		co_await m_host->sendData(dataPid, data);
-		co_return co_await receivePid();
-	}
-
-	SimFunction<size_t> transferOutBatch(size_t endPoint, std::span<const std::byte> data)
-	{
-		Pid dataPid = Pid::data0;
-		size_t sent = 0;
-		while (sent < data.size())
-		{
-			std::span<const std::byte> packet = data.subspan(sent, std::min<size_t>(data.size() - sent, m_maxPacketLength));
-			std::optional<Pid> pid = co_await transferOut(endPoint, packet, dataPid);
-			if (!pid || *pid == Pid::stall)
-				break;
-			if(*pid == Pid::ack)
-			{
-				sent += packet.size();
-				dataPid = dataPid == Pid::data0 ? Pid::data1 : Pid::data0;
-			}
-			else
-				BOOST_TEST((*pid == Pid::nak));
-		}
-		co_return sent;
-	}
-
-	SimFunction<bool> transferSetup(usb::SimSetupPacket packet)
-	{
-		std::array<std::uint8_t, 8> setupPacket;
-		setupPacket[0] = uint8_t(packet.direction) << 7 | uint8_t(packet.type) << 5 | uint8_t(packet.recipient);
-		setupPacket[1] = uint8_t(packet.request);
-		setupPacket[2] = uint8_t(packet.value);
-		setupPacket[3] = uint8_t(packet.value >> 8);
-		setupPacket[4] = uint8_t(packet.index);
-		setupPacket[5] = uint8_t(packet.index >> 8);
-		setupPacket[6] = uint8_t(packet.length);
-		setupPacket[7] = uint8_t(packet.length >> 8);
-
-		std::optional<Pid> pid = co_await transferOut(0, std::as_bytes(std::span(setupPacket)), Pid::data0, Pid::setup);
-		BOOST_TEST(pid.has_value());
-		if (pid)
-		{
-			BOOST_TEST((*pid == Pid::ack));
-			co_return *pid == Pid::ack;
-		}
-		co_return false;
-	}
-
-	SimFunction<bool> controlTransferOut(usb::SimSetupPacket packet, std::span<const std::byte> data = {})
-	{
-		HCL_DESIGNCHECK(data.size_bytes() == packet.length);
-		HCL_DESIGNCHECK_HINT(packet.length <= 64, "no impl");
-
-		co_await transferSetup(packet);
-
-		// optional transfer stage
-		if (packet.length != 0)
-		{
-			std::optional<Pid> pid = co_await transferOut(0, data);
-			HCL_DESIGNCHECK(pid.has_value()); // timeout should trigger retry
-			if (pid)
-			{
-				HCL_DESIGNCHECK(*pid != Pid::nak); // should trigger retry
-				BOOST_TEST((*pid == Pid::ack));
-			}
-			if (!pid || *pid != Pid::ack)
-				co_return false;
-		}
-
-		std::vector<std::byte> status = co_await transferIn(0);
-		BOOST_TEST(status.empty());
-		co_return status.empty();
-	}
-
-	SimFunction<std::vector<std::byte>> controlTransferIn(usb::SimSetupPacket packet)
-	{
-		co_await transferSetup(packet);
-
-		std::vector<std::byte> data;
-		if (packet.length != 0)
-		{
-			data = co_await transferInBatch(0, packet.length);
-			BOOST_TEST(data.size() <= packet.length);
-		}
-
-		std::optional<Pid> pid = co_await transferOut(0, {});
-		BOOST_TEST(pid.has_value());
-		if (pid)
-		{
-			BOOST_TEST((*pid == Pid::ack));
-			if (*pid == Pid::ack)
-				co_return data;
-		}
-		co_return std::vector<std::byte>{};
-	}
-
-	SimFunction<bool> controlSetAddress(uint8_t newAddress)
-	{
-		sim::SimulationContext::current()->onDebugMessage(nullptr, "set address");
-
-		bool success = co_await controlTransferOut({
-			.direction = usb::EndpointDirection::out,
-			.request = usb::SetupRequest::SET_ADDRESS,
-			.value = newAddress
-		});
-
-		if (success)
-			m_functionAddress = newAddress;
-
-		co_return success;
-	}
-
-	SimFunction<bool> controlSetConfiguration(uint8_t configuration)
-	{
-		sim::SimulationContext::current()->onDebugMessage(nullptr, "set configuration");
-
-		return controlTransferOut({
-			.direction = usb::EndpointDirection::out,
-			.request = usb::SetupRequest::SET_CONFIGURATION,
-			.value = configuration
-		});
-	}
-
-	SimFunction<std::vector<std::byte>> readDescriptor(uint16_t type, uint8_t index, uint16_t length)
-	{
-		sim::SimulationContext::current()->onDebugMessage(nullptr, "read descriptor " + std::to_string(type));
-
-		std::vector<std::byte> data = co_await controlTransferIn({ 
-			.value = uint16_t(type << 8 | index), 
-			.length = length,
-		});
-
-		BOOST_TEST(data.size() >= 2);
-		if (data.size() >= 2)
-		{
-			BOOST_TEST(uint8_t(data[1]) == type);
-			
-			bool firstDescFound = false;
-			std::span<const std::byte> checkRange = data;
-			for (const DescriptorEntry& d : m_func->descriptor().entries())
-			{
-				if (firstDescFound || index == d.index && type == d.type())
-				{
-					firstDescFound = true;
-
-					size_t checkLen = std::min(checkRange.size(), d.data.size());
-					BOOST_TEST(!memcmp(d.data.data(), checkRange.data(), checkLen));
-					checkRange = checkRange.subspan(checkLen);
-
-					if (checkRange.empty() || type != ConfigurationDescriptor::TYPE)
-						break;
-				}
-			}
-		}
-
-		co_return data;
-	}
-
-	SimProcess testWindowsDeviceDiscovery()
-	{
-		sim::SimulationContext::current()->onDebugMessage(nullptr, "ask for the first 64b of the descriptor");
-		co_await transferSetup({ .value = uint16_t(DeviceDescriptor::TYPE) << 8, .length = 64 });
-
-		auto checkDevDescriptor = [&](const std::vector<std::byte>& data) {
-			BOOST_TEST(data.size() == std::min<size_t>(sizeof(usb::DeviceDescriptor) + 2, m_maxPacketLength));
-
-			if (data.size() >= 2)
-			{
-				BOOST_TEST(uint8_t(data[0]) == sizeof(usb::DeviceDescriptor) + 2);
-				BOOST_TEST(uint8_t(data[1]) == usb::DeviceDescriptor::TYPE);
-
-				if (data.size() >= sizeof(usb::DeviceDescriptor) + 2)
-					BOOST_TEST(!memcmp(data.data() + 2, m_func->descriptor().device(), sizeof(usb::DeviceDescriptor)));
-			}
-			};
-		checkDevDescriptor(co_await transferIn(0));
-
-		sim::SimulationContext::current()->onDebugMessage(nullptr, "reset device");
-		co_await m_host->deviceReset();
-		if (m_pinStatusRegister)
-		{
-			BOOST_TEST(simu(m_func->deviceAddress()) == 0);
-			BOOST_TEST(simu(m_func->configuration()) == 0);
-		}
-
-		co_await controlSetAddress(5);
-
-		co_await readDescriptor(DeviceDescriptor::TYPE, 0, 18);
-		std::vector<std::byte> confDescPrefix = co_await readDescriptor(ConfigurationDescriptor::TYPE, 0, 9);
-		BOOST_TEST(confDescPrefix.size() == 9);
-
-		std::vector<std::byte> confDesc = co_await readDescriptor(ConfigurationDescriptor::TYPE, 0, 255);
-		BOOST_TEST(confDesc.size() >= 9);
-		BOOST_TEST(!memcmp(confDesc.data(), confDescPrefix.data(), confDescPrefix.size()));
-
-		const DescriptorEntry& confDescEntry = descriptor(ConfigurationDescriptor::TYPE);
-		const size_t confDescSize = confDescEntry.data[2] | (confDescEntry.data[3] << 8);
-		BOOST_TEST(confDesc.size() == confDescSize);
-
-		co_await controlSetConfiguration(1);
-
-		if (m_pinStatusRegister)
-		{
-			BOOST_TEST(simu(m_func->configuration()) == 1);
-			BOOST_TEST(simu(m_func->deviceAddress()) == m_functionAddress);
-		}
-	}
-
-	const usb::DescriptorEntry& descriptor(size_t type, size_t index = 0)
-	{ 
-		for (const usb::DescriptorEntry& d : m_func->descriptor().entries())
-		{
-			if (d.type() == type && d.index == index)
-				return d;
-		}
-		throw std::runtime_error("descriptor not found");
-	}
-
 protected:
 	bool m_useSimuPhy = true;
 	bool m_pinApplicationInterface = true;
 	bool m_pinStatusRegister = true;
+	uint8_t m_maxPacketLength = 64;
+	std::list<std::function<void(Function&)>> m_setupCallback;
 
 	std::optional<usb::Function> m_func;
-	usb::SimuHostBase* m_host = nullptr;
-
-	uint8_t m_functionAddress = 0;
-	uint8_t m_maxPacketLength = 64;
-
-	std::list<std::function<void(Function&)>> m_setupCallback;
+	usb::SimuBusBase* m_host = nullptr;
+	std::optional<usb::SimuHostController> m_controller;
 };
 
 
@@ -437,18 +141,18 @@ BOOST_FIXTURE_TEST_CASE(usb_windows_discovery, UsbFixture)
 	addSimulationProcess([&]() -> SimProcess {
 		co_await OnClk(clock);
 
-		co_await m_host->sendToken(usb::Pid::sof, 0x2CD);
-		co_await testWindowsDeviceDiscovery();
+		co_await m_controller->sendToken(usb::Pid::sof, 0x2CD);
+		co_await m_controller->testWindowsDeviceDiscovery();
 		BOOST_TEST(simu(m_func->frameId()) == 0x2CD);
 
 		// send data
 		sim::SimulationContext::current()->onDebugMessage(nullptr, "transfer out");
 		const char testString[] = "Hello World!!!";
-		std::optional<Pid> pid = co_await transferOut(1, std::as_bytes(std::span(testString)));
+		std::optional<Pid> pid = co_await m_controller->transferOut(1, std::as_bytes(std::span(testString)));
 		BOOST_TEST((pid && *pid == Pid::ack));
 
 		// receive nothing
-		std::vector<std::byte> dataIn = co_await transferIn(1);
+		std::vector<std::byte> dataIn = co_await m_controller->transferIn(1);
 		BOOST_TEST(dataIn.empty());
 
 		stopTest();
@@ -512,7 +216,7 @@ BOOST_FIXTURE_TEST_CASE(usb_loopback_cyc10, SingleEndpointUsbFixture, *boost::un
 	addSimulationProcess([&]() -> SimProcess {
 		co_await OnClk(clock);
 		//co_await testWindowsDeviceDiscovery();
-		co_await controlSetConfiguration(1);
+		co_await m_controller->controlSetConfiguration(1);
 
 		co_await WaitFor({ 20, 1'000'000 });
 
@@ -521,18 +225,18 @@ BOOST_FIXTURE_TEST_CASE(usb_loopback_cyc10, SingleEndpointUsbFixture, *boost::un
 
 		// receive a packet but do not ack
 		sim::SimulationContext::current()->onDebugMessage(nullptr, "data 1");
-		co_await m_host->sendToken(Pid::in, m_functionAddress, 1);
+		co_await m_controller->sendToken(Pid::in, m_controller->functionAddress(), 1);
 		std::vector<std::byte> data = co_await m_host->receive();
 
 		sim::SimulationContext::current()->onDebugMessage(nullptr, "control");
-		co_await controlTransferOut({
+		co_await m_controller->controlTransferOut({
 			.direction = usb::EndpointDirection::out,
 			.request = usb::SetupRequest::CLEAR_FEATURE,
 			.index = 0x81
 		});
 
 		sim::SimulationContext::current()->onDebugMessage(nullptr, "data 2");
-		std::vector<std::byte> data2 = co_await transferIn(1);
+		std::vector<std::byte> data2 = co_await m_controller->transferIn(1);
 
 		stopTest();
 	});
@@ -706,8 +410,8 @@ BOOST_FIXTURE_TEST_CASE(usb_to_uart_cyc1000, SingleEndpointUsbFixture, *boost::u
 
 	addSimulationProcess([&]() -> SimProcess {
 		co_await OnClk(clock);
-		//co_await testWindowsDeviceDiscovery();
-		co_await controlSetConfiguration(1);
+		//co_await m_controller->testWindowsDeviceDiscovery();
+		co_await m_controller->controlSetConfiguration(1);
 
 		stopTest();
 	});
@@ -785,8 +489,8 @@ BOOST_FIXTURE_TEST_CASE(usb_to_bitbang_max10deca, SingleEndpointUsbFixture, *boo
 		simu(bitbang.io(2).in) = '1';
 
 		co_await OnClk(clock);
-		//co_await testWindowsDeviceDiscovery();
-		co_await controlSetConfiguration(1);
+		co_await m_controller->testWindowsDeviceDiscovery();
+		co_await m_controller->controlSetConfiguration(1);
 
 		std::vector<uint8_t> commands = {
 			// spi setup
@@ -794,12 +498,18 @@ BOOST_FIXTURE_TEST_CASE(usb_to_bitbang_max10deca, SingleEndpointUsbFixture, *boo
 			// spi transfer, send a command byte and receive 8 bytes of data
 			0xc1, 0x13, 0x07, 0xdf, 0xc1, 0x23, 0x3f, 0xc9,
 		};
-		co_await this->transferOutBatch(1, std::as_bytes(std::span(commands)));
+		co_await m_controller->transferOutBatch(1, std::as_bytes(std::span(commands)));
 
-		std::vector<std::byte> result = co_await this->transferInBatch(1, 64);
+
+		std::vector<std::byte> result;
+		while (result.size() < 8)
+		{
+			std::vector<std::byte> packet = co_await m_controller->transferInBatch(1, 64);
+			for (size_t i = 0; i < packet.size(); ++i)
+				BOOST_TEST((packet[i] == std::byte(0xFF)));
+			result.insert(result.end(), packet.begin(), packet.end());
+		}
 		BOOST_TEST(result.size() == 8);
-		for (size_t i = 0; i < result.size(); ++i)
-			BOOST_TEST((result[i] == std::byte(0xFF)));
 
 		for(size_t i = 0; i < 128; ++i)
 			co_await OnClk(clock);
@@ -844,19 +554,19 @@ BOOST_FIXTURE_TEST_CASE(usb_resend_setup_interrupted, UsbFixture)
 
 	addSimulationProcess([&]() -> SimProcess {
 		co_await OnClk(clock);
-		co_await controlSetConfiguration(1);
+		co_await m_controller->controlSetConfiguration(1);
 
 		co_await WaitFor({ 20, 1'000'000 });
 
 		// receive a packet but do not ack
 		sim::SimulationContext::current()->onDebugMessage(nullptr, "data 1");
-		co_await m_host->sendToken(Pid::in, m_functionAddress, 1);
-		std::vector<std::byte> data1 = co_await m_host->receive();
+		co_await m_controller->sendToken(Pid::in, m_controller->functionAddress(), 1);
+		std::vector<std::byte> data1 = co_await m_controller->bus().receive();
 		BOOST_TEST(data1.size() > 3);
 
 		// interrupt by control transfer which changes the endpoint
 		sim::SimulationContext::current()->onDebugMessage(nullptr, "control");
-		co_await controlTransferOut({
+		co_await m_controller->controlTransferOut({
 			.direction = usb::EndpointDirection::out,
 			.request = usb::SetupRequest::CLEAR_FEATURE,
 			.index = 0x81
@@ -865,8 +575,8 @@ BOOST_FIXTURE_TEST_CASE(usb_resend_setup_interrupted, UsbFixture)
 		co_await WaitFor({ 20, 1'000'000 });
 
 		sim::SimulationContext::current()->onDebugMessage(nullptr, "data 2");
-		co_await m_host->sendToken(Pid::in, m_functionAddress, 1);
-		std::vector<std::byte> data2 = co_await m_host->receive();
+		co_await m_controller->sendToken(Pid::in, m_controller->functionAddress(), 1);
+		std::vector<std::byte> data2 = co_await m_controller->bus().receive();
 		BOOST_TEST(data1 == data2);
 
 		stopTest();

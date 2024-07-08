@@ -420,9 +420,11 @@ RvStream<BVec> BitBangEngine::generate(RvStream<BVec> command, size_t numIo)
 		io.out = reg(io.out, '0');
 		io.en = reg(io.en, '0');
 		io.openDrain = reg(io.openDrain, '0');
-		io.in = '0';
 	}
 	HCL_NAMED(m_io);
+	for (Io& io : m_io)
+		io.in = '0';
+
 	HCL_NAMED(out);
 	return out;
 }

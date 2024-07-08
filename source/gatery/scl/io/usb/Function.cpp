@@ -21,6 +21,7 @@
 
 #include "../../Counter.h"
 #include "../../utils/OneHot.h"
+#include "../../stream/streamFifo.h"
 
 gtry::scl::usb::Function::Function() :
 	m_area{"usbFunction", true}
@@ -157,6 +158,32 @@ void gtry::scl::usb::Function::attachTxFifo(TransactionalFifo<StreamData>& fifo,
 	setName(m_tx, "tx");
 }
 
+gtry::scl::RvStream<gtry::BVec> gtry::scl::usb::Function::rxEndPointFifo(size_t endPoint, size_t fifoDpeth)
+{
+	TransactionalFifo<StreamData> fifo{ fifoDpeth };
+	attachRxFifo(fifo, 1 << endPoint);
+
+	RvStream<BVec> out =
+		strm::pop(fifo)
+		.transform([](const StreamData& data) { return (BVec)data.data; });
+
+	fifo.generate();
+	setName(out, "usbep" + std::to_string(endPoint) + "_rx");
+	return out;
+}
+
+void gtry::scl::usb::Function::txEndPointFifo(size_t endPoint, size_t fifoDpeth, RvStream<BVec> data)
+{
+	TransactionalFifo<StreamData> fifo{ fifoDpeth };
+	attachTxFifo(fifo, 1 << endPoint);
+
+	data
+		.transform([=](const BVec& d) { return StreamData{ .data = (UInt)d, .endPoint = endPoint }; })
+		| strm::push(fifo);
+
+	fifo.generate();
+}
+
 void gtry::scl::usb::Function::generateCapturePacket()
 {
 	const PhyRxStream& rx = m_phy.rx;
@@ -198,6 +225,10 @@ void gtry::scl::usb::Function::generateInitialFsm()
 	Bit ackExpected;
 	ackExpected = reg(ackExpected, '0');
 	HCL_NAMED(ackExpected);
+
+	Bit incompleteTransfer;
+	incompleteTransfer = reg(incompleteTransfer, '0');
+	HCL_NAMED(incompleteTransfer);
 
 	m_tx.commit = '0';
 	m_tx.rollback = '0';
@@ -273,8 +304,15 @@ void gtry::scl::usb::Function::generateInitialFsm()
 					{
 						IF(m_pid.upper(2_b) == 2) // in
 						{
-							m_sendDataState = State::sendData;
-							m_state = State::sendDataPid;
+							IF(incompleteTransfer | (m_tx.valid & m_tx.endPoint == m_endPoint))
+							{
+								m_sendDataState = State::sendData;
+								m_state = State::sendDataPid;
+							}
+							ELSE
+							{
+								sendHandshake(Handshake::NAK);
+							}
 						}
 						IF(m_pid.upper(2_b) == 0) // out
 						{
@@ -301,6 +339,8 @@ void gtry::scl::usb::Function::generateInitialFsm()
 			{
 				SetupPacket setup;
 				unpack(m_packetData, setup);
+				HCL_NAMED(setup);
+
 				sendHandshake(Handshake::STALL);
 				m_descLength = 0; // zero length status stage
 
@@ -471,8 +511,8 @@ void gtry::scl::usb::Function::generateInitialFsm()
 	IF(m_state.current() == State::sendData)
 	{
 		PhyTxStream& tx = m_phy.tx;
-
-		IF(m_tx.valid & m_tx.endPoint == m_endPoint & m_packetLen != m_packetLenTxLimit)
+		Bit lenghtLimitReached = m_packetLen == m_packetLenTxLimit;
+		IF(m_tx.valid & m_tx.endPoint == m_endPoint & !lenghtLimitReached)
 		{
 			m_tx.ready = tx.ready;
 			tx.valid = '1';
@@ -480,6 +520,7 @@ void gtry::scl::usb::Function::generateInitialFsm()
 		}
 		ELSE
 		{
+			incompleteTransfer = lenghtLimitReached;
 			m_packetLenTxLimit = m_packetLen;
 			ackExpected = '1';
 			m_state = State::waitForToken;
