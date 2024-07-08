@@ -52,7 +52,7 @@ public:
 		setupPhy(*m_func);
 		pin(*m_func);
 
-		m_controller.emplace(*m_host, &m_func->descriptor());
+		m_controller.emplace(*m_host, m_func->descriptor());
 	}
 	
 	virtual void setupDescriptor(usb::Function& func)
@@ -231,7 +231,7 @@ BOOST_FIXTURE_TEST_CASE(usb_loopback_cyc10, SingleEndpointUsbFixture, *boost::un
 		sim::SimulationContext::current()->onDebugMessage(nullptr, "control");
 		co_await m_controller->controlTransferOut({
 			.direction = usb::EndpointDirection::out,
-			.request = usb::SetupRequest::CLEAR_FEATURE,
+			.request = uint8_t(usb::SetupRequest::CLEAR_FEATURE),
 			.index = 0x81
 		});
 
@@ -568,7 +568,7 @@ BOOST_FIXTURE_TEST_CASE(usb_resend_setup_interrupted, UsbFixture)
 		sim::SimulationContext::current()->onDebugMessage(nullptr, "control");
 		co_await m_controller->controlTransferOut({
 			.direction = usb::EndpointDirection::out,
-			.request = usb::SetupRequest::CLEAR_FEATURE,
+			.request = uint8_t(usb::SetupRequest::CLEAR_FEATURE),
 			.index = 0x81
 		});
 
