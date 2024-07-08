@@ -66,6 +66,7 @@ namespace gtry::scl::usb
 		PhyTxStream m_tx;
 		PhyRxStream m_rx;
 
+		Bit m_se0;
 		Bit m_crcEn;
 		Bit m_crcIn;
 		Bit m_crcOut;

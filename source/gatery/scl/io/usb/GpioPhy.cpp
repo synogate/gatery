@@ -131,6 +131,9 @@ gtry::Bit gtry::scl::usb::GpioPhy::setup(OpMode mode)
 	m_status.rxActive = flagInstantSet(valid(lineInDecoded), valid(lineInDecoded) & lineInDecoded.template get<SingleEnded>().zero, '0');
 	HCL_NAMED(m_status);
 
+	m_se0 = lineInDecoded.template get<SingleEnded>().zero;
+	HCL_NAMED(m_se0);
+
 	generateCrc();
 	generateRx(lineInDecoded);
 	generateTx(dEn, dpOut, dnOut);
@@ -286,6 +289,24 @@ gtry::scl::usb::GpioPhy::Symbol gtry::scl::usb::GpioPhy::lineState() const
 	return undefined;
 }
 
+static gtry::Bit pulseExtender(gtry::Bit input, size_t cycles, gtry::Bit reset = '0') {
+	using namespace gtry;
+	using namespace gtry::scl;
+	Area area{ "scl_pulseExtender", true };
+
+	HCL_DESIGNCHECK(cycles != 0);
+
+	Counter pulseCtr(cycles + 1);
+
+	IF(input)
+		pulseCtr.reset();
+
+	HCL_NAMED(input);
+	Bit ret = flagInstantSet(input, (pulseCtr.isLast() & !input) | reset); HCL_NAMED(ret);
+
+	return ret;
+}
+
 void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 {
 	HCL_NAMED(m_tx);
@@ -298,7 +319,7 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 
 #if 0 // use this to inject random tx errors
 	IF(transfer(txPacketStream))
-		IF(Counter{45}.isLast())
+		IF(Counter{45}.isLast()) 
 			*txPacketStream ^= Counter{ 8_b }.value();
 #endif
 
@@ -318,31 +339,21 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 		txTimer.inc();
 	ELSE
 		txTimer.reset();
+
+	Bit wait = pulseExtender(
+		m_se0,
+		hlim::floor(m_clock.absoluteFrequency() / hlim::ClockRational{ 12'000'000 }) * 3);
+
+	txStuffedStream = scl::strm::stall(move(txStuffedStream), wait);
 	ready(txStuffedStream) = txTimer.isLast();
 
-
-	Counter txWaitTimer{ hlim::floor(m_clock.absoluteFrequency() / hlim::ClockRational{ 12'000'000 }) * 2};
-	Bit wait = flagInstantSet(edgeRising(valid(txStuffedStream)), txWaitTimer.isLast(), '0');
-	IF(wait)
-		txWaitTimer.inc();
-	ready(txStuffedStream) &= !wait;
-
-	en = valid(txStuffedStream) & !wait;
+	en = valid(txStuffedStream);
 	p = *txStuffedStream;
 	n = !p;
 
-	Counter se0Timer{ hlim::floor(m_clock.absoluteFrequency() / hlim::ClockRational{ 12'000'000 }) * 2 };
-	Bit se0;
-	IF(se0)
-		se0Timer.inc();
-	ELSE
-		se0Timer.reset();
-
-	IF(transfer(txStuffedStream) & eop(txStuffedStream))
-		se0 = '1';
-	IF(se0Timer.isLast())
-		se0 = '0';
-	se0 = reg(se0, '0');
+	Bit se0 = reg(pulseExtender(
+		transfer(txStuffedStream) & eop(txStuffedStream),
+		hlim::floor(m_clock.absoluteFrequency() / hlim::ClockRational{ 12'000'000 }) * 2), '0');
 	HCL_NAMED(se0);
 
 	IF(se0)
