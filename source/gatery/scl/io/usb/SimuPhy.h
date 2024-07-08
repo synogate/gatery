@@ -46,7 +46,7 @@ namespace gtry::scl::usb
 		EndpointDirection direction = EndpointDirection::in;
 		SetupType type = SetupType::standard;
 		SetupRecipient recipient = SetupRecipient::device;
-		SetupRequest request = SetupRequest::GET_DESCRIPTOR;
+		uint8_t request = uint8_t(SetupRequest::GET_DESCRIPTOR);
 		uint16_t value = 0;
 		uint16_t index = 0;
 		uint16_t length = 0;
@@ -141,5 +141,6 @@ namespace gtry::scl::usb
 		Descriptor m_descriptor;
 		uint8_t m_functionAddress = 0;
 		uint8_t m_maxPacketLength = 64;
+		Pid m_nextDataPidOut[16];
 	};
 }

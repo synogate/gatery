@@ -159,6 +159,9 @@ namespace gtry::scl::usb
 	SimuHostController::SimuHostController(SimuBusBase& bus, const Descriptor& descriptor) : m_bus(bus), m_descriptor(descriptor) {
 		if(m_descriptor.device())
 			m_maxPacketLength = m_descriptor.device()->MaxPacketSize;
+
+		for(Pid& p : m_nextDataPidOut)
+			p = Pid::data0;
 	}
 	
 	SimFunction<std::optional<Pid>> SimuHostController::receivePid(size_t timeoutCycles)
@@ -174,17 +177,20 @@ namespace gtry::scl::usb
 	
 	SimFunction<std::vector<std::byte>> SimuHostController::transferIn(size_t endPoint)
 	{
-		co_await sendToken(Pid::in, m_functionAddress, endPoint);
-
-		std::vector<std::byte> data = co_await bus().receive();
-		checkPacketBitErrors(data);
-
-		if (data.size() >= 3)
+		while (true)
 		{
-			co_await sendHandshake(Pid::ack);
-			co_return std::vector<std::byte>(data.begin() + 1, data.end() - 2);
+			co_await sendToken(Pid::in, m_functionAddress, endPoint);
+
+			std::vector<std::byte> data = co_await bus().receive();
+			checkPacketBitErrors(data);
+
+			if (data.size() >= 3)
+			{
+				co_await sendHandshake(Pid::ack);
+				co_return std::vector<std::byte>(data.begin() + 1, data.end() - 2);
+			}
+			HCL_ASSERT(data.size() == 1 && (uint8_t(data[0]) & 0xF) == std::uint8_t(Pid::nak));
 		}
-		co_return std::vector<std::byte>{};
 	}
 	
 	void SimuHostController::checkPacketBitErrors(std::span<const std::byte> packet)
@@ -246,18 +252,19 @@ namespace gtry::scl::usb
 	
 	SimFunction<size_t> SimuHostController::transferOutBatch(size_t endPoint, std::span<const std::byte> data)
 	{
-		Pid dataPid = Pid::data0;
+		HCL_ASSERT(endPoint < 16);
+
 		size_t sent = 0;
 		while (sent < data.size())
 		{
 			std::span<const std::byte> packet = data.subspan(sent, std::min<size_t>(data.size() - sent, m_maxPacketLength));
-			std::optional<Pid> pid = co_await transferOut(endPoint, packet, dataPid);
+			std::optional<Pid> pid = co_await transferOut(endPoint, packet, m_nextDataPidOut[endPoint]);
 			if (!pid || *pid == Pid::stall)
 				break;
 			if (*pid == Pid::ack)
 			{
 				sent += packet.size();
-				dataPid = dataPid == Pid::data0 ? Pid::data1 : Pid::data0;
+				m_nextDataPidOut[endPoint] = m_nextDataPidOut[endPoint] == Pid::data0 ? Pid::data1 : Pid::data0;
 			}
 			else
 				HCL_ASSERT((*pid == Pid::nak));
@@ -341,7 +348,7 @@ namespace gtry::scl::usb
 
 		bool success = co_await controlTransferOut({
 			.direction = usb::EndpointDirection::out,
-			.request = usb::SetupRequest::SET_ADDRESS,
+			.request = uint8_t(usb::SetupRequest::SET_ADDRESS),
 			.value = newAddress
 			});
 
@@ -357,7 +364,7 @@ namespace gtry::scl::usb
 
 		return controlTransferOut({
 			.direction = usb::EndpointDirection::out,
-			.request = usb::SetupRequest::SET_CONFIGURATION,
+			.request = uint8_t(usb::SetupRequest::SET_CONFIGURATION),
 			.value = configuration
 			});
 	}
