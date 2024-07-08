@@ -33,14 +33,14 @@ namespace gtry::scl {
 		Bit p = allowClockDomainCrossing(ioP, signalClock, logicClk);	setName(ioP, "in_p_pin");
 		Bit n = allowClockDomainCrossing(ioN, signalClock, logicClk);	setName(ioN, "in_n_pin");
 
-		BitWidth delayW = 4_b;
+		BitWidth delayW = 5_b;
 		UInt delay = delayW;
 		{
 			auto* pll = dynamic_cast<arch::intel::ALTPLL*> (DesignScope::get()->getCircuit().findFirstNodeByName("ALTPLL"));
 			HCL_DESIGNCHECK_HINT(pll != nullptr, "there is no altera pll in your design.");
 
 			hlim::ClockRational pllClkIn = pll->inClkFrequency();
-			hlim::ClockRational targetFastClockFrequency = { 200'000'000 };
+			hlim::ClockRational targetFastClockFrequency = { 400'000'000 };
 
 			size_t multiplier = (size_t)round(hlim::toDouble(targetFastClockFrequency / pllClkIn));
 
