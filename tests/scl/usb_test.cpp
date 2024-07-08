@@ -286,7 +286,7 @@ public:
 
 		addSimulationProcess([&]() -> SimProcess {
 			co_await OnClk(clock);
-			co_await testWindowsDeviceDiscovery();
+			co_await m_controller->testWindowsDeviceDiscovery();
 			stopTest();
 			});
 
