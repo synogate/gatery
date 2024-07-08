@@ -38,7 +38,13 @@ namespace gtry::scl {
 		{
 			auto* pll = dynamic_cast<arch::intel::ALTPLL*> (DesignScope::get()->getCircuit().findFirstNodeByName("ALTPLL"));
 			HCL_DESIGNCHECK_HINT(pll != nullptr, "there is no altera pll in your design.");
-			Clock fastClk = pll->generateUnspecificClock(16, 1, 50, 0);
+
+			hlim::ClockRational pllClkIn = pll->inClkFrequency();
+			hlim::ClockRational targetFastClockFrequency = { 200'000'000 };
+
+			size_t multiplier = (size_t)round(hlim::toDouble(targetFastClockFrequency / pllClkIn));
+
+			Clock fastClk = pll->generateUnspecificClock(multiplier, 1, 50, 0);
 			ClockScope fastScope(fastClk);
 
 			delay = allowClockDomainCrossing(delay, logicClk, fastClk);
