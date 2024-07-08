@@ -59,6 +59,9 @@ UnitTestSimulationFixture::~UnitTestSimulationFixture()
 {
 	gtry::dbg::stopInDebugger();
 
+	if (m_vhdlExport)
+		m_vhdlExport->clearTestbenchRecorder();
+
 	// Force destruct of simulator (and all frontend signals held inside coroutines) before destruction of DesignScope in base class.
 	m_simulator.reset(nullptr);
 }

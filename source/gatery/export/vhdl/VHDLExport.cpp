@@ -107,7 +107,7 @@ VHDLExport::VHDLExport(std::filesystem::path destination, std::filesystem::path 
 
 VHDLExport::~VHDLExport()
 {
-	m_testbenchRecorder.clear(); // Explicitly clear to trigger destructors and flushes before anything important destructs.
+	clearTestbenchRecorder(); // Explicitly clear to trigger destructors and flushes before anything important destructs.
 }
 
 VHDLExport &VHDLExport::outputMode(OutputMode outputMode)

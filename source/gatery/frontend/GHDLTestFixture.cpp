@@ -159,7 +159,7 @@ void GHDLTestFixture::prepRun()
 
 	m_vhdlExport.emplace(m_cwd / "design.vhd");
 	m_vhdlExport->outputMode(vhdlOutputMode);
-	m_vhdlExport->addTestbenchRecorder(getSimulator(), "testbench", true);
+	m_vhdlExport->addTestbenchRecorder(getSimulator(), "testbench", false);
 	m_vhdlExport->targetSynthesisTool(new GHDL());
 	m_vhdlExport->writeStandAloneProjectFile("compile.sh");
 	(*m_vhdlExport)(design.getCircuit());
