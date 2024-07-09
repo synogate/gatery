@@ -47,7 +47,7 @@ FileBasedTestbenchRecorder::FileBasedTestbenchRecorder(VHDLExport &exporter, AST
 
 FileBasedTestbenchRecorder::~FileBasedTestbenchRecorder()
 {
-	flush(m_writtenSimulationTime + Seconds{1,1'000'000});
+	flush(m_simulator.getCurrentSimulationTime());// + Seconds{1,1'000'000'000'000ull});
 }
 
 void FileBasedTestbenchRecorder::writeVHDL()
@@ -66,8 +66,6 @@ END )" << m_dependencySortedEntities.back() << R"(;
 ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 
 )";
-
-	findClocksAndPorts();
 
 	auto *rootEntity = m_ast->getRootEntity();
 
@@ -113,6 +111,8 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 	)";
 	
 
+	const std::string assertionSeverity = "warning";
+
 	vhdlFile << "BEGIN" << std::endl;
 
 	cf.indent(vhdlFile, 1);
@@ -122,6 +122,9 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 
 	cf.indent(vhdlFile, 1);
 	vhdlFile << ");" << std::endl;
+
+	for (auto &clock : m_clocksOfInterest)
+		buildClockProcess(m_testbenchFile->stream(), clock);	
 
 	cf.indent(vhdlFile, 1);
 	vhdlFile << "sim_process : PROCESS" << std::endl;
@@ -226,7 +229,7 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 			else
 				vhdlFile << "bread(v_line, v_" << p.second << ");" << std::endl;
 			cf.indent(vhdlFile, 5);
-			vhdlFile << "ASSERT std_match(" << p.second << ", v_" << p.second << ") severity failure;" << std::endl;
+			vhdlFile << "ASSERT std_match(" << p.second << ", v_" << p.second << ") severity " << assertionSeverity<< ";" << std::endl;
 		}
 		cf.indent(vhdlFile, 4);
 		vhdlFile << "ELSE" << std::endl;
@@ -237,7 +240,7 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 
 		cf.indent(vhdlFile, 4);
 		vhdlFile << "END IF;" << std::endl;
-
+#if 0
 	cf.indent(vhdlFile, 3);
 	vhdlFile << "ELSIF stringcompare(v_line(1 to v_line'length), \"CLK\") THEN" << std::endl;
 
@@ -273,7 +276,7 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 
 		cf.indent(vhdlFile, 4);
 		vhdlFile << "END IF;" << std::endl;
-
+#endif
 	cf.indent(vhdlFile, 3);
 	vhdlFile << "ELSIF stringcompare(v_line(1 to v_line'length), \"RST\") THEN" << std::endl;
 
@@ -339,19 +342,35 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 	vhdlFile << "WAIT;" << std::endl;
 	vhdlFile << "END PROCESS;" << std::endl;
 	vhdlFile << "END;" << std::endl;
-
-	m_writtenSimulationTime = 0;
-	m_flushIntervalStart = 0;
 }
 
 void FileBasedTestbenchRecorder::onPowerOn()
 {
+	findClocksAndPorts();
+
+	m_writtenSimulationTime = 0;
+	m_flushIntervalStart = 0;
+	m_phases.push_back({});
+}
+
+void FileBasedTestbenchRecorder::onAfterPowerOn()
+{
 	writeVHDL();
 }
 
+
+
 void FileBasedTestbenchRecorder::onNewTick(const hlim::ClockRational &simulationTime)
 {
-	flush(simulationTime);
+}
+
+void FileBasedTestbenchRecorder::onNewPhase(size_t phase)
+{
+	if (phase == sim::WaitClock::AFTER) {
+		flush(m_simulator.getCurrentSimulationTime());
+		m_phases.back() = std::move(m_postDuringPhase); // Have all the assignments from the previous DURING phase be the first thing in the next interval
+		m_phases.push_back({});
+	}
 }
 
 void FileBasedTestbenchRecorder::onAfterMicroTick(size_t microTick)
@@ -385,9 +404,6 @@ void FileBasedTestbenchRecorder::flush(const hlim::ClockRational &flushIntervalE
 		if (phase.assertStatements.str().empty() && phase.signalOverrides.empty() && phase.resetOverrides.empty())
 			continue;
 
-		if (phase.assertStatements.str().empty() && phase.signalOverrides.empty() && phase.resetOverrides.empty())
-			continue;
-
 		advanceTimeTo(m_flushIntervalStart + interval * (1 + phaseIdx));
 
 		m_testvectorFile->stream() << phase.assertStatements.str();
@@ -397,7 +413,6 @@ void FileBasedTestbenchRecorder::flush(const hlim::ClockRational &flushIntervalE
 
 		for (const auto &p : phase.resetOverrides) 
 			m_testvectorFile->stream() << "RST\n" << p.first << '\n' << p.second << '\n';
-
 	}
 
 	m_phases.clear();
@@ -408,16 +423,18 @@ void FileBasedTestbenchRecorder::flush(const hlim::ClockRational &flushIntervalE
 
 void FileBasedTestbenchRecorder::onClock(const hlim::Clock *clock, bool risingEdge)
 {
+#if 0
 	if (!m_clocksOfInterest.contains(clock)) return;
 
 	auto *rootEntity = m_ast->getRootEntity();
-// todo
+
 	m_testvectorFile->stream() << "CLK\n" << rootEntity->getNamespaceScope().getClock((hlim::Clock *) clock).name << std::endl;
 
 	if (risingEdge)
 		m_testvectorFile->stream() << "1\n";
 	else
 		m_testvectorFile->stream() << "0\n";
+#endif
 }
 
 void FileBasedTestbenchRecorder::onReset(const hlim::Clock *clock, bool resetAsserted)
@@ -426,7 +443,12 @@ void FileBasedTestbenchRecorder::onReset(const hlim::Clock *clock, bool resetAss
 
 	auto *rootEntity = m_ast->getRootEntity();
 
-	m_phases.back().resetOverrides[rootEntity->getNamespaceScope().getReset((hlim::Clock *) clock).name] = resetAsserted?"1":"0";
+	const std::string rst = rootEntity->getNamespaceScope().getReset((hlim::Clock *) clock).name;
+
+	if (m_simulator.getCurrentPhase() == sim::WaitClock::DURING)
+		m_postDuringPhase.resetOverrides[rst] = resetAsserted?"1":"0";
+	else
+		m_phases.back().resetOverrides[rst] = resetAsserted?"1":"0";
 }
 
 void FileBasedTestbenchRecorder::onSimProcOutputOverridden(const hlim::NodePort &output, const sim::ExtendedBitVectorState &state)
@@ -442,7 +464,10 @@ void FileBasedTestbenchRecorder::onSimProcOutputOverridden(const hlim::NodePort 
 	std::stringstream str_state;
 	str_state << state;
 
-	m_phases.back().signalOverrides[name_it->second] = str_state.str();
+	if (m_simulator.getCurrentPhase() == sim::WaitClock::DURING)
+		m_postDuringPhase.signalOverrides[name_it->second] = str_state.str();
+	else
+		m_phases.back().signalOverrides[name_it->second] = str_state.str();
 }
 
 void FileBasedTestbenchRecorder::onSimProcOutputRead(const hlim::NodePort &output, const sim::DefaultBitVectorState &state)
