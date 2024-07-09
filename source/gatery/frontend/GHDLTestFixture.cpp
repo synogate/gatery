@@ -123,22 +123,7 @@ void GHDLTestFixture::testCompilation(Flavor flavor)
 {
 	design.postprocess();
 
-	m_vhdlExport.emplace(m_cwd / "design.vhd");
-	for (const auto &file_content : m_customVhdlFiles)
-		m_vhdlExport->addCustomVhdlFile(file_content.first, file_content.second);
-
-	m_vhdlExport->outputMode(vhdlOutputMode);
-
-	gtry::SynthesisTool* synthesisTool = nullptr;
-	switch (flavor) {
-		case TARGET_GHDL:  synthesisTool = new GHDL(); break;
-		case TARGET_QUARTUS : synthesisTool = new IntelQuartus(); break;
-	}
-	m_vhdlExport->targetSynthesisTool(synthesisTool);
-	(*m_vhdlExport)(design.getCircuit());
-
-	synthesisTool->writeStandAloneProject(*m_vhdlExport, "compile.sh");
-	synthesisTool->writeStandAloneProject(*m_vhdlExport, "compile.bat");
+	performVhdlExport(flavor);
 
 	m_generatedSourceFiles = SynthesisTool::sourceFiles(*m_vhdlExport, true, false);
 	m_vhdlExport.reset();
@@ -157,14 +142,27 @@ void GHDLTestFixture::prepRun()
 	design.postprocess();
 	BoostUnitTestSimulationFixture::prepRun();
 
+	performVhdlExport();
+}
+
+void GHDLTestFixture::performVhdlExport(Flavor flavor)
+{
 	m_vhdlExport.emplace(m_cwd / "design.vhd");
+	for (const auto &file_content : m_customVhdlFiles)
+		m_vhdlExport->addCustomVhdlFile(file_content.first, file_content.second);
+
 	m_vhdlExport->outputMode(vhdlOutputMode);
 	m_vhdlExport->addTestbenchRecorder(getSimulator(), "testbench", false);
 	m_vhdlExport->targetSynthesisTool(new GHDL());
 	m_vhdlExport->writeStandAloneProjectFile("compile.sh");
-	(*m_vhdlExport)(design.getCircuit());
 
-	//recordVCD("internal.vcd");
+	gtry::SynthesisTool* synthesisTool = nullptr;
+	switch (flavor) {
+		case TARGET_GHDL:  synthesisTool = new GHDL(); break;
+		case TARGET_QUARTUS : synthesisTool = new IntelQuartus(); break;
+	}
+	m_vhdlExport->targetSynthesisTool(synthesisTool);
+	(*m_vhdlExport)(design.getCircuit());
 }
 
 void GHDLTestFixture::runTest(const hlim::ClockRational &timeoutSeconds)

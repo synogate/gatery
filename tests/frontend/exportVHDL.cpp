@@ -1189,4 +1189,85 @@ BOOST_FIXTURE_TEST_CASE(tristateBitIntoParent, gtry::GHDLTestFixture)
 }
 
 
+
+BOOST_FIXTURE_TEST_CASE(IgnoreSimulationOnlyPins, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+
+	Bit in = pinIn().setName("in");
+
+	Bit out;
+
+	{
+		Area area("magic", true);
+
+		ExternalModule dut("TestEntity", "work");
+		{
+			dut.in("in_bit", {.type = PinType::STD_LOGIC}) = in;
+			out = dut.out("out_bit", {.type = PinType::STD_LOGIC});
+		}
+
+		auto simProcessIn = pinOut(in, { .simulationOnlyPin = true });
+		auto simOverride = pinIn({ .simulationOnlyPin = true });
+
+		out.simulationOverride((Bit)simOverride);
+
+		DesignScope::get()->getCircuit().addSimulationProcess([=]() -> SimProcess {
+			while (true) {
+				ReadSignalList allInputs;
+				simu(simOverride) = !(bool)simu(simProcessIn);
+
+				co_await allInputs.anyInputChange();
+			}
+			co_return;
+		});		
+	}
+
+	pinOut(out).setName("out");
+
+
+	addCustomVHDL("TestEntity", R"Delim(
+
+		LIBRARY ieee;
+		USE ieee.std_logic_1164.ALL;
+		USE ieee.numeric_std.all;
+
+		ENTITY TestEntity IS 
+			PORT(
+				in_bit : in STD_LOGIC;
+				out_bit : out STD_LOGIC
+			);
+		END TestEntity;
+
+		ARCHITECTURE impl OF TestEntity IS 
+		BEGIN
+			do_stuff : PROCESS (all)
+			begin
+				out_bit <= not(in_bit);
+			end PROCESS;
+		END impl;
+
+	)Delim");	
+
+	addSimulationProcess([=, this]()->SimProcess {
+		std::mt19937 rng = std::mt19937{ 1337 };
+		
+		for ([[maybe_unused]] auto i : gtry::utils::Range(100)) {
+			bool v = rng() & 1;
+			simu(in) = v;
+			co_await AfterClk(clock);
+			BOOST_TEST(simu(out) == !v);
+		}
+
+		stopTest();
+	});
+
+
+	runTest({ 1,1 });
+}
+
+
 BOOST_AUTO_TEST_SUITE_END()

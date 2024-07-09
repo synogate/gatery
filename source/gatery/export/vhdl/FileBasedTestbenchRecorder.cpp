@@ -37,7 +37,7 @@ namespace gtry::vhdl {
 
 FileBasedTestbenchRecorder::FileBasedTestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, utils::FileSystem &fileSystem, std::string name) : BaseTestbenchRecorder(ast, simulator, std::move(name)), m_exporter(exporter)
 {
-	m_dependencySortedEntities.push_back(m_name);
+	m_dependencySortedEntities.push_back(m_entityName);
 	m_testVectorFilename = m_name + ".testvectors";
 	m_auxiliaryDataFiles.push_back(m_testVectorFilename);
 
@@ -64,10 +64,10 @@ USE ieee.std_logic_1164.ALL;
 USE ieee.numeric_std.all;
 USE std.textio.all;
 
-ENTITY )" << m_dependencySortedEntities.back() << R"( IS
-END )" << m_dependencySortedEntities.back() << R"(;
+ENTITY )" << m_entityName << R"( IS
+END )" <<m_entityName << R"(;
 
-ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
+ARCHITECTURE tb OF )" << m_entityName << R"( IS
 
 )";
 
@@ -115,7 +115,8 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 	)";
 	
 
-	const std::string assertionSeverity = "warning";
+	//const std::string assertionSeverity = "warning";
+	const std::string assertionSeverity = "error";
 
 	vhdlFile << "BEGIN" << std::endl;
 

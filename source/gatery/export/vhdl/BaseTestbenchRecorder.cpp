@@ -30,10 +30,13 @@
 
 #include <gatery/export/vhdl/VHDLSignalDeclaration.h>
 
+#include <boost/algorithm/string/replace.hpp>
+
 namespace gtry::vhdl {
 
 BaseTestbenchRecorder::BaseTestbenchRecorder(AST *ast, sim::Simulator &simulator, std::string name) : m_ast(ast), m_simulator(simulator), m_name(std::move(name))
 {
+	m_entityName = nameToEntity(m_name);
 }
 
 BaseTestbenchRecorder::~BaseTestbenchRecorder()
@@ -321,5 +324,12 @@ void BaseTestbenchRecorder::writePortmapVerilog(std::ostream &stream)
 }
 
 
+std::string BaseTestbenchRecorder::nameToEntity(const std::string &name)
+{
+	std::string entityName = name;
+	boost::replace_all(entityName, " ", "_");
+	boost::replace_all(entityName, "-", "_");
+	return entityName;
+}
 
 }
