@@ -78,6 +78,8 @@ namespace gtry::scl::arch::intel
 		ALTPLL(size_t availableOutputClocks = 5);
 
 		void setClock(size_t idx, const Clock& clock);
+		
+		hlim::ClockRational inClkFrequency() const { HCL_DESIGNCHECK_HINT(m_inClk, "input clock not yet specified"); return m_inClk->absoluteFrequency(); }
 
 		ALTPLL& configureDeviceFamily(std::string familyName);
 		ALTPLL& configureClock(size_t idx, size_t mul, size_t div, size_t dutyCyclePercent, size_t phaseShiftPs);

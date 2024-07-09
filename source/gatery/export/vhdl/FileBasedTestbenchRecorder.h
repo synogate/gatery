@@ -49,7 +49,9 @@ class FileBasedTestbenchRecorder : public BaseTestbenchRecorder
 		~FileBasedTestbenchRecorder();
 
 		virtual void onPowerOn() override;
+		virtual void onAfterPowerOn() override;
 		virtual void onNewTick(const hlim::ClockRational &simulationTime) override;
+		virtual void onNewPhase(size_t phase) override;
 		virtual void onAfterMicroTick(size_t microTick) override;
 		virtual void onCommitState() override;
 		virtual void onClock(const hlim::Clock *clock, bool risingEdge) override;

@@ -131,6 +131,9 @@ gtry::Bit gtry::scl::usb::GpioPhy::setup(OpMode mode)
 	m_status.rxActive = flagInstantSet(valid(lineInDecoded), valid(lineInDecoded) & lineInDecoded.template get<SingleEnded>().zero, '0');
 	HCL_NAMED(m_status);
 
+	m_se0 = lineInDecoded.template get<SingleEnded>().zero;
+	HCL_NAMED(m_se0);
+
 	generateCrc();
 	generateRx(lineInDecoded);
 	generateTx(dEn, dpOut, dnOut);
@@ -160,10 +163,9 @@ gtry::scl::usb::PhyRxStream& gtry::scl::usb::GpioPhy::rx()
 
 gtry::SimProcess gtry::scl::usb::GpioPhy::deviceReset()
 {
-	simu(get<0>(*m_pins)) = '0';
-	simu(get<1>(*m_pins)) = '0';
+	lineState(SE0);
 	co_await WaitFor({ 512, 12'000'000 });
-	simu(get<0>(*m_pins)) = '1';
+	lineState(J);
 	co_await WaitFor({   2, 12'000'000 });
 }
 
@@ -240,20 +242,22 @@ gtry::SimProcess gtry::scl::usb::GpioPhy::send(std::span<const std::byte> packet
 	for (std::byte b : packet)
 		co_await send(static_cast<uint8_t>(b), bitStuffCounter, baudRate);
 
-	simu(get<0>(*m_pins)) = '0';
-	simu(get<1>(*m_pins)) = '0';
+	lineState(SE0);
 	co_await WaitFor(baudRate);
 	co_await WaitFor(baudRate);
-	simu(get<0>(*m_pins)) = '1';
+	lineState(J);
 	co_await WaitFor(baudRate);
 	co_await WaitFor(baudRate);
 }
 
 gtry::SimProcess gtry::scl::usb::GpioPhy::send(uint8_t byte, size_t& bitStuffCounter, hlim::ClockRational baudRate)
 {
+	Symbol state = lineState();
 	auto swapLine = [&]() {
-		simu(get<0>(*m_pins)) = !simu(get<0>(*m_pins)).value();
-		simu(get<1>(*m_pins)) = !simu(get<1>(*m_pins)).value();
+		if(state == Symbol::J)			state = Symbol::K;
+		else if (state == Symbol::K)	state = Symbol::J;
+		lineState(state);
+
 		bitStuffCounter = 0;
 	};
 
@@ -286,6 +290,45 @@ gtry::scl::usb::GpioPhy::Symbol gtry::scl::usb::GpioPhy::lineState() const
 	return undefined;
 }
 
+void gtry::scl::usb::GpioPhy::lineState(Symbol state)
+{
+	switch (state)
+	{
+	case J:
+		simu(get<0>(*m_pins)) = '1';
+		simu(get<1>(*m_pins)) = '0';
+		break;
+	case K:
+		simu(get<0>(*m_pins)) = '0';
+		simu(get<1>(*m_pins)) = '1';
+		break;
+	case SE0:
+		simu(get<0>(*m_pins)) = '0';
+		simu(get<1>(*m_pins)) = '0';
+		break;
+	default:
+		break;
+	}
+}
+
+static gtry::Bit pulseExtender(gtry::Bit input, size_t cycles, gtry::Bit reset = '0') {
+	using namespace gtry;
+	using namespace gtry::scl;
+	Area area{ "scl_pulseExtender", true };
+
+	HCL_DESIGNCHECK(cycles != 0);
+
+	Counter pulseCtr(cycles + 1);
+
+	IF(input)
+		pulseCtr.reset();
+
+	HCL_NAMED(input);
+	Bit ret = flagInstantSet(input, (pulseCtr.isLast() & !input) | reset); HCL_NAMED(ret);
+
+	return ret;
+}
+
 void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 {
 	HCL_NAMED(m_tx);
@@ -298,7 +341,7 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 
 #if 0 // use this to inject random tx errors
 	IF(transfer(txPacketStream))
-		IF(Counter{45}.isLast())
+		IF(Counter{45}.isLast()) 
 			*txPacketStream ^= Counter{ 8_b }.value();
 #endif
 
@@ -318,31 +361,21 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 		txTimer.inc();
 	ELSE
 		txTimer.reset();
+
+	Bit wait = pulseExtender(
+		m_se0,
+		hlim::floor(m_clock.absoluteFrequency() / hlim::ClockRational{ 12'000'000 }) * 3);
+
+	txStuffedStream = scl::strm::stall(move(txStuffedStream), wait);
 	ready(txStuffedStream) = txTimer.isLast();
 
-
-	Counter txWaitTimer{ hlim::floor(m_clock.absoluteFrequency() / hlim::ClockRational{ 12'000'000 }) * 2};
-	Bit wait = flagInstantSet(edgeRising(valid(txStuffedStream)), txWaitTimer.isLast(), '0');
-	IF(wait)
-		txWaitTimer.inc();
-	ready(txStuffedStream) &= !wait;
-
-	en = valid(txStuffedStream) & !wait;
+	en = valid(txStuffedStream);
 	p = *txStuffedStream;
 	n = !p;
 
-	Counter se0Timer{ hlim::floor(m_clock.absoluteFrequency() / hlim::ClockRational{ 12'000'000 }) * 2 };
-	Bit se0;
-	IF(se0)
-		se0Timer.inc();
-	ELSE
-		se0Timer.reset();
-
-	IF(transfer(txStuffedStream) & eop(txStuffedStream))
-		se0 = '1';
-	IF(se0Timer.isLast())
-		se0 = '0';
-	se0 = reg(se0, '0');
+	Bit se0 = reg(pulseExtender(
+		transfer(txStuffedStream) & eop(txStuffedStream),
+		hlim::floor(m_clock.absoluteFrequency() / hlim::ClockRational{ 12'000'000 }) * 2), '0');
 	HCL_NAMED(se0);
 
 	IF(se0)

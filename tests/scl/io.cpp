@@ -261,6 +261,7 @@ void setup_recoverDataDifferential(hlim::ClockRational actualBusClockFrequency, 
 		while (true) {
 			float bitDist = randomBitDistribution(rng);
 			size_t burstLength = randomBurstLength(rng);
+			std::pair<bool, bool> lastBeat = { true, true };
 			for ([[maybe_unused]] auto i : gtry::utils::Range(burstLength)) {
 
 				std::pair<bool, bool> beat;
@@ -273,7 +274,12 @@ void setup_recoverDataDifferential(hlim::ClockRational actualBusClockFrequency, 
 
 				simu(ioP) = beat.first;
 				simu(ioN) = beat.second;
+
 				dataStream.push_back(beat);
+				if (lastBeat == std::make_pair(false, false) && beat == std::make_pair(false, false))
+					dataStream.pop_back();
+				else
+					lastBeat = beat;
 
 				co_await AfterClk(actualBusClock);
 			}

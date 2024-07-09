@@ -26,7 +26,7 @@
 
 namespace gtry::scl::usb
 {
-	class GpioPhy : public Phy, public SimuHostBase
+	class GpioPhy : public Phy, public SimuBusBase
 	{
 	public:
 		GpioPhy();
@@ -50,7 +50,8 @@ namespace gtry::scl::usb
 		SimProcess send(uint8_t byte, size_t& bitStuffCounter, hlim::ClockRational baudRate = { 1, 12'000'000 });
 
 		enum Symbol { J, K, SE0, undefined };
-		Symbol lineState() const;
+		virtual Symbol lineState() const;
+		virtual void lineState(Symbol state);
 
 	protected:
 		virtual void generateTx(Bit& en, Bit& p, Bit& n);
@@ -66,6 +67,7 @@ namespace gtry::scl::usb
 		PhyTxStream m_tx;
 		PhyRxStream m_rx;
 
+		Bit m_se0;
 		Bit m_crcEn;
 		Bit m_crcIn;
 		Bit m_crcOut;

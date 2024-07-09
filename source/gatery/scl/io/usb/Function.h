@@ -19,6 +19,7 @@
 #include "CrcHandler.h"
 #include "Descriptor.h"
 #include "../../TransactionalFifo.h"
+#include "../../stream/Stream.h"
 
 namespace gtry::scl::usb
 {
@@ -115,6 +116,9 @@ namespace gtry::scl::usb
 		void attachRxFifo(TransactionalFifo<StreamData>& fifo, uint16_t endPointMask = 0xFFFE);
 		void attachTxFifo(TransactionalFifo<StreamData>& fifo, uint16_t endPointMask = 0xFFFE);
 
+		RvStream<BVec> rxEndPointFifo(size_t endPoint, size_t fifoDpeth);
+		void txEndPointFifo(size_t endPoint, size_t fifoDpeth, RvStream<BVec> data);
+
 	protected:
 		void generateCapturePacket();
 
@@ -173,6 +177,7 @@ namespace gtry::scl::usb
 
 }
 
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::usb::SetupPacket, requestType, request, wValue, wIndex, wLength);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::usb::Function::RxStream, valid, sop, endPoint, data, eop, error);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::usb::Function::TxStream, ready, commit, rollback, valid, endPoint, data);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::usb::Function::StreamData, data, endPoint);
