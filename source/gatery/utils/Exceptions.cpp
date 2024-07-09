@@ -31,7 +31,11 @@ std::string composeMHDLErrorString(const char *file, size_t line, const std::str
 InternalError::InternalError(const char *file, size_t line, const std::string &what) : MHDLError<std::logic_error>(file, line, what) { }
 InternalError::~InternalError() { }
 
-DesignError::DesignError(const char *file, size_t line, const std::string &what) : MHDLError<std::runtime_error>(file, line, what) { }
+DesignError::DesignError(const char *file, size_t line, const std::string &what) : MHDLError<std::runtime_error>(file, line, what) {
+#ifdef _WIN32
+	OutputDebugStringA(what.c_str());
+#endif
+}
 DesignError::~DesignError() { }
 
 }

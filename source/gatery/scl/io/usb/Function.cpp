@@ -691,6 +691,10 @@ void gtry::scl::usb::Function::generateRxStream()
 
 	m_rx.eop = m_phy.rx.eop & functionStream;
 	m_rx.error = m_phy.rx.error | m_rxReadyError;
+#if 0 //debug crc errors with the leds
+	IF(m_phy.rx.eop & m_phy.rx.error)
+		pinOut(Counter{8_b}.value(), "LED");
+#endif
 	HCL_NAMED(m_rx);
 }
 

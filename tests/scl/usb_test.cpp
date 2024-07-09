@@ -32,6 +32,7 @@
 #include <gatery/scl/io/uart.h>
 #include <gatery/scl/io/BitBangEngine.h>
 
+#include <gatery/scl/io/dynamicDelay.h>
 using namespace boost::unit_test;
 using namespace gtry;
 using namespace gtry::scl;
@@ -151,8 +152,9 @@ BOOST_FIXTURE_TEST_CASE(usb_windows_discovery, UsbFixture)
 		BOOST_TEST((pid && *pid == Pid::ack));
 
 		// receive nothing
-		std::vector<std::byte> dataIn = co_await m_controller->transferIn(1);
-		BOOST_TEST(dataIn.empty());
+		co_await m_controller->sendToken(Pid::in, m_controller->functionAddress(), 1);
+		std::vector<std::byte> data = co_await m_controller->bus().receive();
+		BOOST_TEST((data.size() == 1 && data[0] == std::byte(0x5A)));
 
 		stopTest();
 	});
@@ -247,6 +249,75 @@ BOOST_FIXTURE_TEST_CASE(usb_loopback_cyc10, SingleEndpointUsbFixture, *boost::un
 	vhdl(design.getCircuit());
 
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000 }));
+}
+
+class WindowsDiscoveryLoopbackUsbFixture : public SingleEndpointUsbFixture {
+public:
+	size_t samplingRatio = 4;
+	std::function<void()> configure = []() {};
+	void runTest() {
+		configure();
+		m_useSimuPhy = false;
+		m_pinApplicationInterface = false;
+		m_pinStatusRegister = false;
+		m_maxPacketLength = 64;
+
+		auto device = std::make_unique<scl::IntelDevice>();
+		device->setupDevice("10CL025YU256C8G");
+		design.setTargetTechnology(std::move(device));
+
+		Clock clk12{ ClockConfig{
+			.absoluteFrequency = 12'000'000,
+			.name = "CLK12M",
+			.resetType = ClockConfig::ResetType::NONE
+		} };
+
+		auto* pll2 = DesignScope::get()->createNode<scl::arch::intel::ALTPLL>();
+		pll2->setClock(0, clk12);
+		Clock clock = pll2->generateOutClock(0, samplingRatio, 1, 50, 0);
+		ClockScope clkScp(clock);
+
+		setupFunction();
+		{
+			scl::TransactionalFifo<scl::usb::Function::StreamData> loopbackFifo{ 256 };
+			m_func->attachRxFifo(loopbackFifo, 1 << 1);
+			m_func->attachTxFifo(loopbackFifo, 1 << 1);
+			loopbackFifo.generate();
+		}
+
+		addSimulationProcess([&]() -> SimProcess {
+			co_await OnClk(clock);
+			co_await m_controller->testWindowsDeviceDiscovery();
+			stopTest();
+			});
+
+		design.postprocess();
+
+		vhdl::VHDLExport vhdl("synthesis_projects/usb_loopback_cyc10/usb_loopback_cyc10.vhd");
+		vhdl.targetSynthesisTool(new IntelQuartus());
+		vhdl(design.getCircuit());
+
+		BOOST_TEST(!runHitsTimeout({ 1, 1'000 }));
+	}
+};
+
+BOOST_FIXTURE_TEST_CASE(usb_loopback_cyc10_oversampled, WindowsDiscoveryLoopbackUsbFixture, *boost::unit_test::disabled())
+{
+	samplingRatio = 4;
+	runTest();
+}
+
+BOOST_FIXTURE_TEST_CASE(usb_loopback_cyc10_dirty, WindowsDiscoveryLoopbackUsbFixture, *boost::unit_test::disabled())
+{
+	samplingRatio = 1;
+	configure = []() { hlim::NodeGroup::configTree("scl_recoverDataDifferential*", "version", "dirty"); };
+	runTest();
+}
+
+BOOST_FIXTURE_TEST_CASE(usb_loopback_cyc10_clean, WindowsDiscoveryLoopbackUsbFixture, *boost::unit_test::disabled())
+{
+	samplingRatio = 1;
+	runTest();
 }
 
 BOOST_FIXTURE_TEST_CASE(usb_to_uart_cyc1000, SingleEndpointUsbFixture, *boost::unit_test::disabled())
@@ -751,4 +822,129 @@ BOOST_FIXTURE_TEST_CASE(usb_bit_crc16_tx_test, BoostUnitTestSimulationFixture)
 
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(cyc10_pin_delay_tester, SingleEndpointUsbFixture, *boost::unit_test::disabled())
+{
+	//this test serves as a testbench to display the delay
+	// obtained by using the pins of a cyclone 10 device on the leds of the board
+
+	auto device = std::make_unique<scl::IntelDevice>();
+	device->setupDevice("10CL025YU256C8G");
+	design.setTargetTechnology(std::move(device));
+
+	Clock clk12{ ClockConfig{
+		.absoluteFrequency = 12'000'000,
+		.name = "CLK12M",
+		.resetType = ClockConfig::ResetType::NONE
+	} };
+
+	auto* pll2 = DesignScope::get()->createNode<scl::arch::intel::ALTPLL>();
+	pll2->setClock(0, clk12);
+	Clock clock = pll2->generateOutClock(0, 16, 1, 50, 0);
+	ClockScope clkScp(clock);
+
+	Bit tx;
+	tx = reg(tx, '0');
+	Counter delayCtr{ 8_b };
+	
+	IF(delayCtr.isFirst())
+		tx = !tx;
+	
+
+	PinDelay generator(4ns);
+	Bit rx = reg(delayChainWithTaps(tx, 7, generator), '0');
+
+	HCL_NAMED(tx);
+	HCL_NAMED(rx);
+	IF(tx != rx)
+		delayCtr.inc();
+
+	UInt idleTime = 12'000'000 * 16;
+	UInt simIdleTime = constructFrom(idleTime);
+	simIdleTime = 12'000'000 * 16 / 1'000'000;
+	idleTime.simulationOverride(simIdleTime);
+	Counter idleCtr{ idleTime };
+
+	IF(tx != rx)
+		idleCtr.reset();
+	ELSE{
+		IF(idleCtr.isLast())
+			delayCtr.reset();
+	}
+
+	pinOut(delayCtr.value(), "LED");
+	design.postprocess();
+
+	vhdl::VHDLExport vhdl("synthesis_projects/cyc10_pin_delay_tester/cyc10_pin_delay_tester.vhd");
+	vhdl.targetSynthesisTool(new IntelQuartus());
+	vhdl(design.getCircuit());
+
+	runFixedLengthTest({ 100, 1'000'000 });
+}
+
+
+BOOST_FIXTURE_TEST_CASE(usb_hi_speed_register_delay_tester, SingleEndpointUsbFixture, *boost::unit_test::disabled())
+{
+	//this test is currently untested but also serves a questionable purpose since the delay
+	// of a fast register chain delay is fully computable
+	auto device = std::make_unique<scl::IntelDevice>();
+	device->setupDevice("10CL025YU256C8G");
+	design.setTargetTechnology(std::move(device));
+
+	Clock clk12{ ClockConfig{
+		.absoluteFrequency = 12'000'000,
+		.name = "CLK12M",
+		.resetType = ClockConfig::ResetType::NONE
+	} };
+
+	auto* pll2 = DesignScope::get()->createNode<scl::arch::intel::ALTPLL>();
+	pll2->setClock(0, clk12);
+	Clock clock = pll2->generateOutClock(0, 8, 1, 50, 0);
+	ClockScope clkScp(clock);
+
+	Bit tx;
+	tx = reg(tx, '0');
+	Counter delayCtr{ 8_b };
+
+	IF(delayCtr.isFirst())
+		tx = !tx;
+
+	Clock fastClk = pll2->generateOutClock(1, 32, 1, 50, 0);
+
+	Bit rx;
+	{
+		ClockScope fastScp(clkScp);
+		Bit cdcTx = allowClockDomainCrossing(tx, clock, fastClk);
+		auto regChain = [](Bit in) -> Bit {
+			for (size_t i = 0; i < 30; i++)
+				in = reg(in, '0');
+			return in;
+		};
+		rx = delayChainWithTaps(tx, 1, regChain);
+	}
+	rx = reg(allowClockDomainCrossing(rx, fastClk, clock));
+
+	HCL_NAMED(tx);
+	HCL_NAMED(rx);
+	IF(tx != rx)
+		delayCtr.inc();
+
+	Counter idleCtr{ 12'000'000 * 8 };
+
+	IF(tx != rx)
+		idleCtr.reset();
+	ELSE{
+		IF(idleCtr.isLast())
+		delayCtr.reset();
+	}
+
+	pinOut(delayCtr.value(), "LED");
+	design.postprocess();
+
+	vhdl::VHDLExport vhdl("synthesis_projects/cyc10_reg_delay_tester/cyc10_reg_delay_tester.vhd");
+	vhdl.targetSynthesisTool(new IntelQuartus());
+	vhdl(design.getCircuit());
+
+	runFixedLengthTest({ 1, 1'000'000 });
 }
