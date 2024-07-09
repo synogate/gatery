@@ -64,10 +64,12 @@ class FileBasedTestbenchRecorder : public BaseTestbenchRecorder
 		virtual void onSimProcOutputOverridden(const hlim::NodePort &output, const sim::ExtendedBitVectorState &state) override;
 		virtual void onSimProcOutputRead(const hlim::NodePort &output, const sim::DefaultBitVectorState &state) override;
 
+		void writeVerilogTestbench();
 	protected:
 		VHDLExport &m_exporter;
 		std::unique_ptr<utils::FileSink> m_testvectorFile;
 		std::unique_ptr<utils::FileSink> m_testbenchFile;
+		std::unique_ptr<utils::FileSink> m_verilogTestbenchFile;
 		hlim::ClockRational m_writtenSimulationTime;
 		hlim::ClockRational m_flushIntervalStart;
 

@@ -43,6 +43,10 @@ FileBasedTestbenchRecorder::FileBasedTestbenchRecorder(VHDLExport &exporter, AST
 
 	m_testvectorFile = fileSystem.writeFile(m_testVectorFilename);
 	m_testbenchFile = fileSystem.writeFile(m_ast->getFilename(m_name));
+
+	auto verilogTBFilename = m_ast->getFilename(m_name);
+	verilogTBFilename.replace_extension("v");
+	m_verilogTestbenchFile = fileSystem.writeFile(verilogTBFilename);
 }
 
 FileBasedTestbenchRecorder::~FileBasedTestbenchRecorder()
@@ -124,7 +128,7 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 	vhdlFile << ");" << std::endl;
 
 	for (auto &clock : m_clocksOfInterest)
-		buildClockProcess(m_testbenchFile->stream(), clock);	
+		buildClockProcess(vhdlFile, clock);	
 
 	cf.indent(vhdlFile, 1);
 	vhdlFile << "sim_process : PROCESS" << std::endl;
@@ -132,10 +136,8 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 	for (auto ioPin : m_allIOPins) {
 		const auto &decl = rootEntity->getNamespaceScope().get(ioPin);
 
-		//hlim::ConnectionType conType = ioPin->getConnectionType();
-
-		vhdlFile << "	VARIABLE v_" << decl.name << " : ";
-		cf.formatConnectionType(vhdlFile, decl);
+		vhdlFile << "	VARIABLE v_";
+		cf.formatDeclaration(vhdlFile, decl);
 		vhdlFile << ';' << std::endl;
 	}
 
@@ -356,6 +358,7 @@ void FileBasedTestbenchRecorder::onPowerOn()
 void FileBasedTestbenchRecorder::onAfterPowerOn()
 {
 	writeVHDL();
+	writeVerilogTestbench();
 }
 
 
@@ -530,6 +533,286 @@ void FileBasedTestbenchRecorder::onSimProcOutputRead(const hlim::NodePort &outpu
 			m_phases.back().assertStatements << std::endl;
 		}
 	}
+}
+
+
+
+
+void FileBasedTestbenchRecorder::writeVerilogTestbench()
+{
+	auto &verilogFile = m_verilogTestbenchFile->stream();
+
+	verilogFile << R"(
+`timescale 1ps/1ps
+
+module )" << m_dependencySortedEntities.back() << "();" << std::endl;
+
+
+	auto *rootEntity = m_ast->getRootEntity();
+
+	CodeFormatting &cf = m_ast->getCodeFormatting();
+
+	declareSignalsVerilog(verilogFile);
+
+	utils::StableMap<hlim::NodePort, bool> outputIsBool;
+	utils::StableSet<hlim::NodePort> outputIsDrivenByNetwork;
+	utils::StableMap<hlim::NodePort, bool> isBidirectional;
+
+	for (auto ioPin : m_allIOPins) {
+		const std::string &name = rootEntity->getNamespaceScope().get(ioPin).name;
+		auto conType = ioPin->getConnectionType();
+
+		if (ioPin->isOutputPin()) {
+			m_outputToIoPinName[ioPin->getDriver(0)] = name;
+			outputIsBool[ioPin->getDriver(0)] = conType.isBool();
+			outputIsDrivenByNetwork.insert(ioPin->getDriver(0));
+		}
+
+		if (ioPin->isInputPin()) {
+			hlim::NodePort pinOutput{const_cast<hlim::Node_Pin*>(ioPin), 0};
+			m_outputToIoPinName[pinOutput] = name;
+			outputIsBool[pinOutput] = conType.isBool();
+			isBidirectional[pinOutput] = ioPin->isBiDirectional();
+		}
+
+	}
+
+	verilogFile << R"(
+    function automatic integer stringcompare;
+        input string v_line;
+        input string str;
+        integer i;
+        begin
+            if ($strlen(v_line) != $strlen(str)) begin
+                stringcompare = 0;
+                return;
+            end
+            for (i = 0; i < $strlen(v_line); i = i + 1) begin
+                if (v_line[i] != str[i]) begin
+                    stringcompare = 0;
+                    return;
+                end
+            end
+            stringcompare = 1;
+        end
+    endfunction
+	)";
+	
+
+	const std::string assertionSeverity = "warning";
+
+
+	cf.indent(verilogFile, 1);
+	verilogFile << rootEntity->getName() << " inst_root (" << std::endl;
+
+	writePortmapVerilog(verilogFile);
+
+	cf.indent(verilogFile, 1);
+	verilogFile << ");" << std::endl;
+
+	for (auto &clock : m_clocksOfInterest)
+		buildClockProcessVerilog(verilogFile, clock);	
+
+	cf.indent(verilogFile, 1);
+	verilogFile << "initial begin" << std::endl;
+
+	cf.indent(verilogFile, 2);
+	verilogFile << "reg [4095:0] line;" << std::endl;
+	cf.indent(verilogFile, 2);
+	verilogFile << "integer time_in_ps;" << std::endl;
+
+	cf.indent(verilogFile, 2);
+	verilogFile << "integer test_vector_file;" << std::endl;
+
+	cf.indent(verilogFile, 2);
+	verilogFile << "reg v_clk;" << std::endl;
+
+	for (auto ioPin : m_allIOPins) {
+		const auto &decl = rootEntity->getNamespaceScope().get(ioPin);
+
+		cf.indent(verilogFile, 2);
+		verilogFile << "reg ";
+		formatDeclarationVerilog(verilogFile, decl);
+		verilogFile << "_TB_helper;" << std::endl;
+	}
+
+
+	cf.indent(verilogFile, 2);
+	verilogFile << "test_vector_file = $fopen(\"" << m_testVectorFilename << "\", \"r\");" << std::endl;
+
+	cf.indent(verilogFile, 2);
+	verilogFile << "if (test_vector_file == 0) begin" << std::endl;
+	cf.indent(verilogFile, 3);
+	verilogFile << "$display(\"The test vector file could not be opened!\");" << std::endl;
+	cf.indent(verilogFile, 3);
+	verilogFile << "$stop;" << std::endl;
+	cf.indent(verilogFile, 2);
+	verilogFile << "end" << std::endl;
+
+	cf.indent(verilogFile, 2);
+	verilogFile << "while (!$feof(test_vector_file)) begin" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "$fgets(line, test_vector_file);" << std::endl;
+	
+	cf.indent(verilogFile, 3);
+	verilogFile << "if (stringcompare(line, \"SET\")) begin" << std::endl;
+
+		cf.indent(verilogFile, 4);
+		verilogFile << "$fgets(line, test_vector_file);" << std::endl;
+
+		cf.indent(verilogFile, 4);
+		verilogFile << "if (0) ;" << std::endl;
+		for (auto &p : m_outputToIoPinName) {
+			if (outputIsDrivenByNetwork.contains(p.first)) continue;
+
+			cf.indent(verilogFile, 4);
+			verilogFile << "else if (stringcompare(line, \"" << p.second << "\")) begin" << std::endl;
+
+			cf.indent(verilogFile, 5);
+			verilogFile << "$fgets(line, test_vector_file);" << std::endl;
+
+			cf.indent(verilogFile, 5);
+			verilogFile << "$sscanf(line, \"%b\", " << p.second << "_TB_helper);" << std::endl;
+
+			cf.indent(verilogFile, 5);
+
+#if 0
+			if (isBidirectional[p.first])
+				verilogFile << p.second << "_TB_driver <= " << p.second << "_TB_helper;" << std::endl;
+			else 
+#endif
+				verilogFile << p.second << " <= " << p.second << "_TB_helper;" << std::endl;
+
+			cf.indent(verilogFile, 4);
+			verilogFile << "end" << std::endl;
+		}
+		cf.indent(verilogFile, 4);
+		verilogFile << "else begin" << std::endl;
+		cf.indent(verilogFile, 5);
+		verilogFile << "$display(\"An error occured while parsing the test vector file: unknown signal: %s\", line);" << std::endl;
+		cf.indent(verilogFile, 5);
+		verilogFile << "$finish;" << std::endl;
+
+		cf.indent(verilogFile, 4);
+		verilogFile << "end" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "end" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "else if (stringcompare(line, \"CHECK\")) begin" << std::endl;
+
+		cf.indent(verilogFile, 4);
+		verilogFile << "$fgets(line, test_vector_file);" << std::endl;
+
+		cf.indent(verilogFile, 4);
+		verilogFile << "if (0) ;" << std::endl;
+		for (auto &p : m_outputToIoPinName) {
+
+			cf.indent(verilogFile, 4);
+			verilogFile << "else if (stringcompare(line, \"" << p.second << "\")) begin" << std::endl;
+
+			cf.indent(verilogFile, 5);
+			verilogFile << "$fgets(line, test_vector_file);" << std::endl;
+
+			cf.indent(verilogFile, 5);
+			verilogFile << "$sscanf(line, \"%b\", " << p.second << "_TB_helper);" << std::endl;
+			cf.indent(verilogFile, 5);
+			verilogFile << "if (" << p.second << " !== " << p.second << "_TB_helper) $fatal(1, \"Check failed on " << p.second << "\");" << std::endl;
+
+			cf.indent(verilogFile, 4);
+			verilogFile << "end" << std::endl;
+		}
+		cf.indent(verilogFile, 4);
+		verilogFile << "else begin" << std::endl;
+		cf.indent(verilogFile, 5);
+		verilogFile << "$display(\"An error occured while parsing the test vector file: unknown signal: %s\", line);" << std::endl;
+		cf.indent(verilogFile, 5);
+		verilogFile << "$finish;" << std::endl;
+
+		cf.indent(verilogFile, 4);
+		verilogFile << "end" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "end" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "else if (stringcompare(line, \"RST\")) begin" << std::endl;
+
+		cf.indent(verilogFile, 4);
+		verilogFile << "$fgets(line, test_vector_file);" << std::endl;
+
+		cf.indent(verilogFile, 4);
+		verilogFile << "if (0) ;" << std::endl;
+		for (auto c : m_resetsOfInterest) {
+
+			auto *rootEntity = m_ast->getRootEntity();
+			std::string resetName =  rootEntity->getNamespaceScope().getReset((hlim::Clock *) c).name;
+
+
+			cf.indent(verilogFile, 4);
+			verilogFile << "else if (stringcompare(line, \"" << resetName << "\")) begin" << std::endl;
+
+			cf.indent(verilogFile, 5);
+			verilogFile << "$fgets(line, test_vector_file);" << std::endl;
+
+			cf.indent(verilogFile, 5);
+			verilogFile << "$sscanf(line, \"%b\", v_clk);" << std::endl;
+
+			cf.indent(verilogFile, 5);
+			verilogFile << resetName << " <= v_clk;" << std::endl;
+
+			cf.indent(verilogFile, 4);
+			verilogFile << "end" << std::endl;
+		}
+		cf.indent(verilogFile, 4);
+		verilogFile << "else begin" << std::endl;
+
+		cf.indent(verilogFile, 5);
+		verilogFile << "$display(\"An error occured while parsing the test vector file: unknown clock: %s\", line);" << std::endl;
+		cf.indent(verilogFile, 5);
+		verilogFile << "$finish;" << std::endl;
+
+		cf.indent(verilogFile, 4);
+		verilogFile << "end" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "end" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "else if (stringcompare(line, \"ADV\")) begin" << std::endl;
+
+		cf.indent(verilogFile, 4);
+		verilogFile << "$fgets(line, test_vector_file);" << std::endl;
+		cf.indent(verilogFile, 4);
+		verilogFile << "$sscanf(line, \"%d\", time_in_ps);" << std::endl;
+		cf.indent(verilogFile, 4);
+		verilogFile << "#time_in_ps;" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "end" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "else begin" << std::endl;
+
+
+	cf.indent(verilogFile, 4);
+	verilogFile << "$display(\"An error occured while parsing the test vector file: Can't parse line: %s\", line);" << std::endl;
+	cf.indent(verilogFile, 4);
+	verilogFile << "$finish;" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "end" << std::endl;
+
+	cf.indent(verilogFile, 2);
+	verilogFile << "end" << std::endl;
+
+
+	verilogFile << "TB_testbench_is_done <= 1;" << std::endl;
+	verilogFile << "$stop;" << std::endl;
+	verilogFile << "end" << std::endl;
+	verilogFile << "endmodule" << std::endl;
 }
 
 
