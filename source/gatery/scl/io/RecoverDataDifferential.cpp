@@ -55,7 +55,7 @@ namespace gtry::scl {
 			phaseCounter.load((samples + 1) / 2);
 			valid(out) = '0'; // prevent double sampling
 		}
-		Bit validMaskExtraSe0 = flag(valid(out) & se0, valid(out) & !se0);
+		Bit validMaskExtraSe0 = flagInstantReset(valid(out) & se0, valid(out) & !se0);
 		HCL_NAMED(validMaskExtraSe0);
 		valid(out) &= !validMaskExtraSe0;
 
