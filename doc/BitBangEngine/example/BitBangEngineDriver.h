@@ -2,9 +2,16 @@
 #include <boost/asio.hpp>
 #include <optional>
 #include <bitset>
+#include <span>
+#include <iostream>
 
 namespace bitbang
 {
+	inline uint8_t CLK  = 0b0001;
+	inline uint8_t DOUT = 0b0010;
+	inline uint8_t DIN  = 0b0100;
+	inline uint8_t CS   = 0b1000;
+
 	enum class PinGroup {
 		low = 0,
 		high = 1,
@@ -19,6 +26,13 @@ namespace bitbang
 		rising = 0,
 		falling = 1,
 	};
+
+	inline std::ostream& operator<<(std::ostream& os, std::span<const uint8_t> buffer)
+	{
+		for (uint8_t value : buffer)
+			os << std::format("0x{:02X}, ", value);
+		return os;
+	}
 
 	struct TransferSettings {
 		bool read = false;
@@ -285,7 +299,7 @@ namespace bitbang::spi
 		reset(cmdBuf);
 		// setup pin directions out for CSn, MOSI and SCK
 		// setup initial logic levels according to spi mode
-		set_pin(cmdBuf, 0b1010 | ((spiMode >> 1) & 1), 0b1011);
+		set_pin(cmdBuf, CS | (spiMode / 2 ? CLK : 0), CS | DOUT | CLK);
 		set_clock_frequency(cmdBuf, busClock);
 	}
 
@@ -381,13 +395,26 @@ namespace bitbang::spi
 		}
 	}
 
-	template<typename Container, typename TData>
-	void send(Container& cmdBuf, TData data, size_t spiMode = 0, uint8_t csPinIndex = 3)
+	template<typename Container>
+	void start(Container& cmdBuf, size_t spiMode = 0)
 	{
-		uint8_t idleState = spiMode >> 1;
+		uint8_t idleState = (spiMode / 2 ? CLK : 0);
 		set_pin_fast(cmdBuf, idleState); // chip select
+	}
+
+	template<typename Container>
+	void stop(Container& cmdBuf, size_t spiMode = 0)
+	{
+		uint8_t idleState = (spiMode / 2 ? CLK : 0);
+		set_pin_fast(cmdBuf, idleState | CS); // chip deselect
+	}
+
+	template<typename Container, typename TData>
+	void send(Container& cmdBuf, TData data, size_t spiMode = 0)
+	{
+		start(cmdBuf, spiMode);
 		send_bytes(cmdBuf, data, spiMode);
-		set_pin_fast(cmdBuf, idleState | (1 << csPinIndex));	// chip deselect
+		stop(cmdBuf, spiMode);
 	}
 
 	struct TransferParameter {
@@ -400,16 +427,15 @@ namespace bitbang::spi
 	{
 		std::vector<uint8_t> cmdBuf;
 
-		uint8_t idleState = uint8_t(param.spiMode >> 1) & 1;
-		set_pin_fast(cmdBuf, idleState); // chip select
+		start(cmdBuf, param.spiMode);
 		if(param.commandByte)
 		{
 			transfer_command(cmdBuf, *param.commandByte, 8, param.spiMode, *param.commandByte != 0, false);
-			if(data == 0 && *param.commandByte != 0) // restore data line to low level
-				set_pin_fast(cmdBuf, idleState);
+			if (data == 0 && *param.commandByte != 0) // restore data line to low level
+				start(cmdBuf, param.spiMode);
 		}
 		transfer_command(cmdBuf, data, bitLength, param.spiMode, data != 0, param.receive);
-		set_pin_fast(cmdBuf, idleState | (1 << 3));	// chip deselect
+		stop(cmdBuf, param.spiMode);
 		write(serial, boost::asio::buffer(cmdBuf));
 
 		uint64_t result = 0;
@@ -456,19 +482,21 @@ namespace bitbang::threewire
 		return write(serial, boost::asio::buffer(cmdBuf)) == cmdBuf.size();
 	}
 
+	using spi::start;
+	using spi::stop;
 	using spi::write;
 
 	inline uint64_t read(boost::asio::serial_port& serial, uint8_t command, size_t bitLength, size_t spiMode = 0)
 	{
 		std::vector<uint8_t> cmdBuf;
 
-		uint8_t idleState = uint8_t(spiMode >> 1) & 1;
+		uint8_t idleState = (spiMode / 2 ? CLK : 0);
 		set_pin_fast(cmdBuf, idleState); // chip select
 		spi::transfer_command(cmdBuf, command, 8, spiMode, true, false);
 
-		set_pin(cmdBuf, idleState, 0b1001); // set MOSI to input
+		set_pin(cmdBuf, idleState, CS | CLK); // set MOSI to input
 		spi::transfer_command(cmdBuf, 0, bitLength, spiMode, false, true);
-		set_pin(cmdBuf, idleState | (1 << 3), 0b1011); // reset MOSI to output
+		set_pin(cmdBuf, idleState | CS, CS | CLK | DOUT); // reset MOSI to output
 		write(serial, boost::asio::buffer(cmdBuf));
 
 		uint64_t result = 0;
@@ -485,13 +513,13 @@ namespace bitbang::threewire
 	{
 		std::vector<uint8_t> cmdBuf;
 
-		uint8_t idleState = uint8_t(spiMode >> 1) & 1;
-		set_pin(cmdBuf, idleState, 0b1001); // set MOSI to input
+		uint8_t idleState = (spiMode / 2 ? CLK : 0);
+		set_pin(cmdBuf, idleState, CS | CLK); // set MOSI to input
 		set_pin_fast(cmdBuf, idleState); // chip select
 		spi::transfer_command(cmdBuf, 0, bitLengthRead, spiMode, false, true);
-		set_pin(cmdBuf, idleState, 0b1011); // reset MOSI to output
+		set_pin(cmdBuf, idleState, CS | CLK | DOUT); // reset MOSI to output
 		spi::transfer_command(cmdBuf, data, bitLengthWrite, spiMode, true, false);
-		set_pin_fast(cmdBuf, idleState | (1 << 3)); // chip deselect
+		set_pin_fast(cmdBuf, idleState | CS); // chip deselect
 		write(serial, boost::asio::buffer(cmdBuf));
 
 		uint64_t result = 0;
@@ -531,8 +559,8 @@ namespace bitbang::i2c
 	void setup(Container& cmdBuf, size_t busClock = 100'000)
 	{
 		reset(cmdBuf);
-		set_open_drain(cmdBuf, 3);
-		set_pin(cmdBuf, 0x03, 0x03);
+		set_open_drain(cmdBuf, CLK | DOUT);
+		set_pin(cmdBuf, CLK | DOUT, CLK | DOUT);
 		set_three_phase_clocking(cmdBuf, true);
 		set_external_loopback(cmdBuf, true);
 		set_clock_frequency(cmdBuf, busClock * 3 / 2); // +50% for three phase clocking
@@ -548,7 +576,7 @@ namespace bitbang::i2c
 	template<typename Container>
 	void start(Container& cmdBuf)
 	{
-		set_pin_fast(cmdBuf, 1); // SDA low
+		set_pin_fast(cmdBuf, CLK); // SDA low
 		set_pin_fast(cmdBuf, 0); // SDC low
 	}
 
@@ -556,8 +584,8 @@ namespace bitbang::i2c
 	void stop(Container& cmdBuf)
 	{
 		set_pin_fast(cmdBuf, 0); // make sure to be in active idle state
-		set_pin_fast(cmdBuf, 2); // SDA high
-		set_pin_fast(cmdBuf, 3); // SDC high
+		set_pin_fast(cmdBuf, DOUT); // SDA high
+		set_pin_fast(cmdBuf, DOUT | CLK); // SDC high
 	}
 
 	void send_byte_checked(boost::asio::serial_port& serial, uint8_t value)
