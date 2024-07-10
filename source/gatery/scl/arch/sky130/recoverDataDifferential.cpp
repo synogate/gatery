@@ -37,12 +37,13 @@ namespace gtry::scl::arch::sky130 {
 		BitWidth delayW = 5_b;
 		UInt delay = delayW;
 		
-		p = delayChainWithTaps(p, delay, [](Bit in) { return dlygate4sd3{Strength::one, 500ps}(in); }); setName(p, "in_p_delayed");
-		n = delayChainWithTaps(n, delay, [](Bit in) { return dlygate4sd3{Strength::one, 500ps}(in); }); setName(n, "in_n_delayed");
+		dlygate4sd3_factory delayFactory(Strength::one, 500ps);
+		p = delayChainWithTaps(p, delay, delayFactory); setName(p, "in_p_delayed");
+		n = delayChainWithTaps(n, delay, delayFactory); setName(n, "in_n_delayed");
 
 		Bit se0 = detectSingleEnded({ p, n }, '0'); HCL_NAMED(se0);
 
-		Enum<PhaseCommand> command = analyzePhaseAlignment(p);
+		Enum<PhaseCommand> command = analyzePhaseAlignment(p); 
 		delay = counterUpDown(
 			command == PhaseCommand::delay,
 			command == PhaseCommand::anticipate,

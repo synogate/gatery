@@ -33,4 +33,16 @@ namespace gtry::scl::arch::sky130 {
 	private:
 		picoseconds m_simDelay;
 	};
+
+	class dlygate4sd3_factory
+	{
+	public:
+		dlygate4sd3_factory(Strength strength = Strength::one, picoseconds simDelay = 500ps, Library lib = Library::highDensity);
+		Bit operator()(Bit in);
+	private:
+		Strength m_strength;
+		picoseconds m_simDelay;
+		Library m_lib;
+	};
+
 }

@@ -24,12 +24,24 @@ namespace gtry::scl::arch::sky130
 	dlygate4sd3::dlygate4sd3(Strength strength, picoseconds simDelay, Library lib)
 		: ExternalModule("sky130_fd_sc_" + toLibraryName(lib) + "_dlygate4sd3_" + std::to_string((size_t)strength)),
 		m_simDelay(simDelay)
-	{}
+	{
+		this->isEntity(false); this->requiresComponentDeclaration(true);
+	}
 
 	Bit dlygate4sd3::operator()(Bit in) {
 		this->in("A") = in;
-		Bit ret = this->out("x");
+		Bit ret = this->out("X");
 		ret.simulationOverride(simulateDelay(in, m_simDelay, "sim_delay")); //not perfect, but ok
 		return ret;
+	}
+
+	dlygate4sd3_factory::dlygate4sd3_factory(Strength strength, picoseconds simDelay, Library lib)
+		: m_strength(strength), m_simDelay(simDelay), m_lib(lib)
+	{}
+
+	Bit dlygate4sd3_factory::operator()(Bit in)
+	{
+		dlygate4sd3 instance(m_strength, m_simDelay, m_lib);
+		return instance(in);
 	}
 };
