@@ -578,28 +578,6 @@ module )" << m_dependencySortedEntities.back() << "();" << std::endl;
 
 	}
 
-	verilogFile << R"(
-    function automatic integer stringcompare;
-        input string v_line;
-        input string str;
-        integer i;
-        begin
-            if ($strlen(v_line) != $strlen(str)) begin
-                stringcompare = 0;
-                return;
-            end
-            for (i = 0; i < $strlen(v_line); i = i + 1) begin
-                if (v_line[i] != str[i]) begin
-                    stringcompare = 0;
-                    return;
-                end
-            end
-            stringcompare = 1;
-        end
-    endfunction
-	)";
-	
-
 	const std::string assertionSeverity = "warning";
 
 
@@ -655,9 +633,19 @@ module )" << m_dependencySortedEntities.back() << "();" << std::endl;
 
 	cf.indent(verilogFile, 3);
 	verilogFile << "$fgets(line, test_vector_file);" << std::endl;
-	
+
 	cf.indent(verilogFile, 3);
-	verilogFile << "if (stringcompare(line, \"SET\")) begin" << std::endl;
+	verilogFile << "if (line ==  \"\") begin" << std::endl;
+	cf.indent(verilogFile, 3);
+	verilogFile << "end" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "else if (line ==  \"\\n\") begin" << std::endl;
+	cf.indent(verilogFile, 3);
+	verilogFile << "end" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "else if (line ==  \"SET\\n\") begin" << std::endl;
 
 		cf.indent(verilogFile, 4);
 		verilogFile << "$fgets(line, test_vector_file);" << std::endl;
@@ -668,7 +656,7 @@ module )" << m_dependencySortedEntities.back() << "();" << std::endl;
 			if (outputIsDrivenByNetwork.contains(p.first)) continue;
 
 			cf.indent(verilogFile, 4);
-			verilogFile << "else if (stringcompare(line, \"" << p.second << "\")) begin" << std::endl;
+			verilogFile << "else if (line == \"" << p.second << "\\n\") begin" << std::endl;
 
 			cf.indent(verilogFile, 5);
 			verilogFile << "$fgets(line, test_vector_file);" << std::endl;
@@ -702,7 +690,7 @@ module )" << m_dependencySortedEntities.back() << "();" << std::endl;
 	verilogFile << "end" << std::endl;
 
 	cf.indent(verilogFile, 3);
-	verilogFile << "else if (stringcompare(line, \"CHECK\")) begin" << std::endl;
+	verilogFile << "else if (line == \"CHECK\\n\") begin" << std::endl;
 
 		cf.indent(verilogFile, 4);
 		verilogFile << "$fgets(line, test_vector_file);" << std::endl;
@@ -712,7 +700,7 @@ module )" << m_dependencySortedEntities.back() << "();" << std::endl;
 		for (auto &p : m_outputToIoPinName) {
 
 			cf.indent(verilogFile, 4);
-			verilogFile << "else if (stringcompare(line, \"" << p.second << "\")) begin" << std::endl;
+			verilogFile << "else if (line == \"" << p.second << "\\n\") begin" << std::endl;
 
 			cf.indent(verilogFile, 5);
 			verilogFile << "$fgets(line, test_vector_file);" << std::endl;
@@ -739,7 +727,7 @@ module )" << m_dependencySortedEntities.back() << "();" << std::endl;
 	verilogFile << "end" << std::endl;
 
 	cf.indent(verilogFile, 3);
-	verilogFile << "else if (stringcompare(line, \"RST\")) begin" << std::endl;
+	verilogFile << "else if (line == \"RST\\n\") begin" << std::endl;
 
 		cf.indent(verilogFile, 4);
 		verilogFile << "$fgets(line, test_vector_file);" << std::endl;
@@ -753,7 +741,7 @@ module )" << m_dependencySortedEntities.back() << "();" << std::endl;
 
 
 			cf.indent(verilogFile, 4);
-			verilogFile << "else if (stringcompare(line, \"" << resetName << "\")) begin" << std::endl;
+			verilogFile << "else if (line == \"" << resetName << "\\n\") begin" << std::endl;
 
 			cf.indent(verilogFile, 5);
 			verilogFile << "$fgets(line, test_vector_file);" << std::endl;
@@ -782,7 +770,7 @@ module )" << m_dependencySortedEntities.back() << "();" << std::endl;
 	verilogFile << "end" << std::endl;
 
 	cf.indent(verilogFile, 3);
-	verilogFile << "else if (stringcompare(line, \"ADV\")) begin" << std::endl;
+	verilogFile << "else if (line == \"ADV\\n\") begin" << std::endl;
 
 		cf.indent(verilogFile, 4);
 		verilogFile << "$fgets(line, test_vector_file);" << std::endl;
