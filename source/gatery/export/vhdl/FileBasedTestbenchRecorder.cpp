@@ -632,15 +632,9 @@ module )" << m_dependencySortedEntities.back() << "();" << std::endl;
 	verilogFile << "while (!$feof(test_vector_file)) begin" << std::endl;
 
 	cf.indent(verilogFile, 3);
-	verilogFile << "$fgets(line, test_vector_file);" << std::endl;
-
-	cf.indent(verilogFile, 3);
-	verilogFile << "if (line ==  \"\") begin" << std::endl;
-	cf.indent(verilogFile, 3);
-	verilogFile << "end" << std::endl;
-
-	cf.indent(verilogFile, 3);
-	verilogFile << "else if (line ==  \"\\n\") begin" << std::endl;
+	verilogFile << "if (!$fgets(line, test_vector_file)) begin" << std::endl;
+	cf.indent(verilogFile, 4);
+	verilogFile << "$stop;" << std::endl;
 	cf.indent(verilogFile, 3);
 	verilogFile << "end" << std::endl;
 
