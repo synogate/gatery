@@ -49,7 +49,7 @@ namespace gtry::scl::arch::sky130 {
 			case Library::lowSpeed: return "ls";
 			case Library::mediumSpeed: return "ms";
 		}
-		HCL_DESIGNCHECK(false);
+		HCL_ASSERT(false);
 		return "";
 	}
 }
