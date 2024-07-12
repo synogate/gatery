@@ -205,6 +205,11 @@ namespace gtry::hlim
 #endif
 	}
 
+	void NodeGroup::configTreeReset()
+	{
+		ms_config.reset();
+	}
+
 	void NodeGroupConfig::load(utils::ConfigTree config)
 	{
 #ifdef USE_YAMLCPP
@@ -264,6 +269,12 @@ namespace gtry::hlim
 			});
 		}
 #endif
+	}
+
+	void NodeGroupConfig::reset()
+	{
+		m_config.clear();
+		m_usedConfig.clear();
 	}
 
 	void NodeGroupConfig::finalize()

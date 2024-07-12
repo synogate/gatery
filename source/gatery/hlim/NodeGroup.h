@@ -58,6 +58,7 @@ namespace gtry::hlim {
 	public:
 		void load(utils::ConfigTree config);
 		void add(std::string_view key, std::string_view filter, utils::ConfigTree setting);
+		void reset();
 		void finalize();
 
 		std::optional<utils::ConfigTree> operator ()(std::string_view key, std::string_view instancePath) const;
@@ -139,6 +140,7 @@ namespace gtry::hlim {
 		 * @warning This function does not do anything if gatery is not compiled with YamlCpp.
 		 */
 		static void configTree(std::string_view instanceFilter, std::string_view attribute, std::string_view value);
+		static void configTreeReset();
 
 		inline Circuit &getCircuit() { return m_circuit; }
 

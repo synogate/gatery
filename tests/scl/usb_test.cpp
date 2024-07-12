@@ -33,6 +33,7 @@
 #include <gatery/scl/io/BitBangEngine.h>
 
 #include <gatery/scl/io/dynamicDelay.h>
+#include <gatery/scl/arch/sky130/Sky130Device.h>
 using namespace boost::unit_test;
 using namespace gtry;
 using namespace gtry::scl;
@@ -317,6 +318,57 @@ BOOST_FIXTURE_TEST_CASE(usb_loopback_cyc10_dirty, WindowsDiscoveryLoopbackUsbFix
 BOOST_FIXTURE_TEST_CASE(usb_loopback_cyc10_clean, WindowsDiscoveryLoopbackUsbFixture, *boost::unit_test::disabled())
 {
 	samplingRatio = 1;
+	runTest();
+}
+
+class WindowsDiscoveryLoopbackUsbFixtureSky130 : public SingleEndpointUsbFixture {
+public:
+	std::function<void()> configure = []() {};
+	void runTest() {
+		configure();
+		m_useSimuPhy = false;
+		m_pinApplicationInterface = false;
+		m_pinStatusRegister = false;
+		m_maxPacketLength = 64;
+
+		//auto device = std::make_unique<scl::Sky130Device>();
+		//design.setTargetTechnology(std::move(device));
+
+		Clock clk12{ ClockConfig{
+			.absoluteFrequency = 12'000'000,
+			.name = "CLK12M",
+			.resetType = ClockConfig::ResetType::NONE
+		} };
+
+		ClockScope clkScp(clk12);
+
+		setupFunction();
+		{
+			scl::TransactionalFifo<scl::usb::Function::StreamData> loopbackFifo{ 256 };
+			m_func->attachRxFifo(loopbackFifo, 1 << 1);
+			m_func->attachTxFifo(loopbackFifo, 1 << 1);
+			loopbackFifo.generate();
+		}
+
+		addSimulationProcess([&]() -> SimProcess {
+			co_await OnClk(clk12);
+			co_await m_controller->testWindowsDeviceDiscovery();
+			stopTest();
+		});
+
+		design.postprocess();
+
+		vhdl::VHDLExport vhdl("synthesis_projects/usb_loopback_sky130/usb_loopback_sky130.vhd");
+		//vhdl.targetSynthesisTool(new Yosys());
+		vhdl(design.getCircuit());
+
+		BOOST_TEST(!runHitsTimeout({ 1, 1'000 }));
+	}
+};
+
+BOOST_FIXTURE_TEST_CASE(usb_loopback_sky130, WindowsDiscoveryLoopbackUsbFixtureSky130, *boost::unit_test::disabled())
+{
+	configure = []() { hlim::NodeGroup::configTree("scl_recoverDataDifferential*", "version", "sky130"); };
 	runTest();
 }
 

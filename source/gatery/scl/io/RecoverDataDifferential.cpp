@@ -22,6 +22,7 @@
 #include "../Counter.h"
 #include <gatery/scl/stream/utils.h>
 #include <gatery/scl/arch/intel/recoverDataDifferential.h>
+#include <gatery/scl/arch/sky130/recoverDataDifferential.h>
 #include <gatery/scl/arch/intel/ALTPLL.h>
 
 namespace gtry::scl {
@@ -98,6 +99,8 @@ namespace gtry::scl {
 					return recoverDataDifferentialEqualsamplingDirty(signalClock, ioP, ioN);
 				if(config.as<std::string>() == "altera")
 					return recoverDataDifferentialEqualsamplingAltera(signalClock, ioP, ioN);
+				if(config.as<std::string>() == "sky130")
+					return arch::sky130::recoverDataDifferentialEqualsamplingSky130(signalClock, ioP, ioN);
 			}
 			
 			//choose clean version if altera pll is found, otherwise use dirty version.
