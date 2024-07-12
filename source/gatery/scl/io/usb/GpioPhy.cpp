@@ -332,7 +332,7 @@ static gtry::Bit pulseExtender(gtry::Bit input, size_t cycles, gtry::Bit reset =
 void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 {
 	HCL_NAMED(m_tx);
-	setName(en, "tx_enable");
+	//tap(m_tx);
 	RvStream<UInt> txStream{ m_tx.data };
 	valid(txStream) = m_tx.valid;
 	m_tx.ready = ready(txStream);

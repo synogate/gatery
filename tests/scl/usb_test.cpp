@@ -153,8 +153,9 @@ BOOST_FIXTURE_TEST_CASE(usb_windows_discovery, UsbFixture)
 		BOOST_TEST((pid && *pid == Pid::ack));
 
 		// receive nothing
-		std::vector<std::byte> dataIn = co_await m_controller->transferIn(1);
-		BOOST_TEST(dataIn.empty());
+		co_await m_controller->sendToken(Pid::in, m_controller->functionAddress(), 1);
+		std::vector<std::byte> data = co_await m_controller->bus().receive();
+		BOOST_TEST((data.size() == 1 && data[0] == std::byte(0x5A)));
 
 		stopTest();
 	});

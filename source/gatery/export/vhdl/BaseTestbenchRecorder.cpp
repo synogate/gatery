@@ -28,10 +28,15 @@
 #include "../../hlim/supportNodes/Node_ExportOverride.h"
 #include "../../hlim/RevisitCheck.h"
 
+#include <gatery/export/vhdl/VHDLSignalDeclaration.h>
+
+#include <boost/algorithm/string/replace.hpp>
+
 namespace gtry::vhdl {
 
 BaseTestbenchRecorder::BaseTestbenchRecorder(AST *ast, sim::Simulator &simulator, std::string name) : m_ast(ast), m_simulator(simulator), m_name(std::move(name))
 {
+	m_entityName = nameToEntity(m_name);
 }
 
 BaseTestbenchRecorder::~BaseTestbenchRecorder()
@@ -52,7 +57,7 @@ void BaseTestbenchRecorder::declareSignals(std::ostream &stream)
 			if (val[sim::DefaultConfig::VALUE])
 				stream << "'1';" << std::endl;
 			else
-				stream << "'0';" << std::endl;		
+				stream << "'0';" << std::endl;
 	}
 	for (auto clock : m_resetsOfInterest) {
 		stream << "	SIGNAL " << rootEntity->getNamespaceScope().getReset(clock).name << " : STD_LOGIC := ";
@@ -69,8 +74,8 @@ void BaseTestbenchRecorder::declareSignals(std::ostream &stream)
 	for (auto ioPin : m_allIOPins) {
 		const auto &decl = rootEntity->getNamespaceScope().get(ioPin);
 
-		stream << "	SIGNAL " << decl.name << " : ";
-		cf.formatConnectionType(stream, decl);
+		stream << "	SIGNAL ";
+		cf.formatDeclaration(stream, decl);
 		stream << ';' << std::endl;
 	}
 
@@ -185,6 +190,146 @@ hlim::Node_Pin *BaseTestbenchRecorder::isDrivenByPin(hlim::NodePort nodePort) co
 			return nullptr;		
 	}
 	return nullptr;
+}
+
+
+
+
+
+
+void BaseTestbenchRecorder::formatDeclarationVerilog(std::ostream &stream, const VHDLSignalDeclaration &decl)
+{
+	if (isSingleBit(decl.dataType))
+		stream << decl.name;
+	else
+		stream << '[' << (int)decl.width-1 << ":0] " << decl.name;
+}
+
+void BaseTestbenchRecorder::buildClockProcessVerilog(std::ostream &stream, const hlim::Clock *clock)
+{
+	CodeFormatting &cf = m_ast->getCodeFormatting();
+	auto *rootEntity = m_ast->getRootEntity();
+	const std::string &clockName = rootEntity->getNamespaceScope().getClock(clock).name;
+
+	cf.indent(stream, 1);
+	stream << "always begin" << std::endl;
+
+	auto halfPeriod = hlim::ClockRational(1,2) / clock->absoluteFrequency();
+	double halfPeriodNs = hlim::toNanoseconds(halfPeriod);
+
+	cf.indent(stream, 2);
+	stream << '#' << halfPeriodNs * 1000.0 << ' ' << clockName << " = ~" << clockName << ";\n";
+
+	cf.indent(stream, 2);
+	stream << "if (TB_testbench_is_done) $stop;" << std::endl;  
+
+	cf.indent(stream, 1);
+	stream << "end" << std::endl;
+
+}
+
+void BaseTestbenchRecorder::declareSignalsVerilog(std::ostream &stream)
+{
+	auto *rootEntity = m_ast->getRootEntity();
+	CodeFormatting &cf = m_ast->getCodeFormatting();
+
+	for (auto clock : m_clocksOfInterest) {
+		stream << "reg " << rootEntity->getNamespaceScope().getClock(clock).name << " = ";
+		auto val = m_simulator.getValueOfClock(clock);
+		if (!val[sim::DefaultConfig::DEFINED])
+			stream << "x;" << std::endl;
+		else
+			if (val[sim::DefaultConfig::VALUE])
+				stream << "1;" << std::endl;
+			else
+				stream << "0;" << std::endl;
+	}
+	for (auto clock : m_resetsOfInterest) {
+		stream << "reg " << rootEntity->getNamespaceScope().getReset(clock).name << " = ";
+		auto val = m_simulator.getValueOfReset(clock);
+		if (!val[sim::DefaultConfig::DEFINED])
+			stream << "x;" << std::endl;
+		else
+			if (val[sim::DefaultConfig::VALUE])
+				stream << "1;" << std::endl;
+			else
+				stream << "0;" << std::endl;
+	}
+
+	for (auto ioPin : m_allIOPins) {
+		const auto &decl = rootEntity->getNamespaceScope().get(ioPin);
+
+#if 0
+		if (ioPin->isBiDirectional()) {
+			stream << "reg ";
+			formatDeclarationVerilog(stream, decl);
+			stream << "_TB_driver;\n";
+
+			stream << "wire ";
+			formatDeclarationVerilog(stream, decl);
+			stream << ";\n";
+
+			stream << "assign " << decl.name << " = " << decl.name << "_TB_driver;";
+		} else 
+#endif
+		if (ioPin->isInputPin()) {
+			stream << "reg ";
+			formatDeclarationVerilog(stream, decl);
+			stream << ";\n";
+		} else {
+			stream << "wire ";
+			formatDeclarationVerilog(stream, decl);
+			stream << ";\n";
+		}
+	}
+
+	stream << "	reg TB_testbench_is_done = 0;\n";
+
+}
+
+void BaseTestbenchRecorder::writePortmapVerilog(std::ostream &stream)
+{
+	auto *rootEntity = m_ast->getRootEntity();
+	CodeFormatting &cf = m_ast->getCodeFormatting();
+
+	std::vector<std::string> portmapList;
+
+	for (auto &s : m_clocksOfInterest) {
+		std::stringstream line;
+		line << '.' << rootEntity->getNamespaceScope().getClock(s).name << '(';
+		line << rootEntity->getNamespaceScope().getClock(s).name << ')';
+		portmapList.push_back(line.str());
+	}
+	for (auto &s : m_resetsOfInterest) {
+		std::stringstream line;
+		line << '.' << rootEntity->getNamespaceScope().getReset(s).name << '(';
+		line << rootEntity->getNamespaceScope().getReset(s).name << ')';
+		portmapList.push_back(line.str());
+	}
+	for (auto &s : m_allIOPins) {
+		std::stringstream line;
+		line << '.' << rootEntity->getNamespaceScope().get(s).name << '(';
+		line << rootEntity->getNamespaceScope().get(s).name << ')';
+		portmapList.push_back(line.str());
+	}
+
+	for (auto i : utils::Range(portmapList.size())) {
+		cf.indent(stream, 2);
+		stream << portmapList[i];
+		if (i+1 < portmapList.size())
+			stream << ",";
+		stream << std::endl;
+	}
+
+}
+
+
+std::string BaseTestbenchRecorder::nameToEntity(const std::string &name)
+{
+	std::string entityName = name;
+	boost::replace_all(entityName, " ", "_");
+	boost::replace_all(entityName, "-", "_");
+	return entityName;
 }
 
 }

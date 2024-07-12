@@ -25,6 +25,7 @@ RvStream<BVec> BitBangEngine::generate(RvStream<BVec> command, size_t numIo)
 {
 	Area scope{ "scl_BitBangEngine", true };
 	HCL_DESIGNCHECK(command->width() == 8_b);
+	HCL_NAMED(command);
 	m_io.resize(numIo);
 
 	bool hasSerialEngine = false;
