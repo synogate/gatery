@@ -47,7 +47,7 @@ namespace gtry::scl {
 		Bit sim_output = pinIn(PinNodeParameter{.simulationOnlyPin = true}).setName(name + "_output");
 		
 		DesignScope::get()->getCircuit().addSimulationProcess([=]()->SimProcess {
-			simu(sim_output) = '0';
+			simu(sim_output) = 'x';
 			co_await WaitFor(Seconds{ 0,1 }); //every read needs to be able to read what's written
 			while (true) {
 				ReadSignalList allInputs;

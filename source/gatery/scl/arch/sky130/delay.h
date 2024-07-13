@@ -28,7 +28,7 @@ namespace gtry::scl::arch::sky130 {
 	class dlygate4sd3 : protected ExternalModule
 	{
 	public:
-		dlygate4sd3(Strength strength = Strength::one, picoseconds simDelay = 500ps, Library lib = Library::highDensity);
+		dlygate4sd3(Strength strength = Strength::one, picoseconds simDelay = 375ps, Library lib = Library::highDensity);
 		Bit operator()(Bit in);
 	private:
 		picoseconds m_simDelay;
@@ -37,11 +37,10 @@ namespace gtry::scl::arch::sky130 {
 	class dlygate4sd3_factory
 	{
 	public:
-		dlygate4sd3_factory(Strength strength = Strength::one, picoseconds simDelay = 500ps, Library lib = Library::highDensity);
+		dlygate4sd3_factory(size_t numDelayGates = 1, Library lib = Library::highDensity);
 		Bit operator()(Bit in);
 	private:
-		Strength m_strength;
-		picoseconds m_simDelay;
+		size_t m_numDelayGates;
 		Library m_lib;
 	};
 

@@ -27,7 +27,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 namespace gtry::scl::arch::sky130 {
 	VStream<Bit, SingleEnded> recoverDataDifferentialEqualsamplingSky130(const Clock& signalClock, Bit ioP, Bit ioN) {
-		Area area{ "scl_recoverDataDifferential_equalsampling_sky130", true };
+		Area area{ "scl_recoverDataDifferential_equalsampling_sky130", false };
+		auto scope = area.enter();
 
 		Clock logicClk = ClockScope::getClk();
 
@@ -36,10 +37,14 @@ namespace gtry::scl::arch::sky130 {
 
 		BitWidth delayW = 5_b;
 		UInt delay = delayW;
-		
-		dlygate4sd3_factory delayFactory(Strength::one, 500ps);
-		p = delayChainWithTaps(p, delay, delayFactory); setName(p, "in_p_delayed");
-		n = delayChainWithTaps(n, delay, delayFactory); setName(n, "in_n_delayed");
+
+		size_t numDelayElements = 1;
+		if(auto&& cfg = scope.config("numDelayElements"))
+			numDelayElements = cfg.as<size_t>();
+
+		dlygate4sd3_factory delayGate{ numDelayElements };
+		p = delayChainWithTaps(p, delay, delayGate); setName(p, "in_p_delayed");
+		n = delayChainWithTaps(n, delay, delayGate); setName(n, "in_n_delayed");
 
 		Bit se0 = detectSingleEnded({ p, n }, '0'); HCL_NAMED(se0);
 

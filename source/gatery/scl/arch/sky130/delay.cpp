@@ -35,13 +35,15 @@ namespace gtry::scl::arch::sky130
 		return ret;
 	}
 
-	dlygate4sd3_factory::dlygate4sd3_factory(Strength strength, picoseconds simDelay, Library lib)
-		: m_strength(strength), m_simDelay(simDelay), m_lib(lib)
+	dlygate4sd3_factory::dlygate4sd3_factory(size_t numDelayGates, Library lib)
+		: m_numDelayGates(numDelayGates), m_lib(lib)
 	{}
 
 	Bit dlygate4sd3_factory::operator()(Bit in)
 	{
-		dlygate4sd3 instance(m_strength, m_simDelay, m_lib);
-		return instance(in);
+		Bit out = in;
+		for (size_t i = 0; i < m_numDelayGates; i++)
+			out = dlygate4sd3{ Strength::one, 375ps, m_lib }(out);
+		return out;
 	}
 };
