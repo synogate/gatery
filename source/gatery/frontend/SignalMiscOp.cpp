@@ -29,6 +29,7 @@
 #include "../hlim/coreNodes/Node_ClkRst2Signal.h"
 #include "../hlim/coreNodes/Node_Logic.h"
 #include "../hlim/coreNodes/Node_Rewire.h"
+#include "../hlim/coreNodes/Node_Signal.h"
 
 #include <gatery/utils/Range.h>
 #include <gatery/utils/Preprocessor.h>
@@ -294,16 +295,16 @@ namespace gtry
 
 	void internal::tap(const ElementarySignal& signal)
 	{
-		hlim::SignalAttributes att;
-		att.userDefinedVendorAttributes["xilinx"]["mark_debug"] = { .type = "string", .value = "\"true\"" };
-		att.userDefinedVendorAttributes["intel_quartus"]["preserve"] = { .type = "boolean", .value = "true" };
-		attribute((ElementarySignal&)signal, att);
+		auto attributedSignalNodePort = internal::attribute(signal, { .hardwareDebugSignal = true });
+		// This is a bit wild, but we give the attribute node a name so that this 
+		// defines the name of the tap in the vhdl export, since attributes are
+		// forced to be signals (rather than variables).
+		attributedSignalNodePort.node->setName(std::string(signal.getName()));
 
 		auto *node = DesignScope::createNode<hlim::Node_SignalTap>();
 		node->recordStackTrace();
 		node->setLevel(hlim::Node_SignalTap::LVL_WATCH);
 		node->setName(std::string(signal.getName()));
-
-		node->addInput(signal.readPort());
+		node->addInput(attributedSignalNodePort);
 	}	
 }

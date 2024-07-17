@@ -52,6 +52,8 @@ class Node_RegSpawner : public Node<Node_RegSpawner>
 
 		virtual bool hasSideEffects() const override { return false; }
 		virtual bool isCombinatorial(size_t port) const override { return true; }
+		virtual bool canBeRetimedOver() const override { return false; }
+		virtual std::optional<size_t> forwardsInputToOutput(size_t outputPort = 0) const override { return { INPUT_SIGNAL_OFFSET + outputPort }; }
 
 		virtual std::string getTypeName() const override;
 		virtual void assertValidity() const override;

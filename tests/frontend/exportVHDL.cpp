@@ -180,6 +180,7 @@ BOOST_FIXTURE_TEST_CASE(muxUndefined, gtry::GHDLTestFixture)
         pinOut(output).setName("out");
     }
 
+	//DesignScope::visualize("test_muxUndefined_before");
 	testCompilation();
 	//DesignScope::visualize("test_muxUndefined");
 }
@@ -540,7 +541,7 @@ BOOST_FIXTURE_TEST_CASE(unusedTappedSignalRemains, gtry::GHDLTestFixture)
 
 	testCompilation();
 
-	BOOST_TEST(exportContains(std::regex{"s_unused <= "}));
+	BOOST_TEST(exportContains(std::regex{"s_unused.* <= "}));
 }
 
 
@@ -564,10 +565,12 @@ BOOST_FIXTURE_TEST_CASE(signalTapForcesVariableToSignal, gtry::GHDLTestFixture)
         pinOut(output).setName("out");
     }
 
+	//design.visualize("before");
 	testCompilation();
+	//design.visualize("after");
 
-	BOOST_TEST(exportContains(std::regex{"SIGNAL s_intermediate : STD_LOGIC;"}));
-	BOOST_TEST(exportContains(std::regex{"<= \\(s_intermediate xor input3\\)"}));
+	BOOST_TEST(exportContains(std::regex{"SIGNAL intermediate : STD_LOGIC;"}));
+	BOOST_TEST(exportContains(std::regex{"intermediate <="}));
 }
 
 
@@ -804,7 +807,7 @@ BOOST_FIXTURE_TEST_CASE(signalAttributes, gtry::GHDLTestFixture)
 
 		SignalAttributes attrib;
 		attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe\""};
-		attribute(input, attrib);
+		input = attribute(input, attrib);
 
 		pinOut(input).setName("output");
 	}
@@ -816,7 +819,7 @@ BOOST_FIXTURE_TEST_CASE(signalAttributes, gtry::GHDLTestFixture)
 
 		SignalAttributes attrib;
 		attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe_single\""};
-		attribute(input, attrib);
+		input = attribute(input, attrib);
 
 		pinOut(input).setName("outputSingle");
 	}	
@@ -827,7 +830,7 @@ BOOST_FIXTURE_TEST_CASE(signalAttributes, gtry::GHDLTestFixture)
 
 		SignalAttributes attrib;
 		attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe_const\""};
-		attribute(input, attrib);
+		input = attribute(input, attrib);
 
 		pinOut(input).setName("outputConst");
 	}	
@@ -841,7 +844,7 @@ BOOST_FIXTURE_TEST_CASE(signalAttributes, gtry::GHDLTestFixture)
 
 		SignalAttributes attrib;
 		attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe_no_signal\""};
-		attribute(input, attrib);
+		input = attribute(input, attrib);
 
 		pinOut(input).setName("output_no_signal");
 	}
@@ -851,7 +854,7 @@ BOOST_FIXTURE_TEST_CASE(signalAttributes, gtry::GHDLTestFixture)
 
 		SignalAttributes attrib;
 		attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe_single_no_signal\""};
-		attribute(input, attrib);
+		input = attribute(input, attrib);
 
 		pinOut(input).setName("outputSingle_no_signal");
 	}	
@@ -860,22 +863,44 @@ BOOST_FIXTURE_TEST_CASE(signalAttributes, gtry::GHDLTestFixture)
 
 		SignalAttributes attrib;
 		attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe_const_no_signal\""};
-		attribute(input, attrib);
+		input = attribute(input, attrib);
 
 		pinOut(input).setName("outputConst_no_signal");
 	}
-//	design.visualize("before");
+	{
+		Bit input = pinIn().setName("input_into_child");
+
+		Bit output;
+		{
+			Area area("child", true);
+
+			SignalAttributes attrib;
+			attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe_input_into_child\""};
+			input = attribute(input, attrib);
+
+			pinOut(input).setName("output_from_within_child");
+
+			output = '0';
+			SignalAttributes attrib2;
+			attrib2.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe_output_from_child\""};
+			output = attribute(output, attrib2);
+		}
+		pinOut(output).setName("output_from_child");
+	}
+	//design.visualize("before");
 	testCompilation();
-//	design.visualize("after");
+	//design.visualize("after");
 
 	BOOST_TEST(exportContains(std::regex{"maybe"}));
 	BOOST_TEST(exportContains(std::regex{"maybe_single"}));
 	BOOST_TEST(exportContains(std::regex{"maybe_const"}));
-/*
+
 	BOOST_TEST(exportContains(std::regex{"maybe_no_signal"}));
 	BOOST_TEST(exportContains(std::regex{"maybe_single_no_signal"}));
 	BOOST_TEST(exportContains(std::regex{"maybe_const_no_signal"}));
-*/
+
+	BOOST_TEST(exportContains(std::regex{"maybe_input_into_child"}));
+	BOOST_TEST(exportContains(std::regex{"maybe_output_from_child"}));
 }
 
 
@@ -1162,7 +1187,7 @@ BOOST_FIXTURE_TEST_CASE(tristateBitIntoSubEntity, gtry::GHDLTestFixture)
 	//design.visualize("before");
 	testCompilation();
 	//design.visualize("after");
-	BOOST_TEST(exportContains(std::regex{"s_tristatePin_2 <= UNSIGNED\\(tristatePin\\);"}));
+	BOOST_TEST(exportContains(std::regex{"s_tristatePin <= UNSIGNED\\(tristatePin\\);"}));
 }
 
 BOOST_FIXTURE_TEST_CASE(tristateBitIntoParent, gtry::GHDLTestFixture)
@@ -1185,7 +1210,7 @@ BOOST_FIXTURE_TEST_CASE(tristateBitIntoParent, gtry::GHDLTestFixture)
 	//design.visualize("before");
 	testCompilation();
 	//design.visualize("after");
-	BOOST_TEST(exportContains(std::regex{"out_tristatePin <= UNSIGNED\\(tristatePin_2\\);"}));
+	BOOST_TEST(exportContains(std::regex{"out_tristatePin <= UNSIGNED\\(tristatePin\\);"}));
 }
 
 

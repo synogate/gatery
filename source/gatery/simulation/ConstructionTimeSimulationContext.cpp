@@ -91,7 +91,7 @@ void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, Defau
 		if (auto *reg = dynamic_cast<hlim::Node_Register*>(nodePort.node)) {
 			auto type = hlim::getOutputConnectionType(nodePort);
 
-			auto reset = reg->getNonSignalDriver(hlim::Node_Register::Input::RESET_VALUE);
+			auto reset = reg->getNonForwardingDriver(hlim::Node_Register::Input::RESET_VALUE);
 			if (reset.node != nullptr) {
 				outputPorts.insert(reset);
 				openList.push_back(reset);

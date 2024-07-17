@@ -46,10 +46,12 @@ std::string NamespaceScope::allocateName(hlim::NodePort nodePort, const std::str
 
 	HCL_ASSERT(m_nodeNames.find(nodePort) == m_nodeNames.end());
 
-	auto &attempt = m_nextNameAttempt[desiredName];
+	std::string initialName = cf.getSignalName(desiredName, type);
+
+	auto &attempt = m_nextNameAttempt[initialName];
 	std::string name, lowerCaseName;
 	do {
-		name = cf.getSignalName(desiredName, type, attempt++);
+		name = cf.formatDuplicateName(initialName, attempt++);
 		lowerCaseName = boost::to_lower_copy(name);
 	} while (isNameInUse(lowerCaseName));
 
@@ -92,10 +94,12 @@ std::string NamespaceScope::allocateName(hlim::Clock *clock, const std::string &
 
 	HCL_ASSERT(m_clockNames.find(clock) == m_clockNames.end());
 
-	auto &attempt = m_nextNameAttempt[desiredName];
+	std::string initialName = cf.getClockName(desiredName);
+
+	auto &attempt = m_nextNameAttempt[initialName];
 	std::string name, lowerCaseName;
 	do {
-		name = cf.getClockName(desiredName, attempt++);
+		name = cf.formatDuplicateName(initialName, attempt++);
 		lowerCaseName = boost::to_lower_copy(name);
 	} while (isNameInUse(lowerCaseName));
 
@@ -124,10 +128,12 @@ std::string NamespaceScope::allocateResetName(hlim::Clock *clock, const std::str
 
 	HCL_ASSERT(m_resetNames.find(clock) == m_resetNames.end());
 
-	auto &attempt = m_nextNameAttempt[desiredName];
+	std::string initialName = cf.getClockName(desiredName);
+
+	auto &attempt = m_nextNameAttempt[initialName];
 	std::string name, lowerCaseName;
 	do {
-		name = cf.getClockName(desiredName, attempt++);
+		name = cf.formatDuplicateName(initialName, attempt++);
 		lowerCaseName = boost::to_lower_copy(name);
 	} while (isNameInUse(lowerCaseName));
 
@@ -157,10 +163,12 @@ std::string NamespaceScope::allocateName(hlim::Node_Pin *ioPin, const std::strin
 
 	HCL_ASSERT(m_ioPinNames.find(ioPin) == m_ioPinNames.end());
 
-	auto &attempt = m_nextNameAttempt[desiredName];
+	std::string initialName = cf.getIoPinName(desiredName);
+
+	auto &attempt = m_nextNameAttempt[initialName];
 	std::string name, lowerCaseName;
 	do {
-		name = cf.getIoPinName(desiredName, attempt++);
+		name = cf.formatDuplicateName(initialName, attempt++);
 		lowerCaseName = boost::to_lower_copy(name);
 	} while (isNameInUse(lowerCaseName));
 
@@ -188,10 +196,12 @@ std::string NamespaceScope::allocatePackageName(const std::string &desiredName)
 	HCL_ASSERT(!desiredName.empty());
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 
-	auto &attempt = m_nextNameAttempt[desiredName];
+	std::string initialName = cf.getPackageName(desiredName);
+
+	auto &attempt = m_nextNameAttempt[initialName];
 	std::string name, lowerCaseName;
 	do {
-		name = cf.getPackageName(desiredName, attempt++);
+		name = cf.formatDuplicateName(initialName, attempt++);
 		lowerCaseName = boost::to_lower_copy(name);
 	} while (isNameInUse(lowerCaseName));
 
@@ -213,10 +223,12 @@ std::string NamespaceScope::allocateEntityName(const std::string &desiredName)
 	HCL_ASSERT(!desiredName.empty());
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 
-	auto &attempt = m_nextNameAttempt[desiredName];
+	std::string initialName = cf.getEntityName(desiredName);
+
+	auto &attempt = m_nextNameAttempt[initialName];
 	std::string name, lowerCaseName;
 	do {
-		name = cf.getEntityName(desiredName, attempt++);
+		name = cf.formatDuplicateName(initialName, attempt++);
 		lowerCaseName = boost::to_lower_copy(name);
 	} while (isNameInUse(lowerCaseName));
 
@@ -229,10 +241,12 @@ std::string NamespaceScope::allocateBlockName(const std::string &desiredName)
 	HCL_ASSERT(!desiredName.empty());
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 
-	auto &attempt = m_nextNameAttempt[desiredName];
+	std::string initialName = cf.getBlockName(desiredName);
+
+	auto &attempt = m_nextNameAttempt[initialName];
 	std::string name, lowerCaseName;
 	do {
-		name = cf.getBlockName(desiredName, attempt++);
+		name = cf.formatDuplicateName(initialName, attempt++);
 		lowerCaseName = boost::to_lower_copy(name);
 	} while (isNameInUse(lowerCaseName));
 
@@ -245,10 +259,12 @@ std::string NamespaceScope::allocateProcessName(const std::string &desiredName, 
 	HCL_ASSERT(!desiredName.empty());
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 
-	auto &attempt = m_nextNameAttempt[desiredName];
+	std::string initialName = cf.getProcessName(desiredName, clocked);
+
+	auto &attempt = m_nextNameAttempt[initialName];
 	std::string name, lowerCaseName;
 	do {
-		name = cf.getProcessName(desiredName, clocked, attempt++);
+		name = cf.formatDuplicateName(initialName, attempt++);
 		lowerCaseName = boost::to_lower_copy(name);
 	} while (isNameInUse(lowerCaseName));
 
@@ -261,10 +277,12 @@ std::string NamespaceScope::allocateInstanceName(const std::string &desiredName)
 	HCL_ASSERT(!desiredName.empty());
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 
-	auto &attempt = m_nextNameAttempt[desiredName];
+	std::string initialName = cf.getInstanceName(desiredName);
+
+	auto &attempt = m_nextNameAttempt[initialName];
 	std::string name, lowerCaseName;
 	do {
-		name = cf.getInstanceName(desiredName, attempt++);
+		name = cf.formatDuplicateName(initialName, attempt++);
 		lowerCaseName = boost::to_lower_copy(name);
 	} while (isNameInUse(lowerCaseName));
 

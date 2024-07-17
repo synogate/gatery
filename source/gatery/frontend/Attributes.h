@@ -37,13 +37,46 @@ using hlim::PathAttributes;
  * @{
  */
 
+
+namespace internal {
+
+/// Set an attribute for a signal, such as max-fanout or vendor specific attributes.
+SignalReadPort attribute(const ElementarySignal &signal, SignalAttributes attributes);
+
+}
+
+
 /**
  * @brief Set an attribute for a signal, such as max-fanout or vendor specific attributes
  * 
  * @param signal Signal to which to apply the attribute. Often, attributes then actually refer to the driver of this signal.
  * @param attributes The attributes to set, potentially overwrites previous attributes.
  */
-void attribute(ElementarySignal &signal, SignalAttributes attributes);
+template<BaseSignal SignalType>
+inline SignalType attribute(const SignalType& in, SignalAttributes attributes) {
+	return internal::attribute(in, std::move(attributes));
+}
+	
+
+/**
+ * @brief Set an attribute for a signal, such as max-fanout or vendor specific attributes
+ * 
+ * @param signal Signal to which to apply the attribute. Often, attributes then actually refer to the driver of this signal.
+ * @param attributes The attributes to set, potentially overwrites previous attributes.
+ */
+template<Signal T>
+T attribute(const T& val, SignalAttributes attributes)
+{
+	return internal::transformSignal(val, [&](const auto& sig) {
+		if constexpr (!Signal<decltype(sig)>)
+			return sig;
+		else
+			return attribute(sig, attributes);
+	});
+}
+
+
+
 
 /**
  * @brief Sets an attribute for a signal path, such as false-path or multi-cycle.

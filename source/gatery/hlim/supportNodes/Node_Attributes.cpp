@@ -28,8 +28,22 @@ Node_Attributes::Node_Attributes() : Node(1, 1)
 
 }
 
+void Node_Attributes::setConnectionType(const ConnectionType &connectionType)
+{
+	setOutputConnectionType(0, connectionType);
+}
+
 void Node_Attributes::connectInput(const NodePort &nodePort)
 {
+	if (nodePort.node != nullptr) {
+		auto paramType = hlim::getOutputConnectionType(nodePort);
+		auto myType = getOutputConnectionType(0);
+		if (!getDirectlyDriven(0).empty()) {
+			HCL_ASSERT_HINT( paramType == myType, "The connection type of a node that is driving other nodes can not change");
+		} else
+			setConnectionType(paramType);
+	}
+
 	NodeIO::connectInput(0, nodePort);
 }
 
@@ -40,6 +54,10 @@ void Node_Attributes::disconnectInput()
 }
 
 
+bool Node_Attributes::canBeRetimedOver() const
+{
+	return m_attributes.preventRetimingOver();
+}
 
 
 std::string Node_Attributes::getTypeName() const
@@ -76,6 +94,20 @@ std::unique_ptr<BaseNode> Node_Attributes::cloneUnconnected() const
 
 	return copy;
 }
+
+std::string Node_Attributes::attemptInferOutputName(size_t outputPort) const
+{
+	std::stringstream name;
+
+	auto driver = getDriver(0);
+	if (driver.node == nullptr) return "";
+	if (inputIsComingThroughParentNodeGroup(0)) return "";
+	if (driver.node->getName().empty()) return "";
+
+	return driver.node->getName() + "_attrib";
+}
+
+
 
 
 }

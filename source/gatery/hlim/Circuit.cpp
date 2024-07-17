@@ -1448,6 +1448,9 @@ void Circuit::ensureSignalNodePlacement()
 			if (driver.node->getGroup() != nullptr && driver.node->getGroup()->getGroupType() == NodeGroupType::SFU) continue;
 			if (dynamic_cast<Node_MultiDriver*>(driver.node) != nullptr) continue;
 
+			// No signal nodes needed after attributes, as they anyways become signals
+			if (dynamic_cast<Node_Attributes*>(driver.node) != nullptr) continue;
+
 			auto it = addedSignalsNodes.find(driver);
 			if (it != addedSignalsNodes.end()) {
 				node->connectInput(i, {.node=it->second, .port=0ull});
@@ -1865,16 +1868,17 @@ Node_Signal *Circuit::appendSignal(RefCtdNodePort &nodePort)
 
 Node_Attributes *Circuit::getCreateAttribNode(NodePort &nodePort)
 {
-	for (auto nh : nodePort.node->exploreOutput(nodePort.port)) {
-		if (auto *attribNode = dynamic_cast<Node_Attributes*>(nh.node())) return attribNode;
-		if (!nh.isSignal()) nh.backtrack();
-	}
+	if (auto *attrib = dynamic_cast<Node_Attributes*>(nodePort.node))
+		return attrib;
 
 	
 	auto *attribNode = createNode<Node_Attributes>();
-	attribNode->connectInput(nodePort); /// @todo: place after signal node?
+	attribNode->connectInput(nodePort);
 	attribNode->recordStackTrace();
 	attribNode->moveToGroup(nodePort.node->getGroup());
+
+	nodePort = { .node = attribNode, .port = 0ull };
+
 	return attribNode;
 }
 

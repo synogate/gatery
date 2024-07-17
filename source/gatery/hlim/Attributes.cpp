@@ -58,7 +58,7 @@ void Attributes::loadConfig(const utils::ConfigTree& config)
 	#pragma message ("Loading attributes from ConfigTree is disabled for non yaml-cpp builds!")
 #endif
 }
-	
+
 void SignalAttributes::fuseWith(const SignalAttributes &rhs)
 {
 	Attributes::fuseWith(rhs);
@@ -67,6 +67,15 @@ void SignalAttributes::fuseWith(const SignalAttributes &rhs)
 		maxFanout = rhs.maxFanout;
 	if (rhs.allowFusing)
 		allowFusing = rhs.allowFusing;
+	if (rhs.optimizationBarrier)
+		optimizationBarrier = rhs.optimizationBarrier;
+	if (rhs.hardwareDebugSignal)
+		hardwareDebugSignal = rhs.hardwareDebugSignal;
+}
+
+bool SignalAttributes::preventRetimingOver() const
+{
+	return !userDefinedVendorAttributes.empty();
 }
 
 }

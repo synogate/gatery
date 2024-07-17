@@ -139,20 +139,26 @@ void Process::extractSignals()
 		
 
 #if 1
-		// Named signals are explicit
+		// Named signals are explicit and must be signals (not variables)
 		if (dynamic_cast<hlim::Node_Signal*>(node) != nullptr && node->hasGivenName() && node->getOutputConnectionType(0).width > 0) {
 			hlim::NodePort driver = {.node = node, .port = 0};
-			potentialLocalSignals.insert(driver);
+			//potentialLocalSignals.insert(driver);
+			potentialNonVariableSignals.insert(driver);
 		}
 #endif
 
+		if (auto *attrib = dynamic_cast<hlim::Node_Attributes*>(node)) {
+			potentialNonVariableSignals.insert({ .node = attrib, .port = 0 });
+		}
+
 		if (auto *tap = dynamic_cast<hlim::Node_SignalTap*>(node)) {
-			if (tap->getLevel() == hlim::Node_SignalTap::LVL_WATCH)
+			if (tap->getLevel() == hlim::Node_SignalTap::LVL_WATCH) {
 				potentialNonVariableSignals.insert(tap->getDriver(0));
+			}
 		}
 
 		// Need an explicit signal between input-pins and rewire to handle cast
-		if (dynamic_cast<hlim::Node_Signal*>(node) != nullptr && dynamic_cast<hlim::Node_Pin*>(node->getNonSignalDriver(0).node)) {
+		if (dynamic_cast<hlim::Node_Signal*>(node) != nullptr && dynamic_cast<hlim::Node_Pin*>(node->getNonForwardingDriver(0).node)) {
 			bool feedsIntoRewire = false;
 			for (auto driven : node->getDirectlyDriven(0))
 				if (dynamic_cast<hlim::Node_Rewire*>(driven.node)) {
@@ -307,6 +313,7 @@ void CombinatoryProcess::formatExpression(std::ostream &stream, size_t indentati
 	}
 
 	if (const auto *attribNode = dynamic_cast<const hlim::Node_Attributes *>(nodePort.node)) {
+		//HCL_ASSERT_HINT(false, "Internal error, attribute nodes should not end up in processes as vhdl-attributes on vhdl-variables are ignored!");
 		formatExpression(stream, indentation, comments, attribNode->getDriver(0), dependentInputs, context);
 		return;
 	}
@@ -911,7 +918,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 			if (s->isInputPin())
 				signalsReady.insert({.node=s, .port=0});
 
-			if (s->isOutputPin() && s->getNonSignalDriver(0).node != nullptr && !m_outputs.contains({.node=s, .port=0}))
+			if (s->isOutputPin() && s->getNonForwardingDriver(0).node != nullptr && !m_outputs.contains({.node=s, .port=0}))
 				constructStatementsFor({.node=s, .port=0});
 		}
 

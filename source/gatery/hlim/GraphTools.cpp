@@ -89,7 +89,7 @@ Node_Pin *findOutputPin(NodePort output)
 	if (dynamic_cast<const Node_Signal*>(output.node) == nullptr)
 		driver = output;
 	else
-		driver = output.node->getNonSignalDriver(0);
+		driver = output.node->getNonForwardingDriver(0);
 
 	// Second: From there on explore all nodes driven directly or via signal nodes.
 	for (auto nh : driver.node->exploreOutput(driver.port)) {
@@ -371,11 +371,11 @@ std::optional<std::pair<Node_Constant*, NodePort>> isComparisonWithConstant(Node
 	if (auto *compare = dynamic_cast<Node_Compare*>(output.node)) {
 		if (compare->getOp() == Node_Compare::EQ) {
 
-			auto *const1 = dynamic_cast<Node_Constant*>(compare->getNonSignalDriver(0).node);
+			auto *const1 = dynamic_cast<Node_Constant*>(compare->getNonForwardingDriver(0).node);
 			if (const1) 
 				return { std::make_pair(const1, compare->getDriver(1)) };
 
-			auto *const2 = dynamic_cast<Node_Constant*>(compare->getNonSignalDriver(1).node);
+			auto *const2 = dynamic_cast<Node_Constant*>(compare->getNonForwardingDriver(1).node);
 			if (const2)
 				return { std::make_pair(const2, compare->getDriver(0)) };
 		}

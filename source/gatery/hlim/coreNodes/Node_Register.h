@@ -82,8 +82,8 @@ namespace gtry::hlim {
 		inline const utils::BitFlags<Flags> &getFlags() const { return m_flags; }
 		inline utils::BitFlags<Flags> &getFlags() { return m_flags; }
 
-		bool hasResetValue() const { return getNonSignalDriver((size_t)Input::RESET_VALUE).node != nullptr; }
-		bool hasEnable() const { return getNonSignalDriver((size_t)Input::ENABLE).node != nullptr; }
+		bool hasResetValue() const { return getNonForwardingDriver((size_t)Input::RESET_VALUE).node != nullptr; }
+		bool hasEnable() const { return getNonForwardingDriver((size_t)Input::ENABLE).node != nullptr; }
 
 		virtual bool inputIsEnable(size_t inputPort) const override;
 	protected:

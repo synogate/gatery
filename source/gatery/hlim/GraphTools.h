@@ -86,6 +86,7 @@ namespace gtry::hlim {
 	struct FindDriverOpts {
 		size_t inputPortIdx = 0ull;
 		bool skipSignalNodes = true;
+		bool skipAllForwardingNodes = true;
 		bool skipNamedSignalNodes = true;
 		std::optional<size_t> skipExportOverrideNodes = {};
 	};

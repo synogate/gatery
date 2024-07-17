@@ -109,7 +109,7 @@ class UnstableMap
 		template< class... Args >
 		auto try_emplace( Args&&... args ) { return m_map.try_emplace(std::forward<Args>(args)...); }
 
-		void insert(value_type &&value) { m_map.insert(std::forward<value_type>(value)); }
+		auto insert(value_type &&value) { return m_map.insert(std::forward<value_type>(value)); }
 		auto find(const Key &key) { return m_map.find(key); }
 		auto find(const Key &key) const { return m_map.find(key); }
 		auto erase(const Key &key) { return m_map.erase(key); }

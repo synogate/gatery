@@ -59,7 +59,7 @@ void Node_PriorityConditional::disconnectInput(size_t choice)
 void Node_PriorityConditional::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
 	for (auto choice : utils::Range(getNumChoices())) {
-		auto conditionDriver = getNonSignalDriver(inputPortChoiceCondition(choice));
+		auto conditionDriver = getNonForwardingDriver(inputPortChoiceCondition(choice));
 		if (conditionDriver.node == nullptr) {
 			state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
 			return;

@@ -47,6 +47,7 @@ class NodeIO
 		ConnectionType getDriverConnType(size_t inputPort) const;
 		NodePort getDriver(size_t inputPort) const;
 		NodePort getNonSignalDriver(size_t inputPort) const;
+		NodePort getNonForwardingDriver(size_t inputPort) const;
 
 		const std::vector<NodePort> &getDirectlyDriven(size_t outputPort) const;
 

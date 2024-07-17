@@ -59,7 +59,7 @@ void RunTimeSimulationContext::overrideRegister(const SigHandle &handle, const D
 
 	auto *node = handle.getOutput().node;
 	if (dynamic_cast<hlim::Node_Signal*>(node))
-		node = node->getNonSignalDriver(0).node;
+		node = node->getNonForwardingDriver(0).node;
 
 	auto *reg = dynamic_cast<hlim::Node_Register*>(node);
 	HCL_DESIGNCHECK_HINT(reg != nullptr, "Trying to override register output, but the signal is not driven by a register.");

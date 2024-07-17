@@ -82,8 +82,6 @@ namespace gtry {
 
 		virtual void assign(SignalReadPort, bool ignoreConditions = false) = 0;
 
-		void attribute(const hlim::SignalAttributes &attributes);
-
 		virtual BVec toBVec() const = 0;
 		virtual void fromBVec(const BVec &bvec) = 0;
 

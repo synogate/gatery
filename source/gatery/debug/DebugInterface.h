@@ -98,7 +98,8 @@ class LogMessage
 		LogMessage &operator<<(const hlim::NodePort &nodePort) { m_messageParts.push_back(nodePort); return *this; }
 		/// @brief Adds a reference to a subnet to the message, usually to be displayed as a visual graph.
 		/// @details Note that the nodes int the subnet may change or even be deleted between now and when the log message is viewed.
-		LogMessage &operator<<(hlim::Subnet subnet) { m_messageParts.push_back(std::move(subnet)); return *this; }
+		LogMessage &operator<<(hlim::Subnet subnet) { m_messageParts.push_back(subnet.asConst()); return *this; }
+		LogMessage &operator<<(hlim::ConstSubnet subnet) { m_messageParts.push_back(std::move(subnet)); return *this; }
 
 		template<std::derived_from<hlim::BaseNode> T>
 		LogMessage &operator<<(const T &v) { return this->operator<<((const hlim::BaseNode *)v); }
@@ -124,7 +125,7 @@ class LogMessage
 		Source m_source = LOG_DESIGN;
 		const hlim::NodeGroup *m_anchor = nullptr;
 
-		std::vector<std::variant<const char*, std::string, const hlim::BaseNode*, const hlim::NodeGroup*, hlim::Subnet, hlim::NodePort>> m_messageParts;
+		std::vector<std::variant<const char*, std::string, const hlim::BaseNode*, const hlim::NodeGroup*, hlim::ConstSubnet, hlim::NodePort>> m_messageParts;
 };
 
 enum class State {

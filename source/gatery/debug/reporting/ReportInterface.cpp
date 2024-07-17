@@ -89,8 +89,8 @@ namespace gtry::dbg {
 	void ReportInterface::log(LogMessage msg)
 	{
 		for (const auto &part : msg.parts())
-			if (std::holds_alternative<hlim::Subnet>(part))
-				prerenderSubnet(std::get<hlim::Subnet>(part).asConst());
+			if (std::holds_alternative<hlim::ConstSubnet>(part))
+				prerenderSubnet(std::get<hlim::ConstSubnet>(part).asConst());
 	
 		json::serializeLogMessage(m_logMessages.append().newEntity(), msg);
 	}

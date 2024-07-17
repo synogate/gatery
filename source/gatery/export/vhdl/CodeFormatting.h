@@ -67,20 +67,23 @@ class CodeFormatting
 			SIG_CHILD_ENTITY_OUTPUT,
 			SIG_REGISTER_INPUT,
 			SIG_REGISTER_OUTPUT,
+			SIG_ATTRIBUTED_SIGNAL,
 			SIG_LOCAL_SIGNAL,
 			SIG_LOCAL_VARIABLE,
 			SIG_CONSTANT,
 		};
 
-		virtual std::string getNodeName(const hlim::BaseNode *node, size_t attempt) const = 0;
-		virtual std::string getSignalName(const std::string &desiredName, SignalType type, size_t attempt) const = 0;
-		virtual std::string getPackageName(const std::string &desiredName, size_t attempt) const = 0;
-		virtual std::string getEntityName(const std::string &desiredName, size_t attempt) const = 0;
-		virtual std::string getBlockName(const std::string &desiredName, size_t attempt) const = 0;
-		virtual std::string getProcessName(const std::string &desiredName, bool clocked, size_t attempt) const = 0;
-		virtual std::string getClockName(const std::string &desiredName, size_t attempt) const = 0;
-		virtual std::string getIoPinName(const std::string &desiredName, size_t attempt) const = 0;
-		virtual std::string getInstanceName(const std::string &desiredName, size_t attempt) const = 0;
+		virtual std::string formatDuplicateName(const std::string &name, size_t attempt) const = 0;
+
+		virtual std::string getNodeName(const hlim::BaseNode *node) const = 0;
+		virtual std::string getSignalName(const std::string &desiredName, SignalType type) const = 0;
+		virtual std::string getPackageName(const std::string &desiredName) const = 0;
+		virtual std::string getEntityName(const std::string &desiredName) const = 0;
+		virtual std::string getBlockName(const std::string &desiredName) const = 0;
+		virtual std::string getProcessName(const std::string &desiredName, bool clocked) const = 0;
+		virtual std::string getClockName(const std::string &desiredName) const = 0;
+		virtual std::string getIoPinName(const std::string &desiredName) const = 0;
+		virtual std::string getInstanceName(const std::string &desiredName) const = 0;
 	protected:
 		std::string m_indentation;
 		std::string m_fileHeader;
@@ -94,15 +97,17 @@ class DefaultCodeFormatting : public CodeFormatting
 	public:
 		DefaultCodeFormatting();
 
-		virtual std::string getNodeName(const hlim::BaseNode *node, size_t attempt) const override;
-		virtual std::string getSignalName(const std::string &desiredName, SignalType type, size_t attempt) const override;
-		virtual std::string getPackageName(const std::string &desiredName, size_t attempt) const override;
-		virtual std::string getEntityName(const std::string &desiredName, size_t attempt) const override;
-		virtual std::string getBlockName(const std::string &desiredName, size_t attempt) const override;
-		virtual std::string getProcessName(const std::string &desiredName, bool clocked, size_t attempt) const override;
-		virtual std::string getClockName(const std::string &desiredName, size_t attempt) const override;
-		virtual std::string getIoPinName(const std::string &desiredName, size_t attempt) const override;
-		virtual std::string getInstanceName(const std::string &desiredName, size_t attempt) const override;
+		virtual std::string formatDuplicateName(const std::string &name, size_t attempt) const override;
+
+		virtual std::string getNodeName(const hlim::BaseNode *node) const override;
+		virtual std::string getSignalName(const std::string &desiredName, SignalType type) const override;
+		virtual std::string getPackageName(const std::string &desiredName) const override;
+		virtual std::string getEntityName(const std::string &desiredName) const override;
+		virtual std::string getBlockName(const std::string &desiredName) const override;
+		virtual std::string getProcessName(const std::string &desiredName, bool clocked) const override;
+		virtual std::string getClockName(const std::string &desiredName) const override;
+		virtual std::string getIoPinName(const std::string &desiredName) const override;
+		virtual std::string getInstanceName(const std::string &desiredName) const override;
 
 		virtual void formatEntityComment(std::ostream &stream, const std::string &entityName, const std::string &comment) const override;
 		virtual void formatBlockComment(std::ostream &stream, const std::string &blockName, const std::string &comment) const override;

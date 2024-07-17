@@ -30,6 +30,7 @@
 #include "../../hlim/coreNodes/Node_Register.h"
 #include "../../hlim/coreNodes/Node_Pin.h"
 #include "../../hlim/supportNodes/Node_Attributes.h"
+#include "../../hlim/supportNodes/Node_SignalTap.h"
 #include "../../hlim/Clock.h"
 #include "../../frontend/SynthesisTool.h"
 
@@ -119,7 +120,8 @@ std::string BaseGrouping::findNearestDesiredName(hlim::NodePort nodePort, hlim::
 		if (subtreeToRestrictTo == nullptr || driven.node->getGroup() == subtreeToRestrictTo || driven.node->getGroup()->isChildOf(subtreeToRestrictTo)) {
 			bool isSignal = dynamic_cast<hlim::Node_Signal*>(driven.node) != nullptr;
 			bool isMultiNode = dynamic_cast<hlim::Node_MultiDriver*>(driven.node) != nullptr;
-			if ((isSignal || isMultiNode) && !driven.node->getName().empty())
+			bool isSignalTap = dynamic_cast<hlim::Node_SignalTap*>(driven.node) != nullptr;
+			if ((isSignal || isMultiNode || isSignalTap) && !driven.node->getName().empty())
 				return driven.node->getName();
 		}
 	}
@@ -249,6 +251,11 @@ void BaseGrouping::declareLocalSignals(std::ostream &stream, bool asVariables, u
 			m_ast.getSynthesisTool().resolveAttributes(clock->getRegAttribs(), resolvedAttribs);
 		}
 
+#if 1
+		if (auto *attrib = dynamic_cast<hlim::Node_Attributes*>(signal.node)) {
+			m_ast.getSynthesisTool().resolveAttributes(attrib->getAttribs(), resolvedAttribs);
+		}
+#else
 		// Find and accumulate all attribute nodes
 		for (auto nh : signal.node->exploreOutput(signal.port)) {
 			if (const auto *attrib = dynamic_cast<const hlim::Node_Attributes*>(nh.node())) {
@@ -274,6 +281,7 @@ void BaseGrouping::declareLocalSignals(std::ostream &stream, bool asVariables, u
 					HCL_DESIGNCHECK_HINT(false, "Loop detected!");
 				}
 		}
+#endif
 
 		// write out all attribs
 		for (const auto &attrib : resolvedAttribs) {

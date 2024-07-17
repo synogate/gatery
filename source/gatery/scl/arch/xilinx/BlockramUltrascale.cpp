@@ -308,7 +308,7 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
 		Clock clock(reg->getClocks()[0]);
 		ENIF (getBitBefore({.node = reg, .port = (size_t)hlim::Node_Register::ENABLE}, '1'))
 			readData = clock(readData);
-		attribute(readData, {.allowFusing = false});
+		readData = attribute(readData, {.allowFusing = false});
 	}		
 
 	BVec rdDataHook = hookBVecAfter(rp.dataOutput);
@@ -424,18 +424,13 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
 
 		ClockScope cscope(clock);
 		for ([[maybe_unused]] auto i : utils::Range(numAdditionalInputRegisters)) {
-			rdAddr = reg(rdAddr);
-			attribute(rdAddr, {.allowFusing = false});
-			rdEn = reg(rdEn);
-			attribute(rdEn, {.allowFusing = false});
+			rdAddr = attribute(reg(rdAddr), {.allowFusing = false});
+			rdEn = attribute(reg(rdEn), {.allowFusing = false});
 
 			if (hasWritePort) {
-				wrAddr = reg(wrAddr);
-				attribute(wrAddr, {.allowFusing = false});
-				wrData = reg(wrData);
-				attribute(wrData, {.allowFusing = false});
-				wrEn = reg(wrEn);
-				attribute(wrEn, {.allowFusing = false});
+				wrAddr = attribute(reg(wrAddr), {.allowFusing = false});
+				wrData = attribute(reg(wrData), {.allowFusing = false});
+				wrEn = attribute(reg(wrEn), {.allowFusing = false});
 			}
 		}
 	}
@@ -499,8 +494,7 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
 
 		ClockScope cscope(clock);
 		for ([[maybe_unused]] auto i : utils::Range(numOutputRegisters)) {
-			readData = reg(readData);
-			attribute(readData, {.allowFusing = false});
+			readData = attribute(reg(readData), {.allowFusing = false});
 		}
 	}
 

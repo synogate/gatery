@@ -188,10 +188,10 @@ NodePort Clock::getLogicDriver(bool simulation, bool clk) const
 	NodePort driver;
 	if (clk) {
 		if (m_clockDriver != nullptr)
-			driver = m_clockDriver->getNonSignalDriver(0);
+			driver = m_clockDriver->getNonForwardingDriver(0);
 	} else {
 		if (m_resetDriver != nullptr)
-			driver = m_resetDriver->getNonSignalDriver(0);
+			driver = m_resetDriver->getNonForwardingDriver(0);
 	}
 
 	utils::UnstableSet<NodePort> alreadyVisited;
@@ -203,9 +203,9 @@ NodePort Clock::getLogicDriver(bool simulation, bool clk) const
 		auto *expOverride = dynamic_cast<Node_ExportOverride*>(driver.node);
 		if (expOverride) {
 			if (simulation)
-				driver = expOverride->getNonSignalDriver(Node_ExportOverride::Inputs::SIM_INPUT);
+				driver = expOverride->getNonForwardingDriver(Node_ExportOverride::Inputs::SIM_INPUT);
 			else
-				driver = expOverride->getNonSignalDriver(Node_ExportOverride::Inputs::EXP_INPUT);
+				driver = expOverride->getNonForwardingDriver(Node_ExportOverride::Inputs::EXP_INPUT);
 		} else
 			return driver;
 	}

@@ -112,8 +112,11 @@ void XilinxVivado::resolveAttributes(const hlim::SignalAttributes &attribs, hlim
 		resolvedAttribs.insert({"DONT_TOUCH", {"string", "\"true\""}});
 	}
 
-	if(attribs.dont_touch)
-		resolvedAttribs.insert({"DONT_TOUCH", {"string", *attribs.dont_touch ? "\"true\"" : "\"false\""} });
+	if(attribs.optimizationBarrier)
+		resolvedAttribs.insert({"DONT_TOUCH", {"string", *attribs.optimizationBarrier ? "\"true\"" : "\"false\""} });
+
+	if(attribs.hardwareDebugSignal)
+		resolvedAttribs.insert({"MARK_DEBUG", {"string", *attribs.hardwareDebugSignal ? "\"true\"" : "\"false\""} });
 
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }

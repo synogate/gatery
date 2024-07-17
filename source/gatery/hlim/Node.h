@@ -112,8 +112,14 @@ class BaseNode : public NodeIO
 		inline bool nameWasInferred() const { return m_nameInferred; }
 		inline bool hasGivenName() const { return !m_name.empty() && !m_nameInferred; }
 
+		template<typename T>
+		inline bool isA() const { return dynamic_cast<const T*>(this) != nullptr; }
+
 		bool isOrphaned() const;
 		virtual bool hasSideEffects() const;
+		virtual bool canBeRetimedOver() const { return !hasSideEffects(); }
+		virtual std::optional<size_t> forwardsInputToOutput(size_t outputPort = 0) const { return {}; }
+		virtual bool allOutputsForwarded() const;
 		virtual bool isCombinatorial(size_t port) const;
 		virtual bool outputIsConstant(size_t port) const { return false; }
 

@@ -33,6 +33,7 @@
 #include "../../hlim/coreNodes/Node_MultiDriver.h"
 #include "../../hlim/coreNodes/Node_Pin.h"
 #include "../../hlim/supportNodes/Node_ExportOverride.h"
+#include "../../hlim/supportNodes/Node_Attributes.h"
 #include "../../hlim/GraphTools.h"
 #include "../../hlim/Clock.h"
 
@@ -173,8 +174,12 @@ void BasicBlock::allocateNames()
 	for (auto &constant : m_constants)
 		m_namespaceScope.allocateName(constant, findNearestDesiredName(constant), chooseDataTypeFromOutput(constant), CodeFormatting::SIG_CONSTANT);
 
-	for (auto &local : m_localSignals)
-		m_namespaceScope.allocateName(local, findNearestDesiredName(local), chooseDataTypeFromOutput(local), CodeFormatting::SIG_LOCAL_SIGNAL);
+	for (auto &local : m_localSignals) {
+		if (local.node->isA<hlim::Node_Attributes>())
+			m_namespaceScope.allocateName(local, findNearestDesiredName(local), chooseDataTypeFromOutput(local), CodeFormatting::SIG_ATTRIBUTED_SIGNAL);
+		else
+			m_namespaceScope.allocateName(local, findNearestDesiredName(local), chooseDataTypeFromOutput(local), CodeFormatting::SIG_LOCAL_SIGNAL);
+	}
 
 	for (auto &bidir : m_bidirSignals) {
 		hlim::NodePort output = {.node = bidir.first, .port = 0ull};

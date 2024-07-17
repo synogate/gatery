@@ -149,7 +149,7 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 	utils::StableSet<hlim::BaseNode*> nodesRemaining;
 
 	for (auto node : nodes) {
-		if (dynamic_cast<hlim::Node_Signal*>(node) != nullptr) continue;
+		if (node->allOutputsForwarded() && !node->hasSideEffects()) continue;
 		if (dynamic_cast<hlim::Node_ExportOverride*>(node) != nullptr) continue;
 		nodesRemaining.insert(node);
 
@@ -158,7 +158,7 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 		mappedNode.node = node;
 		mappedNode.internal = m_stateMapping.nodeToInternalOffset[node];
 		for (auto i : utils::Range(node->getNumInputPorts())) {
-			auto driver = node->getNonSignalDriver(i);
+			auto driver = node->getNonForwardingDriver(i);
 			auto it = m_stateMapping.outputToOffset.find(driver);
 			if (it != m_stateMapping.outputToOffset.end())
 				mappedNode.inputs.push_back(it->second);
@@ -221,12 +221,12 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 			readyNodeInputs.clear();
 			readyNodeInputs.resize(node->getNumInputPorts());
 			for (auto i : utils::Range(node->getNumInputPorts())) {
-				auto driver = node->getNonSignalDriver(i);
+				auto driver = node->getNonForwardingDriver(i);
 				{
 					utils::UnstableSet<hlim::NodePort> alreadyVisited;
 					while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) { // Skip all export override nodes
 						alreadyVisited.insert(driver);
-						driver = driver.node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
+						driver = driver.node->getNonForwardingDriver(hlim::Node_ExportOverride::SIM_INPUT);
 						if (alreadyVisited.contains(driver))
 							driver = {};
 					}
@@ -294,9 +294,9 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 			for (auto node : loopNodes) {
 				std::cout << node->getName() << " in group " << node->getGroup()->getName() << " - " << std::dec << node->getId() << " -  " << node->getTypeName() << "  " << std::hex << (size_t)node << std::endl;
 				for (auto i : utils::Range(node->getNumInputPorts())) {
-					auto driver = node->getNonSignalDriver(i);
+					auto driver = node->getNonForwardingDriver(i);
 					while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) // Skip all export override nodes
-						driver = driver.node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
+						driver = driver.node->getNonForwardingDriver(hlim::Node_ExportOverride::SIM_INPUT);
 					if (driver.node != nullptr && !outputsReady.contains(driver)) {
 						std::cout << "	Input " << i << " not ready." << std::endl;
 						std::cout << "		" << driver.node->getName() << "  " << driver.node->getTypeName() << "  " << std::hex << (size_t)driver.node << std::endl;
@@ -318,7 +318,8 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 					}
 			}
 
-			dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING << "Simulator detected a signal loop: " << loopSubnet);
+			hlim::ConstSubnet looping = hlim::ConstSubnet::all(circuit).filterLoopNodesOnly();
+			dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING << "Simulator detected a signal loop: " << loopSubnet << looping);
 
 			//{
 			//	DotExport exp("loop.dot");
@@ -326,7 +327,6 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 			//	exp.runGraphViz("loop.svg");
 			//}
 			{
-				hlim::ConstSubnet looping = hlim::ConstSubnet::all(circuit).filterLoopNodesOnly();
 				//loopSubnet.dilate(true, true);
 
 				DotExport exp("loop_only.dot");
@@ -398,35 +398,37 @@ void Program::allocateSignals(const hlim::Circuit &circuit, const hlim::Subnet &
 	// Keep a list of nodes that refer to other node's internal state to fill in once all internal state has been allocated.
 	for (auto node : nodes) {
 		// Signals simply point to the actual producer's output, as do export overrides
-		if (dynamic_cast<hlim::Node_Signal*>(node) || dynamic_cast<hlim::Node_ExportOverride*>(node)) {
+		if (node->allOutputsForwarded() || dynamic_cast<hlim::Node_ExportOverride*>(node)) {
+			for (auto i : utils::Range(node->getNumOutputPorts())) {
 
-			hlim::NodePort driver;
-			if (dynamic_cast<hlim::Node_Signal*>(node))
-				driver = node->getNonSignalDriver(0);
-			else
-				driver = node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
+				hlim::NodePort driver;
+				if (dynamic_cast<hlim::Node_ExportOverride*>(node))
+					driver = node->getNonForwardingDriver(hlim::Node_ExportOverride::SIM_INPUT);
+				else
+					driver = node->getNonForwardingDriver(*node->forwardsInputToOutput(i));
 
-			{
-				utils::UnstableSet<hlim::NodePort> alreadyVisited;
-				while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) { // Skip all export override nodes
-					alreadyVisited.insert(driver);
-					driver = driver.node->getNonSignalDriver(hlim::Node_ExportOverride::SIM_INPUT);
-					if (alreadyVisited.contains(driver))
-						driver = {};
+				{
+					utils::UnstableSet<hlim::NodePort> alreadyVisited;
+					while (dynamic_cast<hlim::Node_ExportOverride*>(driver.node)) { // Skip all export override nodes
+						alreadyVisited.insert(driver);
+						driver = driver.node->getNonForwardingDriver(hlim::Node_ExportOverride::SIM_INPUT);
+						if (alreadyVisited.contains(driver))
+							driver = {};
+					}
 				}
-			}
 
-			size_t width = node->getOutputConnectionType(0).width;
+				size_t width = node->getOutputConnectionType(0).width;
 
-			if (driver.node != nullptr) {
-				auto it = m_stateMapping.outputToOffset.find(driver);
-				if (it == m_stateMapping.outputToOffset.end()) {
-					auto offset = allocator.allocate(width);
-					m_stateMapping.outputToOffset[driver] = offset;
-					m_stateMapping.outputToOffset[{.node = node, .port = 0ull}] = offset;
-				} else {
-					// point to same output port
-					m_stateMapping.outputToOffset[{.node = node, .port = 0ull}] = it->second;
+				if (driver.node != nullptr) {
+					auto it = m_stateMapping.outputToOffset.find(driver);
+					if (it == m_stateMapping.outputToOffset.end()) {
+						auto offset = allocator.allocate(width);
+						m_stateMapping.outputToOffset[driver] = offset;
+						m_stateMapping.outputToOffset[{.node = node, .port = 0ull}] = offset;
+					} else {
+						// point to same output port
+						m_stateMapping.outputToOffset[{.node = node, .port = 0ull}] = it->second;
+					}
 				}
 			}
 		} else {

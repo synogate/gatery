@@ -63,7 +63,7 @@ void Node_SignalTap::simulateCommit(sim::SimulatorCallbacks &simCallbacks, sim::
 				message << str;
 			}
 			void operator()(const FormattedSignal &signal) {  /// @todo: invoke pretty printer
-				auto driver = node->getNonSignalDriver(signal.inputIdx);
+				auto driver = node->getNonForwardingDriver(signal.inputIdx);
 				if (driver.node == nullptr) {
 					message << "UNCONNECTED";
 					return;

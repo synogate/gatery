@@ -56,6 +56,7 @@ class Node_NegativeRegister : public Node<Node_NegativeRegister>
 		NodePort enableOutput() { return {.node = this, .port = (size_t) Outputs::enable }; }
 
 		virtual bool hasSideEffects() const override { return false; }
+		virtual std::optional<size_t> forwardsInputToOutput(size_t outputPort = 0) const override { return { 0 }; }
 
 		virtual std::string getTypeName() const override;
 		virtual void assertValidity() const override;

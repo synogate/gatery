@@ -53,9 +53,12 @@ struct SignalAttributes : public Attributes {
 	/// Whether the signal may be fused away (e.g. signal between regs to shiftreg)
 	std::optional<bool> allowFusing;
 	/// Do not optimize this signal during synthesis and implementation
-	std::optional<bool> dont_touch;
+	std::optional<bool> optimizationBarrier;
+	/// Preserve this signal for debugging in hardware
+	std::optional<bool> hardwareDebugSignal;
 
 	void fuseWith(const SignalAttributes &rhs);
+	bool preventRetimingOver() const;
 };
 
 struct RegisterAttributes : public Attributes {

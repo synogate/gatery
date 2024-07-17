@@ -64,6 +64,25 @@ NodePort NodeIO::getNonSignalDriver(size_t inputPort) const
 	return np;
 }
 
+NodePort NodeIO::getNonForwardingDriver(size_t inputPort) const
+{
+	NodePort np = m_inputPorts[inputPort];
+	size_t loopCounter = 0;
+	const NodeIO* loopCheckSignal = this;
+
+	std::optional<size_t> forwardingInputPort;
+	while (np.node != nullptr && (forwardingInputPort = np.node->forwardsInputToOutput(np.port)))
+	{
+		if (np.node == loopCheckSignal)
+			return NodePort{};
+		if (++loopCounter % 200 == 0) // TODO: use node color for loop detection
+			loopCheckSignal = np.node;
+
+		np = np.node->m_inputPorts[*forwardingInputPort];
+	}
+	return np;
+}
+
 const std::vector<NodePort> &NodeIO::getDirectlyDriven(size_t outputPort) const
 {
 	return m_outputPorts[outputPort].connections;

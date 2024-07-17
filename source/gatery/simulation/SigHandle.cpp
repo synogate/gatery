@@ -321,7 +321,7 @@ bool SigHandle::operator==(std::span<const std::byte> rhs) const
 void SigHandle::overrideDrivingRegister()
 {
 	if (auto *reg = dynamic_cast<hlim::Node_Register*>(m_output.node))
-		m_output = reg->getNonSignalDriver(hlim::Node_Register::DATA);
+		m_output = reg->getNonForwardingDriver(hlim::Node_Register::DATA);
 	
 	m_overrideRegister = true;
 }

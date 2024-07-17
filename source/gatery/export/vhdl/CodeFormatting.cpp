@@ -47,18 +47,24 @@ R"Delim(
 	m_filenameExtension = ".vhd";
 }
 
-std::string DefaultCodeFormatting::getNodeName(const hlim::BaseNode *node, size_t attempt) const
+std::string DefaultCodeFormatting::formatDuplicateName(const std::string &name, size_t attempt) const
+{
+	if (attempt == 0)
+		return name;
+
+	return (boost::format("%s_%d") % name % (attempt+1)).str();
+}
+
+std::string DefaultCodeFormatting::getNodeName(const hlim::BaseNode *node) const
 {
 	std::string initialName = node->getName();
 	if (initialName.empty())
 		initialName = "unnamed";
-	if (attempt == 0)
-		return initialName;
-
-	return (boost::format("%s_%d") % initialName % (attempt+1)).str();
+	
+	return initialName;
 }
 
-std::string DefaultCodeFormatting::getSignalName(const std::string &desiredName, SignalType type, size_t attempt) const
+std::string DefaultCodeFormatting::getSignalName(const std::string &desiredName, SignalType type) const
 {
 	std::string initialName = desiredName;
 	if (initialName.empty())
@@ -71,92 +77,70 @@ std::string DefaultCodeFormatting::getSignalName(const std::string &desiredName,
 		case SIG_CHILD_ENTITY_OUTPUT: initialName = std::string("c_out_") + initialName; break;
 		case SIG_REGISTER_INPUT: initialName = std::string("r_in_") + initialName; break;
 		case SIG_REGISTER_OUTPUT: initialName = std::string("r_out_") + initialName; break;
+		case SIG_ATTRIBUTED_SIGNAL: initialName = initialName; break;
 		case SIG_LOCAL_SIGNAL: initialName = std::string("s_") + initialName; break;
 		case SIG_LOCAL_VARIABLE: initialName = std::string("v_") + initialName; break;
 		case SIG_CONSTANT: boost::to_upper(initialName); initialName = std::string("C_") + initialName; break;
 	}
 
-	if (attempt == 0)
-		return initialName;
-
-	return (boost::format("%s_%d") % initialName % (attempt+1)).str();
+	return initialName;
 }
 
-std::string DefaultCodeFormatting::getPackageName(const std::string &desiredName, size_t attempt) const
+std::string DefaultCodeFormatting::getPackageName(const std::string &desiredName) const
 {
 	std::string initialName = desiredName;
 	if (initialName.empty())
 		initialName = "UnnamedPackage";
-	if (attempt == 0)
-		return initialName;
-
-	return (boost::format("%s_%d") % initialName % (attempt+1)).str();
+	return initialName;
 }
 
-std::string DefaultCodeFormatting::getEntityName(const std::string &desiredName, size_t attempt) const
+std::string DefaultCodeFormatting::getEntityName(const std::string &desiredName) const
 {
 	std::string initialName = desiredName;
 	if (initialName.empty())
 		initialName = "UnnamedEntity";
-	if (attempt == 0)
-		return initialName;
-
-	return (boost::format("%s_%d") % initialName % (attempt+1)).str();
+	return initialName;
 }
 
-std::string DefaultCodeFormatting::getBlockName(const std::string &desiredName, size_t attempt) const
+std::string DefaultCodeFormatting::getBlockName(const std::string &desiredName) const
 {
 	std::string initialName = desiredName;
 	if (initialName.empty())
 		initialName = "unnamedBlock";
-	if (attempt == 0)
-		return initialName;
-
-	return (boost::format("%s_%d") % initialName % (attempt+1)).str();
+	return initialName;
 }
 
-std::string DefaultCodeFormatting::getProcessName(const std::string &desiredName, bool clocked, size_t attempt) const
+std::string DefaultCodeFormatting::getProcessName(const std::string &desiredName, bool clocked) const
 {
 	std::string initialName = desiredName;
 	if (initialName.empty())
 		initialName = "unnamedProcess";
-	if (attempt == 0)
-		return initialName + (clocked?"_reg":"_comb");
 
-	return (boost::format("%s_%d%s") % initialName % (attempt+1) % (clocked?"_reg":"_comb")).str();
+	return initialName + (clocked?"_reg":"_comb");
 }
 
-std::string DefaultCodeFormatting::getClockName(const std::string &desiredName, size_t attempt) const
+std::string DefaultCodeFormatting::getClockName(const std::string &desiredName) const
 {
 	std::string initialName = desiredName;
 	if (initialName.empty())
 		initialName = "unnamedClock";
-	if (attempt == 0)
-		return initialName;
-
-	return (boost::format("%s_%d") % initialName % (attempt+1)).str();
+	return initialName;
 }
 
-std::string DefaultCodeFormatting::getIoPinName(const std::string &desiredName, size_t attempt) const
+std::string DefaultCodeFormatting::getIoPinName(const std::string &desiredName) const
 {
 	std::string initialName = desiredName;
 	if (initialName.empty())
 		initialName = "unnamedIoPin";
-	if (attempt == 0)
-		return initialName;
-
-	return (boost::format("%s_%d") % initialName % (attempt+1)).str();
+	return initialName;
 }
 
-std::string DefaultCodeFormatting::getInstanceName(const std::string &desiredName, size_t attempt) const
+std::string DefaultCodeFormatting::getInstanceName(const std::string &desiredName) const
 {
 	std::string initialName = desiredName;
 	if (initialName.empty())
 		initialName = "unnamedInstance";
-	if (attempt == 0)
-		return initialName;
-
-	return (boost::format("%s_%d") % initialName % (attempt+1)).str();
+	return initialName;
 }
 
 

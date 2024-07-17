@@ -1091,7 +1091,7 @@ Conjunction suggestBackwardRetimingEnableCondition(Circuit &circuit, Subnet &are
 			// Retime over anchored registers and registers with enable signals (since we can't move them yet).
 			if (reg->getFlags().contains(Node_Register::Flags::ALLOW_RETIMING_BACKWARD)) {
 				Conjunction enableTerm;
-				if (reg->getNonSignalDriver(Node_Register::ENABLE).node != nullptr)
+				if (reg->getNonForwardingDriver(Node_Register::ENABLE).node != nullptr)
 					enableTerm.parseInput({.node = reg, .port = Node_Register::ENABLE});
 				
 				return enableTerm;
@@ -1379,8 +1379,7 @@ std::optional<BackwardRetimingPlan> determineAreaToBeRetimedBackward(Circuit &ci
 		}
 
 		// We can not retime nodes with a side effect
-		if (node->hasSideEffects() 
-			&& !dynamic_cast<Node_Attributes*>(node) && !dynamic_cast<Node_SignalTap*>(node)) { // Attrib hotfix
+		if (!node->canBeRetimedOver()) {
 			if (!failureIsError) return {};
 
 #ifdef DEBUG_OUTPUT
@@ -1394,8 +1393,8 @@ std::optional<BackwardRetimingPlan> determineAreaToBeRetimedBackward(Circuit &ci
 				<< "Node from:\n" << output.node->getStackTrace() << "\n";
 
 			error 
-				<< "The fanning-out signals are driving a node with side effects " << node->getName() << " (" << node->getTypeName() << ") which can not be retimed.\n"
-				<< "Node with side effects from:\n" << node->getStackTrace() << "\n";
+				<< "The fanning-out signals are driving a node with " << node->getName() << " (" << node->getTypeName() << ") which can not be retimed.\n"
+				<< "Node from:\n" << node->getStackTrace() << "\n";
 
 			HCL_ASSERT_HINT(false, error.str());
 		}		
@@ -1717,7 +1716,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const utils::StableS
 
 
 				mux->connectSelector(delayedResetSignal);
-				mux->connectInput(0, resetDriver);
+				mux->connectInput(0, reg->getDriver(Node_Register::RESET_VALUE));
 				mux->connectInput(1, {.node = reg, .port = 0ull});
 				mux->moveToGroup(reg->getGroup());
 				mux->setComment("A register with a reset value was retimed backwards from here. To preserve the reset value, this multiplexer overrides the signal during reset and in the first cycle after with the original reset value.");
@@ -1754,7 +1753,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const utils::StableS
 		if (dynamic_cast<Node_Constant*>(np.node)) continue;
 		// Don't insert registers on signals leading to constants
 		if (auto *signal = dynamic_cast<Node_Signal*>(np.node))
-			if (dynamic_cast<Node_Constant*>(signal->getNonSignalDriver(0).node)) continue;
+			if (dynamic_cast<Node_Constant*>(signal->getNonForwardingDriver(0).node)) continue;
 
 		NodePort enableSignal = enableCondition.build(*nodeGroup, &newlyCreatedNodes);
 
@@ -2110,7 +2109,7 @@ void ReadModifyWriteHazardLogicBuilder::build(bool useMemory)
 				Subnet area = Subnet::all(m_circuit);
 				Subnet newNodes;
 				for (auto i : {0, 2}) // don't retime memory read port register, only override data and conflict signal
-					if (!dynamic_cast<Node_Register*>(muxNode->getNonSignalDriver(i).node))
+					if (!dynamic_cast<Node_Register*>(muxNode->getNonForwardingDriver(i).node))
 						retimeForwardToOutput(m_circuit, area, muxNode->getDriver(i), {.ignoreRefs=true, .newNodes=&newNodes});
 
 				for (auto n : newNodes)

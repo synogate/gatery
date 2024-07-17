@@ -43,6 +43,7 @@ namespace gtry {
 	};		
 
 	using PinNodeParameter = hlim::Node_Pin::PinNodeParameter;
+	using HighImpedanceValue = hlim::Node_Pin::PinNodeParameter::HighImpedanceValue;
 
 	class BaseOutputPin : public BasePin {
 		public:

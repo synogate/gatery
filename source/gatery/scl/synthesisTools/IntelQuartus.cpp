@@ -123,10 +123,13 @@ void IntelQuartus::resolveAttributes(const hlim::SignalAttributes &attribs, hlim
 		resolvedAttribs.insert({"maxfan", {"integer", std::to_string(*attribs.maxFanout)}});
 
 	if (attribs.allowFusing && !*attribs.allowFusing)
-		resolvedAttribs.insert({"adv_netlist_opt_allowed", {"boolean", "false"}});
+		resolvedAttribs.insert({"adv_netlist_opt_allowed", {"boolean", "false"}}); // todo: this is not a signal attribute in quartus
 
-	if (attribs.dont_touch)
-		resolvedAttribs.insert({ "keep", {"boolean", *attribs.dont_touch ? "true" : "false"}});
+	if (attribs.optimizationBarrier)
+		resolvedAttribs.insert({ "keep", {"boolean", *attribs.optimizationBarrier ? "true" : "false"}});
+
+	if (attribs.hardwareDebugSignal)
+		resolvedAttribs.insert({ "preserve", {"boolean", *attribs.hardwareDebugSignal ? "true" : "false"}});
 
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }

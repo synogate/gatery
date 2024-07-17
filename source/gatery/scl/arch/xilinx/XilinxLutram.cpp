@@ -221,7 +221,7 @@ void XilinxLutram::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
 		Clock clock(reg->getClocks()[0]);
 		readData = clock(readData);
 		if (i > 0)
-			attribute(readData, {.allowFusing = false});
+			readData = attribute(readData, {.allowFusing = false});
 	}		
 
 	BVec rdDataHook = hookBVecAfter(rp.dataOutput);
