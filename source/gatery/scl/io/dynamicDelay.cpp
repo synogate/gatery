@@ -32,8 +32,7 @@ namespace gtry::scl {
 		for (size_t i = 0; i < (delay.width().count() - 1); i++) {
 			delayedInputs[i] = temp_i_loop;
 			temp_i_loop = delayFunction(temp_i_loop);
-			temp_i_loop.attribute(SignalAttributes{.dont_touch = true}); //to avoid replacing regs with shiftRegs/memories/etc. Might be overkill
-			tap(temp_i_loop);
+			temp_i_loop = attribute(temp_i_loop, SignalAttributes{.allowFusing = false}); //to avoid replacing regs with shiftRegs/memories/etc. Might be overkill
 		}
 
 		delayedInputs.msb() = temp_i_loop;
@@ -69,15 +68,12 @@ namespace gtry::scl {
 	{
 		Area area{ "scl_pin_delay_" + std::to_string(m_iterator), true};
 		Bit enable = '1';
-		enable.attribute({ .dont_touch = true });
+		enable = attribute(enable, { .optimizationBarrier = true });
 		
-		input.attribute({ .dont_touch = true });
+		input = attribute(input, { .optimizationBarrier = true });
 		Bit ret = tristatePin(input, enable).setName("delay_io_" + std::to_string(m_iterator));
-		ret.attribute({ .dont_touch = true });
+		ret = attribute(ret, { .optimizationBarrier = true });
 		ret.simulationOverride(simulateDelay(input, m_delay, "sim_delay_" + std::to_string(m_iterator++)));
-		tap(enable);	//this tap is necessary. Symptom: Quartus bypasses the pins when mapping. Hypothesis: something to do with signals and variables with attributes
-		tap(input);		//this tap is necessary. Symptom: Quartus bypasses the pins when mapping. Hypothesis: something to do with signals and variables with attributes
-		tap(ret);		//this tap is necessary. Symptom: Quartus bypasses the pins when mapping. Hypothesis: something to do with signals and variables with attributes
 		return ret;
 	}
 }
