@@ -105,6 +105,7 @@ namespace gtry {
 		sim::DefaultBitVectorState eval() const { ReadSignalList::addToAllScopes(m_handle.getOutput()); return m_handle.eval(); }
 
 		inline sim::SigHandle &getBackendHandle() { return m_handle; }
+		inline const sim::SigHandle& getBackendHandle() const { return m_handle; }
 	protected:
 		BaseSigHandle(const hlim::NodePort& np) : m_handle(np) { HCL_DESIGNCHECK(np.node != nullptr); }
 
