@@ -86,14 +86,22 @@ namespace gtry::scl
 		BVec user;
 	};
 
+	struct AxiReadChannel {
+		Reverse<RvStream<AxiAddress>> a; 
+		RvPacketStream<AxiReadData> d;
+	};
+
+	struct AxiWriteChannel {
+		Reverse<RvStream<AxiAddress>> a;
+		Reverse<RvPacketStream<AxiWriteData>> d;
+		RvStream<AxiWriteResponse> b;
+	};
+
 	struct Axi4
 	{
-		Reverse<RvStream<AxiAddress>> ar;
-		Reverse<RvStream<AxiAddress>> aw;
-		Reverse<RvPacketStream<AxiWriteData>> w;
-		RvStream<AxiWriteResponse> b;
-		RvPacketStream<AxiReadData> r;
-
+		AxiReadChannel r;
+		AxiWriteChannel w;
+		
 		static Axi4 fromConfig(const AxiConfig& cfg);
 
 		template<Signal T>
@@ -125,7 +133,9 @@ BOOST_HANA_ADAPT_STRUCT(gtry::scl::AxiAddress, id, addr, len, size, burst, cache
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::AxiWriteData, data, strb, user);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::AxiWriteResponse, id, resp, user);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::AxiReadData, id, data, resp, user);
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::Axi4, ar, aw, w, b, r);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::AxiReadChannel, a, d);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::AxiWriteChannel, a, d, b);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::Axi4, r, w);
 
 namespace gtry::scl
 {
@@ -140,8 +150,8 @@ namespace gtry::scl
 			.dataW = dataW,
 			.idW = idW,
 		});
-		axi.r = connectMemoryReadPort(mem, move(*axi.ar));
-		axi.b = connectMemoryWritePort(mem, move(*axi.aw), move(*axi.w));
+		axi.r.d = connectMemoryReadPort(mem, move(*axi.r.a));
+		axi.w.b = connectMemoryWritePort(mem, move(*axi.w.a), move(*axi.w.d));
 		return axi;
 	}
 

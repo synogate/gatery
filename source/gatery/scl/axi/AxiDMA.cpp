@@ -97,8 +97,8 @@ namespace gtry::scl
 		HCL_NAMED(axi);
 		HCL_NAMED(cmd);
 
-		*axi.ar <<= axiGenerateAddressFromCommand(move(cmd), axi.config());
-		Stream out = axiToStream(move(axi.r));
+		*axi.r.a <<= axiGenerateAddressFromCommand(move(cmd), axi.config());
+		Stream out = axiToStream(move(axi.r.d));
 		HCL_NAMED(out);
 		return out;
 	}
@@ -126,9 +126,9 @@ namespace gtry::scl
 		HCL_NAMED(cmd);
 		
 
-		*axi.aw <<= axiGenerateAddressFromCommand(move(cmd), axi.config());
-		axiFromStream(move(data), *axi.w, cmd->bytesPerBurst / axi.config().alignedDataW().bytes());
-		ready(axi.b) = '1';
+		*axi.w.a <<= axiGenerateAddressFromCommand(move(cmd), axi.config());
+		axiFromStream(move(data), *axi.w.d, cmd->bytesPerBurst / axi.config().alignedDataW().bytes());
+		ready(axi.w.b) = '1';
 		HCL_NAMED(axi);
 	}
 
@@ -151,12 +151,12 @@ namespace gtry::scl
 	{
 		Area area{ "scl_axiTransferAuditor", true };
 		Counter burstCounter(counterW.last());
-		IF(transfer(streamToSniff.b))
+		IF(transfer(streamToSniff.w.b))
 			burstCounter.inc();
 
 		Counter failCounter(counterW.last());
-		IF(transfer(streamToSniff.b))
-			IF(streamToSniff.b->resp == (size_t) AxiResponseCode::SLVERR | streamToSniff.b->resp == (size_t) AxiResponseCode::DECERR)
+		IF(transfer(streamToSniff.w.b))
+			IF(streamToSniff.w.b->resp == (size_t) AxiResponseCode::SLVERR | streamToSniff.w.b->resp == (size_t) AxiResponseCode::DECERR)
 				failCounter.inc();
 
 		return AxiTransferReport{.burstCount = burstCounter.value(), .failCount = failCounter.value(), .bitsPerBurst = bitsPerBurst.bits()};
