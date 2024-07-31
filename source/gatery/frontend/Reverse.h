@@ -18,6 +18,7 @@
 #pragma once
 #include "Signal.h"
 #include "Compound.h"
+#include "SignalReset.h"
 #include "ConstructFrom.h"
 
 namespace gtry
@@ -74,6 +75,7 @@ namespace gtry
 	template<TupleSignal T> auto upstream(T& signal);
 	template<TupleSignal T> auto upstream(const T& signal);
 
+	template<Signal T> void resetSignal(Reverse<T>& val);
 
 	template<typename T>
 	struct VisitCompound<Reverse<T>>
@@ -237,4 +239,11 @@ namespace gtry
 	template<class Ta, class Tb>
 	requires (Connectable<Ta, Tb> and not BaseSignal<Ta>)
 	void operator <<= (Ta&& lhs, Tb&& rhs) { connect(lhs, rhs); }
+
+
+	template<Signal T>
+	void resetSignal(Reverse<T>& val)
+	{
+		resetSignal(*val);
+	}
 }

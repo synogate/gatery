@@ -85,6 +85,7 @@ namespace gtry {
 		virtual BVec toBVec() const = 0;
 		virtual void fromBVec(const BVec &bvec) = 0;
 
+		virtual void resetNode() = 0;
 	protected:
 		size_t m_initialScopeId = 0;
 

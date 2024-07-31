@@ -75,7 +75,7 @@ namespace gtry {
 		explicit operator T() const { if (m_node) return T(readPort()); else return T{}; }
 
 		void resize(size_t width);
-		virtual void resetNode();
+		virtual void resetNode() override;
 
 		Bit& lsb() { return aliasLsb(); }
 		const Bit& lsb() const { return aliasLsb(); }
