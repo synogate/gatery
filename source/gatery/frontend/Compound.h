@@ -748,6 +748,61 @@ namespace gtry
 				return T{ func(std::get<0>(args), std::get<1>(args))...};
 			});
 		}
+
+
+
+
+		template<BaseSignal T, typename TFunc>
+		void mutateSignal(T& val, TFunc&& func);
+
+		template<CompoundSignal T, typename TFunc>
+		void mutateSignal(T& val, TFunc&& func);
+
+		template<ContainerSignal T, typename TFunc>
+		void mutateSignal(T& val, TFunc&& func);
+
+		template<TupleSignal T, typename TFunc>
+		void mutateSignal(T& val, TFunc&& func);
+
+		template<typename T, typename TFunc>
+		void mutateIfSignal(T& signal, TFunc&& func)
+		{
+			if constexpr(Signal<T>)
+				func(signal);
+		}
+
+		template<BaseSignal T, typename TFunc>
+		void mutateSignal(T& val, TFunc&& func)
+		{
+			func(val);
+		}
+
+		template<CompoundSignal T, typename TFunc>
+		void mutateSignal(T& val, TFunc&& func)
+		{
+			boost::hana::for_each(boost::pfr::structure_tie(val), [&](auto&& member) {
+				if constexpr(Signal<decltype(member)>)
+					func(member);
+			});
+		}
+
+		template<ContainerSignal T, typename TFunc>
+		void mutateSignal(T& val, TFunc&& func)
+		{
+			for(auto& it : val)
+				func(it);
+		}
+
+		template<TupleSignal T, typename TFunc>
+		void mutateSignal(T& val, TFunc&& func)
+		{
+			using namespace internal;
+
+			boost::hana::for_each(val, [&](auto&& member) {
+				if constexpr(Signal<decltype(member)>)
+					func(member);
+			});
+		}
 	}
 
 	BitWidth width(const BaseSignal auto& signal) { return signal.width(); }

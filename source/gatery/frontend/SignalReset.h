@@ -52,11 +52,9 @@ namespace gtry
 	template<Signal T>
 	void resetSignal(T& val)
 	{
-		return internal::transformSignal(val, [&](const auto& sig) {
-			if constexpr (!Signal<decltype(sig)>)
-				return sig;
-			else
-				return resetSignal(sig);
+		internal::mutateSignal(val, [&](auto& sig) {
+			if constexpr (Signal<decltype(sig)>)
+				resetSignal(sig);
 		});
 	}
 
