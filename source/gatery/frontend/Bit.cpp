@@ -370,6 +370,8 @@ namespace gtry {
 
 		if (auto* scope = ConditionalScope::get())
 			m_initialScopeId = scope->getId();	
+
+		createNode();		
 	}
 
 }
