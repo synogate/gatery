@@ -87,6 +87,8 @@ namespace gtry {
 			void addToSignalGroup(hlim::SignalGroup *signalGroup);
 
 			hlim::Node_Signal* node() const { return m_node.get(); }
+
+			void resetNode() override;
 		protected:
 			virtual void createNode();
 			void assign(size_t v, std::string_view name);
@@ -142,6 +144,10 @@ namespace gtry {
 		virtual BVec toBVec() const override { return (BVec) numericalValue(); }
 		virtual void fromBVec(const BVec &bvec) override { (*this) = Enum<T>((UInt)bvec); }
 
+		void resetNode() override {
+			BaseEnum::resetNode();
+			m_resetValue.reset();
+		}
 	protected:
 		virtual void createNode() override;
 		void assignEnum(T);
