@@ -44,7 +44,7 @@ namespace gtry::scl
 		if(cfg.wordStride.bits() == 0)
 			cfg.wordStride = cfg.axiCfg.dataW + cfg.axiCfg.wUserW;
 
-		const uint64_t uniqueId = (*axi->ar)->addr.node()->getId();
+		const uint64_t uniqueId = (*axi->r.a)->addr.node()->getId();
 		pinIn(*axi, "simu_aximem_" + std::to_string(uniqueId), { .simulationOnlyPin = true });
 
 		Clock clock = ClockScope::getClk();
@@ -58,8 +58,8 @@ namespace gtry::scl
 
 
 			fork([axi, clock, &storage, wordStride, axiCfg, readLatency]() -> SimProcess {
-				simu(valid(axi->r)) = '0';
-				simu(ready(*axi->ar)) = '1';
+				simu(valid(axi->r.d)) = '0';
+				simu(ready(*axi->r.a)) = '1';
 
 				std::mt19937 rng(13579);
 				std::bernoulli_distribution memoryDelayed(0.01);
@@ -69,10 +69,10 @@ namespace gtry::scl
 				size_t slot_current = 0;
 				while (true)
 				{
-					co_await performTransferWait(*axi->ar, clock);
+					co_await performTransferWait(*axi->r.a, clock);
 
 					fork([axi, clock, slot_next, &slot_current, &storage, wordStride, axiCfg, readLatency, &rng, &randomDelayAmount, &memoryDelayed]() -> SimProcess {
-						AxiAddress& ar = **axi->ar;
+						AxiAddress& ar = **axi->r.a;
 						uint64_t wordOffset = simu(ar.addr).value() / axiCfg.alignedDataW().bytes();
 						//uint64_t size = simu(ar.size).value();
 						uint64_t burst = simu(ar.burst).value();
@@ -94,27 +94,27 @@ namespace gtry::scl
 
 						for (size_t i = 0; i < len; ++i)
 						{
-							simu(valid(axi->r)) = '1';
-							simu(eop(axi->r)) = i + 1 == len;
-							simu(axi->r->id) = id;
-							simu(axi->r->resp) = (size_t)AxiResponseCode::OKAY;
+							simu(valid(axi->r.d)) = '1';
+							simu(eop(axi->r.d)) = i + 1 == len;
+							simu(axi->r.d->id) = id;
+							simu(axi->r.d->resp) = (size_t)AxiResponseCode::OKAY;
 
 							size_t bitOffset = wordOffset * wordStride.bits();
-							simu(axi->r->data) = storage.read(bitOffset, axiCfg.dataW.bits());
-							simu(axi->r->user) = storage.read(bitOffset + axiCfg.dataW.bits(), axiCfg.rUserW.bits());
+							simu(axi->r.d->data) = storage.read(bitOffset, axiCfg.dataW.bits());
+							simu(axi->r.d->user) = storage.read(bitOffset + axiCfg.dataW.bits(), axiCfg.rUserW.bits());
 
-							co_await performTransferWait(axi->r, clock);
+							co_await performTransferWait(axi->r.d, clock);
 							
 							if (burst == (size_t)AxiBurstType::INCR)
 								wordOffset++;
 						}
 
-						simu(valid(axi->r)) = '0';
-						simu(eop(axi->r)).invalidate();
-						simu(axi->r->id).invalidate();
-						simu(axi->r->resp).invalidate();
-						simu(axi->r->data).invalidate();
-						simu(axi->r->user).invalidate();
+						simu(valid(axi->r.d)) = '0';
+						simu(eop(axi->r.d)).invalidate();
+						simu(axi->r.d->id).invalidate();
+						simu(axi->r.d->resp).invalidate();
+						simu(axi->r.d->data).invalidate();
+						simu(axi->r.d->user).invalidate();
 
 						slot_current++;
 					});
@@ -122,27 +122,27 @@ namespace gtry::scl
 					slot_next++;
 					while (slot_next - slot_current > 8)
 					{
-						simu(ready(*axi->ar)) = '0';
+						simu(ready(*axi->r.a)) = '0';
 						co_await OnClk(clock);
-						simu(ready(*axi->ar)) = '1';
+						simu(ready(*axi->r.a)) = '1';
 					}
 				}
 			});
 
 			fork([axi, clock, &storage, wordStride, axiCfg]() -> SimProcess {
-				simu(valid(axi->b)) = '0';
-				simu(ready(*axi->aw)) = '1';
-				simu(ready(*axi->w)) = '0';
+				simu(valid(axi->w.b)) = '0';
+				simu(ready(*axi->w.a)) = '1';
+				simu(ready(*axi->w.d)) = '0';
 
 				size_t slot_next = 0;
 				size_t slot_current = 0;
 				size_t slot_current_ack = 0;
 				while (true)
 				{
-					co_await performTransferWait(*axi->aw, clock);
+					co_await performTransferWait(*axi->w.a, clock);
 
 					fork([axi, clock, slot_next, &slot_current, &slot_current_ack, &storage, wordStride, axiCfg]() -> SimProcess {
-						AxiAddress& ar = **axi->aw;
+						AxiAddress& ar = **axi->w.a;
 						uint64_t wordOffset = simu(ar.addr).value() / axiCfg.alignedDataW().bytes();
 						//uint64_t size = simu(ar.size).value();
 						uint64_t burst = simu(ar.burst).value();
@@ -152,16 +152,16 @@ namespace gtry::scl
 						while (slot_next != slot_current)
 							co_await OnClk(clock);
 
-						simu(ready(*axi->w)) = '1';
+						simu(ready(*axi->w.d)) = '1';
 
 						BitWidth wordSize = axiCfg.dataW + axiCfg.wUserW;
 						for (size_t i = 0; i < len; ++i)
 						{
-							co_await performTransferWait(*axi->w, clock);
+							co_await performTransferWait(*axi->w.d, clock);
 
-							sim::DefaultBitVectorState data = simu((*axi->w)->data);
-							sim::DefaultBitVectorState user = simu((*axi->w)->user);
-							sim::DefaultBitVectorState strb = simu((*axi->w)->strb);
+							sim::DefaultBitVectorState data = simu((*axi->w.d)->data);
+							sim::DefaultBitVectorState user = simu((*axi->w.d)->user);
+							sim::DefaultBitVectorState strb = simu((*axi->w.d)->strb);
 							sim::DefaultBitVectorState mask;
 							mask.resize(data.size());
 							for (size_t i = 0; i < strb.size(); ++i)
@@ -176,26 +176,26 @@ namespace gtry::scl
 							if (burst == (size_t)AxiBurstType::INCR)
 								wordOffset++;	
 						}
-						simu(ready(*axi->w)) = '0';
+						simu(ready(*axi->w.d)) = '0';
 						slot_current++;
 
 						while (slot_next != slot_current_ack)
 							co_await OnClk(clock);
 
-						simu(axi->b->id) = id;
-						simu(axi->b->resp) = (size_t)AxiResponseCode::OKAY;
-						co_await performTransfer(axi->b, clock);
-						simu(axi->b->id).invalidate();
-						simu(axi->b->resp).invalidate();
+						simu(axi->w.b->id) = id;
+						simu(axi->w.b->resp) = (size_t)AxiResponseCode::OKAY;
+						co_await performTransfer(axi->w.b, clock);
+						simu(axi->w.b->id).invalidate();
+						simu(axi->w.b->resp).invalidate();
 						slot_current_ack++;
 					});
 
 					slot_next++;
 					while (slot_next - slot_current > 8)
 					{
-						simu(ready(*axi->aw)) = '0';
+						simu(ready(*axi->w.a)) = '0';
 						co_await OnClk(clock);
-						simu(ready(*axi->aw)) = '1';
+						simu(ready(*axi->w.a)) = '1';
 					}
 				}
 			});
@@ -217,20 +217,20 @@ namespace gtry::scl
 
 		upstream(axi) = upstream(out);
 
-		ready(*out.ar).exportOverride(ready(*axi.ar));
-		ready(*out.aw).exportOverride(ready(*axi.aw));
-		ready(*out.w).exportOverride(ready(*axi.w));
+		ready(*out.r.a).exportOverride(ready(*axi.r.a));
+		ready(*out.w.a).exportOverride(ready(*axi.w.a));
+		ready(*out.w.d).exportOverride(ready(*axi.w.d));
 
-		valid(out.r).exportOverride(valid(axi.r));
-		eop(out.r).exportOverride(eop(axi.r));
-		out.r->id.exportOverride(axi.r->id);
-		out.r->data.exportOverride(axi.r->data);
-		out.r->resp.exportOverride(axi.r->resp);
-		out.r->user.exportOverride(axi.r->user);
+		valid(out.r.d).exportOverride(valid(axi.r.d));
+		eop(out.r.d).exportOverride(eop(axi.r.d));
+		out.r.d->id.exportOverride(axi.r.d->id);
+		out.r.d->data.exportOverride(axi.r.d->data);
+		out.r.d->resp.exportOverride(axi.r.d->resp);
+		out.r.d->user.exportOverride(axi.r.d->user);
 
-		valid(out.b).exportOverride(valid(axi.b));
-		out.b->id.exportOverride(axi.b->id);
-		out.b->resp.exportOverride(axi.b->resp);
+		valid(out.w.b).exportOverride(valid(axi.w.b));
+		out.w.b->id.exportOverride(axi.w.b->id);
+		out.w.b->resp.exportOverride(axi.w.b->resp);
 
 		return out;
 	}
