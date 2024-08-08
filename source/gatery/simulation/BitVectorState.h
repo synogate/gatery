@@ -836,11 +836,15 @@ BitVectorState<Config> BitVectorState<Config>::extract(size_t start, size_t size
 template<class Config>
 inline void BitVectorState<Config>::insert(const BitVectorState& state, size_t offset, size_t size)
 {
+	HCL_ASSERT_HINT(state.size() + offset <= this->size(), "this BitVectorState is not large enough to accommodate the state BitVectorState at the requested offset");
 	const size_t width = size ? size : state.size();
 	size_t srcOffset = 0;
 
 	while (srcOffset < width) {
-		size_t chunkSize = std::min<size_t>(64, width - srcOffset);
+		size_t chunkSize = std::min<size_t>(Config::NUM_BITS_PER_BLOCK, width - srcOffset);
+		//these next modulos should boil down to simple ands since the num bits is 64;
+		chunkSize = std::min<size_t>(Config::NUM_BITS_PER_BLOCK - (srcOffset + Config::NUM_BITS_PER_BLOCK) % Config::NUM_BITS_PER_BLOCK, chunkSize);
+		chunkSize = std::min<size_t>(Config::NUM_BITS_PER_BLOCK - (offset + Config::NUM_BITS_PER_BLOCK) % Config::NUM_BITS_PER_BLOCK, chunkSize);
 
 		for (auto i : utils::Range<size_t>(Config::NUM_PLANES)) {
 			auto val = state.extractNonStraddling((typename Config::Plane) i, srcOffset, chunkSize);
