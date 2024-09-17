@@ -358,9 +358,9 @@ namespace gtry::scl::strm
 		return [=, &lostBeatCount](auto&& source) {
 			auto [outStream, outLostBeatCount] = addReadyAndCompensateForLostBeats(move(source), counterW);
 			lostBeatCount = outLostBeatCount;
-			return move(outStream);
+			return outStream;
 		};
-	}}
+	}
 
 	/**
 	* @brief This overload allows for stream chaining
@@ -368,10 +368,9 @@ namespace gtry::scl::strm
 	inline auto addReadyAndCompensateForLostBeats(BitWidth counterW){
 		return [=](auto&& source) { 
 			auto [outStream, outLostBeatCount] = addReadyAndCompensateForLostBeats(move(source), counterW);
-			return move(outStream);
-			};
+			return outStream;
+		};
 	}
-
 }
 
 namespace gtry::scl::strm
