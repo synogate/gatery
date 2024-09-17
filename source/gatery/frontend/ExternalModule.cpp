@@ -261,7 +261,7 @@ Bit ExternalModule::out(std::string_view name, PinConfig cfg)
 }
 
 
-void ExternalModule::inoutPin(std::string_view portName, std::string_view pinName, BitWidth W, PinConfig cfg)
+ExternalModule& ExternalModule::inoutPin(std::string_view portName, std::string_view pinName, BitWidth W, PinConfig cfg)
 {
 	HCL_DESIGNCHECK_HINT(!cfg.isEnableSignal, "Only input bit signals can be declared enable signals!");
 
@@ -283,9 +283,11 @@ void ExternalModule::inoutPin(std::string_view portName, std::string_view pinNam
 	BVec out = ConstBVec(W);
 	out.exportOverride(SignalReadPort(multiDriver));
 	multiDriver->rewireInput(1, BVec(bidirPin(out).setName(std::string(pinName))).readPort());
+
+	return *this;
 }
 
-void ExternalModule::inoutPin(std::string_view portName, std::string_view pinName, PinConfig cfg)
+ExternalModule& ExternalModule::inoutPin(std::string_view portName, std::string_view pinName, PinConfig cfg)
 {
 	HCL_DESIGNCHECK_HINT(!cfg.isEnableSignal, "Only input bit signals can be declared enable signals!");
 
@@ -307,6 +309,8 @@ void ExternalModule::inoutPin(std::string_view portName, std::string_view pinNam
 	Bit out = 'x';
 	out.exportOverride(Bit(SignalReadPort(multiDriver)));
 	multiDriver->rewireInput(1, Bit(bidirPin(out).setName(std::string(pinName))).readPort());
+
+	return *this;
 }
 
 

@@ -64,8 +64,8 @@ namespace gtry
 		BVec				out(std::string_view name, BitWidth W, PinConfig cfg = {});
 		Bit					out(std::string_view name, PinConfig cfg = {});
 
-		void inoutPin(std::string_view portName, std::string_view pinName, BitWidth W, PinConfig cfg = {});
-		void inoutPin(std::string_view portName, std::string_view pinName, PinConfig cfg = {});
+		ExternalModule& inoutPin(std::string_view portName, std::string_view pinName, BitWidth W, PinConfig cfg = {});
+		ExternalModule& inoutPin(std::string_view portName, std::string_view pinName, PinConfig cfg = {});
 
 		void isEntity(bool b) { m_node.isEntity(b); }
 		void requiresComponentDeclaration(bool b) { m_node.requiresComponentDeclaration(b); }
