@@ -342,6 +342,35 @@ namespace gtry::scl::strm
 	 */
 	template<StreamSignal T, StreamSignal... To>
 	T arbitrate(T&& in1, To&&... inX);
+
+	/**
+	* @brief this module does not comply with valid semantics. It can change its payload without transfer,
+	* but this might be acceptable since its use case is only to prevent catastrophic lockup and to give
+	* proper failure reporting possibilities to user, such as the possibility to mapOut the totalLostPackets.
+	*/
+	template<StreamSignal StreamT> requires (!StreamT::template has<Ready>() && !StreamT::template has<Eop>())
+	std::tuple<decltype(StreamT{}.add(Ready{})), UInt> addReadyAndCompensateForLostBeats(StreamT&& in, BitWidth counterW);
+
+	/**
+	 * @brief This overload allows for stream chaining. Please pass in an uninitialized UInt.
+	*/
+	inline auto addReadyAndCompensateForLostBeats(BitWidth counterW, UInt& lostBeatCount) {
+		return [=, &lostBeatCount](auto&& source) {
+			auto [outStream, outLostBeatCount] = addReadyAndCompensateForLostBeats(move(source), counterW);
+			lostBeatCount = outLostBeatCount;
+			return move(outStream);
+		};
+	}
+
+	/**
+	* @brief This overload allows for stream chaining
+	*/
+	inline auto addReadyAndCompensateForLostBeats(BitWidth counterW){
+		return [=](auto&& source) { 
+			auto [outStream, outLostBeatCount] = addReadyAndCompensateForLostBeats(move(source), counterW);
+			return move(outStream);
+		};
+	}
 }
 
 namespace gtry::scl::strm
@@ -869,20 +898,36 @@ namespace gtry::scl::strm
 		return out;
 	}
 
+	template<StreamSignal StreamT> requires (!StreamT::template has<Ready>() && !StreamT::template has<Eop>())
+	std::tuple<decltype(StreamT{}.add(Ready{})), UInt> addReadyAndCompensateForLostBeats(StreamT&& in, BitWidth counterW) {
+		Area area("scl_addReadyAndCompensateForLostBeats", true);
+
+		auto inWithReady = move(in).add(Ready{});
+		Counter totalLostBeats(counterW);
+		Counter lostBeats(counterW);
+
+		Bit lostBeat = valid(inWithReady) & !ready(inWithReady);
+		sim_debugIf(lostBeat) << __FILE__ << " " << __LINE__ << " this beat, the packet has been lost, but it will be compensated with a garbage beat in the future";
+		IF(lostBeat) {
+			lostBeats.inc();
+			totalLostBeats.inc();
+		}
+
+		Bit garbageBeat = !lostBeats.isFirst() & !valid(inWithReady);
+		IF(garbageBeat) {
+			valid(inWithReady) |= '1';
+			*inWithReady = allZeros(*inWithReady);
+		}
+
+		IF(garbageBeat & transfer(inWithReady))
+			lostBeats.dec();
+
+		return std::make_tuple(move(inWithReady), totalLostBeats.value());
+	}
+
 	template<StreamSignal T, StreamSignal... To>
 	T arbitrate(T&& in1, To&&... inX)
 	{
 		return arbitrateWithPolicy(ArbiterPolicyLowest{}, move(in1), move(inX)...);
 	}
 }
-
-
-// Quite common:
-
-GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::strm::PacketStream<gtry::BVec>)
-GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::strm::RvPacketStream<gtry::BVec>)
-GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::strm::VPacketStream<gtry::BVec>)
-
-GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::strm::PacketStream<gtry::BVec, gtry::scl::strm::EmptyBits>)
-GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::strm::RvPacketStream<gtry::BVec, gtry::scl::strm::EmptyBits>)
-GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::strm::VPacketStream<gtry::BVec, gtry::scl::strm::EmptyBits>)
