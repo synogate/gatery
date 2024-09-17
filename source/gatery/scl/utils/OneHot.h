@@ -44,7 +44,7 @@ namespace gtry::scl
 
 	std::vector<VStream<UInt>> makeIndexList(const UInt& valids);
 
-	UInt countLeadingZeros(const UInt& in);
+	UInt countLeadingZeros(const BVec& in);
 	VStream<UInt> priorityEncoder(const UInt& in);
 	VStream<UInt> priorityEncoderTree(const UInt& in, bool registerStep, size_t resultBitsPerStep = 2);
 }
