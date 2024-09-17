@@ -19,6 +19,9 @@
 
 
 #if __has_include(<yaml-cpp/yaml.h>)
+#ifndef YAML_CPP_API
+#define YAML_CPP_API // work around dll export/import warnings in yaml-cpp
+#endif
 # include <yaml-cpp/yaml.h>
 # include <external/magic_enum.hpp>
 # define USE_YAMLCPP

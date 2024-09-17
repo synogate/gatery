@@ -26,7 +26,7 @@ namespace gtry::scl
 	 * @return Delayed signals.
 	 */
 	template<typename Signal>
-	Signal delay(Signal signal, unsigned delay);
+	Signal delay(Signal signal, size_t delay);
 
 	/**
 	 * @brief Delay the input Signal by delay cycles. This version allows for combinatorical change of delay.
@@ -67,7 +67,7 @@ namespace gtry::scl
 namespace gtry::scl
 {
 	template<typename Signal>
-	Signal delay(Signal signal, unsigned delay) {
+	Signal delay(Signal signal, size_t delay) {
 		for ([[maybe_unused]] auto i : utils::Range(delay))
 			signal = reg(signal);
 		return signal;
