@@ -33,5 +33,6 @@ source/gen/
 /tests/**/incremental_db
 /tests/**/output_files
 /tests/**/*.vhd
+/tests/**/*.mif
 /tests/**/*.qws
 
