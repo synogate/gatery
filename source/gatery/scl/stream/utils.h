@@ -358,7 +358,7 @@ namespace gtry::scl::strm
 		return [=, &lostBeatCount](auto&& source) {
 			auto [outStream, outLostBeatCount] = addReadyAndCompensateForLostBeats(move(source), counterW);
 			lostBeatCount = outLostBeatCount;
-			return outStream;
+			return move(outStream);
 		};
 	}
 
@@ -368,7 +368,7 @@ namespace gtry::scl::strm
 	inline auto addReadyAndCompensateForLostBeats(BitWidth counterW){
 		return [=](auto&& source) { 
 			auto [outStream, outLostBeatCount] = addReadyAndCompensateForLostBeats(move(source), counterW);
-			return outStream;
+			return move(outStream);
 		};
 	}
 }
