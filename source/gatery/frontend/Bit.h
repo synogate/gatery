@@ -126,6 +126,7 @@ namespace hlim {
 		virtual BVec toBVec() const override;
 		virtual void fromBVec(const BVec &bvec) override;
 
+		virtual void resetNode() override;
 	protected:
 		void createNode();
 		void assign(bool);

@@ -53,6 +53,18 @@ std::vector<gtry::scl::VStream<gtry::UInt>> gtry::scl::makeIndexList(const UInt&
 	return ret;
 }
 
+UInt gtry::scl::countLeadingZeros(const BVec& in) {
+	//could also use priority encoder, but default case of all zeros is mishandled;
+	Area area{ "scl_count_leading_zeros", true};
+
+	UInt ret = in.size();
+	for (size_t i = 0; i < in.size(); i++)
+		IF(in[i])
+			ret = in.size() - i - 1;
+
+	return ret;
+}
+
 gtry::scl::VStream<UInt> gtry::scl::priorityEncoder(const UInt& in)
 {
 	if (in.empty())

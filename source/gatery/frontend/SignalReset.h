@@ -1,5 +1,5 @@
 /*  This file is part of Gatery, a library for circuit design.
-	Copyright (C) 2021 Michael Offel, Andreas Ley
+	Copyright (C) 2024 Michael Offel, Andreas Ley
 
 	Gatery is free software; you can redistribute it and/or
 	modify it under the terms of the GNU Lesser General Public
@@ -16,35 +16,48 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
-#include <span>
+#include "Signal.h"
+#include "Compound.h"
+#include "ConstructFrom.h"
 
-#include <gatery/frontend.h>
+#include <boost/hana/ext/std/array.hpp>
+#include <boost/hana/ext/std/tuple.hpp>
+#include <boost/hana/ext/std/pair.hpp>
+#include <boost/hana/transform.hpp>
+#include <boost/hana/zip.hpp>
+#include <gatery/compat/boost_pfr.h>
 
-#include "../stream/Stream.h"
 
-#include <gatery/frontend/Reverse.h>
-
-namespace gtry::scl
+namespace gtry
 {
-	struct OneHot : UInt
+/**
+ * @addtogroup gtry_frontend
+ * @{
+ */
+
+
+	template<BaseSignal T>
+	void resetSignal(T& val);
+
+	template<Signal T>
+	void resetSignal(T& val);
+
+
+	template<BaseSignal T>
+	void resetSignal(T& val)
 	{
-		OneHot() : UInt() {}
-		OneHot(const OneHot&) = default;
+		val.resetNode();
+	}
 
-		OneHot(BitWidth width) : UInt(width, Expansion::none) {}
-		explicit OneHot(const UInt& initValue) : UInt(initValue) {}
+	template<Signal T>
+	void resetSignal(T& val)
+	{
+		internal::mutateSignal(val, [&](auto& sig) {
+			if constexpr (Signal<decltype(sig)>)
+				resetSignal(sig);
+		});
+	}
 
-		OneHot& operator = (const OneHot&) = default;
+/// @}
 
-		void setBit(const UInt& idx);
-	};
-
-	OneHot decoder(const UInt& in);
-	UInt encoder(const OneHot& in);
-
-	std::vector<VStream<UInt>> makeIndexList(const UInt& valids);
-
-	UInt countLeadingZeros(const BVec& in);
-	VStream<UInt> priorityEncoder(const UInt& in);
-	VStream<UInt> priorityEncoderTree(const UInt& in, bool registerStep, size_t resultBitsPerStep = 2);
 }

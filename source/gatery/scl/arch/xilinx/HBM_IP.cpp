@@ -76,58 +76,58 @@ namespace gtry::scl::arch::xilinx
 		m_controllerResetLow &= scl::synchronizeRelease(resetSignalN, clk, *m_controllerClock, hlim::RegisterAttributes::Active::LOW);
 
 		// AR
-		ready(*axi.ar) = out(prefix + "ARREADY");
-		in(prefix + "ARVALID") = valid(*axi.ar);
-		in(prefix + "ARADDR", addrW - hbmAddrOffsetW) = zext((BVec)(*axi.ar)->addr.upper(-hbmAddrOffsetW));
-		in(prefix + "ARBURST", 2_b) = (BVec)(*axi.ar)->burst;
-		in(prefix + "ARID", 6_b) = (*axi.ar)->id;
-		in(prefix + "ARLEN", 4_b) = (BVec)(*axi.ar)->len.lower(4_b);
+		ready(*axi.r.a) = out(prefix + "ARREADY");
+		in(prefix + "ARVALID") = valid(*axi.r.a);
+		in(prefix + "ARADDR", addrW - hbmAddrOffsetW) = zext((BVec)(*axi.r.a)->addr.upper(-hbmAddrOffsetW));
+		in(prefix + "ARBURST", 2_b) = (BVec)(*axi.r.a)->burst;
+		in(prefix + "ARID", 6_b) = (*axi.r.a)->id;
+		in(prefix + "ARLEN", 4_b) = (BVec)(*axi.r.a)->len.lower(4_b);
 		if (addECCBitsToData)
-			in(prefix + "ARSIZE", 3_b) = (BVec)((*axi.ar)->size - 1);
+			in(prefix + "ARSIZE", 3_b) = (BVec)((*axi.r.a)->size - 1);
 		else
-			in(prefix + "ARSIZE", 3_b) = (BVec)(*axi.ar)->size;
+			in(prefix + "ARSIZE", 3_b) = (BVec)(*axi.r.a)->size;
 
 		// AW
-		ready(*axi.aw) = out(prefix + "AWREADY");
-		in(prefix + "AWVALID") = valid(*axi.aw);
-		in(prefix + "AWADDR", addrW - hbmAddrOffsetW) = zext((BVec)(*axi.aw)->addr.upper(-hbmAddrOffsetW));
-		in(prefix + "AWBURST", 2_b) = (BVec)(*axi.aw)->burst;
-		in(prefix + "AWID", 6_b) = (*axi.aw)->id;
-		in(prefix + "AWLEN", 4_b) = (BVec)(*axi.aw)->len.lower(4_b);
+		ready(*axi.w.a) = out(prefix + "AWREADY");
+		in(prefix + "AWVALID") = valid(*axi.w.a);
+		in(prefix + "AWADDR", addrW - hbmAddrOffsetW) = zext((BVec)(*axi.w.a)->addr.upper(-hbmAddrOffsetW));
+		in(prefix + "AWBURST", 2_b) = (BVec)(*axi.w.a)->burst;
+		in(prefix + "AWID", 6_b) = (*axi.w.a)->id;
+		in(prefix + "AWLEN", 4_b) = (BVec)(*axi.w.a)->len.lower(4_b);
 		if(addECCBitsToData)
-			in(prefix + "AWSIZE", 3_b) = (BVec)((*axi.aw)->size - 1);
+			in(prefix + "AWSIZE", 3_b) = (BVec)((*axi.w.a)->size - 1);
 		else
-			in(prefix + "AWSIZE", 3_b) = (BVec)(*axi.aw)->size;
+			in(prefix + "AWSIZE", 3_b) = (BVec)(*axi.w.a)->size;
 
 		// W
-		ready(*axi.w) = out(prefix + "WREADY");
-		in(prefix + "WVALID") = valid(*axi.w);
-		in(prefix + "WLAST") = eop(*axi.w);
-		in(prefix + "WDATA", 256_b) = (*axi.w)->data.lower(256_b);
-		in(prefix + "WSTRB", 32_b) = (*axi.w)->strb.lower(32_b);
+		ready(*axi.w.d) = out(prefix + "WREADY");
+		in(prefix + "WVALID") = valid(*axi.w.d);
+		in(prefix + "WLAST") = eop(*axi.w.d);
+		in(prefix + "WDATA", 256_b) = (*axi.w.d)->data.lower(256_b);
+		in(prefix + "WSTRB", 32_b) = (*axi.w.d)->strb.lower(32_b);
 
 		if (addECCBitsToData)
-			in(prefix + "WDATA_PARITY", 32_b) = (*axi.w)->data.upper(32_b);
+			in(prefix + "WDATA_PARITY", 32_b) = (*axi.w.d)->data.upper(32_b);
 		else
 			in(prefix + "WDATA_PARITY", 32_b);
 
 		// R
-		in(prefix + "RREADY") = ready(axi.r);
-		valid(axi.r) = out(prefix + "RVALID");
-		eop(axi.r) = out(prefix + "RLAST");
-		axi.r->data = 0;
-		axi.r->data.lower(256_b) = out(prefix + "RDATA", 256_b);
-		axi.r->resp = out(prefix + "RRESP", 2_b);
-		axi.r->id = out(prefix + "RID", 6_b);
+		in(prefix + "RREADY") = ready(axi.r.d);
+		valid(axi.r.d) = out(prefix + "RVALID");
+		eop(axi.r.d) = out(prefix + "RLAST");
+		axi.r.d->data = 0;
+		axi.r.d->data.lower(256_b) = out(prefix + "RDATA", 256_b);
+		axi.r.d->resp = out(prefix + "RRESP", 2_b);
+		axi.r.d->id = out(prefix + "RID", 6_b);
 
 		if(addECCBitsToData)
-			axi.r->data.upper(32_b) = out(prefix + "RDATA_PARITY", 32_b);
+			axi.r.d->data.upper(32_b) = out(prefix + "RDATA_PARITY", 32_b);
 
 		// B
-		in(prefix + "BREADY") = ready(axi.b);
-		valid(axi.b) = out(prefix + "BVALID");
-		axi.b->resp = out(prefix + "BRESP", 2_b);
-		axi.b->id = out(prefix + "BID", 6_b);
+		in(prefix + "BREADY") = ready(axi.w.b);
+		valid(axi.w.b) = out(prefix + "BVALID");
+		axi.w.b->resp = out(prefix + "BRESP", 2_b);
+		axi.w.b->id = out(prefix + "BID", 6_b);
 
 		return axiMemorySimulationPortOverride(m_memoryConfig, move(axi));
 	}

@@ -160,4 +160,8 @@ namespace gtry
 		m_node->connectInput(port);
 	}
 
+	void BaseEnum::resetNode() {
+		m_node = nullptr;
+	}
+
 }

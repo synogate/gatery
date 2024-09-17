@@ -360,4 +360,18 @@ namespace gtry {
 		(*this) = bvec.lsb(); 
 	}
 
+	void Bit::resetNode()
+	{
+		HCL_DESIGNCHECK_HINT(!m_slice, "Bit::resetNode is not allowed for alias Bit's.");
+
+		m_node = nullptr;
+		m_slice.reset();
+		m_resetValue.reset();
+
+		if (auto* scope = ConditionalScope::get())
+			m_initialScopeId = scope->getId();	
+
+		createNode();		
+	}
+
 }
