@@ -23,45 +23,47 @@
 #include <gatery/hlim/NodePort.h>
 #include <gatery/utils/Traits.h>
 
-namespace gtry {
-	
-
+namespace gtry 
+{
 /**
  * @addtogroup gtry_frontend
  * @{
  */
-
 	class Bit;
 
 	class ConditionalScope : public BaseScope<ConditionalScope>
 	{
-		public:
-			static ConditionalScope *get() { return m_currentScope; }
+	public:
+		struct ElseCase {};
 
-			ConditionalScope(const Bit &condition, bool override = false);
-			ConditionalScope();
-			~ConditionalScope();
+		static ConditionalScope *get() { return m_currentScope; }
 
-			static Bit globalEnable();
+		ConditionalScope(const Bit &condition, bool override = false);
+		ConditionalScope(ElseCase);
+		ConditionalScope(ElseCase, const Bit& condition);
+		~ConditionalScope();
 
-			hlim::NodePort getFullCondition() const { return m_fullCondition; }
-			size_t getId() const { return m_id; }
+		static Bit globalEnable();
 
-			explicit operator bool() const { return true; }
+		hlim::NodePort getFullCondition() const { return m_fullCondition; }
+		size_t getId() const { return m_id; }
 
-		private:
-			void setCondition(hlim::NodePort port, bool override = false);
+		explicit operator bool() const { return true; }
 
-			const size_t m_id;
-			hlim::NodePort m_condition;
-			hlim::NodePort m_fullCondition;
-			bool m_isElseScope;
+	private:
+		void setCondition(hlim::NodePort port, bool override = false);
 
-			/// @todo: Remove once we decouple enable scopes and condition scopes
-			EnableScope m_enScope;
+		const size_t m_id;
+		hlim::NodePort m_condition;
+		hlim::NodePort m_fullCondition;
 
-			thread_local static hlim::NodePort m_lastCondition;
-			thread_local static size_t s_nextId;
+		/// @todo: Remove once we decouple enable scopes and condition scopes
+		EnableScope m_enScope;
+		std::optional<hlim::NodePort> m_lastConditionOnEntry;
+		std::optional<hlim::NodePort> m_combinedelseChainConditon;
+
+		thread_local static hlim::NodePort m_lastCondition;
+		thread_local static size_t s_nextId;
 	};
 
 
@@ -70,8 +72,12 @@ namespace gtry {
 
 #define ELSE \
 	else { HCL_ASSERT(false); } \
-	if (gtry::ConditionalScope ___condScope{})
+	if (gtry::ConditionalScope ___condScope{ConditionalScope::ElseCase{}})
 
+	/// @brief This is preferred over the use of ELSE IF (with space) to avoid dangling else warnings on clang.
+#define ELSEIF(x) \
+	else { HCL_ASSERT(false); } \
+	if (gtry::ConditionalScope ___condScope{ConditionalScope::ElseCase{}, x})
 /// @}
 
 }

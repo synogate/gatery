@@ -1098,6 +1098,131 @@ BOOST_FIXTURE_TEST_CASE(MultiElseConditionalAssignment, BoostUnitTestSimulationF
 	runEvalOnlyTest();
 }
 
+BOOST_FIXTURE_TEST_CASE(NestedElseIf, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Bit a1 = pinIn();	HCL_NAMED(a1);
+	Bit a2 = pinIn();	HCL_NAMED(a2);
+	Bit a3 = pinIn();	HCL_NAMED(a3);
+	Bit a4 = pinIn();	HCL_NAMED(a4);
+	Bit b1 = pinIn();	HCL_NAMED(b1);
+	Bit b2 = pinIn();	HCL_NAMED(b2);
+	Bit b3 = pinIn();	HCL_NAMED(b3);
+	Bit b4 = pinIn();	HCL_NAMED(b4);
+
+	UInt result = ConstUInt(8_b);
+	IF(a1)
+	{
+		IF(b1)
+			result = 1;
+		ELSE IF(b2)
+			result = 2;
+		ELSE IF(b3)
+			result = 3;
+		ELSE
+			result = 4;
+	}
+	ELSE IF(a2)
+	{
+		IF(b1)
+			result = 5;
+		ELSEIF(b2)
+			result = 6;
+		ELSE IF(b3)
+			result = 7;
+		ELSE
+			result = 8;
+	}
+	ELSE IF(a3)
+	{
+		IF(b1)
+			result = 9;
+		ELSE IF(b2)
+			result = 10;
+		ELSEIF(b3)
+			result = 11;
+		ELSE
+			result = 12;
+	}
+	ELSE
+	{
+		IF(b1)
+			result = 13;
+		ELSEIF(b2)
+			result = 14;
+		ELSEIF(b3)
+			result = 15;
+		ELSE
+			result = 16;
+	}
+
+	pinOut(result, "result");
+
+	addSimulationProcess([&, clock = ClockScope::getClk()]() -> SimProcess {
+		for (size_t i = 0; i < 1 << 8; ++i)
+		{
+			simu(a1) = (i & 1) != 0;
+			simu(a2) = (i & 2) != 0;
+			simu(a3) = (i & 4) != 0;
+			simu(a4) = (i & 8) != 0;
+			simu(b1) = (i & 16) != 0;
+			simu(b2) = (i & 32) != 0;
+			simu(b3) = (i & 64) != 0;
+			simu(b4) = (i & 128) != 0;
+			co_await OnClk(clock);
+
+			if(simu(a1))
+			{
+				if (simu(b1))
+					BOOST_TEST(simu(result) == 1);
+				else if (simu(b2))
+					BOOST_TEST(simu(result) == 2);
+				else if (simu(b3))
+					BOOST_TEST(simu(result) == 3);
+				else
+					BOOST_TEST(simu(result) == 4);
+			}
+			else if (simu(a2))
+			{
+				if (simu(b1))
+					BOOST_TEST(simu(result) == 5);
+				else if (simu(b2))
+					BOOST_TEST(simu(result) == 6);
+				else if (simu(b3))
+					BOOST_TEST(simu(result) == 7);
+				else
+					BOOST_TEST(simu(result) == 8);
+			}
+			else if (simu(a3))
+			{
+				if (simu(b1))
+					BOOST_TEST(simu(result) == 9);
+				else if (simu(b2))
+					BOOST_TEST(simu(result) == 10);
+				else if (simu(b3))
+					BOOST_TEST(simu(result) == 11);
+				else
+					BOOST_TEST(simu(result) == 12);
+			}
+			else
+			{
+				if (simu(b1))
+					BOOST_TEST(simu(result) == 13);
+				else if (simu(b2))
+					BOOST_TEST(simu(result) == 14);
+				else if (simu(b3))
+					BOOST_TEST(simu(result) == 15);
+				else
+					BOOST_TEST(simu(result) == 16);
+			}
+		}
+		stopTest();
+	});
+
+	//design.postprocess();
+	runTest({1,1});
+}
 BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentWithPreviousAssignmentNoElse, BoostUnitTestSimulationFixture)
 {
 	using namespace gtry;
