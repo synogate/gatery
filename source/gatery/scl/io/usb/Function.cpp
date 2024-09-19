@@ -277,7 +277,7 @@ void gtry::scl::usb::Function::generateInitialFsm()
 				{
 					m_frameId = m_packetData.upper(16_b).lower(11_b);
 				}
-				ELSE IF(token.address == m_address) // in, out, setup for us
+				ELSEIF(token.address == m_address) // in, out, setup for us
 				{
 					m_endPoint = token.endPoint;
 					m_endPointMask = scl::decoder(m_endPoint);
@@ -537,7 +537,7 @@ void gtry::scl::usb::Function::generateInitialFsm()
 
 			IF(rx.data == cat(~expectedPid, expectedPid))
 				m_state = State::recvData;
-			ELSE IF(rx.data != cat(~resendPid, resendPid))
+			ELSEIF(rx.data != cat(~resendPid, resendPid))
 				m_state = State::waitForToken;
 			// else stay in state and ack resend
 		}

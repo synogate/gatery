@@ -96,7 +96,7 @@ RvStream<BVec> BitBangEngine::generate(RvStream<BVec> command, size_t numIo)
 					state = CmdState::inc_bits;
 			}
 		}
-		ELSE IF((*command)(2, 5_b) == 0)
+		ELSEIF((*command)(2, 5_b) == 0)
 		{
 			config.targetPinGroup = (UInt)(*command)(1, 1_b);
 
@@ -113,28 +113,28 @@ RvStream<BVec> BitBangEngine::generate(RvStream<BVec> command, size_t numIo)
 				state = CmdState::write_out;
 			}
 		}
-		ELSE IF((*command)(1, 6_b) == 0x04 >> 1) // loopback mode
+		ELSEIF((*command)(1, 6_b) == 0x04 >> 1) // loopback mode
 		{
 			config.dataLoopback = !command->lsb();
 		}
-		ELSE IF(command->lower(7_b) == 0x6) // set clock div
+		ELSEIF(command->lower(7_b) == 0x6) // set clock div
 		{
 			state = CmdState::inc_low;
 		}
-		ELSE IF(command->lower(7_b) == 0x7) // flush buffer
+		ELSEIF(command->lower(7_b) == 0x7) // flush buffer
 		{
 			// flush buffers (no need to implement in USB1.1)
 		}
-		ELSE IF((*command)(1, 6_b) == 0x08 >> 1) // wait for signal
+		ELSEIF((*command)(1, 6_b) == 0x08 >> 1) // wait for signal
 		{
 			config.stopClockSignal = !command->lsb();
 			state = CmdState::wait_for_gpio_signal;
 		}
-		ELSE IF((*command)(1, 6_b) == 0x0C >> 1) // enable 3 phase clocking
+		ELSEIF((*command)(1, 6_b) == 0x0C >> 1) // enable 3 phase clocking
 		{
 			config.clockThreePhase = !command->lsb();
 		}
-		ELSE IF((*command)(1, 6_b) == 0x0E >> 1) // clock only
+		ELSEIF((*command)(1, 6_b) == 0x0E >> 1) // clock only
 		{
 			if (hasSerialEngine)
 			{
@@ -144,7 +144,7 @@ RvStream<BVec> BitBangEngine::generate(RvStream<BVec> command, size_t numIo)
 					state = CmdState::inc_low; // byte mode
 			}
 		}
-		ELSE IF((*command)(1, 6_b) == 0x14 >> 1) // clock until high/low
+		ELSEIF((*command)(1, 6_b) == 0x14 >> 1) // clock until high/low
 		{
 			if (m_io.size() > m_ioStopClockIndex)
 			{
@@ -154,7 +154,7 @@ RvStream<BVec> BitBangEngine::generate(RvStream<BVec> command, size_t numIo)
 				state = CmdState::clock_setup;
 			}
 		}
-		ELSE IF((*command)(1, 6_b) == 0x1C >> 1) // clock until high/low with timeout
+		ELSEIF((*command)(1, 6_b) == 0x1C >> 1) // clock until high/low with timeout
 		{
 			if (m_io.size() > m_ioStopClockIndex)
 			{
@@ -165,11 +165,11 @@ RvStream<BVec> BitBangEngine::generate(RvStream<BVec> command, size_t numIo)
 				state = CmdState::inc_low; // byte mode
 			}
 		}
-		ELSE IF(command->lower(7_b) == 0x1E) // set open drain mode
+		ELSEIF(command->lower(7_b) == 0x1E) // set open drain mode
 		{
 			state = CmdState::load_low;
 		}
-		ELSE IF((*command)(5, 2_b) == 2) // synogate fast bit bang mode
+		ELSEIF((*command)(5, 2_b) == 2) // synogate fast bit bang mode
 		{
 			ready(command) = '0';
 			IF(tick)

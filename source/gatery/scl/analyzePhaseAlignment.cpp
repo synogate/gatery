@@ -52,7 +52,7 @@ namespace gtry::scl {
 			ELSE
 				ret = PhaseCommand::anticipate;
 		}
-		ELSE IF(samples[2] != samples[1]) {
+		ELSEIF(samples[2] != samples[1]) {
 			ret = PhaseCommand::delay;
 		}
 

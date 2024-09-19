@@ -204,7 +204,7 @@ void gtry::scl::usb::Ulpi::generateRxStream()
 	{
 		IF(m_io.dir == '0')
 			m_rx.eop = '1'; // end due to bus direction change
-		ELSE IF(m_io.nxt == '0' & m_io.dataIn[4] == '0')
+		ELSEIF(m_io.nxt == '0' & m_io.dataIn[4] == '0')
 			m_rx.eop = '1'; // end due to RxActive low
 	}
 

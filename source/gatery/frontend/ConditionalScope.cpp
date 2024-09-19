@@ -88,7 +88,7 @@ ConditionalScope::~ConditionalScope()
 	}
 	else if (m_lastConditionOnEntry && m_lastConditionOnEntry != m_lastCondition)
 	{
-		// special case for ELSE IF to catch the condition of the IF scope in the ELSE dtor
+		// special case for ELSEIF to catch the condition of the IF scope in the ELSE dtor
 		hlim::Node_Logic* orNode = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::OR);
 		orNode->connectInput(0, m_lastCondition);
 		orNode->connectInput(1, *m_lastConditionOnEntry);

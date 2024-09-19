@@ -65,9 +65,9 @@ namespace gtry::scl
 
 			IF(round < 20) {
                 k = 0x5A827999;
-            } ELSE IF(round < 40) {
+            } ELSEIF(round < 40) {
                 k = 0x6ED9EBA1;
-            } ELSE IF(round < 60) {
+            } ELSEIF(round < 60) {
                 k = 0x8F1BBCDC;
             }
 
@@ -77,7 +77,7 @@ namespace gtry::scl
 			TVec f = b ^ c ^ d;
 			IF(round < 20)
 				f = (b & c) | (~b & d);
-			ELSE IF(round >= 40 & round < 60)
+			ELSEIF(round >= 40 & round < 60)
 				f = (b & c) | (b & d) | (c & d);
 
 			HCL_NAMED(f);
