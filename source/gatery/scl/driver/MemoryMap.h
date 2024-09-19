@@ -150,10 +150,17 @@ class DynamicMemoryMap {
 template<typename T>
 MemoryMap DynamicMemoryMap<T>::memoryMap;
 
-template<const MemoryMapEntry entries[]>
+struct MemoryMapEntryArray {
+	template<size_t SIZE>
+	constexpr MemoryMapEntryArray(const MemoryMapEntry(&entries)[SIZE]) : entries(entries), size(SIZE) {};
+	const MemoryMapEntry * const entries;
+	const size_t size;
+};
+
+template<MemoryMapEntryArray a>
 class StaticMemoryMap {
 	public:
-        static constexpr MemoryMap memoryMap = MemoryMap(std::span<const MemoryMapEntry>(entries, sizeof(entries) / sizeof(MemoryMapEntry)));
+        static constexpr MemoryMap memoryMap = MemoryMap(std::span<const MemoryMapEntry>(a.entries, a.size));
 		constexpr operator MemoryMapEntryHandle() const { return memoryMap; }
 
         template<TemplateString name>
