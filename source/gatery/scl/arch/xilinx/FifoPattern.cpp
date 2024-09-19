@@ -293,7 +293,7 @@ Xilinx7SeriesFifoCapabilities::~Xilinx7SeriesFifoCapabilities()
 { 
 }
 
-Xilinx7SeriesFifoCapabilities::Choice Xilinx7SeriesFifoCapabilities::select(const Xilinx7SeriesFifoCapabilities::Request &request) const
+Xilinx7SeriesFifoCapabilities::Choice Xilinx7SeriesFifoCapabilities::select(hlim::NodeGroup*, const Xilinx7SeriesFifoCapabilities::Request &request) const
 {
 	Choice choice;
 

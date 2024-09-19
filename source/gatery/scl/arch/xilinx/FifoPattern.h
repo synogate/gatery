@@ -38,7 +38,7 @@ class Xilinx7SeriesFifoCapabilities : public FifoCapabilities
 {
 	public:
 		virtual ~Xilinx7SeriesFifoCapabilities();
-		virtual Choice select(const Request &request) const;
+		virtual Choice select(hlim::NodeGroup* group, const Request &request) const override;
 };
 
 

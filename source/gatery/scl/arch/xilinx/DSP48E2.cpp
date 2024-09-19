@@ -361,8 +361,10 @@ namespace gtry::scl::arch::xilinx
 				}
 
 				if(iB != 0)
-					ENIF (enable)
+				{
+					ENIF(enable)
 						Bout = reg(Bout);//, { .allowRetimingForward = true });
+				}
 				BitWidth directOutW = iB != mulBSteps - 1 ? BitWidth{ mulBWidth } : BitWidth{ aW + bW };
 				if(directOutW.bits() + aOfs + bOfs > resultOffset)
 					Bout(aOfs + bOfs, directOutW) = dsp.p().lower(directOutW);

@@ -235,7 +235,7 @@ ReturnValue Simulator::executeCoroutine(SimulationFunction<ReturnValue> coroutin
 	ReturnValue result;
 	bool done = false;
 
-	auto callbackWrapper = [&result, &done, &coroutine, this]()mutable->SimulationFunction<void> {
+	auto callbackWrapper = [&result, &done, &coroutine]()mutable->SimulationFunction<void> {
 		result = co_await coroutine;
 		done = true;
 	};

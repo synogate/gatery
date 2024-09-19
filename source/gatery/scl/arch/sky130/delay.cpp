@@ -19,6 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "delay.h"
 #include <gatery/scl/io/dynamicDelay.h>
 
+
 namespace gtry::scl::arch::sky130
 {
 	dlygate4sd3::dlygate4sd3(Strength strength, picoseconds simDelay, Library lib)
@@ -43,7 +44,7 @@ namespace gtry::scl::arch::sky130
 	{
 		Bit out = in;
 		for (size_t i = 0; i < m_numDelayGates; i++)
-			out = dlygate4sd3{ Strength::one, 375ps, m_lib }(out);
+			out = dlygate4sd3{ Strength::one, 375_ps, m_lib }(out);
 		return out;
 	}
 };

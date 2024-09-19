@@ -41,7 +41,7 @@ namespace gtry::scl::arch::sky130 {
 		mediumSpeed
 	};
 
-	static std::string toLibraryName(Library lib) {
+	inline std::string toLibraryName(Library lib) {
 		switch (lib) {
 			case Library::highDensity: return "hd";
 			case Library::highDensityLowLeakage: return "hdll";

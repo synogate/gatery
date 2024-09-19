@@ -37,7 +37,7 @@ namespace gtry::scl::usb
 		pinOut(m_tx.error, pinPrefix + "tx_error", simPin);
 		pinOut(m_tx.data, pinPrefix + "tx_data", simPin);
 
-		DesignScope::get()->getCircuit().addSimulationProcess([=]() -> SimProcess {
+		DesignScope::get()->getCircuit().addSimulationProcess([this]() -> SimProcess {
 			simu(m_status.lineState) = 1;
 			simu(m_status.sessEnd) = '0';
 			simu(m_status.sessValid) = '0';
@@ -387,7 +387,7 @@ namespace gtry::scl::usb
 			std::span<const std::byte> checkRange = data;
 			for (const DescriptorEntry& d : m_descriptor.entries())
 			{
-				if (firstDescFound || index == d.index && type == d.type())
+				if (firstDescFound || (index == d.index && type == d.type()))
 				{
 					firstDescFound = true;
 
