@@ -114,15 +114,6 @@ struct MemoryState {
 	}
 };
 
-
-bool anyAsync(const MemorySimConfig &config) {
-	for (const auto &port : config.readPorts)
-		if (port.inputLatency == 0 && port.outputLatency == 0)
-			return true;
-
-	return false;
-}
-
 sim::SimulationFunction<void> handleReadPortOnce(MemorySimConfig &config, size_t rdPortIdx, MemoryState &memState)
 {
 	auto &port = config.readPorts[rdPortIdx];

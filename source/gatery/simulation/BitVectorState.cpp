@@ -412,7 +412,7 @@ DefaultBitVectorState parseBitVector(uint64_t value, size_t width)
 
 BitVectorState<ExtendedConfig> convertToExtended(const BitVectorState<DefaultConfig> &src)
 {
-	HCL_ASSERT(DefaultConfig::NUM_BITS_PER_BLOCK == ExtendedConfig::NUM_BITS_PER_BLOCK);
+	HCL_ASSERT(int(DefaultConfig::NUM_BITS_PER_BLOCK) == int(ExtendedConfig::NUM_BITS_PER_BLOCK));
 
 	BitVectorState<ExtendedConfig> result;
 	result.resize(src.size());
@@ -427,7 +427,7 @@ BitVectorState<ExtendedConfig> convertToExtended(const BitVectorState<DefaultCon
 
 std::optional<BitVectorState<DefaultConfig>> tryConvertToDefault(const BitVectorState<ExtendedConfig> &src)
 {
-	HCL_ASSERT(DefaultConfig::NUM_BITS_PER_BLOCK == ExtendedConfig::NUM_BITS_PER_BLOCK);
+	HCL_ASSERT(int(DefaultConfig::NUM_BITS_PER_BLOCK) == int(ExtendedConfig::NUM_BITS_PER_BLOCK));
 	for (size_t offset = 0; offset < src.size(); offset += ExtendedConfig::NUM_BITS_PER_BLOCK) {
 		size_t chunkSize = std::min<size_t>(ExtendedConfig::NUM_BITS_PER_BLOCK, src.size()-offset);
 

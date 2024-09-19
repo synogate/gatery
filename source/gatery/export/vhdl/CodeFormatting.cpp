@@ -77,7 +77,7 @@ std::string DefaultCodeFormatting::getSignalName(const std::string &desiredName,
 		case SIG_CHILD_ENTITY_OUTPUT: initialName = std::string("c_out_") + initialName; break;
 		case SIG_REGISTER_INPUT: initialName = std::string("r_in_") + initialName; break;
 		case SIG_REGISTER_OUTPUT: initialName = std::string("r_out_") + initialName; break;
-		case SIG_ATTRIBUTED_SIGNAL: initialName = initialName; break;
+		case SIG_ATTRIBUTED_SIGNAL: break;
 		case SIG_LOCAL_SIGNAL: initialName = std::string("s_") + initialName; break;
 		case SIG_LOCAL_VARIABLE: initialName = std::string("v_") + initialName; break;
 		case SIG_CONSTANT: boost::to_upper(initialName); initialName = std::string("C_") + initialName; break;

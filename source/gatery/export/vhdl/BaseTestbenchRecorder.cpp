@@ -231,7 +231,6 @@ void BaseTestbenchRecorder::buildClockProcessVerilog(std::ostream &stream, const
 void BaseTestbenchRecorder::declareSignalsVerilog(std::ostream &stream)
 {
 	auto *rootEntity = m_ast->getRootEntity();
-	CodeFormatting &cf = m_ast->getCodeFormatting();
 
 	for (auto clock : m_clocksOfInterest) {
 		stream << "reg " << rootEntity->getNamespaceScope().getClock(clock).name << " = ";

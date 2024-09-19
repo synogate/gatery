@@ -16,7 +16,7 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
-
+#include <chrono>
 
 namespace gtry {
 	using namespace std::chrono;
@@ -24,25 +24,30 @@ namespace gtry {
 
 
 // we want to introduce a used defined literal which does not start with underscore. These are reserved for future standardization.
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4455) 
+#if __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wuser-defined-literals"
 #elif __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wliteral-suffix"
+#elif _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4455) 
 #endif
 
 
 
-	[[nodiscard]] inline constexpr picoseconds operator""ps(unsigned long long _Val) noexcept
+	[[nodiscard]] inline constexpr picoseconds operator"" ps(unsigned long long _Val) noexcept
 	{
 		return picoseconds(_Val);
 	}
 
-#ifdef _MSC_VER
-#pragma warning(pop)
+#if __clang__
+#pragma clang diagnostic pop
 #elif __GNUC__
 #pragma GCC diagnostic pop
+#elif _MSC_VER
+#pragma warning(pop)
 #endif
 
 }

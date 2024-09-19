@@ -166,7 +166,9 @@ void GTKWaveProjectFile::writeSurferScript(const std::filesystem::path& filename
 				} while (idx);
 				file << "item_focus " << prefix << '_' << fixedName << '\n';
 
+#ifndef __clang__
 				HCL_ASSERT_HINT(s.color < std::size(colorNames), "Invalid color index");
+#endif
 				file << "item_set_color " << colorNames[s.color] << "\n";
 			}
 			break;

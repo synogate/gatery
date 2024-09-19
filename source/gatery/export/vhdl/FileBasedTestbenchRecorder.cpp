@@ -513,11 +513,9 @@ void FileBasedTestbenchRecorder::onSimProcOutputRead(const hlim::NodePort &outpu
 			m_phases.back().assertStatements << "CHECK" << std::endl << name_it->second << std::endl << state << std::endl;
 		}
 	} else {
-		bool allDefined = true;
 		bool anyDefined = false;
 		for (auto i : utils::Range(conType.width)) {
 			bool d = state.get(sim::DefaultConfig::DEFINED, i);
-			allDefined &= d;
 			anyDefined |= d;
 		}
 

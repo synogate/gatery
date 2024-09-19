@@ -31,7 +31,7 @@ namespace gtry {
 		auto pathName = getNodePath(name);
 		m_counter[pathName] = 0;
 
-		DesignScope::get()->getCircuit().addSimulationProcess([=]()->SimProcess {
+		DesignScope::get()->getCircuit().addSimulationProcess([=, this]()->SimProcess {
 			while (true)
 			{
 				co_await OnClk(clk);

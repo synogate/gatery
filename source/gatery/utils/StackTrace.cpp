@@ -149,7 +149,7 @@ namespace gtry::utils
 
 	std::string FrameResolver::to_string(const boost::stacktrace::frame& frame)
 	{
-#ifdef WIN32
+#ifdef BOOST_MSVC
 		std::string res;
 		idebug.to_string_impl(frame.address(), res);
 

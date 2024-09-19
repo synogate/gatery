@@ -21,7 +21,7 @@
 #include <optional>
 
 
-#ifdef __clang__
+#if __clang__ && !_WIN32
 template <typename T>
 auto operator<=>(const std::optional<T> &lhs, const std::optional<T> &rhs) {
 	bool leftExists = (bool) lhs;

@@ -34,7 +34,7 @@ namespace gtry::utils {
 		std::string to_string(const boost::stacktrace::frame& frame);
 
 	private:
-#ifdef WIN32
+#ifdef BOOST_MSVC
 		boost::stacktrace::detail::debugging_symbols idebug; 
 #endif
 	};
