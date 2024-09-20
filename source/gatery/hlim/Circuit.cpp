@@ -728,7 +728,8 @@ void Circuit::removeIrrelevantMuxes(Subnet &subnet)
 
 				for (size_t muxInputPort : utils::Range(1,3)) {
 
-					for (auto muxOutput : muxNode->getDirectlyDriven(0)) {
+					auto directlyDriven = muxNode->getDirectlyDriven(0);
+					for (auto muxOutput : directlyDriven) {
 						std::vector<NodePort> openList = { muxOutput };
 						utils::UnstableSet<NodePort> closedList;
 
