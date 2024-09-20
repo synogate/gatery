@@ -48,7 +48,7 @@ namespace gtry::scl
 	bool validValue(const T& stream) { return (bool)simu(valid(stream)); }
 
 	template<StreamSignal T>
-	bool transferValue(const T& stream) { return readyValue(stream) & validValue(stream); }
+	bool transferValue(const T& stream) { return readyValue(stream) && validValue(stream); }
 
 	template<StreamSignal T>
 	SimProcess validateStreamValid(T &stream, const Clock &clk)

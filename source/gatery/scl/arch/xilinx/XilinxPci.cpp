@@ -118,7 +118,7 @@ namespace gtry::scl::pci::xilinx {
 		ret.byteCountModifier = '0';
 		ret.lowerByteAddress = desc.lowerByteAddress.lower(7_b);
 		ret.completionStatus = desc.completionStatus;
-		desc.requestCompleted; // maybe do something with this?
+		//desc.requestCompleted; // maybe do something with this?
 		return ret;
 	}
 

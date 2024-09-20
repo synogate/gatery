@@ -38,7 +38,7 @@ namespace gtry::scl::usb
 		virtual PhyTxStream& tx() override;
 		virtual PhyRxStream& rx() override;
 
-		virtual bool supportCrc() const { return true; }
+		virtual bool supportCrc() const override { return true; }
 
 		// simulation helper
 

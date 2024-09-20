@@ -129,7 +129,7 @@ namespace gtry::scl
 				}
 			});
 
-			fork([axi, clock, &storage, wordStride, axiCfg]() -> SimProcess {
+			fork([axi, clock, &storage, axiCfg]() -> SimProcess {
 				simu(valid(axi->w.b)) = '0';
 				simu(ready(*axi->w.a)) = '1';
 				simu(ready(*axi->w.d)) = '0';
@@ -141,7 +141,7 @@ namespace gtry::scl
 				{
 					co_await performTransferWait(*axi->w.a, clock);
 
-					fork([axi, clock, slot_next, &slot_current, &slot_current_ack, &storage, wordStride, axiCfg]() -> SimProcess {
+					fork([axi, clock, slot_next, &slot_current, &slot_current_ack, &storage, axiCfg]() -> SimProcess {
 						AxiAddress& ar = **axi->w.a;
 						uint64_t wordOffset = simu(ar.addr).value() / axiCfg.alignedDataW().bytes();
 						//uint64_t size = simu(ar.size).value();

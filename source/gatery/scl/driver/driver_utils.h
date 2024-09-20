@@ -24,7 +24,7 @@ struct MmTestCtx
 	std::vector<uint32_t> mem;
 };
 
-static void MmTestWrite(void* ctx, uint32_t offset, uint32_t value)
+inline void MmTestWrite(void* ctx, uint32_t offset, uint32_t value)
 {
 	auto* c = (MmTestCtx*)ctx;
 	if (offset >= c->mem.size())
@@ -32,17 +32,17 @@ static void MmTestWrite(void* ctx, uint32_t offset, uint32_t value)
 	c->mem[offset] = value;
 }
 
-static void* driver_alloc(size_t s)
+inline void* driver_alloc(size_t s)
 {
 	return malloc(s);
 }
 
-static void driver_free(void* ptr, size_t)
+inline void driver_free(void* ptr, size_t)
 {
 	free(ptr);
 }
 
-static void driver_basic_hash(void* ctx, uint32_t* key, uint32_t* hash)
+inline void driver_basic_hash(void* ctx, uint32_t* key, uint32_t* hash)
 {
 	const uint32_t k = *key;
 	hash[0] = k * 609598081u;
@@ -55,7 +55,7 @@ static void driver_basic_hash(void* ctx, uint32_t* key, uint32_t* hash)
 	hash[7] = k * 1781057147u;
 }
 
-static uint32_t driver_random_generator(void* mt)
+inline uint32_t driver_random_generator(void* mt)
 {
 	auto& rng = *(std::mt19937*)mt;
 	return rng();

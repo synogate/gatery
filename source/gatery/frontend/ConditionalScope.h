@@ -70,11 +70,16 @@ namespace gtry
 #define IF(x) \
 	if (gtry::ConditionalScope ___condScope{x}) 
 
+#if __clang__
+#define ELSE \
+	if (gtry::ConditionalScope ___condScope{ConditionalScope::ElseCase{}})
+#else
 #define ELSE \
 	else { HCL_ASSERT(false); } \
 	if (gtry::ConditionalScope ___condScope{ConditionalScope::ElseCase{}})
+#endif
 
-	/// @brief This is preferred over the use of ELSEIF (with space) to avoid dangling else warnings on clang.
+	/// @brief This is preferred over the use of ELSE IF (with space) to avoid dangling else warnings on clang.
 #define ELSEIF(x) \
 	else { HCL_ASSERT(false); } \
 	if (gtry::ConditionalScope ___condScope{ConditionalScope::ElseCase{}, x})

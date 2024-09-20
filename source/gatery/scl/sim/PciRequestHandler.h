@@ -31,6 +31,8 @@ namespace gtry::scl::sim {
 	public:
 		PciRequestHandler() = default;
 		PciRequestHandler(uint16_t completerId) : m_completerId(completerId) {}
+
+		virtual ~PciRequestHandler() = default;
 		virtual SimProcess respond(const TlpInstruction& request, const hlim::MemoryStorage& mem, const TlpPacketStream<EmptyBits>& responseStream, const Clock& clk, SimulationSequencer& sendingSeq);
 	protected:
 		uint16_t m_completerId = 0x5678;

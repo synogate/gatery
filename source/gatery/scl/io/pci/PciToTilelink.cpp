@@ -380,7 +380,7 @@ namespace gtry::scl::pci {
 
 		auto rr = tileLinkAToRequesterRequest(move(a));
 		if (tag)
-			rr = move(rr.transform([&](const BVec& in) {
+			rr = rr.transform([&](const BVec& in) {
 				BVec ret = in;
 				IF(valid(rr) & sop(rr)) {
 					auto hdr = RequestHeader::fromRaw(ret.lower(128_b));
@@ -388,7 +388,7 @@ namespace gtry::scl::pci {
 					ret.lower(128_b) = hdr;
 				}
 				return ret;
-			}));
+			});
 	
 		*reqInt.request <<= rr;
 		*ret.d = requesterCompletionToTileLinkDCheapBurst(move(reqInt.completion), sizeW);

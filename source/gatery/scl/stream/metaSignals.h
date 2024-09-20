@@ -21,14 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../flag.h"
 #include "../utils/Thermometric.h"
 
-#if __clang__
-// we actively want to be able to overload move in the future
-#pragma clang diagnostic ignored "-Wunqualified-std-cast-call"
-#endif
-
 namespace gtry::scl::strm {
-	using std::move;
-
 	struct Ready;
 	struct Valid;
 	struct ByteEnable;
@@ -235,8 +228,6 @@ namespace gtry::scl::strm {
 
 
 namespace gtry::scl {
-	using strm::move;
-
 	using strm::valid;
 	using strm::ready;
 	using strm::transfer;

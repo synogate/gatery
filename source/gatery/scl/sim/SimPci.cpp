@@ -222,7 +222,8 @@ namespace gtry::scl::sim {
 		bool hasPayload;
 		size_t hdrSize;
 
-		switch(inst.opcode){
+		switch(inst.opcode)
+		{
 		case scl::pci::TlpOpcode::memoryReadRequest64bit:
 			isRW = true;
 			hasPayload = false;
@@ -243,6 +244,8 @@ namespace gtry::scl::sim {
 			hasPayload = false;
 			hdrSize = 96;
 			break;
+		default:
+			HCL_ASSERT_HINT(false, "should not happen");
 		}
 
 		if (isRW) {

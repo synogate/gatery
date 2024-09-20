@@ -24,7 +24,15 @@
 
 #include "BitWidth.h"
 
-namespace gtry {
+#if __clang__
+// we actively want to be able to overload move in the future
+#pragma clang diagnostic ignored "-Wunqualified-std-cast-call"
+#endif
+
+namespace gtry 
+{
+	using std::move;
+
 	namespace hlim {
 		class BaseNode;
 		struct SignalAttributes;

@@ -306,10 +306,10 @@ void gtry::scl::usb::UlpiSimulator::addSimulationProcess(UlpiIo& io)
 
 		while(1)
 		{
-			if(!m_sendQueue.empty())
+			if(!me->m_sendQueue.empty())
 			{
-				std::vector<uint8_t> packet = m_sendQueue.front();
-				m_sendQueue.pop();
+				std::vector<uint8_t> packet = me->m_sendQueue.front();
+				me->m_sendQueue.pop();
 
 				simu(io.dir) = '1';
 				simu(io.nxt) = '1';
@@ -355,7 +355,7 @@ void gtry::scl::usb::UlpiSimulator::addSimulationProcess(UlpiIo& io)
 						packet.pop_back();
 					}
 
-					m_recvQueue.push(move(packet));
+					me->m_recvQueue.push(std::move(packet));
 					simu(io.nxt) = false;
 				}
 				break;
@@ -365,7 +365,7 @@ void gtry::scl::usb::UlpiSimulator::addSimulationProcess(UlpiIo& io)
 				co_await WaitFor(clockPeriod);
 				simu(io.nxt) = '1';
 				co_await WaitFor(clockPeriod);
-				writeRegister((uint8_t)data & 0x3F, (uint8_t)simu(io.dataIn));
+				me->writeRegister((uint8_t)data & 0x3F, (uint8_t)simu(io.dataIn));
 				co_await WaitFor(clockPeriod);
 				simu(io.nxt) = '0';
 				HCL_ASSERT_HINT(simu(io.stp), "stop missing");
@@ -379,7 +379,7 @@ void gtry::scl::usb::UlpiSimulator::addSimulationProcess(UlpiIo& io)
 				simu(io.nxt) = '0';
 				simu(io.dir) = '1';
 				co_await WaitFor(clockPeriod);
-				simu(io.dataIn) = readRegister((uint8_t)data & 0x3F);
+				simu(io.dataIn) = me->readRegister((uint8_t)data & 0x3F);
 				co_await WaitFor(clockPeriod);
 				simu(io.dataIn).invalidate();
 				simu(io.dir) = '0';
@@ -396,107 +396,107 @@ void gtry::scl::usb::UlpiSimulator::addSimulationProcess(UlpiIo& io)
 
 		co_await WaitFor(clockPeriod * hlim::ClockRational{50, 1});
 
-		m_sendQueue.push({ 0xA5, 0x82, 0x31 }); // SOF
-		m_sendQueue.push({ 0x2D, 0x00, 0x10 }); // SETUP
-		m_sendQueue.push({ 0xC3, 0x80, 0x06, 0x00, 0x01, 0x00, 0x00, 0x40, 0x00, 0xDD, 0x94 }); // SETUP DATA0
+		me->m_sendQueue.push({ 0xA5, 0x82, 0x31 }); // SOF
+		me->m_sendQueue.push({ 0x2D, 0x00, 0x10 }); // SETUP
+		me->m_sendQueue.push({ 0xC3, 0x80, 0x06, 0x00, 0x01, 0x00, 0x00, 0x40, 0x00, 0xDD, 0x94 }); // SETUP DATA0
 
-		while(m_recvQueue.empty())
+		while(me->m_recvQueue.empty())
 			co_await AfterClk(io.clock);
-		HCL_ASSERT_HINT(popToken(TokenPid::ack), "ACK expected for get device descriptor setup packet");
+		HCL_ASSERT_HINT(me->popToken(TokenPid::ack), "ACK expected for get device descriptor setup packet");
 
 		TokenPid dataPid = TokenPid::data1;
 		for(size_t len : {9,9,3})
 		{
-			m_sendQueue.push({ 0x69, 0x00, 0x10 }); // IN
+			me->m_sendQueue.push({ 0x69, 0x00, 0x10 }); // IN
 
-			while(m_recvQueue.empty())
+			while(me->m_recvQueue.empty())
 				co_await AfterClk(io.clock);
-			HCL_ASSERT(m_recvQueue.front().size() == len);
-			HCL_ASSERT(popToken(dataPid));
+			HCL_ASSERT(me->m_recvQueue.front().size() == len);
+			HCL_ASSERT(me->popToken(dataPid));
 			dataPid = dataPid == TokenPid::data0 ? TokenPid::data1 : TokenPid::data0;
 
-			m_sendQueue.push({ 0xD2 }); // ACK
+			me->m_sendQueue.push({ 0xD2 }); // ACK
 		}
 
 		// status stage
-		m_sendQueue.push({ 0xE1, 0x00, 0x10 }); // OUT
-		m_sendQueue.push({ 0x4B, 0x00, 0x00 }); // empty DATA1
-		while(m_recvQueue.empty())
+		me->m_sendQueue.push({ 0xE1, 0x00, 0x10 }); // OUT
+		me->m_sendQueue.push({ 0x4B, 0x00, 0x00 }); // empty DATA1
+		while(me->m_recvQueue.empty())
 			co_await AfterClk(io.clock);
-		HCL_ASSERT(popToken(TokenPid::ack));
+		HCL_ASSERT(me->popToken(TokenPid::ack));
 
 
 		// set configuration (enable device)
-		m_sendQueue.push({ 0x2D, 0x00, 0x10 }); // SETUP
-		m_sendQueue.push({ 0xC3, 0x00, 0x09, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x27, 0x25 }); // SETUP DATA0
-		while(m_recvQueue.empty())
+		me->m_sendQueue.push({ 0x2D, 0x00, 0x10 }); // SETUP
+		me->m_sendQueue.push({ 0xC3, 0x00, 0x09, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x27, 0x25 }); // SETUP DATA0
+		while(me->m_recvQueue.empty())
 			co_await AfterClk(io.clock);
-		HCL_ASSERT(popToken(TokenPid::ack));
+		HCL_ASSERT(me->popToken(TokenPid::ack));
 
 		//	status stage
-		m_sendQueue.push({ 0x69, 0x00, 0x10 }); // IN
-		while(m_recvQueue.empty())
+		me->m_sendQueue.push({ 0x69, 0x00, 0x10 }); // IN
+		while(me->m_recvQueue.empty())
 			co_await AfterClk(io.clock);
-		HCL_ASSERT(m_recvQueue.front().size() == 1);
-		m_recvQueue.pop();
-		m_sendQueue.push({ 0xD2 }); // ACK
+		HCL_ASSERT(me->m_recvQueue.front().size() == 1);
+		me->m_recvQueue.pop();
+		me->m_sendQueue.push({ 0xD2 }); // ACK
 
 		// send data to endpoint 1 bad crc5
-		m_sendQueue.push({ 0xE1, 0x80, 0xb0 }); // OUT
-		m_sendQueue.push({ 0xC3, 0x31, 0x81, 0x6B }); // DATA0
+		me->m_sendQueue.push({ 0xE1, 0x80, 0xb0 }); // OUT
+		me->m_sendQueue.push({ 0xC3, 0x31, 0x81, 0x6B }); // DATA0
 		co_await WaitFor(clockPeriod * hlim::ClockRational{128, 1});
-		HCL_ASSERT(m_recvQueue.empty());
+		HCL_ASSERT(me->m_recvQueue.empty());
 
 		// send data to endpoint 1 bad crc16
-		m_sendQueue.push({ 0xE1, 0x80, 0xa0 }); // OUT
-		m_sendQueue.push({ 0xC3, 0x31, 0x32, 0x33, 0x34, 0x80, 0x6B }); // DATA0
+		me->m_sendQueue.push({ 0xE1, 0x80, 0xa0 }); // OUT
+		me->m_sendQueue.push({ 0xC3, 0x31, 0x32, 0x33, 0x34, 0x80, 0x6B }); // DATA0
 		co_await WaitFor(clockPeriod* hlim::ClockRational{ 128, 1 });
-		HCL_ASSERT(m_recvQueue.empty());
+		HCL_ASSERT(me->m_recvQueue.empty());
 
 		// send data to endpoint 1
-		m_sendQueue.push({ 0xE1, 0x80, 0xa0 }); // OUT
-		m_sendQueue.push({ 0xC3, 0x31, 0x81, 0x6B }); // DATA0
-		while(m_recvQueue.empty())
+		me->m_sendQueue.push({ 0xE1, 0x80, 0xa0 }); // OUT
+		me->m_sendQueue.push({ 0xC3, 0x31, 0x81, 0x6B }); // DATA0
+		while(me->m_recvQueue.empty())
 			co_await AfterClk(io.clock);
-		HCL_ASSERT(popToken(TokenPid::ack));
+		HCL_ASSERT(me->popToken(TokenPid::ack));
 
 		// resend data to endpoint 1
-		m_sendQueue.push({ 0xE1, 0x80, 0xa0 }); // OUT
-		m_sendQueue.push({ 0xC3, 0x31, 0x81, 0x6B }); // DATA0
-		while(m_recvQueue.empty())
+		me->m_sendQueue.push({ 0xE1, 0x80, 0xa0 }); // OUT
+		me->m_sendQueue.push({ 0xC3, 0x31, 0x81, 0x6B }); // DATA0
+		while(me->m_recvQueue.empty())
 			co_await AfterClk(io.clock);
-		HCL_ASSERT(popToken(TokenPid::ack));
+		HCL_ASSERT(me->popToken(TokenPid::ack));
 
 		// send data to endpoint 1
-		m_sendQueue.push({ 0xE1, 0x80, 0xa0 }); // OUT
-		m_sendQueue.push({ 0x4B, 0x32, 0xC1, 0x6A }); // DATA1
-		while(m_recvQueue.empty())
+		me->m_sendQueue.push({ 0xE1, 0x80, 0xa0 }); // OUT
+		me->m_sendQueue.push({ 0x4B, 0x32, 0xC1, 0x6A }); // DATA1
+		while(me->m_recvQueue.empty())
 			co_await AfterClk(io.clock);
-		HCL_ASSERT(popToken(TokenPid::ack));
+		HCL_ASSERT(me->popToken(TokenPid::ack));
 
 		// recv data from endpoint 1
-		m_sendQueue.push({ 0x69, 0x80, 0xa0 }); // IN
-		while(m_recvQueue.empty())
+		me->m_sendQueue.push({ 0x69, 0x80, 0xa0 }); // IN
+		while(me->m_recvQueue.empty())
 			co_await AfterClk(io.clock);
-		HCL_ASSERT(popToken(TokenPid::data0));
-		m_sendQueue.push({ 0xD2 }); // ACK
+		HCL_ASSERT(me->popToken(TokenPid::data0));
+		me->m_sendQueue.push({ 0xD2 }); // ACK
 
 		// set address
-		m_sendQueue.push({ 0x2D, 0x00, 0x10 }); // SETUP
-		m_sendQueue.push({ 0xC3, 0x00, 0x05, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0xEA, 0xA1 }); // SETUP DATA0
-		while(m_recvQueue.empty())
+		me->m_sendQueue.push({ 0x2D, 0x00, 0x10 }); // SETUP
+		me->m_sendQueue.push({ 0xC3, 0x00, 0x05, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0xEA, 0xA1 }); // SETUP DATA0
+		while(me->m_recvQueue.empty())
 			co_await AfterClk(io.clock);
-		HCL_ASSERT(popToken(TokenPid::ack));
+		HCL_ASSERT(me->popToken(TokenPid::ack));
 
 		//	status stage
-		while(m_recvQueue.empty())
+		while(me->m_recvQueue.empty())
 			co_await AfterClk(io.clock);
-		HCL_ASSERT(m_recvQueue.front().size() == 1);
-		m_recvQueue.pop();
-		m_sendQueue.push({ 0xD2 }); // ACK
+		HCL_ASSERT(me->m_recvQueue.front().size() == 1);
+		me->m_recvQueue.pop();
+		me->m_sendQueue.push({ 0xD2 }); // ACK
 
 		// check address set
-		m_sendQueue.push({ 0x2D, 0x00, 0x10 }); // SETUP
+		me->m_sendQueue.push({ 0x2D, 0x00, 0x10 }); // SETUP
 
 	});
 }
