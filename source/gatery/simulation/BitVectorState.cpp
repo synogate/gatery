@@ -141,7 +141,7 @@ gtry::sim::BigInt bitwiseNegation(const gtry::sim::BigInt &v, size_t width)
 	for (auto &elem : words)
 		elem = ~elem;
 
-	while (words.size() < width/64)
+	while (words.size() < (width + 63)/64)
 		words.push_back(~0ull);
 	
 	gtry::sim::BigInt result;
