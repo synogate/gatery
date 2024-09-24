@@ -17,6 +17,8 @@
 */
 #pragma once
 #include "Stream.h"
+#include "utils.h"
+#include "../Counter.h"
 
 namespace gtry::scl::strm
 {
