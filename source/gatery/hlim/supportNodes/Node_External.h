@@ -21,8 +21,6 @@
 
 #include <gatery/simulation/BitVectorState.h>
 
-#include <gatery/utils/ClangSpaceshipOptional.h>
-
 #include <vector>
 #include <string>
 #include <map>

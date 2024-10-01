@@ -4,7 +4,7 @@ stages:
   - coverage
   - deploy
 
-linux-build:
+linux-gcc-build:
   stage: build
   tags:
     - linux
@@ -12,13 +12,27 @@ linux-build:
     - mkdir build/
     - cd build
     - cmake ..
-    - make -j 20
+    - make -j
   artifacts:
     expire_in: 2 days
     paths:
       - build/
 
-windows-build:
+linux-clang-build:
+  stage: build
+  tags:
+    - linux
+  script:
+    - mkdir build/
+    - cd build
+    - CXX=clang++ cmake ..
+    - make -j unittest_frontend unittest_scl
+  artifacts:
+    expire_in: 2 days
+    paths:
+      - build/
+
+windows-msvc-build:
   stage: build
   tags:
     - windows
@@ -32,7 +46,7 @@ windows-build:
 
 test-linux-frontend:
   stage: test
-  needs: ["linux-build"]
+  needs: ["linux-gcc-build"]
   tags:
     - linux
   script:
@@ -40,7 +54,7 @@ test-linux-frontend:
 
 test-linux-scl:
   stage: test
-  needs: ["linux-build"]
+  needs: ["linux-gcc-build"]
   tags:
     - linux
   script:
@@ -48,7 +62,7 @@ test-linux-scl:
 
 test-windows-frontend:
   stage: test
-  needs: ["windows-build"]
+  needs: ["windows-msvc-build"]
   tags:
     - windows
   script:
@@ -56,7 +70,7 @@ test-windows-frontend:
 
 test-windows-scl:
   stage: test
-  needs: ["windows-build"]
+  needs: ["windows-msvc-build"]
   tags:
     - windows
   script:
