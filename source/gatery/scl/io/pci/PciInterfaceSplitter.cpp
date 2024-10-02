@@ -33,7 +33,7 @@ namespace gtry::scl::pci
 		Area area{ "scl_interfaceSplitterRx", true };
 
 		Bit isCompletion = capture(
-			HeaderCommon::fromRawDw0(*rx).isCompletion(),
+			HeaderCommon::fromRawDw0(rx->lower(32_b)).isCompletion(),
 			valid(rx) & sop(rx)
 		);
 		HCL_NAMED(isCompletion);
