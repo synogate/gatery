@@ -28,7 +28,8 @@ namespace gtry::scl
 
 		// improve timing by first calculating the last address
 		struct LastAddress { UInt addr; };
-		scl::Stream cmd = cmdIn.add(LastAddress{ cmdIn->endAddress - cmdIn->bytesPerBurst })
+		scl::Stream cmd = move(cmdIn)
+			| scl::strm::attach(LastAddress{ cmdIn->endAddress - cmdIn->bytesPerBurst })
 			| scl::strm::regDownstream();
 
 		RvStream<AxiAddress> out;
@@ -113,7 +114,7 @@ namespace gtry::scl
 				.strb = BVec{out->strb.width().mask()},
 				.user = ConstBVec(out->user.width()),
 			};
-		}).add(Eop{ beatCtr.isLast() });
+		}) | attach(Eop{ beatCtr.isLast() });
 
 		IF(transfer(out))
 			beatCtr.inc();

@@ -17,6 +17,7 @@
 */
 #pragma once
 
+#include "Stream.h"
 #include "StreamConcept.h" 
 #include "metaSignals.h"
 #include "../RepeatBuffer.h"
@@ -112,10 +113,10 @@ namespace gtry::scl::strm {
 	template<StreamSignal StreamT>
 	StreamT pop(RepeatBuffer<StreamData<StreamT>>& repeatBuffer, const RepeatBufferStreamSettings &settings)
 	{
-		auto ret = repeatBuffer.rdPeek()
-			.add(Ready{})
-			.add(Valid{ '1' })
-			.template reduceTo<StreamT>();
+		auto ret = (repeatBuffer.rdPeek()
+			| strm::attach(Ready{})
+			| strm::attach(Valid{ '1' })
+			).template reduceTo<StreamT>();
 
 		valid(ret) = internal::buildValidLatch(settings.releaseNextPacket, repeatBuffer.rdIsLast(), ready(ret));
 

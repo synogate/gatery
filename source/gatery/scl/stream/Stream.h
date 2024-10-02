@@ -102,8 +102,8 @@ namespace gtry::scl::strm
 		template<Signal T>
 		static constexpr bool has();
 
-		template<Signal T> requires (!StreamSignal<T>) inline auto add(T&& signal);
-		template<Signal T> requires (!StreamSignal<T>) inline auto add(T&& signal) const requires (GTRY_STREAM_ASSIGNABLE);
+		//template<Signal T> requires (!StreamSignal<T>) inline auto add(T&& signal);
+		//template<Signal T> requires (!StreamSignal<T>) inline auto add(T&& signal) const requires (GTRY_STREAM_ASSIGNABLE);
 
 		/**
 		 * @brief Adds the payload of a stream as a metadata field to another stream.
@@ -139,6 +139,10 @@ namespace gtry::scl::strm
 		auto removeFlowControl() { return remove<Ready>().template remove<Valid>().template remove<Sop>(); }
 		auto removeFlowControl() const requires(GTRY_STREAM_ASSIGNABLE) { return remove<Valid>().template remove<Sop>(); }
 	};
+
+	template<Signal AddT, Signal PayloadT, Signal ...MetaT>	auto attach(Stream<PayloadT, MetaT...>&& stream, AddT&& signal);
+	template<Signal AddT, Signal PayloadT, Signal ...MetaT>	auto add(const Stream<PayloadT, MetaT...>& stream, AddT&& signal);
+	template<Signal AddT> auto attach(AddT&& signal);
 }
 
 namespace gtry::scl::strm
@@ -156,17 +160,15 @@ namespace gtry::scl::strm
 			ret |= (std::is_same_v<std::remove_reference_t<Meta>, std::remove_reference_t<T>> | ...);
 		return ret;
 	}
-
-	template<Signal PayloadT, Signal ...Meta>
-	template<Signal T> requires (!StreamSignal<T>) 
-	inline auto Stream<PayloadT, Meta...>::add(T&& signal)
+	template<Signal AddT, Signal PayloadT, Signal ...MetaT>
+	auto attach(Stream<PayloadT, MetaT...>&& stream, AddT&& signal)
 	{
-		using Tplain = std::remove_reference_t<T>;
+		using Tplain = std::remove_reference_t<AddT>;
 
-		if constexpr (has<Tplain>())
+		if constexpr (stream.template has<Tplain>())
 		{
-			Stream ret;
-			connect(ret.data, data);
+			Stream<PayloadT, MetaT...> ret;
+			connect(ret.data, stream.data);
 
 			auto newMeta = std::apply([&](auto& ...meta) {
 				auto fun = [&](auto& member) -> decltype(auto) {
@@ -174,9 +176,9 @@ namespace gtry::scl::strm
 						return std::forward<decltype(member)>(signal);
 					else
 						return std::forward<decltype(member)>(member);
-				};
+					};
 				return std::tie(fun(meta)...);
-			}, _sig);
+				}, stream._sig);
 
 			downstream(ret._sig) = downstream(newMeta);
 			upstream(newMeta) = upstream(ret._sig);
@@ -188,48 +190,67 @@ namespace gtry::scl::strm
 			{
 				// Ready is always the first meta signal if present to fit R*Stream type declarations
 				// This is a bit of a hack, all meta signals should have some kind of deterministic ordering instead
-				Stream<PayloadT, Ready, Meta...> ret;
-				connect(*ret, data);
+				Stream<PayloadT, Ready, MetaT...> ret;
+				connect(*ret, stream.data);
 				ret.template get<Ready>() <<= signal;
 
 				std::apply([&](auto& ...meta) {
 					((ret.template get<std::remove_reference_t<decltype(meta)>>() <<= meta), ...);
-				}, _sig);
+					}, stream._sig);
 				return ret;
 			}
 			else
 			{
-				Stream<PayloadT, Meta..., Tplain> ret;
-				connect(*ret, data);
+				Stream<PayloadT, MetaT..., Tplain> ret;
+				connect(*ret, stream.data);
 				ret.template get<Tplain>() <<= signal;
 
 				std::apply([&](auto& ...meta) {
 					((ret.template get<std::remove_reference_t<decltype(meta)>>() <<= meta), ...);
-				}, _sig);
+					}, stream._sig);
 				return ret;
 			}
 		}
 	}
 
-	template<Signal PayloadT, Signal ...Meta>
-	template<Signal T> requires (!StreamSignal<T>) 
-	inline auto Stream<PayloadT, Meta...>::add(T&& signal) const requires (GTRY_STREAM_ASSIGNABLE)
+	template<Signal AddT, Signal PayloadT, Signal ...MetaT>
+	auto attach(const Stream<PayloadT, MetaT...>& stream, AddT&& signal)
 	{
-		if constexpr (has<T>())
+		using Tplain = std::remove_reference_t<AddT>;
+
+		if constexpr (stream.template has<Tplain>())
 		{
-			Self ret = *this;
-			ret.set(std::forward<T>(signal));
+			Stream<PayloadT, MetaT...> ret = stream;
+			ret.set(std::forward<AddT>(signal));
+			return ret;
+		}
+		else if constexpr (std::is_same_v<Tplain, Ready>)
+		{
+			Stream<PayloadT, Ready, MetaT...> ret{ stream.data };
+			ret.template get<Ready>() <<= signal;
+
+			std::apply([&](auto& ...meta) {
+				((ret.template get<std::remove_cvref_t<decltype(meta)>>() = meta), ...);
+				}, stream._sig);
 			return ret;
 		}
 		else
 		{
-			return Stream<PayloadT, Meta..., T>{
-				data,
+			return Stream<PayloadT, MetaT..., Tplain>{
+				stream.data,
 					std::apply([&](auto&... element) {
-					return std::tuple(element..., std::forward<T>(signal));
-				}, _sig)
+					return std::tuple(element..., std::forward<AddT>(signal));
+						}, stream._sig)
 			};
 		}
+	}
+
+	template<Signal AddT>
+	inline auto attach(AddT&& signal)
+	{
+		return [&](auto&& in) {
+			return ::gtry::scl::strm::attach(std::forward<decltype(in)>(in), std::forward<AddT>(signal));
+		};
 	}
 
 	// Forward declared here, actually in utils.h
@@ -243,7 +264,7 @@ namespace gtry::scl::strm
 		auto [result, duplicated] = replicateForEntirePacket(move(*this), move(stream));
 		ready(duplicated) = '1';
 
-		auto out = result.template add<std::remove_cvref_t<decltype(*duplicated)>>(move(*duplicated));
+		auto out = strm::attach(move(result), move(*duplicated));
 
 		if constexpr (has<Error>() && out.template has<Error>())
 			error(out) |= error(duplicated);

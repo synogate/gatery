@@ -349,7 +349,7 @@ namespace gtry::scl::strm
 	* proper failure reporting possibilities to user, such as the possibility to mapOut the totalLostPackets.
 	*/
 	template<StreamSignal StreamT> requires (!StreamT::template has<Ready>() && !StreamT::template has<Eop>())
-	std::tuple<decltype(StreamT{}.add(Ready{})), UInt> addReadyAndCompensateForLostBeats(StreamT&& in, BitWidth counterW);
+	std::tuple<decltype(attach(StreamT{}, Ready{})), UInt> addReadyAndCompensateForLostBeats(StreamT&& in, BitWidth counterW);
 
 	/**
 	 * @brief This overload allows for stream chaining. Please pass in an uninitialized UInt.
@@ -513,7 +513,8 @@ namespace gtry::scl::strm
 		IF(reset)
 			counter.reset();
 
-		auto ret = source.add(
+		auto ret = attach(
+			move(source),
 			Valid{ counter.isLast() & valid(source) }
 		);
 		if constexpr (T::template has<Ready>())
@@ -750,10 +751,10 @@ namespace gtry::scl::strm
 			crossingStream = reg(crossingStream, RegisterSettings{ .clock = dontSimplifyEnableRegClk });
 		}
 
-		StreamT out = crossingStream
-			.add(Ready{})
-			.add(Valid{})
-			.template reduceTo<StreamT>();
+		StreamT out = (move(crossingStream)
+			| attach(Ready{})
+			| attach(Valid{})
+			).template reduceTo<StreamT>();
 
 		Bit outValid;
 		outValid = flag(outputEnableCondition, outValid & ready(out));
@@ -899,10 +900,10 @@ namespace gtry::scl::strm
 	}
 
 	template<StreamSignal StreamT> requires (!StreamT::template has<Ready>() && !StreamT::template has<Eop>())
-	std::tuple<decltype(StreamT{}.add(Ready{})), UInt> addReadyAndCompensateForLostBeats(StreamT&& in, BitWidth counterW) {
+	std::tuple<decltype(attach(StreamT{}, Ready{})), UInt> addReadyAndCompensateForLostBeats(StreamT&& in, BitWidth counterW) {
 		Area area("scl_addReadyAndCompensateForLostBeats", true);
 
-		auto inWithReady = move(in).add(Ready{});
+		auto inWithReady = attach(move(in), Ready{});
 		Counter totalLostBeats(counterW);
 		Counter lostBeats(counterW);
 

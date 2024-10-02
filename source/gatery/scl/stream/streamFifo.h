@@ -180,10 +180,10 @@ namespace gtry::scl::strm {
 	template<Signal PayloadT, Signal... Meta>
 	RvStream<PayloadT, Meta...> pop(Fifo<Stream<PayloadT, Meta...>>& fifo)
 	{
-		auto ret = fifo.peek()
-			.add(Ready{})
-			.add(Valid{ !fifo.empty() })
-			.template reduceTo<RvStream<PayloadT, Meta...>>();
+		auto ret = (move(fifo.peek())
+			| attach(Ready{})
+			| attach(Valid{ !fifo.empty() })
+			).template reduceTo<RvStream<PayloadT, Meta...>>();
 
 		IF(transfer(ret))
 			fifo.pop();

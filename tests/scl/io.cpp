@@ -181,7 +181,8 @@ BOOST_FIXTURE_TEST_CASE(io_uart_fifo_cyc1000, BoostUnitTestSimulationFixture, *b
 
 	size_t baudRate = 115'200;
 	Bit rx = pinIn().setName("RX");
-	Bit tx = scl::uartRx(reg(rx, '1'), baudRate).add(scl::Ready{}) 
+	Bit tx = scl::uartRx(reg(rx, '1'), baudRate)
+		| attach(scl::Ready{}) 
 		| scl::strm::fifo(256) 
 		| scl::uartTx(baudRate);
 	pinOut(tx, "TX");

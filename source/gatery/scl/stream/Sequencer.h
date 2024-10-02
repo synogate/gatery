@@ -51,7 +51,7 @@ namespace gtry::scl::strm
 		struct Validity {
 			Bit validity;
 		};
-		auto inputWithValidity = move(input).add(Validity{});
+		auto inputWithValidity = move(input) | attach(Validity{});
 
 		Memory reorderBuffer(txid(input).width().count(), inputWithValidity.removeFlowControl().template remove<TxId>());
 		reorderBuffer.initZero();
@@ -67,10 +67,10 @@ namespace gtry::scl::strm
 		for(size_t i = 0; i < reorderBuffer.readLatencyHint(); i++)
 			memoryElement = pipestage(memoryElement);
 
-		auto outputStream = move(memoryElement)
-			.add(Ready{})
-			.add(Valid{ outputValidityPolarity == memoryElement.template get<Validity>().validity })
-			.add(TxId{ currentTxid })
+		auto outputStream = (move(memoryElement)
+			| attach(Ready{})
+			| attach(Valid{ outputValidityPolarity == memoryElement.template get<Validity>().validity })
+			| attach(TxId{ currentTxid }))
 			.template remove<Validity>();
 		HCL_NAMED(outputStream);
 

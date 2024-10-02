@@ -71,17 +71,17 @@ namespace gtry::scl::arch::intel {
 		IF(pci::HeaderCommon::fromRawDw0(rawHdr.lower(32_b)).is3dw())
 			rawHdr.upper(32_b) = 0;
 		
-		TlpPacketStream<EmptyBits, PTileHeader> localTx = move(tx).add(PTileHeader{ swapEndian(rawHdr) });
+		TlpPacketStream<EmptyBits, PTileHeader> localTx = attach(move(tx), PTileHeader{ swapEndian(rawHdr) });
 		
 		//remove header from front of TLP
 		UInt headerSizeInBits = 128;
 		IF(pci::HeaderCommon::fromRawDw0(rawHdr.lower(32_b)).is3dw())
 			headerSizeInBits = 96;
 
-		return strm::streamShiftRight(move(localTx), headerSizeInBits)
-			.add(Error{ '0' })
-			.add(PTilePrefix{ BVec{"32d0"} })
-			.template reduceTo<scl::strm::RvPacketStream<BVec, EmptyBits, scl::Error, PTileHeader, PTilePrefix>>();
+		return (strm::streamShiftRight(move(localTx), headerSizeInBits)
+			| strm::attach(Error{ '0' })
+			| strm::attach(PTilePrefix{ BVec{"32d0"} })
+			).template reduceTo<scl::strm::RvPacketStream<BVec, EmptyBits, scl::Error, PTileHeader, PTilePrefix>>();
 	}
 }
 

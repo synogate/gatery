@@ -453,7 +453,7 @@ BOOST_FIXTURE_TEST_CASE(usb_to_uart_cyc1000, SingleEndpointUsbFixture, *boost::u
 		Bit rx;
 		scl::uartRx(reg(rx, '1'), baudRate)
 			.transform([](const BVec& in) { return scl::usb::Function::StreamData{ .data = (UInt)in, .endPoint = 1 }; })
-			.add(Ready{})
+			| attach(Ready{})
 			| strm::push(uart2hostFifo);
 		pinIn(rx, "RX");
 

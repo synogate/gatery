@@ -218,7 +218,7 @@ namespace gtry::scl::strm
 	{
 		auto scope = Area{ "scl_addEopDeferred" }.enter();
 
-		auto in = source.add(scl::Eop{ '0' });
+		auto in = attach(move(source), scl::Eop{ '0' });
 		HCL_NAMED(in);
 
 		Bit insertState;
@@ -265,8 +265,7 @@ namespace gtry::scl::strm
 		beatCounter = reg(beatCounter, 0);
 
 		HCL_NAMED(beatCounter);
-		auto out = source.add(Eop{ end }).add(Sop{ start });
-		return out;
+		return move(source) | attach(Eop{ end }) | attach(Sop{ start });
 	}
 
 	namespace internal
@@ -275,9 +274,9 @@ namespace gtry::scl::strm
 		auto addReadyAndFailOnBackpressure(const Stream<Payload, Meta...>& source)
 		{
 			Area ent{ "scl_addReadyAndFailOnBackpressure", true };
-			Stream ret = source
-				.add(Ready{})
-				.add(Error{ error(source) });
+			Stream ret = move(source)
+				| attach(Ready{})
+				| attach(Error{ error(source) });
 
 			using Ret = decltype(ret);
 
@@ -322,8 +321,8 @@ namespace gtry::scl::strm
 
 		Stream out = in
 			.template remove<scl::Empty>()
-			.add(Eop{eop(in)})
-			.add(EmptyBits{ emptyBits(in) });
+			| attach(Eop{eop(in)})
+			| attach(EmptyBits{ emptyBits(in) });
 		UInt& emptyBits = out.template get<EmptyBits>().emptyBits;
 
 		Bit delayedEop;			HCL_NAMED(delayedEop);
@@ -916,7 +915,7 @@ namespace gtry::scl::strm
 		auto scope = Area{ "scl_streamShiftRight" }.enter();
 
 		UInt steadyShift = capture(shift, valid(source) & sop(source));
-		StreamBroadcaster sourceCaster(move(source).add(ShiftRightSteadyShift{ steadyShift }));
+		StreamBroadcaster sourceCaster(move(source) | attach(ShiftRightSteadyShift{ steadyShift }));
 
 		scl::Stream currentSource = sourceCaster.bcastTo() | strm::eraseBeat(0, 1);
 		scl::Stream previousSource = sourceCaster.bcastTo() | strm::regReady() | strm::delay(1);
@@ -1195,10 +1194,10 @@ namespace gtry::scl::strm
 	template<scl::StreamSignal StreamT> requires (std::remove_cvref_t<StreamT>::template has<Empty>())
 	auto streamDropTailBytes(StreamT&& in, const UInt& byteCutoff, BitWidth maxPacketW) {
 		UInt inEmptyBytes = empty(in);
-		auto inBits = in.template remove<Empty>().template add<EmptyBits>({cat(inEmptyBytes, "3b0")});
+		auto inBits = in.template remove<Empty>() | attach(EmptyBits{cat(inEmptyBytes, "3b0")});
 		auto outBits = streamDropTail(move(inBits), cat(byteCutoff, "3b0"), maxPacketW);
 		UInt outEmptyBits = emptyBits(outBits);
-		return outBits.template remove<EmptyBits>().template add<Empty>({outEmptyBits.upper(-3_b)});
+		return outBits.template remove<EmptyBits>() | attach(Empty{ outEmptyBits.upper(-3_b) });
 	}
 	extern template auto streamDropTailBytes(RvPacketStream<BVec, Empty> &&in, const UInt& byteCutoff, BitWidth maxPacketW);
 

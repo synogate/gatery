@@ -267,7 +267,7 @@ BOOST_FIXTURE_TEST_CASE(ptile_hail_mary_completer, BoostUnitTestSimulationFixtur
 
 	auto rxUnlocked = ptileRxVendorUnlocking(simOverrideDownstream(ptileInstance.rx(), move(rxSim)) | strm::regDownstream())
 		.template remove<PTileBarRange>()
-		.add(BarInfo{ .id = ConstBVec(0, 3_b), .logByteAperture = ConstUInt(20, 6_b)});//log byte aperture should be set to ip value
+		| strm::attach(BarInfo{ .id = ConstBVec(0, 3_b), .logByteAperture = ConstUInt(20, 6_b)});//log byte aperture should be set to ip value
 	HCL_NAMED(rxUnlocked);
 	complInt.request <<= move(rxUnlocked);
 
