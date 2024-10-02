@@ -881,7 +881,9 @@ namespace gtry::scl::strm
 		auto metaStream = functor(bcast.bcastTo());
 		HCL_NAMED(metaStream);
 
-		auto resultStream = (bcast.bcastTo() | fifo(maxPacketLength)).add(metaStream);
+		auto resultStream = bcast.bcastTo() 
+			| fifo(maxPacketLength) 
+			| attach(move(metaStream));
 		HCL_NAMED(resultStream);
 		return resultStream;
 	}

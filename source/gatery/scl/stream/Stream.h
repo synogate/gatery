@@ -105,16 +105,11 @@ namespace gtry::scl::strm
 		//template<Signal T> requires (!StreamSignal<T>) inline auto add(T&& signal);
 		//template<Signal T> requires (!StreamSignal<T>) inline auto add(T&& signal) const requires (GTRY_STREAM_ASSIGNABLE);
 
-		/**
-		 * @brief Adds the payload of a stream as a metadata field to another stream.
-		 * @details The streams are synchronized to wait for each other and, in case of packet streams, to keep the metadata signal stable for the entire duration of a packet.
-		 */
-		template<StreamSignal T> inline auto add(T&& stream) &&;
 
 		/**
 		 * @brief Adds the payload of a stream as a metadata field to another stream, encapsulating it in a wrapper struct to make it identifyable with the ::get, ::has, and ::remove member functions.
 		 */
-		template<Signal Wrapper, StreamSignal T> inline auto addAs(T&& stream) && { return move(*this).add(stream.transform([](const auto &v) { return Wrapper{ v }; })); }
+		template<Signal Wrapper, StreamSignal T> inline auto addAs(T&& stream) && { return attach(move(*this), stream.transform([](const auto &v) { return Wrapper{ v }; })); }
 
 		template<Signal T> constexpr T& get() { return std::get<T>(_sig); }
 		template<Signal T> constexpr const T& get() const { return std::get<T>(_sig); }
@@ -140,7 +135,12 @@ namespace gtry::scl::strm
 	};
 
 	template<Signal AddT, Signal PayloadT, Signal ...MetaT>	auto attach(Stream<PayloadT, MetaT...>&& stream, AddT&& signal);
-	template<Signal AddT, Signal PayloadT, Signal ...MetaT>	auto add(const Stream<PayloadT, MetaT...>& stream, AddT&& signal);
+	template<Signal AddT, Signal PayloadT, Signal ...MetaT>	auto attach(const Stream<PayloadT, MetaT...>& stream, AddT&& signal);
+	/**
+	* @brief Adds the payload of a stream as a metadata field to another stream.
+	* @details The streams are synchronized to wait for each other and, in case of packet streams, to keep the metadata signal stable for the entire duration of a packet.
+	*/
+	template<Signal AddPayloadT, Signal ...AddMetaT, Signal PayloadT, Signal ...Meta> auto attach(Stream<PayloadT, Meta...>&& stream, Stream<AddPayloadT, AddMetaT...>&& metaStream);
 	template<Signal AddT> auto attach(AddT&& signal);
 }
 
@@ -244,6 +244,20 @@ namespace gtry::scl::strm
 		}
 	}
 
+	template<Signal AddPayloadT, Signal ...AddMetaT, Signal PayloadT, Signal ...Meta> 
+	auto attach(Stream<PayloadT, Meta...>&& stream, Stream<AddPayloadT, AddMetaT...>&& metaStream) 
+	{
+		auto [result, duplicated] = replicateForEntirePacket(move(stream), move(metaStream));
+		ready(duplicated) = '1';
+
+		auto out = strm::attach(move(result), move(*duplicated));
+
+		if constexpr (stream.template has<Error>() && out.template has<Error>())
+			error(out) |= error(duplicated);
+
+		return out;
+	}
+
 	template<Signal AddT>
 	inline auto attach(AddT&& signal)
 	{
@@ -255,21 +269,6 @@ namespace gtry::scl::strm
 	// Forward declared here, actually in utils.h
 	template<StreamSignal BeatStreamT, StreamSignal PacketStreamT>
 	std::tuple<PacketStreamT, BeatStreamT> replicateForEntirePacket(PacketStreamT &&packetStream, BeatStreamT &&beatStream);
-
-	template<Signal PayloadT, Signal ...Meta>
-	template<StreamSignal T> 
-	inline auto Stream<PayloadT, Meta...>::add(T&& stream) &&
-	{
-		auto [result, duplicated] = replicateForEntirePacket(move(*this), move(stream));
-		ready(duplicated) = '1';
-
-		auto out = strm::attach(move(result), move(*duplicated));
-
-		if constexpr (has<Error>() && out.template has<Error>())
-			error(out) |= error(duplicated);
-
-		return out;
-	}
 
 
 	template<Signal PayloadT, Signal ...Meta>
