@@ -15,7 +15,7 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "SpiMaster.h"
 #include "../stream/utils.h"
 
@@ -39,7 +39,10 @@ gtry::scl::RvStream<gtry::BVec> gtry::scl::SpiMaster::generate(RvStream<BVec>& i
 
 	ready(inBit) = '0';
 	m_clk = '0';
-	m_out = *inBit;
+
+	m_out = m_outIdle;
+	IF(valid(inBit))
+		m_out = *inBit;
 
 	valid(outBit) = '0';
 
@@ -84,11 +87,24 @@ gtry::scl::RvStream<gtry::BVec> gtry::scl::SpiMaster::generate(RvStream<BVec>& i
 	return out;
 }
 
+#include <gatery/scl/arch/colognechip/io.h>
+
 gtry::scl::SpiMaster& gtry::scl::SpiMaster::pin(std::string clock, std::string miso, std::string mosi)
 {
 	pinOut(m_clk).setName(clock);
 	pinOut(m_out).setName(mosi);
-	m_in = pinIn().setName(miso);
+	//m_in = pinIn().setName(miso);
+
+	scl::arch::colognechip::CC_IBUF misoBuf;
+	misoBuf.pin(miso);
+	misoBuf.pullup(true);
+	m_in = misoBuf.I();
+	m_in.simulationOverride('1');
+
+	pinOut(m_clk, "DBG_CLK");
+	//pinOut(m_out, "DBG_MOSI");
+	//pinOut(reg(m_in), "DBG_MISO");
+	
 	return *this;
 }
 
@@ -102,5 +118,11 @@ gtry::scl::SpiMaster& gtry::scl::SpiMaster::pinTestLoop()
 gtry::scl::SpiMaster& gtry::scl::SpiMaster::clockDiv(UInt value)
 {
 	m_clockDiv = value;
+	return *this;
+}
+
+gtry::scl::SpiMaster& gtry::scl::SpiMaster::outIdle(bool value)
+{
+	m_outIdle = value;
 	return *this;
 }

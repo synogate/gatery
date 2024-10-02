@@ -41,6 +41,38 @@
 
 namespace gtry
 {
+	template<typename T>
+	concept IsHanaAdapted = requires() {
+		{boost::hana::accessors_impl<T>::apply() };
+	};
+
+
+	#if 0
+	// Provide a specialization for structure_tie that is faster than boost pfr:
+	template<typename T> requires(IsHanaAdapted<T>)
+	constexpr auto structure_tie(T &t) {
+		return boost::hana::unpack(boost::hana::accessors<T>(), [&](auto... Member) {
+					return std::tie(boost::hana::second(Member)(t)...);
+				});	
+	}
+	template<typename T> requires(IsHanaAdapted<T>)
+	constexpr auto structure_tie(const T &t) {
+		return boost::hana::unpack(boost::hana::accessors<T>(), [&](auto... Member) {
+					return std::tie(boost::hana::second(Member)(t)...);
+				});	
+	}
+
+	// Fallback:
+	template<typename T> requires(!IsHanaAdapted<T>)
+	constexpr auto structure_tie(T &t) { return boost::pfr::structure_tie(t); }
+	template<typename T> requires(!IsHanaAdapted<T>)
+	constexpr auto structure_tie(const T &t) { return boost::pfr::structure_tie(t); }
+	#else
+	template<typename T>
+	constexpr auto structure_tie(T &t) { return boost::pfr::structure_tie(t); }
+	template<typename T>
+	constexpr auto structure_tie(const T &t) { return boost::pfr::structure_tie(t); }
+	#endif
 
 	struct CompoundMemberAnnotation {
 		std::string_view shortDesc;
@@ -426,7 +458,7 @@ namespace gtry
 		template<CompoundAssignmentVisitor Visitor>
 		void operator () (T& a, const T& b, Visitor& v)
 		{
-			if (v.enterPackStruct(a, b))
+			if (v.enterPackStruct(a))
 				boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto member) {
 					auto& suba = boost::hana::second(member)(a);
 					auto& subb = boost::hana::second(member)(b);
@@ -461,7 +493,7 @@ namespace gtry
 		template<CompoundBinaryVisitor Visitor>
 		void operator () (const T& a, const T& b, Visitor& v)
 		{
-			if (v.enterPackStruct(a, b)) 
+			if (v.enterPackStruct(a)) 
 				boost::hana::for_each(boost::hana::accessors<std::remove_cvref_t<T>>(), [&](auto member) {
 					auto& suba = boost::hana::second(member)(a);
 					auto& subb = boost::hana::second(member)(b);
@@ -714,6 +746,61 @@ namespace gtry
 			// Essentially return Tuple{ transform(in3[0][0], in3[0][1]), transform(in3[1][0], in3[1][1]), ...}
 			return boost::hana::unpack(in3, [&](auto&&... args) {
 				return T{ func(std::get<0>(args), std::get<1>(args))...};
+			});
+		}
+
+
+
+
+		template<BaseSignal T, typename TFunc>
+		void mutateSignal(T& val, TFunc&& func);
+
+		template<CompoundSignal T, typename TFunc>
+		void mutateSignal(T& val, TFunc&& func);
+
+		template<ContainerSignal T, typename TFunc>
+		void mutateSignal(T& val, TFunc&& func);
+
+		template<TupleSignal T, typename TFunc>
+		void mutateSignal(T& val, TFunc&& func);
+
+		template<typename T, typename TFunc>
+		void mutateIfSignal(T& signal, TFunc&& func)
+		{
+			if constexpr(Signal<T>)
+				func(signal);
+		}
+
+		template<BaseSignal T, typename TFunc>
+		void mutateSignal(T& val, TFunc&& func)
+		{
+			func(val);
+		}
+
+		template<CompoundSignal T, typename TFunc>
+		void mutateSignal(T& val, TFunc&& func)
+		{
+			boost::hana::for_each(boost::pfr::structure_tie(val), [&](auto&& member) {
+				if constexpr(Signal<decltype(member)>)
+					func(member);
+			});
+		}
+
+		template<ContainerSignal T, typename TFunc>
+		void mutateSignal(T& val, TFunc&& func)
+		{
+			for(auto& it : val)
+				func(it);
+		}
+
+		template<TupleSignal T, typename TFunc>
+		void mutateSignal(T& val, TFunc&& func)
+		{
+			using namespace internal;
+
+			boost::hana::for_each(val, [&](auto&& member) {
+				if constexpr(Signal<decltype(member)>)
+					func(member);
 			});
 		}
 	}

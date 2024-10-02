@@ -45,7 +45,8 @@ void Test_Histogram::execute()
 
 	Memory<UInt> histogram(numBuckets, bucketWidth);
 	histogram.initZero();
-
+	if (twoCycleLatencyBRam)
+		histogram.setType(MemType::MEDIUM, 2);
 	if (highLatencyExternal)
 		histogram.setType(MemType::EXTERNAL, 10);
 
@@ -303,4 +304,118 @@ void Test_SDP_DualClock::execute()
 	});
 
 	runTest(Seconds{numWrites + 200,1} / clockA.absoluteFrequency());
+}
+
+
+
+void Test_ReadEnable::execute()
+{
+	Clock clock({
+			.absoluteFrequency = {{125'000'000,1}},
+			.memoryResetType = ClockConfig::ResetType::NONE,
+	});
+	HCL_NAMED(clock);
+	ClockScope scp(clock);
+
+	Bit wrEn = pinIn().setName("wrEn");
+	UInt wrAddr = pinIn(BitWidth::count(numElements)).setName("wrAddr");
+	UInt wrData = pinIn(elementWidth).setName("wrData");
+
+	Bit rdEn = pinIn().setName("rdEn");
+	UInt rdAddr = pinIn(BitWidth::count(numElements)).setName("rdAddr");
+	
+	Memory<UInt> memory(numElements, elementWidth);
+	if (twoCycleLatencyBRam)
+		memory.setType(MemType::MEDIUM, 2);
+	if (highLatencyExternal)
+		memory.setType(MemType::EXTERNAL, 10);
+
+	UInt rdValue = memory[rdAddr];
+	size_t latency = memory.readLatencyHint();
+	ENIF(rdEn)
+		for ([[maybe_unused]] auto i : utils::Range(latency))
+			rdValue = reg(rdValue, {.allowRetimingBackward=true});
+
+	IF (wrEn)
+		memory[wrAddr] = wrData;
+
+
+	pinOut(rdValue).setName("rdValue");
+
+
+	addSimulationProcess([&]()->SimProcess {
+		simu(wrEn) = '0';
+	
+		simu(rdEn) = '1';
+		simu(rdAddr) = 1;
+
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+
+		simu(rdEn) = '0';
+
+		simu(wrEn) = '1';
+		simu(wrAddr) = 1;
+		simu(wrData) = 42;
+
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+		
+		simu(wrEn) = '0';
+
+		simu(rdEn) = '1';
+	
+		for ([[maybe_unused]] auto i : utils::Range(latency)) {
+			BOOST_TEST(simu(rdValue) != 42);
+			co_await AfterClk(clock);
+		}
+
+		BOOST_TEST(simu(rdValue) == 42);
+
+
+		if (latency > 1) {
+			simu(rdEn) = '0';
+			co_await AfterClk(clock);
+			co_await AfterClk(clock);
+			co_await AfterClk(clock);
+			co_await AfterClk(clock);
+
+			simu(wrEn) = '1';
+			simu(wrAddr) = 2;
+			simu(wrData) = 10;
+
+			co_await AfterClk(clock);
+
+			simu(wrEn) = '0';
+			simu(rdEn) = '1';
+			simu(rdAddr) = 2;
+
+			co_await AfterClk(clock);
+			
+			simu(rdEn) = '0';
+
+			for ([[maybe_unused]] auto i : utils::Range(latency*3)) {
+				BOOST_TEST(simu(rdValue) != 10);
+				co_await AfterClk(clock);
+			}
+
+			simu(rdEn) = '1';
+
+			for ([[maybe_unused]] auto i : utils::Range(latency-1)) {
+				BOOST_TEST(simu(rdValue) != 10);
+				co_await AfterClk(clock);
+			}
+
+			BOOST_TEST(simu(rdValue) == 10);
+		}
+
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+
+		stopTest();
+	});
+
+	runTest(Seconds{100, 1} / clock.absoluteFrequency());
 }

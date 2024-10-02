@@ -15,7 +15,7 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 
 #include "IntelDevice.h"
 
@@ -262,6 +262,8 @@ void IntelDevice::setupCustomComposition(const gtry::utils::ConfigTree &customCo
 		m_embeddedMemoryList->add(std::make_unique<M9K>(*this));
 	if (customComposition["M20K"].as(false))
 		m_embeddedMemoryList->add(std::make_unique<M20K>(*this));
+	if (customComposition["M20KStratix10Agilex"].as(false))
+		m_embeddedMemoryList->add(std::make_unique<M20KStratix10Agilex>(*this));
 	if (customComposition["eSRAM"].as(false))
 		m_embeddedMemoryList->add(std::make_unique<eSRAM>(*this));
 
@@ -318,7 +320,7 @@ void IntelDevice::setupDevice(std::string device)
 			// Intel Agilex Device Data Sheet "Table 32. Memory Block Performance Specifications for Intel Agilex Devices"
 			[[maybe_unused]] const size_t MHz_max[] = {1000, 782, 667, 600};
 			[[maybe_unused]] const size_t MHz_min_noecc[] = {600, 500, 420, 360};
-			m_embeddedMemoryList->add(std::make_unique<M20K>(*this));
+			m_embeddedMemoryList->add(std::make_unique<M20KStratix10Agilex>(*this));
 		}
 
 		if (add_eSRAM) {
@@ -348,7 +350,7 @@ void IntelDevice::setupDevice(std::string device)
 		m_family = "Stratix 10";
 
 		m_embeddedMemoryList->add(std::make_unique<MLAB>(*this));
-		m_embeddedMemoryList->add(std::make_unique<M20K>(*this));
+		m_embeddedMemoryList->add(std::make_unique<M20KStratix10Agilex>(*this));
 		m_technologyMapping.addPattern(std::make_unique<GLOBALPattern>());
 		m_technologyMapping.addPattern(std::make_unique<TRIPattern>());
 		m_technologyMapping.addPattern(std::make_unique<ALTDDIO_OUTPattern>(*this));

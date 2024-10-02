@@ -37,11 +37,6 @@ namespace std {
 */
 
 
-#ifdef __clang__
-#define __cpp_impl_coroutine true
-#define __cpp_lib_coroutine true
-#endif
-
 #include <coroutine>
 
 /*

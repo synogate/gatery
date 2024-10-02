@@ -33,6 +33,7 @@
 #include <compare>
 #include <optional>
 #include <map>
+#include <variant>
 
 namespace gtry {
 
@@ -40,10 +41,10 @@ namespace gtry {
 
 	class BaseBitVectorDefault {
 		public:
-			BaseBitVectorDefault(const BaseBitVector& rhs);
-			BaseBitVectorDefault(std::int64_t value);
-			BaseBitVectorDefault(std::uint64_t value);
-			BaseBitVectorDefault(std::string_view);
+			explicit BaseBitVectorDefault(const BaseBitVector& rhs);
+			explicit BaseBitVectorDefault(std::int64_t value);
+			explicit BaseBitVectorDefault(std::uint64_t value);
+			explicit BaseBitVectorDefault(std::string_view);
 
 			hlim::NodePort getNodePort() const { return m_nodePort; }
 		protected:
@@ -74,7 +75,7 @@ namespace gtry {
 		explicit operator T() const { if (m_node) return T(readPort()); else return T{}; }
 
 		void resize(size_t width);
-		void resetNode();
+		virtual void resetNode() override;
 
 		Bit& lsb() { return aliasLsb(); }
 		const Bit& lsb() const { return aliasLsb(); }
@@ -274,6 +275,11 @@ namespace gtry {
 
 		FinalType& operator()(const Selection& selection);
 		const FinalType& operator() (const Selection& selection) const;
+
+		virtual void resetNode() override {
+			BaseBitVector::resetNode();
+			m_rangeAlias.clear();
+		}
 	protected:
 		template<typename T>
 		FinalType& aliasRange(std::shared_ptr<T> range) const {

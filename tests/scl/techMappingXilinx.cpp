@@ -29,6 +29,7 @@
 #include <gatery/scl/arch/xilinx/UltraRAM.h>
 #include <gatery/scl/arch/xilinx/DSP48E2.h>
 #include <gatery/scl/tilelink/TileLinkMasterModel.h>
+#include <gatery/scl/math/PipelinedMath.h>
 
 #include <gatery/hlim/coreNodes/Node_MultiDriver.h>
 
@@ -170,6 +171,26 @@ BOOST_FIXTURE_TEST_CASE(scl_ddr_for_clock, TestWithDefaultDevice<Test_ODDR_ForCl
 	execute();
 	BOOST_TEST(exportContains(std::regex{"ODDR"}));
 }
+
+
+
+
+
+
+BOOST_FIXTURE_TEST_CASE(histogram_noAddress, TestWithDefaultDevice<Test_Histogram>)
+{
+	forceNoInitialization = true; // todo: activate initialization for lutrams (after proper testing)
+	forceMemoryResetLogic = true;
+
+	using namespace gtry;
+	numBuckets = 1;
+	bucketWidth = 8_b;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+
+
 
 BOOST_FIXTURE_TEST_CASE(lutram_1, TestWithDefaultDevice<Test_Histogram>)
 {
@@ -832,6 +853,98 @@ BOOST_FIXTURE_TEST_CASE(DSP48E2_mul_asymetric_partial_test, DSP48E2_mul_fixture)
 	test(26_b, 38_b, 16_b, 20);
 }
 
+
+class DSP48E2_pipelinedMul_fixture : public TestWithDefaultDevice<gtry::GHDLTestFixture>
+{
+protected:
+	void test(gtry::BitWidth aW, gtry::BitWidth bW, gtry::BitWidth resultW, size_t resultOffset)
+	{
+		using namespace gtry;
+		Clock clock({ .absoluteFrequency = 100'000'000, .name = "clk" });
+		ClockScope clkScp(clock);
+
+		PipeBalanceGroup group;
+
+		UInt a = pinIn(aW).setName("a");
+		UInt b = pinIn(bW).setName("b");
+
+		UInt retimeableA = a;
+		UInt retimeableB = b;
+		retimeableA = group(retimeableA);
+		retimeableB = group(retimeableB);
+
+		auto c = scl::math::pipelinedMul(retimeableA, retimeableB, resultW, resultOffset);
+		pinOut(c, "c");
+
+		UInt e = pinIn(c.width()).setName("e");
+
+		std::queue<uint64_t> expected;
+
+		addSimulationProcess([&]()->SimProcess {
+			std::mt19937_64 rng{ std::random_device{}() };
+
+			for (size_t i = 0; i < 64; ++i)
+			{
+				uint64_t aVal = rng() & a.width().mask();
+				simu(a) = aVal;
+				uint64_t bVal = rng() & b.width().mask();
+				simu(b) = bVal;
+				expected.push((aVal * bVal >> resultOffset) & resultW.mask());
+				co_await OnClk(clock);
+			}
+		});
+
+		addSimulationProcess([&]()->SimProcess {
+			size_t latency = group.getNumPipeBalanceGroupStages();
+			for(size_t i = 0; i < latency; ++i)
+				co_await OnClk(clock);
+			while (!expected.empty())
+			{
+				simu(e) = expected.front();
+				co_await OnClk(clock);
+				BOOST_TEST(simu(c) == expected.front());
+				expected.pop();
+			}
+			BOOST_TEST(simu(c) != 0);
+			stopTest();
+		});
+
+		design.visualize("before");
+		runTest({ 2, 1'000'000 });
+		design.visualize("after");
+
+		BOOST_TEST(exportContains(std::regex{"DSP48E2"}));
+	}
+};
+
+BOOST_FIXTURE_TEST_CASE(DSP48E2_pipelinedMul_symetric_full_test, DSP48E2_pipelinedMul_fixture)
+{
+	using namespace gtry;
+	test(8_b, 8_b, 16_b, 0);
+	//test(32_b, 32_b, 64_b, 0);
+}
+
+BOOST_FIXTURE_TEST_CASE(DSP48E2_pipelinedMul_asymetric_full_test, DSP48E2_pipelinedMul_fixture)
+{
+	using namespace gtry;
+	test(26_b, 38_b, 64_b, 0);
+}
+
+BOOST_FIXTURE_TEST_CASE(DSP48E2_pipelinedMul_symetric_partial_test, DSP48E2_pipelinedMul_fixture)
+{
+	using namespace gtry;
+	test(48_b + 13_b, 48_b + 13_b, 48_b, 13);
+}
+
+BOOST_FIXTURE_TEST_CASE(DSP48E2_pipelinedMul_asymetric_partial_test, DSP48E2_pipelinedMul_fixture)
+{
+	using namespace gtry;
+	test(26_b, 38_b, 16_b, 20);
+}
+
+
+
+
 BOOST_FIXTURE_TEST_CASE(test_bidir_pin_extnode, gtry::GHDLTestFixture)
 {
 	using namespace gtry;
@@ -936,5 +1049,22 @@ BOOST_FIXTURE_TEST_CASE(sdp_dualclock_large, TestWithDefaultDevice<Test_SDP_Dual
 	BOOST_TEST(exportContains(std::regex{"RAMB36E2_inst : UNISIM.VCOMPONENTS.RAMB36E2"}));
 }
 
+
+/*
+BOOST_FIXTURE_TEST_CASE(readEnable, TestWithDefaultDevice<Test_ReadEnable>)
+{
+	using namespace gtry;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"RAM64M8"}));
+}
+*/
+
+BOOST_FIXTURE_TEST_CASE(readEnable_bram_2Cycle, TestWithDefaultDevice<Test_ReadEnable>)
+{
+	using namespace gtry;
+	twoCycleLatencyBRam = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"RAMB18E2_inst : UNISIM.VCOMPONENTS.RAMB18E2"}));
+}
 
 BOOST_AUTO_TEST_SUITE_END()

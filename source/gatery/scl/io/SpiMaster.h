@@ -29,6 +29,7 @@ namespace gtry::scl
 		SpiMaster& pin(std::string clock, std::string miso, std::string mosi);
 		SpiMaster& pinTestLoop();
 		SpiMaster& clockDiv(UInt value);
+		SpiMaster& outIdle(bool value);
 
 		const Bit& scl() const { return m_clk; }
 		const Bit& miso() const { return m_in; }
@@ -42,5 +43,7 @@ namespace gtry::scl
 		Bit m_out;
 		Bit m_in;
 		UInt m_clockDiv;
+
+		bool m_outIdle = false;
 	};
 }

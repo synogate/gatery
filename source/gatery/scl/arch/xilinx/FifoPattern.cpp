@@ -15,9 +15,11 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 
 #include <gatery/scl/Fifo.h>
+
+#include <gatery/hlim/NodeGroup.h>
 
 #include <gatery/frontend/DesignScope.h>
 #include "FifoPattern.h"
@@ -38,18 +40,14 @@ bool FifoPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 	// Validate that we can handle the chosen fifo capabilities
 	if (!fifoChoice.singleClock) return false;
 
-	if (fifoChoice.useECCEncoder) return false;
-	if (fifoChoice.useECCDecoder) return false;
-	if (fifoChoice.latency_write_empty != 1) return false;
-	if (fifoChoice.latency_read_empty != 1) return false;
-	if (fifoChoice.latency_write_full != 1) return false;
-	if (fifoChoice.latency_read_full != 1) return false;
-	if (fifoChoice.latency_write_almostEmpty != 1) return false;
-	if (fifoChoice.latency_read_almostEmpty != 1) return false;
-	if (fifoChoice.latency_write_almostFull != 1) return false;
-	if (fifoChoice.latency_read_almostFull != 1) return false;
+	if (fifoChoice.latency_writeToEmpty != 1) return false;
+	if (fifoChoice.latency_readToFull != 1) return false;
+	if (fifoChoice.latency_writeToAlmostEmpty != 1) return false;
+	if (fifoChoice.latency_readToAlmostFull != 1) return false;
 
 	if (fifoChoice.readWidth != fifoChoice.writeWidth) return false;
+
+	bool outputIsFallthrough = fifoChoice.latency_writeToEmpty == 0;
 
 	NodeGroupSurgeryHelper groupHelper(nodeGroup);
 
@@ -170,7 +168,7 @@ bool FifoPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 	
 	if (groupHelper.containsSignal("out_ready")) {
 
-		if (fifoChoice.outputIsFallthrough) {
+		if (outputIsFallthrough) {
 			Clock frontendClock(clock);
 
 			out_ready = groupHelper.getBit("out_ready");
@@ -295,56 +293,15 @@ Xilinx7SeriesFifoCapabilities::~Xilinx7SeriesFifoCapabilities()
 { 
 }
 
-Xilinx7SeriesFifoCapabilities::Choice Xilinx7SeriesFifoCapabilities::select(const Xilinx7SeriesFifoCapabilities::Request &request) const
+Xilinx7SeriesFifoCapabilities::Choice Xilinx7SeriesFifoCapabilities::select(hlim::NodeGroup*, const Xilinx7SeriesFifoCapabilities::Request &request) const
 {
 	Choice choice;
-
-	choice.readWidth = request.readWidth.value;
-	choice.writeWidth = request.writeWidth.value;
-	choice.readDepth = request.readDepth.value;
-
-	choice.outputIsFallthrough = request.outputIsFallthrough.value;
-	choice.singleClock = request.singleClock.value;
-	choice.useECCEncoder = request.useECCEncoder.value;
-	choice.useECCDecoder = request.useECCDecoder.value;
-
-	choice.latency_write_empty = request.latency_write_empty.value;
-	choice.latency_read_empty = request.latency_read_empty.value;
-	choice.latency_write_full = request.latency_write_full.value;
-	choice.latency_read_full = request.latency_read_full.value;
-	choice.latency_write_almostEmpty = request.latency_write_almostEmpty.value;
-	choice.latency_read_almostEmpty = request.latency_read_almostEmpty.value;
-	choice.latency_write_almostFull = request.latency_write_almostFull.value;
-	choice.latency_read_almostFull = request.latency_read_almostFull.value;
-
-	auto handleSimpleDefault = [](auto &choice, const auto &request, auto defaultValue) {
-		HCL_DESIGNCHECK(request.choice != Preference::MIN_VALUE && 
-						request.choice != Preference::MAX_VALUE);
-		if (request.choice == Preference::SPECIFIC_VALUE)
-			choice = request.value;
-		else
-			choice = defaultValue;
-	};
-
-	auto handlePreferredMinimum = [](size_t &choice, const auto &request, size_t preferredMinimum) {
-		switch (request.choice) {
-			case Preference::MIN_VALUE: 
-				choice = std::max<size_t>(request.value, preferredMinimum);
-			break;
-			case Preference::MAX_VALUE:
-				choice = std::min<size_t>(request.value, preferredMinimum);
-			break;
-			case Preference::SPECIFIC_VALUE:
-				choice = request.value;
-			break;
-			default:
-				choice = preferredMinimum;
-		}
-	};
 
 	HCL_ASSERT_HINT(request.readWidth.choice == Preference::SPECIFIC_VALUE, "Read width must be specifc value!");
 	HCL_ASSERT_HINT(request.writeWidth.choice == Preference::SPECIFIC_VALUE, "Write width must be specifc value!");
 
+	choice.readWidth = request.readWidth.value;
+	choice.writeWidth = request.writeWidth.value;
 
 	switch (request.readDepth.choice) {
 		case Preference::MIN_VALUE: 
@@ -362,31 +319,14 @@ Xilinx7SeriesFifoCapabilities::Choice Xilinx7SeriesFifoCapabilities::select(cons
 			choice.readDepth = 512;
 	}
 
-	handleSimpleDefault(choice.outputIsFallthrough, request.outputIsFallthrough, false);
-	handleSimpleDefault(choice.singleClock, request.singleClock, true);
-	handleSimpleDefault(choice.useECCEncoder, request.useECCEncoder, false);
-	handleSimpleDefault(choice.useECCDecoder, request.useECCDecoder, false);
+	choice.singleClock = request.singleClock.resolveSimpleDefault(true);
+
+	choice.latency_writeToEmpty = request.latency_writeToEmpty.resolveToPreferredMinimum(1);
+	choice.latency_readToFull = request.latency_readToFull.resolveToPreferredMinimum(1);
+	choice.latency_writeToAlmostEmpty = request.latency_writeToAlmostEmpty.resolveToPreferredMinimum(1);
+	choice.latency_readToAlmostFull = request.latency_readToAlmostFull.resolveToPreferredMinimum(1);
 
 	HCL_ASSERT_HINT(choice.singleClock, "Dual clock not yet implemented!");
-	if (choice.singleClock) {
-		handlePreferredMinimum(choice.latency_write_empty,	   request.latency_write_empty, 1);
-		handlePreferredMinimum(choice.latency_read_empty,		request.latency_read_empty, 1);
-		handlePreferredMinimum(choice.latency_write_full,		request.latency_write_full, 1);
-		handlePreferredMinimum(choice.latency_read_full,		 request.latency_read_full, 1);
-		handlePreferredMinimum(choice.latency_write_almostEmpty, request.latency_write_almostEmpty, 1);
-		handlePreferredMinimum(choice.latency_read_almostEmpty,  request.latency_read_almostEmpty, 1);
-		handlePreferredMinimum(choice.latency_write_almostFull,  request.latency_write_almostFull, 1);
-		handlePreferredMinimum(choice.latency_read_almostFull,   request.latency_read_almostFull, 1);
-	} else {
-		handlePreferredMinimum(choice.latency_write_empty,	   request.latency_write_empty, 4);
-		handlePreferredMinimum(choice.latency_read_empty,		request.latency_read_empty, 1);
-		handlePreferredMinimum(choice.latency_write_full,		request.latency_write_full, 1);
-		handlePreferredMinimum(choice.latency_read_full,		 request.latency_read_full, 4);
-		handlePreferredMinimum(choice.latency_write_almostEmpty, request.latency_write_almostEmpty, 4);
-		handlePreferredMinimum(choice.latency_read_almostEmpty,  request.latency_read_almostEmpty, 2);
-		handlePreferredMinimum(choice.latency_write_almostFull,  request.latency_write_almostFull, 2);
-		handlePreferredMinimum(choice.latency_read_almostFull,   request.latency_read_almostFull, 4);
-	}
 
 	return choice;
 }

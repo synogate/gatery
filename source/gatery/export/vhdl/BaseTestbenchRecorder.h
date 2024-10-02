@@ -37,6 +37,7 @@ namespace gtry::hlim {
 
 namespace gtry::vhdl {
 
+struct VHDLSignalDeclaration;
 class AST;
 
 class BaseTestbenchRecorder : public sim::SimulatorCallbacks
@@ -54,6 +55,7 @@ class BaseTestbenchRecorder : public sim::SimulatorCallbacks
 		AST *m_ast;
 		sim::Simulator &m_simulator;
 		std::string m_name;
+		std::string m_entityName;
 		std::vector<std::string> m_dependencySortedEntities;
 		std::vector<std::string> m_auxiliaryDataFiles;
 
@@ -80,6 +82,14 @@ class BaseTestbenchRecorder : public sim::SimulatorCallbacks
 		void buildClockProcess(std::ostream &stream, const hlim::Clock *clock);
 
 		hlim::Node_Pin *isDrivenByPin(hlim::NodePort nodePort) const;
+
+
+		void formatDeclarationVerilog(std::ostream &stream, const VHDLSignalDeclaration &declaration);
+		void declareSignalsVerilog(std::ostream &stream);
+		void writePortmapVerilog(std::ostream &stream);
+		void buildClockProcessVerilog(std::ostream &stream, const hlim::Clock *clock);
+
+		static std::string nameToEntity(const std::string &name);
 };
 
 

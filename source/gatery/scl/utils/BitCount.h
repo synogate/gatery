@@ -19,8 +19,23 @@
 
 #include <gatery/frontend.h>
 
-namespace gtry::scl {
- 
-UInt bitcount(UInt vec);
-	
+namespace gtry::scl
+{
+	UInt bitcount(Signal auto vec)
+	{
+		using namespace gtry::hlim;
+
+		GroupScope entity(GroupScope::GroupType::ENTITY, "bitcount");
+		entity
+			.setComment("Counts the number of high bits");
+
+		static_assert(std::is_same_v<Bit, std::remove_cvref_t<decltype(*begin(vec))>>, "bitcount only works on bit vectors");
+		HCL_NAMED(vec);
+
+		UInt sumOfOnes = ConstUInt(0, BitWidth::last(vec.size()));
+		for (const auto& it : vec)
+			sumOfOnes += (UInt)zext(it);
+		HCL_NAMED(sumOfOnes);
+		return sumOfOnes;
+	}
 }

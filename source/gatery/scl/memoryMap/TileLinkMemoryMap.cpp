@@ -16,7 +16,7 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 
 #include "TileLinkMemoryMap.h"
 
@@ -44,10 +44,11 @@ namespace gtry::scl
 
 		memoryMap.packRegisters(dataW);
 		auto& tree = memoryMap.getTree();
-		BitWidth addrWidth = BitWidth::count(tree.physicalDescription.size / 8_b);
+		BitWidth addrWidth = BitWidth::count(tree.physicalDescription->size / 8_b);
 
 		Reverse<TileLinkUL> toMaster = { tileLinkInit<TileLinkUL>(addrWidth, dataW, sourceW) };
 		HCL_NAMED(toMaster);
+		toMaster->addrSpaceDesc = memoryMap.getTree().physicalDescription;
 
 		TileLinkChannelD d0;
 		*d0 = tileLinkDefaultResponse(*toMaster->a);
@@ -63,14 +64,14 @@ namespace gtry::scl
 		BVec readData = ConstBVec(0, d0->data.width());
 		d0->error = '1';
 
-		std::function<void(PackedMemoryMap::Scope& scope)> processRegs;
-		processRegs = [&](PackedMemoryMap::Scope& scope) {
+		std::function<void(PackedMemoryMap::Scope& scope, std::uint64_t offsetInBits)> processRegs;
+		processRegs = [&](PackedMemoryMap::Scope& scope, std::uint64_t offsetInBits) {
 			for (auto& r : scope.physicalRegisters) {
 				if (r.readSignal)
-					setName(*r.readSignal, r.description.name.get() + "_read");
+					setName(*r.readSignal, r.description->name + "_read");
 
-				Bit selected = wordAddress == r.description.offsetInBits / dataW;
-				setName(selected, r.description.name.get() + "_selected");
+				Bit selected = wordAddress == (offsetInBits + r.offsetInBits) / dataW;
+				setName(selected, r.description->name + "_selected");
 
 				if (r.readSignal)
 				{
@@ -92,20 +93,20 @@ namespace gtry::scl
 								IF (toMaster->a->mask[byte])
 									(*r.writeSignal)(byte * 8, size) = toMaster->a->data(byte * 8, size);
 							}
-							setName(*r.writeSignal, r.description.name.get() + "_maskedWrite");
+							setName(*r.writeSignal, r.description->name + "_maskedWrite");
 							*r.onWrite = '1';
 						}
 					}
 				}
 				if (r.writeSignal) {
-					setName(*r.writeSignal, r.description.name.get() + "_write");
-					setName(*r.onWrite, r.description.name.get() + "_writeSelect");
+					setName(*r.writeSignal, r.description->name + "_write");
+					setName(*r.onWrite, r.description->name + "_writeSelect");
 				}
 			}
 			for (auto &c : scope.subScopes)
-				processRegs(c);
+				processRegs(c, offsetInBits + c.offsetInBits);
 		};
-		processRegs(tree);
+		processRegs(tree, 0);
 
 		TileLinkChannelD d = regDownstream(move(d0));
 		d->data = readData;

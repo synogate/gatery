@@ -15,8 +15,10 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "GLOBAL.h"
+
+#include <gatery/hlim/NodeGroup.h>
 
 #include <gatery/debug/DebugInterface.h>
 #include <gatery/frontend/GraphTools.h>
@@ -72,7 +74,7 @@ bool GLOBALPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 {
 	if (nodeGroup->getName() != "scl_globalBuffer") return false;
 
-	dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Replacing " << nodeGroup << " with GLOBAL macro");
+	dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Replacing " << nodeGroup << " with GLOBAL macro");
 
 //	HCL_ASSERT_HINT(nodeGroup->getNodes().size() == 1, "scl_globalBuffer should only contain a single signal node (not working for bundles yet)");
 //	HCL_ASSERT_HINT(dynamic_cast<hlim::Node_Signal*>(nodeGroup->getNodes().front()), "scl_globalBuffer should only contain a single signal node (not working for bundles yet)");
@@ -89,7 +91,7 @@ bool GLOBALPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 		global->setInput(0, input);
 		output.exportOverride(global->getOutputBit(0));
 	} else
-		dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+		dbg::log(dbg::LogMessage{nodeGroup} << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
 				<< "Not replacing " << nodeGroup << " with GLOBAL because the 'globalBufferPlaceholder' signal could not be found or is not a bit!");
 
 	return true;

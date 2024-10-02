@@ -15,10 +15,11 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "DSP48E2.h"
 
 #include <gatery/frontend.h>
+#include <gatery/scl/math/PipelinedMath.h>
 
 namespace gtry::scl::arch::xilinx
 {
@@ -97,7 +98,7 @@ namespace gtry::scl::arch::xilinx
 	{
 		Area ent{ "scl_mulAccumulate", true };
 		if(!instanceName.empty())
-			ent.getNodeGroup()->setInstanceName(std::string{ instanceName });
+			ent.instanceName(std::string{ instanceName });
 
 		HCL_DESIGNCHECK(a.width() <= 27_b);
 		HCL_DESIGNCHECK(b.width() <= 18_b);
@@ -142,7 +143,7 @@ namespace gtry::scl::arch::xilinx
 	{
 		Area ent{ "scl_mulAccumulate", true };
 		if (!instanceName.empty())
-			ent.getNodeGroup()->setInstanceName(std::string{ instanceName });
+			ent.instanceName(std::string{ instanceName });
 
 		HCL_DESIGNCHECK(a1.width() <= 27_b);
 		HCL_DESIGNCHECK(b1.width() <= 18_b);
@@ -287,5 +288,149 @@ namespace gtry::scl::arch::xilinx
 		out.exportOverride(outPhys(resultOffset, resultW));
 		HCL_NAMED(out);
 		return { out, latency };
+	}
+
+	UInt pipelinedMulDSP48E2(const UInt& a, const UInt& b, BitWidth resultW, size_t resultOffset)
+	{
+		HCL_DESIGNCHECK(a.width() + b.width() >= resultW + resultOffset);
+		Area ent{ "scl_dsp48e2_mul", true };
+
+		Bit enable;
+		sim_assert(enable == '1') << "pipelinedMulDSP48E2 can not be disabled. From " << __FILE__ << ':' << __LINE__;
+
+		const size_t mulAWidth = 26;
+		const size_t mulBWidth = 17; // one bit less for unsigned multiplication
+
+		const size_t potentialAstepsA = (a.width().bits() + mulAWidth - 1) / mulAWidth;
+		const size_t potentialAstepsB = (b.width().bits() + mulAWidth - 1) / mulAWidth;
+		BVec A = (BVec)(potentialAstepsA < potentialAstepsB ? a : b);
+		BVec B = (BVec)(potentialAstepsA < potentialAstepsB ? b : a);
+		HCL_NAMED(A);
+		HCL_NAMED(B);
+
+		const size_t mulASteps = (A.width().bits() + mulAWidth - 1) / mulAWidth;
+		const size_t mulBSteps = (B.width().bits() + mulBWidth - 1) / mulBWidth;
+
+		UInt outPhys;
+		for (size_t iA = 0; iA < mulASteps; ++iA)
+		{
+			BVec PC;
+			BVec Ain = A;
+			BVec Bin = B;
+			BVec Bout = ConstBVec(0, a.width() + b.width());
+
+			for (size_t iB = 0; iB < mulBSteps; ++iB)
+			{
+				size_t aOfs = iA * mulAWidth;
+				size_t bOfs = iB * mulBWidth;
+				if (aOfs + bOfs >= resultOffset + resultW.bits())
+				{
+					// no DSP needed but the result needs to be delayed as if we had used a DSP
+					ENIF (enable)
+						Bout = reg(Bout);//, { .allowRetimingForward = true });
+					continue;
+				}
+
+				BitWidth aW = std::min(A.width() - aOfs, BitWidth(mulAWidth));
+				BitWidth bW = std::min(B.width() - bOfs, BitWidth(mulBWidth));
+
+				DSP48E2 dsp;
+				dsp.clock(ClockScope::getClk());
+				dsp.a() = (BVec)zext(Ain(aOfs, aW), 27_b);
+				dsp.b() = (BVec)zext(Bin(bOfs, bW), 18_b);
+
+				dsp.opMode(
+					DSP48E2::MuxW::zero,
+					DSP48E2::MuxX::m,
+					DSP48E2::MuxY::m,
+					iB == 0 ? DSP48E2::MuxZ::zero : DSP48E2::MuxZ::pcin17
+				);
+
+				if (iB != 0) dsp.in("PCIN", 48_b) = PC;
+				if (iB != mulBSteps - 1) PC = dsp.out("PCOUT", 48_b);
+
+				if(iB != 0)
+				{
+					// register moved into dsp slice
+					ENIF (enable) {
+						Ain = reg(Ain);//, { .allowRetimingForward = true });
+						Bin = reg(Bin);//, { .allowRetimingForward = true });
+					}
+					dsp.generic("AREG") = 2;
+					dsp.generic("BREG") = 2;
+				}
+
+				if(iB != 0)
+				{
+					ENIF(enable)
+						Bout = reg(Bout);//, { .allowRetimingForward = true });
+				}
+				BitWidth directOutW = iB != mulBSteps - 1 ? BitWidth{ mulBWidth } : BitWidth{ aW + bW };
+				if(directOutW.bits() + aOfs + bOfs > resultOffset)
+					Bout(aOfs + bOfs, directOutW) = dsp.p().lower(directOutW);
+			}
+
+			if(iA == 0)
+				outPhys = (UInt)Bout;
+			else
+				outPhys += (UInt)Bout;
+		}
+
+		size_t latency = mulBSteps + 2;
+		if (mulASteps > 1)
+		{
+			ENIF (enable)
+				outPhys = reg(outPhys);
+			latency++;
+		}
+
+		for (size_t i = 0; i < latency; ++i)
+			std::tie(outPhys, enable) = negativeReg(outPhys);
+
+		UInt outPhysCropped = outPhys(resultOffset, resultW);
+		HCL_NAMED(outPhysCropped);
+		return outPhysCropped;
+	}
+
+
+	PipelinedMulDSP48E2Pattern::PipelinedMulDSP48E2Pattern()
+	{
+		m_runPreOptimization = true;
+	}
+
+
+	bool PipelinedMulDSP48E2Pattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
+	{
+		if (nodeGroup->getName() != "scl_pipelinedMul") return false;
+
+		const auto *meta = dynamic_cast<math::PipelinedMulMeta*>(nodeGroup->getMetaInfo());
+		if (meta == nullptr) return false;
+
+		NodeGroupSurgeryHelper surgery(nodeGroup);
+
+		if (surgery.containsSignal("a") && surgery.containsSignal("b") && surgery.containsSignal("out")) {
+			BVec a = surgery.hookBVecAfter("a");
+			BVec b = surgery.hookBVecAfter("b");
+			BVec out = surgery.hookBVecBefore("out");
+
+			out.exportOverride((BVec) pipelinedMulDSP48E2((UInt)a, (UInt) b, out.width(), meta->resultOffset));
+		} else
+			dbg::log(dbg::LogMessage{nodeGroup} << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+					<< "Not replacing " << nodeGroup << " with DSP48E2 because necessary signals could not be found!");
+
+
+		return true;
+	}
+
+	UInt mulRetimable(const UInt& a, const UInt& b, BitWidth resultW, size_t resultOffset)
+	{
+		auto [result, latency] = mul(a, b, resultW, resultOffset);
+
+		for (size_t i = 0; i < latency; ++i)
+		{
+			Bit en;
+			std::tie(result, en) = negativeReg(result);
+		}
+		return result;
 	}
 }

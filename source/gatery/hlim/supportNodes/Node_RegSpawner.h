@@ -52,6 +52,8 @@ class Node_RegSpawner : public Node<Node_RegSpawner>
 
 		virtual bool hasSideEffects() const override { return false; }
 		virtual bool isCombinatorial(size_t port) const override { return true; }
+		virtual bool canBeRetimedOver() const override { return false; }
+		virtual std::optional<size_t> forwardsInputToOutput(size_t outputPort = 0) const override { return { INPUT_SIGNAL_OFFSET + outputPort }; }
 
 		virtual std::string getTypeName() const override;
 		virtual void assertValidity() const override;
@@ -67,6 +69,8 @@ class Node_RegSpawner : public Node<Node_RegSpawner>
 		virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit) override;
 
 		inline size_t getNumStagesSpawned() const { return m_numStagesSpawned; }
+
+		virtual bool inputIsEnable(size_t inputPort) const override;
 	protected:
 		size_t m_numStagesSpawned = 0ull;
 		bool m_wasResolved = false;

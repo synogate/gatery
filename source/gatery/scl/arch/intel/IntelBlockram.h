@@ -31,6 +31,7 @@ class IntelBlockram : public EmbeddedMemory
 		virtual bool apply(hlim::NodeGroup *nodeGroup) const override;
 	protected:
 		const IntelDevice &m_intelDevice;
+		bool m_supportsCoherentReadMode = false;
 };
 
 }

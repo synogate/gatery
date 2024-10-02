@@ -18,12 +18,17 @@
 #include "gatery/pch.h"
 #include "DebugInterface.h"
 #include "websocks/WebSocksInterface.h"
-#include "gatery/debug/reporting/ReportInterface.h"
+#include "reporting/ReportInterface.h"
 
 namespace gtry::dbg {
 
 LogMessage::LogMessage()
 {
+}
+
+LogMessage::LogMessage(const hlim::NodeGroup *anchor)
+{
+	(*this) << Anchor{ anchor };
 }
 
 LogMessage::LogMessage(const char *c)
@@ -80,5 +85,21 @@ void vis()
 	awaitDebugger();
 	stopInDebugger();
 }
+
+void logWebsocks(unsigned port)
+{
+	WebSocksInterface::create(port);
+}
+
+void logHtml(const std::filesystem::path &outputDir)
+{
+	ReportInterface::create(outputDir);
+}
+
+std::string howToReachLog()
+{
+	return DebugInterface::instance->howToReachLog();
+}
+
 
 }

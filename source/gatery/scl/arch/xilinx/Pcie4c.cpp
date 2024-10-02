@@ -8,7 +8,7 @@ distribute it without explicit written license by Synogate to do so.
 This program is distributed WITHOUT ANY WARRANTY; without even the
 implied warranty of MERCHANTABILITY.
 */
-#include <gatery/pch.h>
+#include <gatery/scl_pch.h>
 #include "Pcie4c.h"
 
 
@@ -20,15 +20,15 @@ namespace gtry::scl::arch::xilinx {
 
 	Pcie4c::Pcie4c(const Clock& ipClock, const Clock& gtClock,  Settings cfg, std::string_view name):
 		ExternalModule(name, "xil_defaultlib"),
+		m_cfg(cfg),
 		m_usrClk(clockOut("user_clk", "user_reset", ClockConfig{
-		.absoluteFrequency = hlim::ClockRational{ cfg.userClkFrequency, 1 },
-		.name = "pcie_usr_clk",
-		.resetType = ClockConfig::ResetType::ASYNCHRONOUS,
-		.memoryResetType = ClockConfig::ResetType::NONE,
-		.initializeMemory = true,
-		.resetActive = ClockConfig::ResetActive::HIGH,
-			})),
-			m_cfg(cfg)
+			.absoluteFrequency = hlim::ClockRational{ cfg.userClkFrequency, 1 },
+			.name = "pcie_usr_clk",
+			.resetType = ClockConfig::ResetType::ASYNCHRONOUS,
+			.memoryResetType = ClockConfig::ResetType::NONE,
+			.initializeMemory = true,
+			.resetActive = ClockConfig::ResetActive::HIGH,
+		}))
 	{
 		clockIn(ipClock, "sys_clk");
 		clockIn(gtClock, "sys_clk_gt");
@@ -44,8 +44,6 @@ namespace gtry::scl::arch::xilinx {
 	{
 		ClockScope clkScope{ m_usrClk };
 		Axi4PacketStream<CQUser> cq;
-	
-		const PinConfig pinCfg{ .type = PinType::STD_LOGIC };
 	
 		*cq = out("m_axis_cq_tdata", m_cfg.dataBusW);
 		cq.template get<CQUser>() = { out("m_axis_cq_tuser", m_cfg.dataBusW == 512_b? 183_b: 88_b) };

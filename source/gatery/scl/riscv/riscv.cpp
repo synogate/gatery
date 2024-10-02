@@ -15,7 +15,7 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "riscv.h"
 #include "../Adder.h"
 #include "../utils/OneHot.h"
@@ -143,7 +143,7 @@ void gtry::scl::riscv::RV32I::execute()
 {
 	auto entRV = m_area.enter("execute");
 
-	m_trace.name = m_area.getNodeGroup()->instancePath();
+	m_trace.name = m_area.instancePath();
 	m_trace.instructionValid = !m_stall & !m_discardResult;
 	m_trace.instruction = m_instr.instruction;
 	m_trace.instructionPointer = zext(m_IP) | m_IPoffset;

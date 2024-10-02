@@ -32,6 +32,9 @@
 #include <random>
 
 namespace gtry::sim {
+typedef boost::multiprecision::number<boost::multiprecision::cpp_int_backend<>> BigInt;
+
+
 
 struct DefaultConfig
 {
@@ -56,9 +59,11 @@ struct ExtendedConfig
 		VALUE,
 		DEFINED,
 		DONT_CARE,
+		HIGH_IMPEDANCE,
 		NUM_PLANES
 	};
 };
+
 
 template<class Config>
 class BitVectorState
@@ -150,9 +155,6 @@ protected:
 		size_t m_size = 0;
 		std::array<std::vector<typename Config::BaseType>, Config::NUM_PLANES> m_values;
 };
-
-typedef boost::multiprecision::number<boost::multiprecision::cpp_int_backend<>> BigInt;
-
 
 template<typename Config>
 bool allDefinedNonStraddling(const BitVectorState<Config> &vec, size_t start, size_t size) {
@@ -324,6 +326,15 @@ bool canBeReplacedWith(const BitVectorState<Config> &vecA, const BitVectorState<
 	return true;
 }
 
+/**
+ * @brief Converts an entire defaultBitVector to a boost::multiprecision::number
+ * @param vec BitVectorState to extract the bits from
+ * @return BigInt boost::multiprecision::number
+*/
+template<typename Config>
+BigInt extractBigInt(const BitVectorState<Config>& vec) {
+	return extractBigInt(vec, 0, vec.size());
+}
 
 /**
  * @brief Extracts a value range of bits from a BitVectorState and converts it as a boost::multiprecision::number to facilitate big int computations.
@@ -361,22 +372,9 @@ BigInt extractBigInt(const BitVectorState<Config> &vec, size_t offset, size_t si
 		return fullChunkPart | (partialChunk << (lastChunkOffset - offset));
 	}
 }
+extern template BigInt extractBigInt<DefaultConfig>(const BitVectorState<DefaultConfig> &, size_t, size_t);
 
-inline gtry::sim::BigInt bitwiseNegation(const gtry::sim::BigInt &v, size_t width)
-{
-	// Export and reimport so it can't track the sign.
-	std::vector<std::uint64_t> words;
-	export_bits(v, std::back_inserter(words), 64, false);
-	for (auto &elem : words)
-		elem = ~elem;
-
-	while (words.size() < width/64)
-		words.push_back(~0ull);
-	
-	gtry::sim::BigInt result;
-   	import_bits(result, words.begin(), words.end(), 64, false);
-	return result;
-}
+gtry::sim::BigInt bitwiseNegation(const gtry::sim::BigInt &v, size_t width);
 
 
 /**
@@ -419,9 +417,7 @@ void insertBigInt(BitVectorState<Config> &vec, size_t offset, size_t size, BigIn
 		}
 	}
 }
-
-
-
+extern template void insertBigInt(BitVectorState<DefaultConfig> &, size_t, size_t, BigInt);
 
 using DefaultBitVectorState = BitVectorState<DefaultConfig>;
 using ExtendedBitVectorState = BitVectorState<ExtendedConfig>;
@@ -429,6 +425,8 @@ using ExtendedBitVectorState = BitVectorState<ExtendedConfig>;
 DefaultBitVectorState parseBit(char value);
 DefaultBitVectorState parseBit(bool value);
 DefaultBitVectorState parseBitVector(std::string_view);
+ExtendedBitVectorState parseExtendedBit(char value);
+ExtendedBitVectorState parseExtendedBit(bool value);
 ExtendedBitVectorState parseExtendedBitVector(std::string_view);
 DefaultBitVectorState parseBitVector(uint64_t value, size_t width);
 
@@ -562,8 +560,13 @@ DefaultBitVectorState createDefaultBitVectorState(std::size_t numWords, std::siz
 }
 
 DefaultBitVectorState createDefaultBitVectorState(std::size_t bitWidth, const void *data);
+inline DefaultBitVectorState createDefaultBitVectorState(std::span<const std::byte> data) { return createDefaultBitVectorState(data.size() * 8, data.data()); }
 DefaultBitVectorState createDefaultBitVectorState(std::size_t bitWidth, size_t value);
 DefaultBitVectorState createRandomDefaultBitVectorState(std::size_t bitWidth, std::mt19937 &rng);
+DefaultBitVectorState createDefinedRandomDefaultBitVectorState(std::size_t bitWidth, std::mt19937& rng);
+
+ExtendedBitVectorState createExtendedBitVectorState(std::size_t bitWidth, const void *data);
+inline ExtendedBitVectorState createExtendedBitVectorState(std::span<const std::byte> data) { return createExtendedBitVectorState(data.size() * 8, data.data()); }
 
 bool operator==(const DefaultBitVectorState &lhs, std::span<const std::byte> rhs);
 inline bool operator!=(const DefaultBitVectorState &lhs, std::span<const std::byte> rhs) { return !(lhs == rhs); }
@@ -772,6 +775,12 @@ inline bool BitVectorState<ExtendedConfig>::compareRange(size_t dstOffset, const
 
 		auto dont_care = a_dont_care | b_dont_care;
 
+		auto a_high_impedance = src.extract(ExtendedConfig::HIGH_IMPEDANCE, srcOffset + offset, chunkSize);
+		auto b_high_impedance = extract(ExtendedConfig::HIGH_IMPEDANCE, dstOffset + offset, chunkSize);
+
+		if ((a_high_impedance ^ b_high_impedance) & ~dont_care)
+			return false;
+
 		if ((a_defined ^ b_defined) & ~dont_care)
 			return false;
 
@@ -815,7 +824,7 @@ BitVectorState<Config> BitVectorState<Config>::extract(size_t start, size_t size
 {
 	BitVectorState<Config> result;
 	result.resize(size);
-	if (start % 8 == 0) {
+	if (start % 8 == 0 && size % 8 == 0) {
 		for (auto i : utils::Range<size_t>(Config::NUM_PLANES))
 			memcpy((char*) result.data((typename Config::Plane) i), (char*) data((typename Config::Plane) i) + start/8, (size+7)/8);
 	} else
@@ -827,17 +836,21 @@ BitVectorState<Config> BitVectorState<Config>::extract(size_t start, size_t size
 template<class Config>
 inline void BitVectorState<Config>::insert(const BitVectorState& state, size_t offset, size_t size)
 {
+	HCL_ASSERT_HINT(state.size() + offset <= this->size(), "This BitVectorState is not large enough to accommodate the given data at the requested offset");
 	const size_t width = size ? size : state.size();
 	size_t srcOffset = 0;
 
 	while (srcOffset < width) {
-		size_t chunkSize = std::min<size_t>(64, width - srcOffset);
+		size_t chunkSize = std::min<size_t>(Config::NUM_BITS_PER_BLOCK, width - srcOffset);
+		// Limit chunk size to next word border on the source array
+		chunkSize = std::min<size_t>(Config::NUM_BITS_PER_BLOCK - (srcOffset + Config::NUM_BITS_PER_BLOCK) % Config::NUM_BITS_PER_BLOCK, chunkSize);
+		// Limit chunk size to next word border on the destination array
+		chunkSize = std::min<size_t>(Config::NUM_BITS_PER_BLOCK - (offset + Config::NUM_BITS_PER_BLOCK) % Config::NUM_BITS_PER_BLOCK, chunkSize);
 
-		auto val = state.extractNonStraddling(sim::DefaultConfig::VALUE, srcOffset, chunkSize);
-		insertNonStraddling(sim::DefaultConfig::VALUE, offset, chunkSize, val);
-
-		auto def = state.extractNonStraddling(sim::DefaultConfig::DEFINED, srcOffset, chunkSize);
-		insertNonStraddling(sim::DefaultConfig::DEFINED, offset, chunkSize, def);
+		for (auto i : utils::Range<size_t>(Config::NUM_PLANES)) {
+			auto val = state.extractNonStraddling((typename Config::Plane) i, srcOffset, chunkSize);
+			insertNonStraddling((typename Config::Plane) i, offset, chunkSize, val);
+		}
 
 		offset += chunkSize;
 		srcOffset += chunkSize;
@@ -911,7 +924,7 @@ BitVectorState<Config>::range(typename Config::Plane plane, size_t offset, size_
 template<class Config>
 inline bool BitVectorState<Config>::operator==(const BitVectorState& o) const
 {
-	if (size() != o.size())
+	if (size() != o.size())	
 		return false;
 
 	for (size_t p = 0; p < m_values.size(); ++p)
@@ -931,5 +944,13 @@ void BitVectorState<Config>::append(const BitVectorState<Config> &src)
 	resize(size() + src.size());
 	copyRange(offset, src, 0, src.size());
 }
+
+extern template class BitVectorState<DefaultConfig>;
+extern template class BitVectorState<ExtendedConfig>;
+
+
+
+BitVectorState<ExtendedConfig> convertToExtended(const BitVectorState<DefaultConfig> &src);
+std::optional<BitVectorState<DefaultConfig>> tryConvertToDefault(const BitVectorState<ExtendedConfig> &src);
 
 }

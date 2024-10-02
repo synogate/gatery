@@ -15,7 +15,7 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "tilelink.h"
 #include "TileLinkMasterModel.h"
 #include "TileLinkAdapter.h"
@@ -69,6 +69,8 @@ namespace gtry::scl
 			masterD->error = slaveD->error;
 		}
 
+		master.addrSpaceDesc = slave.addrSpaceDesc;
+		HCL_NAMED(master);		
 		return master;
 	}
 
@@ -150,6 +152,8 @@ namespace gtry::scl
 			ready(*slave.d) = ready(*master.d) | (!secondBeatOfBurst & sd.isBurst());
 			valid(*master.d) = valid(*slave.d) & (secondBeatOfBurst | !sd.isBurst());
 		}
+
+		master.addrSpaceDesc = slave.addrSpaceDesc;
 		HCL_NAMED(master);
 		return master;
 	}
@@ -310,6 +314,7 @@ namespace gtry::scl
 		auto&& metaBlueprint = internal::addBurstRequest(slave.a, aReg);
 		internal::addBurstResponse(*slave.d, *master.d, metaBlueprint);
 
+		master.addrSpaceDesc = slave.addrSpaceDesc;
 		HCL_NAMED(master);
 		HCL_NAMED(slave);
 		return master;

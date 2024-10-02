@@ -15,7 +15,7 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "ALTPLL.h"
 
 #include "IntelDevice.h"
@@ -26,8 +26,11 @@
 
 namespace gtry::scl::arch::intel 
 {
-	ALTPLL::ALTPLL()
+	ALTPLL::ALTPLL(size_t availableOutputClocks): m_availableOutputClocks(availableOutputClocks)
 	{
+		for (auto element : m_availableOutputClocks)
+			element = true;
+
 		m_libraryName = "altera_mf";
 		m_packageName = "";
 		m_requiresComponentDeclaration = true;
@@ -171,6 +174,8 @@ namespace gtry::scl::arch::intel
 	Clock ALTPLL::generateOutClock(size_t idx, size_t mul, size_t div, size_t dutyCyclePercent, size_t phaseShiftPs, ClockConfig::ResetType resetType)
 	{
 		HCL_DESIGNCHECK_HINT(m_inClk, "assign in clock first");
+		HCL_DESIGNCHECK_HINT(m_availableOutputClocks[idx] == true, "the desired clock index is not available");
+		m_availableOutputClocks[idx] = false;
 
 		// TODO: set phase shift
 		Clock out = m_inClk->deriveClock(ClockConfig{
@@ -217,6 +222,20 @@ namespace gtry::scl::arch::intel
 		m_genericParameters["port_" + name] = "PORT_USED";
 
 		m_inClk = clock;
+	}
+
+	Clock ALTPLL::generateUnspecificClock(size_t mul, size_t div, size_t dutyCyclePercent, size_t phaseShiftPs, ClockConfig::ResetType resetType)
+	{
+		std::optional<size_t> index;
+		for (int i = (int)m_availableOutputClocks.size() - 1; i >= 0; i--) {
+			if (m_availableOutputClocks[i] == true) {
+				index = i;
+				break;
+			}
+		}
+		HCL_DESIGNCHECK_HINT(index, "this pll does not have any more output clock slots");
+		
+		return generateOutClock(*index, mul, div, dutyCyclePercent, phaseShiftPs, resetType);
 	}
 
 	std::unique_ptr<hlim::BaseNode> ALTPLL::cloneUnconnected() const

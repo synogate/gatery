@@ -4,6 +4,7 @@ doc/gen
 
 *.vcd
 *.gtkw
+*.surfer
 *.filter
 *.dot
 *.svg
@@ -26,3 +27,12 @@ Makefile
 /tests/*.txt
 /scripts/**
 test_export
+
+source/gen/
+/tests/**/db
+/tests/**/incremental_db
+/tests/**/output_files
+/tests/**/*.vhd
+/tests/**/*.mif
+/tests/**/*.qws
+

@@ -37,7 +37,7 @@ namespace gtry::vhdl {
 
 TestbenchRecorder::TestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, utils::FileSystem &fileSystem, std::string name) : BaseTestbenchRecorder(ast, simulator, std::move(name)), m_exporter(exporter)
 {
-	m_dependencySortedEntities.push_back(m_name);
+	m_dependencySortedEntities.push_back(m_entityName);
 	m_testbenchFile = fileSystem.writeFile(m_ast->getFilename(m_name));
 }
 
@@ -55,10 +55,10 @@ USE ieee.std_logic_1164.ALL;
 USE ieee.numeric_std.all;
 use std.env.finish;
 
-ENTITY )" << m_name << R"( IS
-END )" << m_name << R"(;
+ENTITY )" << m_entityName << R"( IS
+END )" << m_entityName << R"(;
 
-ARCHITECTURE tb OF )" << m_name << R"( IS
+ARCHITECTURE tb OF )" << m_entityName << R"( IS
 
 )";
 	auto *rootEntity = m_ast->getRootEntity();
@@ -200,7 +200,7 @@ void TestbenchRecorder::onReset(const hlim::Clock *clock, bool resetAsserted)
 		m_phases.back().resetOverrides[rst] = assignment.str();
 }
 
-void TestbenchRecorder::onSimProcOutputOverridden(const hlim::NodePort &output, const sim::DefaultBitVectorState &state)
+void TestbenchRecorder::onSimProcOutputOverridden(const hlim::NodePort &output, const sim::ExtendedBitVectorState &state)
 {
 	const auto *pin = dynamic_cast<const hlim::Node_Pin*>(output.node);
 	HCL_ASSERT(pin);

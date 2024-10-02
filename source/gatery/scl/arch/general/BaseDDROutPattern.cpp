@@ -15,7 +15,7 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "BaseDDROutPattern.h"
 
 #include <gatery/hlim/coreNodes/Node_Register.h>
@@ -37,7 +37,7 @@ bool BaseDDROutPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 	NodeGroupIO io(nodeGroup);
 
 	if (!io.inputBits.contains("D0") && !io.inputBVecs.contains("D0")) {
-		dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+		dbg::log(dbg::LogMessage{nodeGroup} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
 				<< "Not replacing " << nodeGroup << " with " << m_patternName << " because the 'D0' signal could not be found!");
 		return false;
 	}
@@ -46,37 +46,37 @@ bool BaseDDROutPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 
  	if (vectorBased) {
 		if (!io.inputBVecs.contains("D1")) {
-			dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+			dbg::log(dbg::LogMessage{nodeGroup} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
 					<< "Not replacing " << nodeGroup << " with " << m_patternName << " because the 'D1' signal could not be found or is not a bit vector (as D0 is)!");
 			return false;
 		}
 /*
 		if (!io.inputBVecs.contains("reset")) {
-			dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+			dbg::log(dbg::LogMessage{nodeGroup} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
 					<< "Not replacing " << nodeGroup << " with " << m_patternName << " because the 'reset' signal could not be found or is not a bit vector (as D0 is)!");
 			return false;
 		}
 */
 		if (!io.outputBVecs.contains("O")) {
-			dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+			dbg::log(dbg::LogMessage{nodeGroup} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
 					<< "Not replacing " << nodeGroup << " with " << m_patternName << " because the 'O' signal could not be found or is not a bit vector (as D0 is)!");
 			return false;
 		}
 	} else {
 		if (!io.inputBits.contains("D1")) {
-			dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+			dbg::log(dbg::LogMessage{nodeGroup} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
 					<< "Not replacing " << nodeGroup << " with " << m_patternName << " because the 'D1' signal could not be found or is not a bit!");
 			return false;
 		}
 /*
 		if (!io.inputBits.contains("reset")) {
-			dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+			dbg::log(dbg::LogMessage{nodeGroup} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
 					<< "Not replacing " << nodeGroup << " with " << m_patternName << " because the 'reset' signal could not be found or is not a bit!");
 			return false;
 		}
 */
 		if (!io.outputBits.contains("O")) {
-			dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+			dbg::log(dbg::LogMessage{nodeGroup} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
 					<< "Not replacing " << nodeGroup << " with " << m_patternName << " because the 'O' signal could not be found or is not a bit!");
 			return false;
 		}
@@ -92,7 +92,7 @@ bool BaseDDROutPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 			replaceInfo.reset = io.inputBVecs["reset"];
 
 		if (replaceInfo.D[0].size() != io.outputBVecs["O"].size()) {
-			dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+			dbg::log(dbg::LogMessage{nodeGroup} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
 					<< "Not replacing " << nodeGroup << " with " << m_patternName << " because the 'D0' and 'O' have different sizes!");
 			return false;
 		}
@@ -105,7 +105,7 @@ bool BaseDDROutPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 	}
 
 	if (replaceInfo.D[0].size() != replaceInfo.D[1].size()) {
-		dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+		dbg::log(dbg::LogMessage{nodeGroup} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
 				<< "Not replacing " << nodeGroup << " with " << m_patternName << " because the 'D0' and 'D1' have different sizes!");
 		return false;
 	}
@@ -116,14 +116,14 @@ bool BaseDDROutPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 	NodeGroupSurgeryHelper area(nodeGroup);
 	auto *clkSignal = area.getSignal("CLK");
 	if (clkSignal == nullptr) {
-		dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+		dbg::log(dbg::LogMessage{nodeGroup} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
 				<< "Not replacing " << nodeGroup << " with " << m_patternName << " because no 'CLK' signal was found!");
 		return false;
 	}
 	
 	auto *clk2signal = dynamic_cast<hlim::Node_Clk2Signal*>(clkSignal->getNonSignalDriver(0).node);
 	if (clk2signal == nullptr) {
-		dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+		dbg::log(dbg::LogMessage{nodeGroup} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
 				<< "Not replacing " << nodeGroup << " with " << m_patternName << " because no 'CLK' signal not driven by clock!");
 		return false;
 	}
@@ -209,7 +209,7 @@ bool BaseDDROutPattern::splitByReset(hlim::NodeGroup *nodeGroup, ReplaceInfo &re
 					replacement.O(Selection::Range(start, end)) = info.O;
 				});
 			} else {
-				dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+				dbg::log(dbg::LogMessage{nodeGroup} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
 						<< "Not replacing " << nodeGroup << " with " << m_patternName << " because the reset signal is not fully constant!");
 				return false;
 			}

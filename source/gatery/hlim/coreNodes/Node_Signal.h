@@ -51,6 +51,8 @@ namespace gtry::hlim {
 		virtual void estimateSignalDelay(SignalDelay &sigDelay) override;
 
 		virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit) override;
+
+		virtual std::optional<size_t> forwardsInputToOutput(size_t outputPort = 0) const override { return { 0 }; }
 	protected:
 		SignalGroup *m_signalGroup = nullptr;
 	};

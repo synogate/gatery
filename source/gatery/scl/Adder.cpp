@@ -15,7 +15,7 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "Adder.h"
 
 template class gtry::scl::Adder<gtry::UInt>;
@@ -28,9 +28,8 @@ gtry::scl::CarrySafeAdder& gtry::scl::CarrySafeAdder::add(const UInt& b)
 		m_carry = b;
 	else
 	{
-		UInt new_carry = (m_sum & m_carry) | (m_sum & b) | (m_carry & b);
-		m_sum ^= m_carry ^ b;
-		m_carry = new_carry << 1;
+		std::tie(m_sum, m_carry) = addCarrySave(m_sum, m_carry, b);
+		m_carry <<= 1;
 	}
 	m_count++;
 	return *this;
@@ -55,4 +54,11 @@ std::tuple<gtry::UInt, gtry::UInt> gtry::scl::add(const UInt& a, const UInt& b, 
 	HCL_NAMED(cout);
 
 	return { sum, cout };
+}
+
+std::tuple<gtry::UInt, gtry::UInt> gtry::scl::addCarrySave(const UInt& a, const UInt& b, const UInt& c) 
+{
+	UInt sum = a ^ b ^ c;
+	UInt carry = (a & c) | (a & b) | (c & b);
+	return { sum, carry };
 }

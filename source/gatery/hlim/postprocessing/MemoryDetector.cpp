@@ -63,13 +63,13 @@ MemoryGroup *formMemoryGroupIfNecessary(Circuit &circuit, Node_Memory *memory)
 {
 	auto* memoryGroup = dynamic_cast<MemoryGroup*>(memory->getGroup()->getMetaInfo());
 	if (memoryGroup == nullptr) {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Forming memory group around " << memory);
+		dbg::log(dbg::LogMessage(memory->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Forming memory group around " << memory);
 
 		HCL_ASSERT(memory->getGroup()->getMetaInfo() == nullptr);		
 
 		auto *logicalMemNodeGroup = memory->getGroup();
 
-		auto *physMemNodeGroup = logicalMemNodeGroup->addChildNodeGroup(NodeGroup::GroupType::ENTITY, "physical_memory");
+		auto *physMemNodeGroup = logicalMemNodeGroup->addChildNodeGroup(NodeGroupType::ENTITY, "physical_memory");
 		physMemNodeGroup->recordStackTrace();
 		memory->moveToGroup(physMemNodeGroup);
 
@@ -162,7 +162,7 @@ bool MemoryGroup::ReadPort::findOutputRegisters(size_t readLatency, NodeGroup *m
 
 MemoryGroup::MemoryGroup(NodeGroup *group) : m_nodeGroup(group)
 {
-	m_nodeGroup->setGroupType(NodeGroup::GroupType::SFU);
+	m_nodeGroup->setGroupType(NodeGroupType::SFU);
 }
 
 const MemoryGroup::ReadPort &MemoryGroup::findReadPort(Node_MemPort *memPort)
@@ -241,7 +241,7 @@ NodeGroup *MemoryGroup::lazyCreateFixupNodeGroup()
 			name = "Memory_Helper";
 		else
 			name = m_memory->getName()+"_Memory_Helper";
-		m_fixupNodeGroup = m_nodeGroup->getParent()->addChildNodeGroup(NodeGroup::GroupType::ENTITY, name);
+		m_fixupNodeGroup = m_nodeGroup->getParent()->addChildNodeGroup(NodeGroupType::ENTITY, name);
 		m_fixupNodeGroup->recordStackTrace();
 		m_fixupNodeGroup->setComment("Auto generated to handle various memory access issues such as read during write and read modify write hazards.");
 	}
@@ -644,7 +644,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 {
 	if (m_memory->getRequiredReadLatency() == 0) return;
 
-	dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Attempting register retiming for memory " << m_memory.get());
+	dbg::log(dbg::LogMessage(m_memory->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Attempting register retiming for memory " << m_memory.get());
 
 	//visualize(circuit, "beforeRetiming");
 
@@ -823,7 +823,7 @@ void MemoryGroup::buildResetLogic(Circuit &circuit)
 	if (clockDomain->getRegAttribs().memoryResetType == RegisterAttributes::ResetType::NONE) return;
 	HCL_ASSERT(clockDomain->getRegAttribs().resetType != RegisterAttributes::ResetType::NONE);
 
-	dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Building reset logic for memory " << m_memory);
+	dbg::log(dbg::LogMessage(m_memory->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Building reset logic for memory " << m_memory);
 
 	Clock *resetClock = buildResetClock(circuit, clockDomain);
 
@@ -873,7 +873,7 @@ void MemoryGroup::buildResetRom(Circuit &circuit)
 	if (clockDomain->getRegAttribs().memoryResetType == RegisterAttributes::ResetType::NONE) return;
 	HCL_ASSERT(clockDomain->getRegAttribs().resetType != RegisterAttributes::ResetType::NONE);
 
-	dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Building reset rom for memory " << m_memory);
+	dbg::log(dbg::LogMessage(m_memory->getGroup()) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_POSTPROCESSING << "Building reset rom for memory " << m_memory);
 
 	Clock *resetClock = buildResetClock(circuit, clockDomain);
 
@@ -1013,13 +1013,6 @@ Node_MemPort *MemoryGroup::findSuitableResetWritePort()
 
 NodePort MemoryGroup::buildResetAddrCounter(Circuit &circuit, size_t width, Clock *resetClock)
 {
-	auto *reg = circuit.createNode<Node_Register>();
-	reg->moveToGroup(m_fixupNodeGroup);
-	reg->recordStackTrace();
-	reg->setClock(resetClock);
-	reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD).insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
-
-
 	sim::DefaultBitVectorState state;
 	state.resize(width);
 	state.setRange(sim::DefaultConfig::DEFINED, 0, width);
@@ -1028,6 +1021,15 @@ NodePort MemoryGroup::buildResetAddrCounter(Circuit &circuit, size_t width, Cloc
 	auto *resetConst = circuit.createNode<Node_Constant>(state, ConnectionType::BITVEC);
 	resetConst->moveToGroup(m_fixupNodeGroup);
 	resetConst->recordStackTrace();
+
+	if (width == 0)
+		return { .node = resetConst, .port = 0ull };
+
+	auto *reg = circuit.createNode<Node_Register>();
+	reg->moveToGroup(m_fixupNodeGroup);
+	reg->recordStackTrace();
+	reg->setClock(resetClock);
+	reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD).insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
 	reg->connectInput(Node_Register::RESET_VALUE, {.node = resetConst, .port = 0ull});
 
 
@@ -1283,6 +1285,74 @@ void MemoryGroup::giveName(Circuit &circuit, NodePort &nodePort, std::string nam
 	sig->moveToGroup(m_fixupNodeGroup);
 }
 
+void MemoryGroup::emulateResetOfOutputRegisters(Circuit &circuit)
+{
+	for (auto &rp : m_readPorts)
+		if (rp.dedicatedReadLatencyRegisters.size() == 1)
+			emulateResetOfFirstReadPortOutputRegister(circuit, rp);
+}
+
+void MemoryGroup::emulateResetOfFirstReadPortOutputRegister(Circuit &circuit, MemoryGroup::ReadPort &rp)
+{
+	auto *reg = rp.dedicatedReadLatencyRegisters.front().get();
+	if (reg->getNonSignalDriver(Node_Register::RESET_VALUE).node == nullptr) 
+		return;
+
+	dbg::log(dbg::LogMessage(m_nodeGroup) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Emulating reset logic for output register " << reg);
+
+	lazyCreateFixupNodeGroup();
+
+	auto *clockDomain = reg->getClocks()[0];
+	
+	auto *resetPin = circuit.createNode<Node_ClkRst2Signal>();
+	resetPin->moveToGroup(m_fixupNodeGroup);
+	resetPin->recordStackTrace();
+	resetPin->setClock(clockDomain);
+
+	bool resetHighActive = clockDomain->getRegAttribs().resetActive == RegisterAttributes::Active::HIGH;
+
+	sim::DefaultBitVectorState state;
+	state.resize(1);
+	state.setRange(sim::DefaultConfig::DEFINED, 1, 1);
+	state.clearRange(sim::DefaultConfig::VALUE, resetHighActive?1:0, 1);
+
+	auto *resetConst = circuit.createNode<Node_Constant>(state, ConnectionType::BOOL);
+	resetConst->moveToGroup(m_fixupNodeGroup);
+	resetConst->recordStackTrace();
+
+
+	auto *regReset = circuit.createNode<Node_Register>();
+	regReset->recordStackTrace();
+	regReset->setClock(clockDomain);
+	regReset->connectInput(Node_Register::DATA, {.node = resetPin, .port = 0 });
+	regReset->connectInput(Node_Register::RESET_VALUE, {.node = resetConst, .port = 0 });
+	regReset->connectInput(Node_Register::ENABLE, reg->getDriver(Node_Register::ENABLE));
+	regReset->moveToGroup(m_fixupNodeGroup);
+	regReset->setComment("This register was created to create a delayed reset for use in emulating the reset of a memory output register.");
+
+
+	auto driven = reg->getDirectlyDriven(0);
+
+	auto *muxNode = circuit.createNode<Node_Multiplexer>(2);
+	muxNode->recordStackTrace();
+	muxNode->moveToGroup(m_fixupNodeGroup);
+	muxNode->connectSelector({ .node = regReset, .port = 0 });
+	if (resetHighActive) {
+		muxNode->connectInput(0, { .node = reg, .port =  0ull });
+		muxNode->connectInput(1, reg->getDriver(Node_Register::RESET_VALUE));
+	} else {
+		muxNode->connectInput(0, reg->getDriver(Node_Register::RESET_VALUE));
+		muxNode->connectInput(1, { .node = reg, .port =  0ull });
+	}
+	muxNode->setComment("Emulate the reset of a memory output register.");
+
+	for (auto d : driven)
+		d.node->rewireInput(d.port, { .node = muxNode, .port = 0 });
+
+	reg->disconnectInput(Node_Register::RESET_VALUE);
+}
+
+
 
 Memory2VHDLPattern::Memory2VHDLPattern()
 {
@@ -1296,13 +1366,14 @@ bool Memory2VHDLPattern::attemptApply(Circuit &circuit, hlim::NodeGroup *nodeGro
 	if (!memoryGroup)
 		return false;
 
-	dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Preparing memory in " << nodeGroup << " for vhdl export");
+	dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Preparing memory in " << nodeGroup << " for vhdl export");
 
 	memoryGroup->convertToReadBeforeWrite(circuit);
 	memoryGroup->attemptRegisterRetiming(circuit);
 	memoryGroup->resolveWriteOrder(circuit);
 	memoryGroup->updateNoConflictsAttrib();
 	memoryGroup->buildReset(circuit);
+	memoryGroup->emulateResetOfOutputRegisters(circuit);
 	memoryGroup->bypassSignalNodes();
 	memoryGroup->verify();
 	if (memoryGroup->getMemory()->type() == Node_Memory::MemType::EXTERNAL) {

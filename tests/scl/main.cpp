@@ -20,7 +20,12 @@
 #include <boost/test/unit_test.hpp>
 
 #include <gatery/frontend/GHDLTestFixture.h>
+#include <gatery/scl/synthesisTools/IntelQuartusTestFixture.h>
 
 using GHDLGlobalFixture = gtry::GHDLGlobalFixture;
 
 BOOST_TEST_GLOBAL_FIXTURE( GHDLGlobalFixture );
+
+using IntelQuartusGlobalFixture = gtry::IntelQuartusGlobalFixture;
+
+BOOST_TEST_GLOBAL_FIXTURE( IntelQuartusGlobalFixture );

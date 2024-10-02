@@ -68,6 +68,8 @@ namespace gtry::scl::usb
 		virtual const PhyRxStatus& status() const = 0;
 		virtual PhyTxStream& tx() = 0;
 		virtual PhyRxStream& rx() = 0;
+
+		virtual bool supportCrc() const { return false; }
 	};
 }
 

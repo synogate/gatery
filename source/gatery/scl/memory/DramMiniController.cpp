@@ -15,8 +15,9 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "DramMiniController.h"
+#include "sdram.h"
 
 #include <gatery/scl/arch/colognechip/io.h>
 #include <gatery/scl/arch/colognechip/SpecialFunction.h>
@@ -60,13 +61,11 @@ namespace gtry::scl::sdram
 		}
 		writeData = reg(writeData);	HCL_NAMED(writeData);
 		writeMask = reg(writeMask); HCL_NAMED(writeMask);
-		dramIo.cmd.dq = writeData.part(2, 0);
-		dramIo.cmd.dqm = writeMask.part(2, 0);
 
 		// the state machine orchestrates the write timing, including writeData shifting
 		enum class WriteState
 		{
-			Idle, Wait, Preamble, WriteFirst, WriteSecond
+			Idle, Wait, WriteFirst, WriteSecond
 		};
 		Reg<Enum<WriteState>> writeState{ WriteState::Idle };
 		writeState.setName("writeState");
@@ -79,52 +78,31 @@ namespace gtry::scl::sdram
 
 		IF (writeState.current() == WriteState::Wait)
 		{
-			dramIo.dqsEnable = '1';
-			writeState = WriteState::Preamble;
-		}
-
-		IF(writeState.current() == WriteState::Preamble)
-		{
-			dramIo.dqsPreamble = '0';
-			writeData.part(2, 0) = writeData.part(2, 1);
-			writeMask.part(2, 0) = writeMask.part(2, 1);
-
 			writeState = WriteState::WriteFirst;
 		}
 
+		dramIo.dqWriteValid = '0';
+		dramIo.cmd.dq = writeData.part(2, 0);
+		dramIo.cmd.dqm = writeMask.part(2, 0);
 		IF(writeState.current() == WriteState::WriteFirst)
 		{
+			dramIo.dqWriteValid = '1';
 			writeState = WriteState::WriteSecond;
 		}
 
 		IF(writeState.current() == WriteState::WriteSecond)
 		{
-			dramIo.dqsEnable = '0';
-			dramIo.dqsPreamble = '1';
+			dramIo.dqWriteValid = '1';
+			dramIo.cmd.dq = writeData.part(2, 1);
+			dramIo.cmd.dqm = writeMask.part(2, 1);
 			writeState = WriteState::Idle;
 		}
 
-		dramIo.dqsEnable = reg(dramIo.dqsEnable, '0');
-		dramIo.dqsPreamble = reg(dramIo.dqsPreamble, '1');
-
 		// read logic
-		Counter readState{ 8 };
-		IF(!readState.isFirst())
-			readState.inc();
-
-		IF(dramIo.cmd.cke & !dramIo.cmd.csn & dramIo.cmd.rasn & !dramIo.cmd.casn & dramIo.cmd.wen)
-			readState.inc();
-
-		dramIo.debugSignal = '0';
 		BVec readData = tl.a->data.width();
-		IF(readState.value() == 4)
+		IF(dramIo.dqReadValid)
 		{
-			dramIo.debugSignal = '1';
-			readData.part(2, 0) = dramIo.dqIn;
-		}
-		IF(readState.value() == 5)
-		{
-			dramIo.debugSignal = '1';
+			readData.part(2, 0) = readData.part(2, 1);
 			readData.part(2, 1) = dramIo.dqIn;
 		}
 		readData = reg(readData);
@@ -132,6 +110,150 @@ namespace gtry::scl::sdram
 
 		(*tl.d)->data = readData;
 		return tl;
+	}
+
+	scl::TileLinkUL miniControllerMappedMemory(PhyInterface& dramIo, BitWidth sourceW)
+	{
+		Area ent{ "scl_miniControllerMappedMemory", true };
+
+		const hlim::ClockRational tREFI{ 7'800, 1'000'000'000 }; // 7.8 us
+		const hlim::ClockRational tRFC{ 128, 1'000'000'000 }; // 127.5 ns
+
+		scl::TileLinkUL tl = tileLinkInit<TileLinkUL>(
+			dramIo.cmd.a.width() + dramIo.cmd.ba.width() + 10_b,
+			dramIo.cmd.dq.width() * 2,
+			sourceW
+		);
+		valid(*tl.d) = '0';
+
+		scl::TileLinkChannelA a = regDownstream(move(tl.a));
+		HCL_NAMED(a);
+		ready(a) = '0';
+		**tl.d = tileLinkDefaultResponse(*a);
+
+		BitWidth addrWordW{ utils::Log2C(a->data.width().bytes()) };
+
+		enum class State
+		{
+			Idle, Cas, Wait, First, Second, Ack, Recovery
+		};
+
+		Reg<Enum<State>> state{ State::Idle };
+		state.setName("state");
+
+		scl::Counter refreshInterval{ hlim::floor(tREFI * ClockScope::getClk().absoluteFrequency()) };
+		Bit refreshEnabled = scl::flag(valid(a), '0');
+		HCL_NAMED(refreshEnabled);
+		IF(refreshEnabled)
+			refreshInterval.inc();
+		Bit refreshReq;
+		IF(refreshInterval.isLast())
+			refreshReq = '1';
+		refreshReq = reg(refreshReq, '0');
+		HCL_NAMED(refreshReq);
+
+		IF(state.current() == State::Idle)
+		{
+			IF(valid(a))
+			{
+				// activate command
+				dramIo.cmd.csn = '0';
+				dramIo.cmd.rasn = '0';
+				dramIo.cmd.casn = '1';
+				dramIo.cmd.wen = '1';
+				dramIo.cmd.a = (BVec)a->address.upper(dramIo.cmd.a.width());
+				dramIo.cmd.ba = (BVec)a->address(10, dramIo.cmd.ba.width());
+				state = State::Cas;
+			}
+
+			IF(refreshReq)
+			{
+				// activate command
+				dramIo.cmd.csn = '0';
+				dramIo.cmd.rasn = '0';
+				dramIo.cmd.casn = '0';
+				dramIo.cmd.wen = '1';
+
+				refreshReq = '0';
+				state = State::Recovery;
+			}
+		}
+
+		IF(state.current() == State::Cas)
+		{
+			// cas command
+			dramIo.cmd.csn = '0';
+			dramIo.cmd.rasn = '1';
+			dramIo.cmd.casn = '0';
+			dramIo.cmd.wen = a->isGet();
+			dramIo.cmd.a = (BVec)zext(cat('1', a->address(addrWordW.bits(), 10_b - addrWordW), ConstUInt(0, addrWordW)));
+			dramIo.cmd.ba = (BVec)a->address(10, dramIo.cmd.ba.width());
+			state = State::Wait;
+		}
+
+		IF(state.current() == State::Wait)
+		{
+			state = State::First;
+		}
+
+		IF(state.current() == State::First)
+		{
+			dramIo.dqWriteValid = a->isPut();
+			dramIo.cmd.dq = a->data.part(2, 0);
+			dramIo.cmd.dqm = ~a->mask.part(2, 0);
+
+			IF(a->isPut() | dramIo.dqReadValid)
+				state = State::Second;
+		}
+
+		IF(state.current() == State::Second)
+		{
+			dramIo.dqWriteValid = a->isPut();
+			dramIo.cmd.dq = a->data.part(2, 1);
+			dramIo.cmd.dqm = ~a->mask.part(2, 1);
+			state = State::Ack;
+		}
+
+		IF(state.current() == State::Ack)
+		{
+			valid(*tl.d) = '1';
+			IF(transfer(*tl.d))
+			{
+				ready(a) = '1';
+				state = State::Recovery;
+			}
+		}
+
+		size_t recoveryCyclesRefresh = hlim::ceil(tRFC * ClockScope::getClk().absoluteFrequency());
+		Counter recoveryCounter{ std::max<size_t>(recoveryCyclesRefresh, 4) };
+		IF(state.current() == State::Recovery)
+		{
+			recoveryCounter.inc();
+			IF(recoveryCounter.isLast())
+				state = State::Idle;
+		}
+
+		BVec readData = tl.a->data.width();
+		IF(dramIo.dqReadValid)
+		{
+			readData.part(2, 0) = readData.part(2, 1);
+			readData.part(2, 1) = dramIo.dqIn;
+		}
+		readData = reg(readData);
+		HCL_NAMED(readData);
+		(*tl.d)->data = readData;
+
+		HCL_NAMED(tl);
+		return tl;
+	}
+
+	void miniControllerSimulation(PhyInterface& dramIo)
+	{
+		scl::VStream<BVec> outData = moduleSimulation(dramIo.cmd, Standard::ddr2);
+		pinOut(*outData, "DRAM_SIMU_DQ");
+
+		dramIo.dqReadValid.simulationOverride(valid(outData));
+		dramIo.dqIn.simulationOverride(*outData);
 	}
 
 	PhyInterface phyGateMateDDR2(PhyGateMateDDR2Config cfg)
@@ -150,7 +272,7 @@ namespace gtry::scl::sdram
 		};
 		HCL_NAMED(phy);
 
-		// we use a ddr output to phase shift by 180° for the command bus
+		// we use a ddr output to phase shift by 180ï¿½ for the command bus
 		auto pinCmd = [&](const Bit& pin, const char* name) {
 			CC_ODDR ddr;
 			ddr.D0() = pin;
@@ -170,16 +292,17 @@ namespace gtry::scl::sdram
 			pinOut(out, cfg.pinPrefix + name);
 		};
 
-		pinCmd(phy.cmd.cke, "cke");
-		pinCmd(phy.cmd.csn, "csn");
-		pinCmd(phy.cmd.rasn, "rasn");
-		pinCmd(phy.cmd.casn, "casn");
-		pinCmd(phy.cmd.wen, "wen");
-		pinCmdVec(phy.cmd.ba, "ba");
-		pinCmdVec(phy.cmd.a, "a");
+		CommandBus outCmd = reg(phy.cmd);
+		pinCmd(outCmd.cke, "cke");
+		pinCmd(outCmd.csn, "csn");
+		pinCmd(outCmd.rasn, "rasn");
+		pinCmd(outCmd.casn, "casn");
+		pinCmd(outCmd.wen, "wen");
+		pinCmdVec(outCmd.ba, "ba");
+		pinCmdVec(outCmd.a, "a");
 		pinOut(phy.odt, cfg.pinPrefix + "odt");
 
-		// CK: we do a 180° phase shift by inverting ddr inputs
+		// CK: we do a 180ï¿½ phase shift by inverting ddr inputs
 		// fake differential signal as long as not located on ball pairs
 		CC_OBUF clkBufP, clkBufN;
 		clkBufP.voltage("1.8");
@@ -193,22 +316,29 @@ namespace gtry::scl::sdram
 		clkDDRn.D0() = '0';
 		clkDDRn.D1() = '1';
 
+		Bit dqsEnable = reg(phy.dqWriteValid | reg(phy.dqWriteValid, '0'), '0');
+		HCL_NAMED(dqsEnable);
+		Bit preamble;
+		preamble = !dqsEnable;
+		preamble = reg(preamble, '1');
+		HCL_NAMED(preamble);
+
 		CC_LVDS_IOBUF dqsBuf;
 		dqsBuf.voltage("1.8");
 		//dqsBuf.oct(true);
 		dqsBuf.delayOut(15);
 		dqsBuf.pin(cfg.pinPrefix + "dqs_p", cfg.pinPrefix + "dqs_n");
-		dqsBuf.disable() = !phy.dqsEnable;
+		dqsBuf.disable() = !dqsEnable;
 
 
 		// there is a magical "10ns" dealy between DQ flank and DQS flank. While this is what we need, it is here by
-		// accident and caused by LUT delays. Make sure to add 180° phase shift when switching to ODDR.
+		// accident and caused by LUT delays. Make sure to add 180ï¿½ phase shift when switching to ODDR.
 #if 0	// this is what we should do, but if we do the output buffer is always enables
 		CC_ODDR dqsDDR(dqsBuf);
 		dqsDDR.D0() = !phy.dqsPreamble;
 		dqsDDR.D1() = '0';
 #else
-		dqsBuf.O() = !phy.dqsPreamble & ClockScope::getClk().clkSignal();
+		dqsBuf.O() = !preamble & ClockScope::getClk().clkSignal();
 #endif
 		Clock dqsClk{ ClockConfig{
 			.absoluteFrequency = ClockScope::getClk().absoluteFrequency(), 
@@ -226,12 +356,12 @@ namespace gtry::scl::sdram
 			CC_IOBUF dqBuf;
 			dqBuf.voltage("1.8");
 			dqBuf.pin(cfg.pinPrefix + "dq" + std::to_string(i));
-			dqBuf.disable() = !phy.dqsEnable;
+			dqBuf.disable() = !dqsEnable;
 
 			CC_ODDR dqDDR(dqBuf);
 			dqDDR.clockInversion(true);
-			dqDDR.D0() = phy.cmd.dq.part(2, 0)[i];
-			dqDDR.D1() = phy.cmd.dq.part(2, 1)[i];
+			dqDDR.D0() = reg(phy.cmd.dq.part(2, 0)[i]);
+			dqDDR.D1() = reg(phy.cmd.dq.part(2, 1)[i]);
 
 			CC_IDDR dqInDDR(dqBuf);
 			dqInDDR.clk(dqsClk);
@@ -244,12 +374,24 @@ namespace gtry::scl::sdram
 		{
 			CC_ODDR dqDDR;
 			dqDDR.clockInversion(true);
-			dqDDR.D0() = phy.cmd.dqm.part(2, 0)[i];
-			dqDDR.D1() = phy.cmd.dqm.part(2, 1)[i];
+			dqDDR.D0() = reg(phy.cmd.dqm.part(2, 0)[i]);
+			dqDDR.D1() = reg(phy.cmd.dqm.part(2, 1)[i]);
 
 			pinOut(dqDDR.Q(), cfg.pinPrefix + "dqm" + std::to_string(i));
 		}
 
+		
+		{	// read timing logic
+			Counter readState{ 8 };
+			IF(!readState.isFirst())
+				readState.inc();
+
+			IF(phy.cmd.cke & !phy.cmd.csn & phy.cmd.rasn & !phy.cmd.casn & phy.cmd.wen)
+				readState.inc();
+
+			size_t readDelay = 5;
+			phy.dqReadValid = readState.value() == readDelay | readState.value() == readDelay + 1;
+		}
 		return phy;
 	}
 }

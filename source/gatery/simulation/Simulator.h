@@ -137,7 +137,7 @@ class Simulator
 		*/
 
 		/// Sets the value of an input pin
-		virtual void simProcSetInputPin(hlim::Node_Pin *pin, const DefaultBitVectorState &state) = 0;
+		virtual void simProcSetInputPin(hlim::Node_Pin *pin, const ExtendedBitVectorState &state) = 0;
 		/// Overrides the output of a register until its next activation
 		virtual void simProcOverrideRegisterOutput(hlim::Node_Register *reg, const DefaultBitVectorState &state) = 0;
 		/// Returns @ref getValueOfOutput but also notifies potential testbench exporters via @ref SimulatorCallbacks of the "sampling" of this output.
@@ -212,7 +212,7 @@ class Simulator
 				virtual void onWarning(const hlim::BaseNode *src, std::string msg) override;
 				virtual void onAssert(const hlim::BaseNode *src, std::string msg) override;
 
-				virtual void onSimProcOutputOverridden(const hlim::NodePort &output, const DefaultBitVectorState &state) override;
+				virtual void onSimProcOutputOverridden(const hlim::NodePort &output, const ExtendedBitVectorState &state) override;
 				virtual void onSimProcOutputRead(const hlim::NodePort &output, const DefaultBitVectorState &state) override;
 		};
 
@@ -235,7 +235,7 @@ ReturnValue Simulator::executeCoroutine(SimulationFunction<ReturnValue> coroutin
 	ReturnValue result;
 	bool done = false;
 
-	auto callbackWrapper = [&result, &done, &coroutine, this]()mutable->SimulationFunction<void> {
+	auto callbackWrapper = [&result, &done, &coroutine]()mutable->SimulationFunction<void> {
 		result = co_await coroutine;
 		done = true;
 	};

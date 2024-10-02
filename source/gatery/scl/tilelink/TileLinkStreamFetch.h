@@ -49,3 +49,12 @@ namespace gtry::scl
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkStreamFetch::Command, address, beats);
+
+namespace gtry 
+{
+	extern template void connect(scl::TileLinkStreamFetch::Command&, scl::TileLinkStreamFetch::Command&);
+#if !defined(__clang__) || __clang_major__ >= 14
+	extern template auto upstream(scl::TileLinkStreamFetch::Command&);
+	extern template auto downstream(scl::TileLinkStreamFetch::Command&);
+#endif
+}

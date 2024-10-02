@@ -19,10 +19,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <gatery/frontend.h>
 #include "StreamConcept.h"
 #include "../flag.h"
+#include "../utils/Thermometric.h"
 
 namespace gtry::scl::strm {
-	using std::move;
-
 	struct Ready;
 	struct Valid;
 	struct ByteEnable;
@@ -179,6 +178,21 @@ namespace gtry::scl::strm {
 	template<StreamSignal StreamT> requires (StreamT::template has<EmptyBits>())
 	const UInt& emptyBits(const StreamT& in) { return in.template get<EmptyBits>().emptyBits; }
 
+
+
+
+	template<StreamSignal StreamT>
+	const BVec emptyMask(const StreamT& in) { return ~ConstBVec(0, in->width()); }
+
+	template<StreamSignal StreamT> requires (not StreamT::template has<EmptyBits>() and StreamT::template has<Empty>())
+	const BVec emptyMask(const StreamT& in) { return emptyMaskGenerator(in.template get<Empty>().empty, 8_b, in->width()); }
+	
+	template<StreamSignal StreamT> requires (StreamT::template has<EmptyBits>())
+	const BVec emptyMask(const StreamT& in) { return emptyMaskGenerator(in.template get<EmptyBits>().emptyBits, 1_b, in->width()); }
+
+
+
+
 	template<StreamSignal StreamT> 
 	auto simuReady(const StreamT &stream) {
 		if constexpr (StreamT::template has<Ready>())
@@ -214,8 +228,6 @@ namespace gtry::scl::strm {
 
 
 namespace gtry::scl {
-	using strm::move;
-
 	using strm::valid;
 	using strm::ready;
 	using strm::transfer;

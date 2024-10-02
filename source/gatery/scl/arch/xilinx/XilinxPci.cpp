@@ -16,7 +16,7 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include <gatery/pch.h>
+#include <gatery/scl_pch.h>
 #include <gatery/scl/utils/Thermometric.h>
 #include "XilinxPci.h"
 
@@ -118,7 +118,7 @@ namespace gtry::scl::pci::xilinx {
 		ret.byteCountModifier = '0';
 		ret.lowerByteAddress = desc.lowerByteAddress.lower(7_b);
 		ret.completionStatus = desc.completionStatus;
-		desc.requestCompleted; // maybe do something with this?
+		//desc.requestCompleted; // maybe do something with this?
 		return ret;
 	}
 

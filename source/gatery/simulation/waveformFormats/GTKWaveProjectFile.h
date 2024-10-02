@@ -74,6 +74,7 @@ class GTKWaveProjectFile
 		void setCursor(const hlim::ClockRational &time);
 
 		void write(const char *filename) const;
+		void writeSurferScript(const std::filesystem::path& filename) const;
 		void writeEnumFilterFiles();
 	protected:
 		std::string m_waveformFile;

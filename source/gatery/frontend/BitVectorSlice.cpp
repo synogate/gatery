@@ -87,6 +87,8 @@ SignalReadPort gtry::BitVectorSliceStatic::readPort(SignalReadPort rootPort) con
 	rewire->connectInput(0, basePort);
 	rewire->setOp(op);
 
+	HCL_DESIGNCHECK_HINT(m_offset + m_width <= hlim::getOutputWidth(basePort), "Slice offset+width is larger than source width!");
+
 	if (m_isBit)
 		rewire->changeOutputType({ .type = hlim::ConnectionType::Type::BOOL, .width = 1 });
 

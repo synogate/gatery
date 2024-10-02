@@ -349,8 +349,8 @@ FinalType &SubnetTemplate<makeConst, FinalType>::addAllForExport(CircuitType &ci
 
 		// Ignore the simulation-only part
 		if (dynamic_cast<typename ConstAdaptor<makeConst, hlim::Node_ExportOverride>::type*>(n)) {
-			if (n->getDriver(1).node != nullptr)
-				openList.push_back(n->getDriver(1).node);
+			if (n->getDriver(hlim::Node_ExportOverride::EXP_INPUT).node != nullptr)
+				openList.push_back(n->getDriver(hlim::Node_ExportOverride::EXP_INPUT).node);
 		} else {
 			for (auto i : utils::Range(n->getNumInputPorts())) {
 				auto driver = n->getDriver(i);

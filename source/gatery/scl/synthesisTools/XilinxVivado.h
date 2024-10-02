@@ -25,6 +25,11 @@
 
 namespace gtry {
 
+/**
+ * @addtogroup gtry_synthesisTools
+ * @{
+ */
+
 class XilinxVivado : public SynthesisTool {
 	public:
 		XilinxVivado();
@@ -40,5 +45,7 @@ class XilinxVivado : public SynthesisTool {
 		virtual void writeVhdlProjectScript(vhdl::VHDLExport &vhdlExport, std::string_view filename) override;
 		virtual void writeStandAloneProject(vhdl::VHDLExport& vhdlExport, std::string_view filename) override;
 };
+
+/**@}*/
 
 }

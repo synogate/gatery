@@ -15,7 +15,7 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "CrcHandler.h"
 
 #include "../../crc.h"
@@ -179,4 +179,33 @@ void gtry::scl::usb::CrcHandler::appendTx(PhyTxStream& _tx)
 	_tx.data = reg(_tx.data);
 	_tx.error = reg(_tx.error);
 
+}
+
+gtry::scl::usb::CombinedBitCrc::CombinedBitCrc(Bit in, Enum<Mode> mode, Bit reset, Bit shiftOut)
+{
+	HCL_NAMED(m_state);
+	m_state = reg(m_state);
+	m_state |= reset;
+
+	Bit out = m_state.lsb();
+	IF(mode == crc5)
+		out = m_state[16 - 5];
+	m_out = !out;
+	HCL_NAMED(m_out);
+
+	Bit div = in ^ out;
+	div &= !shiftOut;
+	HCL_NAMED(div);
+	m_state = cat(div, m_state.upper(-1_b));
+	m_state[0] ^= div;
+	m_state[13] ^= div;
+
+	m_match5 = m_state.upper(5_b) == 6;
+	HCL_NAMED(m_match5);
+	m_match16 = m_state == 0xB001;
+	HCL_NAMED(m_match16);
+	m_match = mux(mode == crc5, { m_match16, m_match5 });
+	HCL_NAMED(m_match);
+
+	m_ent.leave();
 }

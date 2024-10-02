@@ -15,7 +15,7 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "UltraRAM.h"
 #include <gatery/debug/DebugInterface.h>
 
@@ -42,7 +42,7 @@ std::array<TileLinkUL, 2> arch::xilinx::ultraRam(size_t numWords, UltraRamSettin
 {
 	Area ent{ "scl_ultraRam", true };
 	if (!cfg.name.empty())
-		ent.getNodeGroup()->setInstanceName(std::string{ cfg.name });
+		ent.instanceName(std::string{ cfg.name });
 
 	size_t numRamBlocks = (numWords + 4095) / 4096;
 	if (!cfg.latency)
@@ -56,7 +56,7 @@ std::array<TileLinkUL, 2> arch::xilinx::ultraRam(size_t numWords, UltraRamSettin
 
 	if (*cfg.latency > ram.size() + 2)
 	{
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_DESIGN << "Thre requested URAM latency of " << *cfg.latency << " cannot be fullfilled with " << ram.size() << " memory blocks.");
+		dbg::log(dbg::LogMessage(ent.getNodeGroup()) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_DESIGN << "Thre requested URAM latency of " << *cfg.latency << " cannot be fullfilled with " << ram.size() << " memory blocks.");
 		*cfg.latency = ram.size() + 2;
 	}
 

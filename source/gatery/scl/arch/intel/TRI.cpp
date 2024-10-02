@@ -15,8 +15,10 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "TRI.h"
+
+#include <gatery/hlim/NodeGroup.h>
 
 #include <gatery/frontend/DesignScope.h>
 #include <gatery/frontend/GraphTools.h>

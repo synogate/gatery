@@ -24,9 +24,12 @@
 #include <gatery/simulation/waveformFormats/VCDSink.h>
 #include <gatery/export/vhdl/VHDLExport.h>
 
-#include <gatery/debug/websocks/WebSocksInterface.h>
-
 #include <gatery/scl/crc.h>
+
+#define TEST_WITH_BOOST_CRC 0
+#ifdef TEST_WITH_BOOST_CRC
+#include <boost/crc.hpp>
+#endif
 
 using namespace boost::unit_test;
 using namespace gtry;
@@ -44,34 +47,6 @@ T crc_ref(T remainder, uint8_t data, T polynomial)
 	}
 	return remainder;
 }
-
-static uint8_t crc5usb_ref(uint16_t remainder, uint8_t data)
-{
-	uint8_t dataRev = 0;
-	for(size_t i = 0; i < 8; ++i)
-		dataRev |= ((data >> i) & 1) << (7 - i);
-
-	remainder <<= 8;
-	remainder ^= dataRev;
-
-	for(size_t i = 0; i < 8; ++i)
-	{
-		if(remainder & (0x80 << 5))
-			remainder = (remainder << 1) ^ (5 << 8);
-		else
-			remainder <<= 1;
-	}
-	remainder >>= 8;
-	remainder &= 0x1F;
-	remainder ^= 0x1F;
-
-	uint8_t remainderRev = 0;
-	for(size_t i = 0; i < 8; ++i)
-		remainderRev |= ((remainder >> i) & 1) << (7 - i);
-
-	return remainderRev >> 3;
-}
-
 
 BOOST_FIXTURE_TEST_CASE(crc8, BoostUnitTestSimulationFixture)
 {
@@ -174,4 +149,26 @@ BOOST_FIXTURE_TEST_CASE(crc16state, BoostUnitTestSimulationFixture)
 
 	design.postprocess();
 	eval();
+}
+
+BOOST_FIXTURE_TEST_CASE(usb_crc5_testvector, BoostUnitTestSimulationFixture)
+{
+	const uint16_t data[] = {
+		// |<crc>|< 11b data >|
+		{ 0b11101'000'00000001 },
+		{ 0b11101'111'00010101 },
+		{ 0b00111'101'00111010 },
+		{ 0b01110'010'01110000 },
+	};
+
+	for (size_t i = 0; i < sizeof(data) / sizeof(*data); ++i)
+	{
+#ifdef TEST_WITH_BOOST_CRC
+		size_t crc = boost::crc<5, 5, 0x1F, 0x1F, true, true>(&data[i], 2);
+		BOOST_TEST(crc == 0x19);
+#endif
+
+		BOOST_TEST(scl::simu_crc5_usb_verify(data[i]));
+		BOOST_TEST(scl::simu_crc5_usb_generate(gtry::utils::bitfieldExtract(data[i], 0, 11)) == data[i]);
+	}
 }

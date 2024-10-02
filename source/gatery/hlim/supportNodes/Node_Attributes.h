@@ -32,6 +32,8 @@ class Node_Attributes : public Node<Node_Attributes>
 	public:
 		Node_Attributes();
 
+		void setConnectionType(const ConnectionType &connectionType);
+
 		void connectInput(const NodePort &nodePort);
 		void disconnectInput();
 
@@ -47,7 +49,10 @@ class Node_Attributes : public Node<Node_Attributes>
 		inline SignalAttributes &getAttribs() { return m_attributes; }
 		inline const SignalAttributes &getAttribs() const { return m_attributes; }
 
-		virtual bool hasSideEffects() const { return true; }
+		virtual bool canBeRetimedOver() const override;
+		virtual std::optional<size_t> forwardsInputToOutput(size_t outputPort = 0) const override { return { 0 }; }
+
+		virtual std::string attemptInferOutputName(size_t outputPort) const override;
 	protected:
 		SignalAttributes m_attributes;
 };

@@ -15,11 +15,13 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "Function.h"
+#include "SimuPhy.h"
 
 #include "../../Counter.h"
 #include "../../utils/OneHot.h"
+#include "../../stream/streamFifo.h"
 
 gtry::scl::usb::Function::Function() :
 	m_area{"usbFunction", true}
@@ -34,8 +36,22 @@ void gtry::scl::usb::Function::setup(Phy& phy)
 	phy.setup(Phy::OpMode::FullSpeedFunction);
 	ClockScope clk{ phy.clock() };
 
+	phy.rx().valid.resetValue('0');
 	phy.rx().eop.resetValue('0');
-	m_phy.checkRxAppendTx(phy.tx(), gtry::reg(phy.rx()));
+	if (phy.supportCrc())
+	{
+		m_phy.rx = gtry::reg(phy.rx());
+
+		m_phy.tx.ready = phy.tx().ready;
+		phy.tx().valid = m_phy.tx.valid;
+		phy.tx().error = m_phy.tx.error;
+		phy.tx().data = m_phy.tx.data;
+	}
+	else
+	{
+		m_phy.checkRxAppendTx(phy.tx(), gtry::reg(phy.rx()));
+	}
+
 	m_rxStatus = gtry::reg(phy.status());
 	m_clock = phy.clock();
 
@@ -52,6 +68,7 @@ void gtry::scl::usb::Function::setup(Phy& phy)
 	if (DeviceDescriptor* dev = m_descriptor.device())
 		m_maxPacketSize = dev->MaxPacketSize;
 	m_packetLen = BitWidth::last(m_maxPacketSize);
+	m_packetLenTxLimit = BitWidth::last(m_maxPacketSize);
 
 	generateFunctionReset();
 	generateDescriptorRom();
@@ -68,6 +85,11 @@ void gtry::scl::usb::Function::setup(Phy& phy)
 void gtry::scl::usb::Function::addClassSetupHandler(std::function<Bit(const SetupPacket&)> handler)
 {
 	m_classHandler.push_back(handler);
+}
+
+void gtry::scl::usb::Function::addClassDataHandler(std::function<void(const BVec&)> handler)
+{
+	m_classDataHandler.push_back(handler);
 }
 
 void gtry::scl::usb::Function::attachRxFifo(TransactionalFifo<StreamData>& fifo, uint16_t endPointMask)
@@ -136,6 +158,32 @@ void gtry::scl::usb::Function::attachTxFifo(TransactionalFifo<StreamData>& fifo,
 	setName(m_tx, "tx");
 }
 
+gtry::scl::RvStream<gtry::BVec> gtry::scl::usb::Function::rxEndPointFifo(size_t endPoint, size_t fifoDpeth)
+{
+	TransactionalFifo<StreamData> fifo{ fifoDpeth };
+	attachRxFifo(fifo, 1 << endPoint);
+
+	RvStream<BVec> out =
+		strm::pop(fifo)
+		.transform([](const StreamData& data) { return (BVec)data.data; });
+
+	fifo.generate();
+	setName(out, "usbep" + std::to_string(endPoint) + "_rx");
+	return out;
+}
+
+void gtry::scl::usb::Function::txEndPointFifo(size_t endPoint, size_t fifoDpeth, RvStream<BVec> data)
+{
+	TransactionalFifo<StreamData> fifo{ fifoDpeth };
+	attachTxFifo(fifo, 1 << endPoint);
+
+	data
+		.transform([=](const BVec& d) { return StreamData{ .data = (UInt)d, .endPoint = endPoint }; })
+		| strm::push(fifo);
+
+	fifo.generate();
+}
+
 void gtry::scl::usb::Function::generateCapturePacket()
 {
 	const PhyRxStream& rx = m_phy.rx;
@@ -174,6 +222,48 @@ void gtry::scl::usb::Function::generateInitialFsm()
 {
 	const PhyRxStream& rx = m_phy.rx;
 
+	Bit ackExpected;
+	ackExpected = reg(ackExpected, '0');
+	HCL_NAMED(ackExpected);
+
+	Bit incompleteTransfer;
+	incompleteTransfer = reg(incompleteTransfer, '0');
+	HCL_NAMED(incompleteTransfer);
+
+	m_tx.commit = '0';
+	m_tx.rollback = '0';
+
+	IF(ackExpected & rx.sop & rx.valid)
+	{
+		IF(rx.data == 0xD2) // ack
+		{
+			m_nextOutDataPid ^= m_endPointMask;
+
+			// commit progress
+			m_descAddress = m_descAddressActive;
+			m_descLength = m_descLengthActive;
+			m_address = m_newAddress;
+
+			IF(m_endPoint != 0)
+				m_packetLenTxLimit = m_maxPacketSize;
+
+			m_tx.commit = '1';
+		}
+		ELSE
+		{
+			m_tx.rollback = '1';
+		}
+		ackExpected = '0';
+	}
+
+	m_packetLenTxLimit = reg(m_packetLenTxLimit, m_maxPacketSize);
+	HCL_NAMED(m_packetLenTxLimit);
+
+	m_endPoint = reg(m_endPoint);
+	HCL_NAMED(m_endPoint);
+	m_endPointMask = reg(m_endPointMask);
+	HCL_NAMED(m_endPointMask);
+
 	IF(m_state.current() == State::waitForToken)
 	{
 		IF(rx.eop & !rx.error)
@@ -187,32 +277,34 @@ void gtry::scl::usb::Function::generateInitialFsm()
 				{
 					m_frameId = m_packetData.upper(16_b).lower(11_b);
 				}
-				ELSE IF(token.address == m_address) // in, out, setup for us
+				ELSEIF(token.address == m_address) // in, out, setup for us
 				{
 					m_endPoint = token.endPoint;
 					m_endPointMask = scl::decoder(m_endPoint);
 
-					IF(m_pid.upper(2_b) == 3) // setup
+					IF(m_endPoint == 0)
 					{
-						m_state = State::waitForSetup;
-						m_nextOutDataPid |= m_endPointMask;
-						m_nextInDataPid &= ~m_endPointMask;
+						IF(m_pid.upper(2_b) == 3) // setup
+						{
+							m_state = State::waitForSetup;
+							m_nextOutDataPid.lsb() = '1';
+							m_nextInDataPid.lsb() = '0';
+						}
+						IF(m_pid.upper(2_b) == 2) // in setup
+						{
+							m_state = State::sendDataPid;
+							m_sendDataState = State::sendSetupData;
+						}
+						IF(m_pid.upper(2_b) == 0) // out setup
+						{
+							m_state = State::recvSetupData;
+						}
 					}
-					IF(m_pid.upper(2_b) == 2 & m_endPoint == 0) // in setup
-					{
-						m_state = State::sendDataPid;
-						m_sendDataState = State::sendSetupData;
-					}
-					IF(m_pid.upper(2_b) == 0 & m_endPoint == 0) // out setup
-					{
-						m_state = State::recvSetupData;
-					}
-
-					IF(m_endPoint != 0)
+					ELSE
 					{
 						IF(m_pid.upper(2_b) == 2) // in
 						{
-							IF(m_tx.valid & m_tx.endPoint == m_endPoint)
+							IF(incompleteTransfer | (m_tx.valid & m_tx.endPoint == m_endPoint))
 							{
 								m_sendDataState = State::sendData;
 								m_state = State::sendDataPid;
@@ -231,10 +323,6 @@ void gtry::scl::usb::Function::generateInitialFsm()
 			}
 		}
 	}
-	m_endPoint = reg(m_endPoint);
-	HCL_NAMED(m_endPoint);
-	m_endPointMask = reg(m_endPointMask);
-	HCL_NAMED(m_endPointMask);
 
 	m_frameId = reg(m_frameId);
 	HCL_NAMED(m_frameId);
@@ -251,6 +339,8 @@ void gtry::scl::usb::Function::generateInitialFsm()
 			{
 				SetupPacket setup;
 				unpack(m_packetData, setup);
+				HCL_NAMED(setup);
+
 				sendHandshake(Handshake::STALL);
 				m_descLength = 0; // zero length status stage
 
@@ -265,6 +355,15 @@ void gtry::scl::usb::Function::generateInitialFsm()
 
 					IF(setup.request == (size_t)SetupRequest::CLEAR_FEATURE)
 					{
+						IF(setup.wValue == 0)
+						{
+							Bit direction = setup.wIndex[7];
+							UInt endPointIndex = setup.wIndex.lower(4_b);
+							IF(direction)
+								m_nextInDataPid[endPointIndex] = '0';
+							ELSE
+								m_nextOutDataPid[endPointIndex] = '0';
+						}
 						sendHandshake(Handshake::ACK);
 					}
 
@@ -356,6 +455,12 @@ void gtry::scl::usb::Function::generateInitialFsm()
 	m_configuration = reg(m_configuration, 0);
 	HCL_NAMED(m_configuration);
 
+	IF(m_state.next() == State::sendDataPid)
+	{
+		m_descAddressActive = m_descAddress;
+		m_descLengthActive = m_descLength;
+	}
+
 	IF(m_state.current() == State::sendDataPid)
 	{
 		IF(m_rxIdle)
@@ -367,9 +472,6 @@ void gtry::scl::usb::Function::generateInitialFsm()
 			IF(m_phy.tx.ready)
 				m_state = m_sendDataState;
 		}
-
-		m_descAddressActive = m_descAddress;
-		m_descLengthActive = m_descLength;
 	}
 	m_nextOutDataPid = reg(m_nextOutDataPid, 0);
 	HCL_NAMED(m_nextOutDataPid);
@@ -399,7 +501,8 @@ void gtry::scl::usb::Function::generateInitialFsm()
 		}
 		ELSE
 		{
-			m_state = State::waitForSetupAck;
+			ackExpected = '1';
+			m_state = State::waitForToken;
 		}
 	}
 
@@ -408,8 +511,8 @@ void gtry::scl::usb::Function::generateInitialFsm()
 	IF(m_state.current() == State::sendData)
 	{
 		PhyTxStream& tx = m_phy.tx;
-
-		IF(m_tx.valid & m_tx.endPoint == m_endPoint & m_packetLen != m_maxPacketSize)
+		Bit lenghtLimitReached = m_packetLen == m_packetLenTxLimit;
+		IF(m_tx.valid & m_tx.endPoint == m_endPoint & !lenghtLimitReached)
 		{
 			m_tx.ready = tx.ready;
 			tx.valid = '1';
@@ -417,7 +520,10 @@ void gtry::scl::usb::Function::generateInitialFsm()
 		}
 		ELSE
 		{
-			m_state = State::waitForSetupAck;
+			incompleteTransfer = lenghtLimitReached;
+			m_packetLenTxLimit = m_packetLen;
+			ackExpected = '1';
+			m_state = State::waitForToken;
 		}
 	}
 
@@ -431,7 +537,7 @@ void gtry::scl::usb::Function::generateInitialFsm()
 
 			IF(rx.data == cat(~expectedPid, expectedPid))
 				m_state = State::recvData;
-			ELSE IF(rx.data != cat(~resendPid, resendPid))
+			ELSEIF(rx.data != cat(~resendPid, resendPid))
 				m_state = State::waitForToken;
 			// else stay in state and ack resend
 		}
@@ -465,31 +571,6 @@ void gtry::scl::usb::Function::generateInitialFsm()
 		}
 	}
 
-	m_tx.commit = '0';
-	m_tx.rollback = '0';
-	IF(m_state.current() == State::waitForSetupAck)
-	{
-		IF(m_phy.rx.eop)
-		{
-			m_state = State::waitForToken;
-
-			IF(!m_phy.rx.error & m_pid == 2) // ack
-			{
-				m_nextOutDataPid ^= m_endPointMask;
-
-				// commit progress
-				m_descAddress = m_descAddressActive;
-				m_descLength = m_descLengthActive;
-				m_address = m_newAddress;
-
-				m_tx.commit = '1';
-			}
-			ELSE
-			{
-				m_tx.rollback = '1';
-			}
-		}
-	}
 	HCL_NAMED(m_tx);
 	m_tx.valid = '0';
 	m_tx.data = ConstUInt(8_b);
@@ -503,6 +584,9 @@ void gtry::scl::usb::Function::generateInitialFsm()
 
 			IF(!m_phy.rx.error & m_pid.lower(2_b) == 3) // data pid
 			{
+				for (auto& h : m_classDataHandler)
+					h((BVec)m_packetData);
+
 				sendHandshake(Handshake::ACK);
 			}
 		}
@@ -607,6 +691,10 @@ void gtry::scl::usb::Function::generateRxStream()
 
 	m_rx.eop = m_phy.rx.eop & functionStream;
 	m_rx.error = m_phy.rx.error | m_rxReadyError;
+#if 0 //debug crc errors with the leds
+	IF(m_phy.rx.eop & m_phy.rx.error)
+		pinOut(Counter{8_b}.value(), "LED");
+#endif
 	HCL_NAMED(m_rx);
 }
 

@@ -27,9 +27,9 @@ namespace gtry::scl
 	{
 	public:
 		TransactionalFifo() = default;
-		explicit TransactionalFifo(size_t minDepth, const TData& ref = TData{}) : TransactionalFifo() { setup(minDepth, std::move(ref)); }
+		explicit TransactionalFifo(size_t minDepth, const TData& ref = TData{}, FifoLatency latency = FifoLatency::DontCare()) : TransactionalFifo() { setup(minDepth, std::move(ref), latency); }
 
-		void setup(size_t minDepth, const TData& ref = TData{});
+		void setup(size_t minDepth, const TData& ref = TData{}, FifoLatency latency = FifoLatency::DontCare());
 
 		void commitPush();
 		void commitPush(UInt cutoff);
@@ -40,8 +40,8 @@ namespace gtry::scl
 
 	protected:
 		virtual void generateCdc(const UInt& pushPut, UInt& pushGet, UInt& popPut, const UInt& popGet) override;
-		virtual UInt generatePush(Memory<TData>& mem, const UInt& getAddr) override;
-		virtual UInt generatePop(const Memory<TData>& mem, const UInt& putAddr) override;
+		virtual UInt generatePush(Memory<TData>& mem, UInt getAddr) override;
+		virtual UInt generatePop(const Memory<TData>& mem, UInt putAddr) override;
 
 	private:
 		Bit m_pushCommit;
@@ -56,9 +56,9 @@ namespace gtry::scl
 	};
 
 	template<Signal TData>
-	inline void TransactionalFifo<TData>::setup(size_t minDepth, const TData& ref)
+	inline void TransactionalFifo<TData>::setup(size_t minDepth, const TData& ref, FifoLatency latency)
 	{
-		Fifo<TData>::setup(minDepth, ref);
+		Fifo<TData>::setup(minDepth, ref, latency);
 
 		m_pushCommit = '0';
 		m_pushRollack = '0';
@@ -117,7 +117,7 @@ namespace gtry::scl
 	}
 
 	template<Signal TData>
-	UInt TransactionalFifo<TData>::generatePush(Memory<TData>&mem, const UInt & get)
+	UInt TransactionalFifo<TData>::generatePush(Memory<TData>&mem, UInt get)
 	{
 		ClockScope clk{ *Fifo<TData>::m_pushClock };
 		if (!m_hasPushCommit)
@@ -159,7 +159,7 @@ namespace gtry::scl
 	}
 
 	template<Signal TData>
-	UInt TransactionalFifo<TData>::generatePop(const Memory<TData>& mem, const UInt& put)
+	UInt TransactionalFifo<TData>::generatePop(const Memory<TData>& mem, UInt put)
 	{
 		ClockScope clk{ *Fifo<TData>::m_popClock };
 		if (!m_hasPopCommit)

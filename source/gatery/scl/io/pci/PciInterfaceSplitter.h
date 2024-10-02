@@ -20,34 +20,16 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <gatery/frontend.h>
 #include <gatery/scl/io/pci/pci.h>
 
-namespace gtry::scl::pci {
-	class PciInterfaceSplitter {
-	public:
-		PciInterfaceSplitter() = default;
-		PciInterfaceSplitter(CompleterInterface& compInt, RequesterInterface& reqInt, TlpPacketStream<EmptyBits, BarInfo>&& rx);
+namespace gtry::scl::pci 
+{
+	/**
+	 * @brief	Splits the TLP rx/tx streams into our vendor independent interface of 
+	 *			completer request/response (CompleterInterface) and requester request/response (RequesterInterface).
+	 *				rx -> (completer request | requester completion)
+	 *				(completer completion | requester request) -> tx
+	 */
+	TlpPacketStream<EmptyBits>	interfaceSplitter(CompleterInterface&& compInt, RequesterInterface&& reqInt, TlpPacketStream<EmptyBits, BarInfo>&& rx);
 
-		PciInterfaceSplitter& rx(TlpPacketStream<EmptyBits, BarInfo>&& rx) { m_rx = move(rx); return *this; }
-		TlpPacketStream<EmptyBits>& tx() { HCL_DESIGNCHECK(m_tx); return *m_tx; }
-
-		TlpPacketStream<EmptyBits, BarInfo> completerRequest() { HCL_DESIGNCHECK(m_completerRequest); return move(*m_completerRequest); }
-		TlpPacketStream<EmptyBits> requesterCompletion() { HCL_DESIGNCHECK(m_requesterCompletion); return move(*m_requesterCompletion); }
-
-		PciInterfaceSplitter& completerCompletion(TlpPacketStream<EmptyBits>&& completerCompletion) { m_completerCompletion = move(completerCompletion); return *this; }
-		PciInterfaceSplitter& requesterRequest(TlpPacketStream<EmptyBits>&& requesterRequest) { m_requesterRequest = move(requesterRequest); return *this; }
-
-		void generate();
-
-		//RequesterInterface& requesterInterface() { HCL_DESIGNCHECK(m_requesterInterface); return *m_requesterInterface; }
-		//CompleterInterface& completerInterface() { HCL_DESIGNCHECK(m_completerInterface); return *m_completerInterface; }
-	private:
-		void splitRx();
-		void mergeTx();
-		std::optional<TlpPacketStream<EmptyBits, BarInfo>> m_rx;
-		std::optional<TlpPacketStream<EmptyBits, BarInfo>> m_completerRequest;
-
-		std::optional<TlpPacketStream<EmptyBits>> m_tx;
-		std::optional<TlpPacketStream<EmptyBits>> m_completerCompletion;
-		std::optional<TlpPacketStream<EmptyBits>> m_requesterRequest;
-		std::optional<TlpPacketStream<EmptyBits>> m_requesterCompletion;
-	};
+	void						interfaceSplitterRx(TlpPacketStream<EmptyBits, BarInfo>&& completerRequest, TlpPacketStream<EmptyBits>&& requesterCompletion, TlpPacketStream<EmptyBits, BarInfo>&& rx);
+	TlpPacketStream<EmptyBits>	interfaceSplitterTx(TlpPacketStream<EmptyBits>&& completerCompletion, TlpPacketStream<EmptyBits>&& requesterRequest);
 }

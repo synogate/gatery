@@ -184,5 +184,12 @@ void Node_RegSpawner::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, si
 	inputBit = ~0u;
 }
 
+bool Node_RegSpawner::inputIsEnable(size_t inputPort) const
+{
+	// This is technically not true, but since the register spawner is allowed to spawn registers and thus change the graph's behavior
+	// wrt. retiming it behaves in the same way.
+	return inputPort == INPUT_ENABLE;
+}
+
 
 }

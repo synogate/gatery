@@ -90,19 +90,6 @@ namespace gtry {
 		};
 	}
 
-	static hlim::Node_Rewire::RewireOperation replaceSelection(size_t rangeOffset, size_t rangeWidth, size_t totalWidth)
-	{
-		HCL_ASSERT(rangeOffset+rangeWidth <= totalWidth);
-
-		hlim::Node_Rewire::RewireOperation op;
-
-		op.addInput(0, 0, rangeOffset);
-		op.addInput(1, 0, rangeWidth);
-		op.addInput(0, rangeOffset + rangeWidth, totalWidth - (rangeOffset + rangeWidth));
-
-		return op;
-	}
-
 	BaseBitVectorDefault::BaseBitVectorDefault(const BaseBitVector& rhs) {
 		m_nodePort = rhs.readPort();
 	}
@@ -149,7 +136,7 @@ namespace gtry {
 
 	BaseBitVector::BaseBitVector(hlim::Node_Signal* node, std::shared_ptr<BitVectorSlice> range, Expansion expansionPolicy, size_t initialScopeId) :
 		m_node(node),
-		m_range(move(range)),
+		m_range(std::move(range)),
 		m_width(m_range->width()),
 		m_expansionPolicy(expansionPolicy)
 	{
@@ -253,11 +240,17 @@ namespace gtry {
 		HCL_DESIGNCHECK_HINT(!m_range, "BaseBitVector::resetNode is not allowed for alias BaseBitVector's.");
 		m_node = nullptr;
 		m_range.reset();
+		m_width = 0_b;
+		m_expansionPolicy = Expansion::none;
 		m_bitAlias.clear();
 		m_lsbAlias = std::nullopt;
 		m_msbAlias = std::nullopt;
 		m_dynamicBitAlias.clear();
+		m_readPort = {};
 		m_readPortDriver = nullptr;
+
+		if (auto* scope = ConditionalScope::get())
+			m_initialScopeId = scope->getId();		
 	}
 
 	Bit &BaseBitVector::getDynamicBitAlias(const UInt &idx) const

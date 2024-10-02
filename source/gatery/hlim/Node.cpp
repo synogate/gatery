@@ -65,6 +65,14 @@ bool BaseNode::hasSideEffects() const
 	return false;
 }
 
+bool BaseNode::allOutputsForwarded() const
+{
+	for (size_t i = 0; i < getNumOutputPorts(); i++)
+		if (!forwardsInputToOutput(i))
+			return false;
+	return true;
+}
+
 bool BaseNode::isCombinatorial(size_t port) const
 {
 	for (auto clk : m_clocks)

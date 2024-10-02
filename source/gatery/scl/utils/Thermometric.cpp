@@ -15,7 +15,7 @@ You should have received a copy of the GNU Lesser General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "Thermometric.h"
 #include "BitCount.h"
 
@@ -38,6 +38,23 @@ namespace gtry::scl {
 
 	UInt thermometricToUInt(BVec in) {
 		return bitcount((UInt)in);
+	}
+
+	BVec emptyMaskGenerator(UInt in, BitWidth wordSize, BitWidth fullSize)
+	{
+		size_t maxInput = in.width().last();
+		size_t numWords = fullSize.value / wordSize.value;
+		BVec ret = ~ConstBVec(0, fullSize);
+		for (size_t i = 0; i < numWords; i++) {
+			size_t threshold = numWords-1 - i;
+			Bit b;
+			if (threshold <= maxInput)
+				b = in <= threshold;
+			else
+				b = '0';
+			ret.word(i, wordSize) = (BVec) sext(b);
+		}
+		return ret;
 	}
 
 }

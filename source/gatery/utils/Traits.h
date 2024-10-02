@@ -115,6 +115,12 @@ namespace gtry {
 	concept BitVectorValue = is_bitvector_value<T>::value;
 
 
+	struct BitWidth;
+	/// Prevents ambiguous instantiations between BVec, UInt and SInt
+	template<>   struct is_bitvector_value<BitWidth> : std::false_type { };
+	template<>   struct is_bitvector_value<const BitWidth&> : std::false_type { };
+
+
 	/// @brief Any bitvector based signals (UInt, SInt, ...)
 	template<typename T>
 	concept BitVectorSignal = BitVectorValue<T> && (!BitVectorLiteral<T>);
@@ -308,7 +314,7 @@ namespace gtry {
 
 	template<typename T>
 	concept Signal =
-		BaseSignal<T> or
+		BaseSignal<T> or BitVectorSignal<T> or // Signal needs to include BitVectorSignal for overload resolution
 		CompoundSignal<T> or
 		ContainerSignal<T> or
 		TupleSignal<T> or
@@ -318,5 +324,4 @@ namespace gtry {
 	concept SignalValue =
 		Signal<T> or
 		BaseSignalValue<T>;
-
 }

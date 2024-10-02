@@ -153,6 +153,8 @@ const Clock& gtry::ExternalModule::addClockOut(Clock clock, Bit clockSignal, std
 
 BVec& ExternalModule::in(std::string_view name, BitWidth W, PinConfig cfg)
 {
+	HCL_DESIGNCHECK_HINT(!cfg.isEnableSignal, "Only input bit signals can be declared enable signals!");
+
 	auto it = std::ranges::find(m_node.ins(), name, &Node_External_Exposed::Port::name);
 	if (it == m_node.ins().end())
 	{
@@ -186,6 +188,8 @@ Bit& ExternalModule::in(std::string_view name, PinConfig cfg)
 			m_node.m_inClock.push_back(cfg.clockOverride->getClk());
 		else
 			m_node.m_inClock.push_back(ClockScope::getClk().getClk());
+		if (cfg.isEnableSignal)
+			m_node.declareInputIsEnable(idx);
 		return signal;
 	}
 	return get<Bit>(m_in[it - m_node.ins().begin()]);
@@ -207,6 +211,8 @@ const Bit& ExternalModule::in(std::string_view name, PinConfig cfg) const
 
 BVec ExternalModule::out(std::string_view name, BitWidth W, PinConfig cfg)
 {
+	HCL_DESIGNCHECK_HINT(!cfg.isEnableSignal, "Only input bit signals can be declared enable signals!");
+
 	auto it = std::ranges::find(m_node.outs(), name, &Node_External_Exposed::Port::name);
 
 	size_t idx;
@@ -231,6 +237,7 @@ BVec ExternalModule::out(std::string_view name, BitWidth W, PinConfig cfg)
 
 Bit ExternalModule::out(std::string_view name, PinConfig cfg)
 {
+	HCL_DESIGNCHECK_HINT(!cfg.isEnableSignal, "Only input bit signals can be declared enable signals!");
 	auto it = std::ranges::find(m_node.outs(), name, &Node_External_Exposed::Port::name);
 
 	size_t idx;
@@ -254,8 +261,10 @@ Bit ExternalModule::out(std::string_view name, PinConfig cfg)
 }
 
 
-void ExternalModule::inoutPin(std::string_view portName, std::string_view pinName, BitWidth W, PinConfig cfg)
+ExternalModule& ExternalModule::inoutPin(std::string_view portName, std::string_view pinName, BitWidth W, PinConfig cfg)
 {
+	HCL_DESIGNCHECK_HINT(!cfg.isEnableSignal, "Only input bit signals can be declared enable signals!");
+
 	HCL_DESIGNCHECK_HINT( std::ranges::find(m_node.ins(), portName, &Node_External_Exposed::Port::name) == m_node.ins().end(), "An input port with that name already exists!");
 	HCL_DESIGNCHECK_HINT( std::ranges::find(m_node.outs(), portName, &Node_External_Exposed::Port::name) == m_node.outs().end(), "An output port with that name already exists!");
 
@@ -274,10 +283,14 @@ void ExternalModule::inoutPin(std::string_view portName, std::string_view pinNam
 	BVec out = ConstBVec(W);
 	out.exportOverride(SignalReadPort(multiDriver));
 	multiDriver->rewireInput(1, BVec(bidirPin(out).setName(std::string(pinName))).readPort());
+
+	return *this;
 }
 
-void ExternalModule::inoutPin(std::string_view portName, std::string_view pinName, PinConfig cfg)
+ExternalModule& ExternalModule::inoutPin(std::string_view portName, std::string_view pinName, PinConfig cfg)
 {
+	HCL_DESIGNCHECK_HINT(!cfg.isEnableSignal, "Only input bit signals can be declared enable signals!");
+
 	HCL_DESIGNCHECK_HINT( std::ranges::find(m_node.ins(), portName, &Node_External_Exposed::Port::name) == m_node.ins().end(), "An input port with that name already exists!");
 	HCL_DESIGNCHECK_HINT( std::ranges::find(m_node.outs(), portName, &Node_External_Exposed::Port::name) == m_node.outs().end(), "An output port with that name already exists!");
 
@@ -296,7 +309,10 @@ void ExternalModule::inoutPin(std::string_view portName, std::string_view pinNam
 	Bit out = 'x';
 	out.exportOverride(Bit(SignalReadPort(multiDriver)));
 	multiDriver->rewireInput(1, Bit(bidirPin(out).setName(std::string(pinName))).readPort());
+
+	return *this;
 }
+
 
 std::unique_ptr<gtry::hlim::BaseNode> gtry::ExternalModule::Node_External_Exposed::cloneUnconnected() const
 {
@@ -304,7 +320,6 @@ std::unique_ptr<gtry::hlim::BaseNode> gtry::ExternalModule::Node_External_Expose
 	copyBaseToClone(res.get());
 	return res;
 }
-
 
 void gtry::ExternalModule::Node_External_Exposed::copyBaseToClone(gtry::hlim::BaseNode *copy) const
 {

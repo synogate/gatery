@@ -41,13 +41,12 @@ ConditionalScope::ConditionalScope(const Bit &condition, bool override) :
 	m_id(s_nextId++)
 {
 	setCondition(condition.readPort(), override);
-	m_isElseScope = false;
 }
 
-ConditionalScope::ConditionalScope() :
-	m_id(s_nextId++)
+ConditionalScope::ConditionalScope(ElseCase) :
+	m_id(s_nextId++),
+	m_lastConditionOnEntry(m_lastCondition)
 {
-	m_isElseScope = true;
 	hlim::Node_Logic* invNode = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::NOT);
 	invNode->connectInput(0, m_lastCondition);
 
@@ -63,18 +62,42 @@ ConditionalScope::ConditionalScope() :
 	
 }
 
+ConditionalScope::ConditionalScope(ElseCase, const Bit& condition) :
+	m_id(s_nextId++)
+{
+	hlim::Node_Logic* orNode = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::OR);
+	orNode->connectInput(0, m_lastCondition);
+	orNode->connectInput(1, condition.readPort());
+	m_combinedelseChainConditon = { .node = orNode, .port = 0u };
+
+	hlim::Node_Logic* invNode = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::NOT);
+	invNode->connectInput(0, m_lastCondition);
+
+	hlim::Node_Logic* andNode = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::AND);
+	andNode->connectInput(0, condition.readPort());
+	andNode->connectInput(1, { .node = invNode, .port = 0u });
+
+	setCondition({ .node = andNode, .port = 0ull });
+}
+
 ConditionalScope::~ConditionalScope()
 {
-	if (!m_isElseScope) {
-		m_lastCondition = m_condition;
-	} else {
-		hlim::Node_Logic* invNode = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::NOT);
-		invNode->connectInput(0, m_condition);
-		hlim::Node_Logic* andNode = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::OR);
-		andNode->connectInput(0, m_lastCondition);
-		andNode->connectInput(1, {.node=invNode, .port=0u});
+	if (m_combinedelseChainConditon)
+	{
+		m_lastCondition = *m_combinedelseChainConditon;
+	}
+	else if (m_lastConditionOnEntry && m_lastConditionOnEntry != m_lastCondition)
+	{
+		// special case for ELSEIF to catch the condition of the IF scope in the ELSE dtor
+		hlim::Node_Logic* orNode = DesignScope::createNode<hlim::Node_Logic>(hlim::Node_Logic::OR);
+		orNode->connectInput(0, m_lastCondition);
+		orNode->connectInput(1, *m_lastConditionOnEntry);
 
-		m_lastCondition = {.node=andNode, .port=0u};
+		m_lastCondition = {.node=orNode, .port=0u};
+	}
+	else
+	{
+		m_lastCondition = m_condition;
 	}
 	g_lastConditionBit.reset();
 }

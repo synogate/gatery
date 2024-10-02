@@ -15,7 +15,7 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "axi.h"
 
 namespace gtry::scl
@@ -24,40 +24,40 @@ namespace gtry::scl
 	{
 		Axi4 axi;
 
-		(*axi.ar)->id = cfg.idW;
-		(*axi.ar)->addr = cfg.addrW;
-		(*axi.ar)->user = cfg.arUserW;
+		(*axi.r.a)->id = cfg.idW;
+		(*axi.r.a)->addr = cfg.addrW;
+		(*axi.r.a)->user = cfg.arUserW;
 
-		(*axi.aw)->id = cfg.idW;
-		(*axi.aw)->addr = cfg.addrW;
-		(*axi.aw)->user = cfg.awUserW;
+		(*axi.w.a)->id = cfg.idW;
+		(*axi.w.a)->addr = cfg.addrW;
+		(*axi.w.a)->user = cfg.awUserW;
 
-		(*axi.w)->data = cfg.dataW;
-		(*axi.w)->strb = cfg.dataW / 8;
-		(*axi.w)->user = cfg.wUserW;
+		(*axi.w.d)->data = cfg.dataW;
+		(*axi.w.d)->strb = cfg.dataW / 8;
+		(*axi.w.d)->user = cfg.wUserW;
 
-		axi.b->id = cfg.idW;
-		axi.b->user = cfg.bUserW;
+		axi.w.b->id = cfg.idW;
+		axi.w.b->user = cfg.bUserW;
 
-		axi.r->id = cfg.idW;
-		axi.r->data = cfg.dataW;
-		axi.r->user = cfg.rUserW;
+		axi.r.d->id = cfg.idW;
+		axi.r.d->data = cfg.dataW;
+		axi.r.d->user = cfg.rUserW;
 
 		return axi;
 	}
 
 	AxiConfig Axi4::config() const
 	{
-		HCL_DESIGNCHECK_HINT((*ar)->addr.width() == (*aw)->addr.width(), "you have a non-standard axi interface. It can not be reproduced through a config");
+		HCL_DESIGNCHECK_HINT((*r.a)->addr.width() == (*w.a)->addr.width(), "you have a non-standard axi interface. It can not be reproduced through a config");
 		return {
-			.addrW = (*ar)->addr.width(),
-			.dataW = (*w)->data.width(),
-			.idW = (*ar)->id.width(),
-			.arUserW = (*ar)->user.width(),
-			.awUserW = (*aw)->user.width(),
-			.wUserW = (*w)->user.width(),
-			.bUserW = b->user.width(),
-			.rUserW = r->user.width(),
+			.addrW = (*r.a)->addr.width(),
+			.dataW = (*w.d)->data.width(),
+			.idW = (*r.a)->id.width(),
+			.arUserW = (*r.a)->user.width(),
+			.awUserW = (*w.a)->user.width(),
+			.wUserW = (*w.d)->user.width(),
+			.bUserW = w.b->user.width(),
+			.rUserW = r.d->user.width(),
 		};
 	}
 
@@ -88,26 +88,26 @@ namespace gtry::scl
 
 	void axiDisableWrites(Axi4& axi)
 	{
-		valid(*axi.aw) = '0';
-		valid(*axi.w) = '0';
-		ready(axi.b) = '1';
+		valid(*axi.w.a) = '0';
+		valid(*axi.w.d) = '0';
+		ready(axi.w.b) = '1';
 	}
 
 	void axiDisableReads(Axi4& axi)
 	{
-		valid(*axi.ar) = '0';
-		ready(axi.r) = '1';
+		valid(*axi.r.a) = '0';
+		ready(axi.r.d) = '1';
 	}
 
 	scl::Axi4 axiRegDecouple(scl::Axi4&& slave, const RegisterSettings& settings) {
 		scl::Axi4 master = constructFrom(slave);
 
-		*slave.aw <<= scl::strm::regDecouple(*master.aw, settings);
-		*slave.w <<= scl::strm::regDecouple(*master.w, settings);
-		*slave.ar <<= scl::strm::regDecouple(*master.ar, settings);
+		*slave.w.a <<= scl::strm::regDecouple(*master.w.a, settings);
+		*slave.w.d <<= scl::strm::regDecouple(*master.w.d, settings);
+		*slave.r.a <<= scl::strm::regDecouple(*master.r.a, settings);
 
-		master.r <<= scl::strm::regDecouple(slave.r, settings);
-		master.b <<= scl::strm::regDecouple(slave.b, settings);
+		master.r.d <<= scl::strm::regDecouple(slave.r.d, settings);
+		master.w.b <<= scl::strm::regDecouple(slave.w.b, settings);
 
 		return master;
 	}
@@ -118,17 +118,17 @@ namespace gtry::scl
 
 		scl::Axi4 master = scl::Axi4::fromConfig(cfg);
 
-		*slave.aw <<= *master.aw;
-		*slave.w <<= master.w->transform(
+		*slave.w.a <<= *master.w.a;
+		*slave.w.d <<= master.w.d->transform(
 			[&](const scl::AxiWriteData& awd) {
 				return scl::AxiWriteData{
-					.data = awd.data.lower((*slave.w)->data.width()),
-					.strb = awd.strb.lower((*slave.w)->strb.width()),
+					.data = awd.data.lower((*slave.w.d)->data.width()),
+					.strb = awd.strb.lower((*slave.w.d)->strb.width()),
 					.user = awd.user,
 				};
 			});
 
-		master.b <<= slave.b;
+		master.w.b <<= slave.w.b;
 
 		return master;
 	}
@@ -136,40 +136,53 @@ namespace gtry::scl
 	scl::Axi4 constrainAddressSpace(scl::Axi4&& slave, BitWidth addressW, const UInt& addressOffset, size_t channels)
 	{
 		scl::Axi4 master = constructFrom(slave);
-		master.r <<= slave.r;
-		master.b <<= slave.b;
-		*slave.w <<= *master.w;
+		master.r.d <<= slave.r.d;
+		master.w.b <<= slave.w.b;
+		*slave.w.d <<= *master.w.d;
 
 		if (channels & AC_WRITE) {
-			(*master.aw)->addr.resetNode();
-			(*master.aw)->addr = addressW;
-			HCL_DESIGNCHECK_HINT(addressW <= (*slave.aw)->addr.width(), "you are trying to extend the address space instead of constraining it");
-			*slave.aw <<= master.aw->transform(
+			(*master.w.a)->addr.resetNode();
+			(*master.w.a)->addr = addressW;
+			HCL_DESIGNCHECK_HINT(addressW <= (*slave.w.a)->addr.width(), "you are trying to extend the address space instead of constraining it");
+			*slave.w.a <<= master.w.a->transform(
 				[&](const scl::AxiAddress& aa) {
 					scl::AxiAddress ret = aa;
 					ret.addr.resetNode();
-					ret.addr = zext(cat(addressOffset, aa.addr), (*slave.aw)->addr.width());
+					ret.addr = zext(cat(addressOffset, aa.addr), (*slave.w.a)->addr.width());
 					return ret;
 				});
 		}
 		else
-			*slave.aw <<= *master.aw;
+			*slave.w.a <<= *master.w.a;
 
 		if (channels & AC_READ) {
-			(*master.ar)->addr.resetNode();
-			(*master.ar)->addr = addressW;
-			HCL_DESIGNCHECK_HINT(addressW <= (*slave.ar)->addr.width(), "you are trying to extend the address space instead of constraining it");
-			*slave.ar <<= master.ar->transform(
+			(*master.r.a)->addr.resetNode();
+			(*master.r.a)->addr = addressW;
+			HCL_DESIGNCHECK_HINT(addressW <= (*slave.r.a)->addr.width(), "you are trying to extend the address space instead of constraining it");
+			*slave.r.a <<= master.r.a->transform(
 				[&](const scl::AxiAddress& aa) {
 					scl::AxiAddress ret = aa;
 					ret.addr.resetNode();
-					ret.addr = zext(cat(addressOffset, aa.addr), (*slave.ar)->addr.width());
+					ret.addr = zext(cat(addressOffset, aa.addr), (*slave.r.a)->addr.width());
 					return ret;
 				});
 		}
 		else
-			*slave.ar <<= *master.ar;
+			*slave.r.a <<= *master.r.a;
 
 		return master;
 	}
 }
+
+GTRY_INSTANTIATE_TEMPLATE_COMPOUND(gtry::scl::AxiAddress)
+GTRY_INSTANTIATE_TEMPLATE_COMPOUND(gtry::scl::AxiWriteResponse)
+GTRY_INSTANTIATE_TEMPLATE_COMPOUND(gtry::scl::AxiWriteData)
+GTRY_INSTANTIATE_TEMPLATE_COMPOUND(gtry::scl::AxiReadData)
+GTRY_INSTANTIATE_TEMPLATE_COMPOUND_MINIMAL(gtry::scl::Axi4)
+
+
+GTRY_INSTANTIATE_TEMPLATE_STREAM(gtry::scl::strm::RvStream<gtry::scl::AxiAddress>)
+GTRY_INSTANTIATE_TEMPLATE_STREAM(gtry::scl::strm::RvPacketStream<gtry::scl::AxiAddress>)
+GTRY_INSTANTIATE_TEMPLATE_STREAM(gtry::scl::strm::RvPacketStream<gtry::scl::AxiWriteData>)
+GTRY_INSTANTIATE_TEMPLATE_STREAM(gtry::scl::strm::RvStream<gtry::scl::AxiWriteResponse>)
+GTRY_INSTANTIATE_TEMPLATE_STREAM(gtry::scl::strm::RvPacketStream<gtry::scl::AxiReadData>)

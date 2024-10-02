@@ -15,7 +15,7 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "TileLinkValidator.h"
 #include <gatery/simulation/Simulator.h>
 
@@ -48,7 +48,7 @@ namespace gtry::scl
 	bool validValue(const T& stream) { return (bool)simu(valid(stream)); }
 
 	template<StreamSignal T>
-	bool transferValue(const T& stream) { return readyValue(stream) & validValue(stream); }
+	bool transferValue(const T& stream) { return readyValue(stream) && validValue(stream); }
 
 	template<StreamSignal T>
 	SimProcess validateStreamValid(T &stream, const Clock &clk)
@@ -436,7 +436,7 @@ namespace gtry::scl
 			const size_t size = simu(d->size);
 			const size_t source = simu(d->source);
 			const size_t sink = simu(d->sink);
-			const bool error = (bool)simu(d->error);
+			const char error = simu(d->error);
 
 			for (size_t i = 0; i < burstBeats; ++i)
 			{

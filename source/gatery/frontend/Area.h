@@ -21,6 +21,10 @@
 namespace gtry
 {
 
+	namespace hlim {
+		struct GroupAttributes;
+	}
+
 /**
  * @addtogroup gtry_scopes
  * @{
@@ -74,7 +78,7 @@ namespace gtry
 		Area(std::string_view name, bool instantEnter = false);
 		
 		/// Access to properties (e.g. from config files) that were places for this Area (in the total area hierarchy).
-		auto operator [] (std::string_view key) { return m_nodeGroup->properties()[key]; }
+		utils::PropertyTree operator [] (std::string_view key);
 
 		/// Creates a GroupScope which automatically handles entering/leaving this Area
 		GroupScope enter() const;
@@ -98,26 +102,32 @@ namespace gtry
 		 */
 		template<typename MetaType, typename... Args>
 		MetaType *createMetaInfo(Args&&... args) {
-			m_nodeGroup->createMetaInfo<MetaType>(std::forward<Args>(args)...);
-			return (MetaType*)m_nodeGroup->getMetaInfo();
+			metaInfo(std::make_unique<MetaType>(std::forward<Args>(args)...));
+			return (MetaType*)metaInfo();
 		}
+
+		void metaInfo(std::unique_ptr<hlim::NodeGroupMetaInfo> metaInfo);
+		hlim::NodeGroupMetaInfo* metaInfo();
 
 		/**
 		 * @brief Whether or not to make this area a partition in a separate file with stable inputs (@see gtry::vhdl::VHDLExport::outputMode).
 		 * @details Setting this to true implies that the instantiation is to use component instantiations
 		 */
-		void setPartition(bool value) { m_nodeGroup->setPartition(value); if (value) useComponentInstantiation(true);  }
-		bool isPartition() const { return m_nodeGroup->isPartition(); }
+		void setPartition(bool value);
+		bool isPartition() const;
 
 		/**
 		 * @brief Whether to use entity instantiations or component instantiations on this area.
 		 */
-		void useComponentInstantiation(bool b) { m_nodeGroup->useComponentInstantiation(b); }
-		bool useComponentInstantiation() const { return m_nodeGroup->useComponentInstantiation(); }
+		void useComponentInstantiation(bool b);
+		bool useComponentInstantiation() const;
 
-		inline hlim::GroupAttributes &groupAttributes() { return m_nodeGroup->groupAttributes(); }
-		inline const hlim::GroupAttributes &groupAttributes() const { return m_nodeGroup->groupAttributes(); }
+		hlim::GroupAttributes &groupAttributes();
+		const hlim::GroupAttributes &groupAttributes() const;
 
+		void instanceName(std::string name);
+		const std::string &instanceName() const;
+		std::string instancePath() const;
 	private:
 		hlim::NodeGroup* m_nodeGroup;
 

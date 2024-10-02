@@ -15,7 +15,7 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 
 #include "MLAB.h"
 #include "IntelDevice.h"
@@ -60,25 +60,25 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 	auto *memGrp = dynamic_cast<hlim::MemoryGroup*>(nodeGroup->getMetaInfo());
 	if (memGrp == nullptr) return false;
 	if (memGrp->getMemory()->type() == hlim::Node_Memory::MemType::EXTERNAL) {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because it is external memory.");
 		return false;
 	}
 	if (memGrp->getReadPorts().size() == 0) {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because it has no read ports.");
 		return false;
 	}
 	if (memGrp->getReadPorts().size() > 1) {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because it has more than one read port and so far only one read port is supported.");
 		return false;
 	}
 	const auto &rp = memGrp->getReadPorts().front();
 	if (memGrp->getWritePorts().size() > 1) {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because it has more than one write port and so far only one write port is supported.");
 
@@ -107,7 +107,7 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 	bool supportsWriteFirst = memGrp->getMemory()->getRequiredReadLatency() >= 1;
 
 	if (memGrp->getWritePorts().size() != 0 && !supportsWriteFirst)  {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because automatic building of read during write bypasses for MLABs is not yet implemented.");
 
@@ -132,19 +132,19 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 		if (reg->hasResetValue()) {
 			// actually for mlabs, the output register is cleared to zero. If we check for zero reset values, we can relax this.
 
-			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 					<< " because one of its output registers has a reset value.");
 			return false;
 		}
 		if (reg->hasEnable()) {
-			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 					<< " because one of its output registers has an enable.");
 			return false;
 		}
 		if (readClock != reg->getClocks()[0]) {
-			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 					<< " because its output registers have differing clocks.");
 			return false;
@@ -153,7 +153,7 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 
 	if (readClock != nullptr) {
 		if (readClock->getTriggerEvent() != hlim::Clock::TriggerEvent::RISING) {
-			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 					<< " because its read clock is not triggering on rising clock edges.");
 			return false;
@@ -162,7 +162,7 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 
 	if (writeClock != nullptr) {
 		if (writeClock->getTriggerEvent() != hlim::Clock::TriggerEvent::RISING) {
-			dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 					<< " because its write clock is not triggering on rising clock edges.");
 			return false;
@@ -170,7 +170,7 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 	}
 
 	if (writeClock != readClock) {
-		dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because differing read and write clocks are not yet supported.");
 		return false;
@@ -181,6 +181,8 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 	memGrp->buildReset(circuit);
 	memGrp->bypassSignalNodes();
 	memGrp->verify();
+//DesignScope::get()->visualize(std::string("intelLutram")+std::to_string(__LINE__));
+
 
 	auto *altdpram = DesignScope::createNode<ALTDPRAM>(width, depth);
 	if (memGrp->getMemory()->requiresPowerOnInitialization())
@@ -200,21 +202,66 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 	}
 
 	HCL_ASSERT(!writeFirst);
-	altdpram->setupMixedPortRdw(ALTDPRAM::RDWBehavior::NEW_DATA_MASKED_UNDEFINED);
+
+	bool retimeReadPortByOne = false;
+
+	if (memGrp->getWritePorts().empty()) {
+		altdpram->setupMixedPortRdw(ALTDPRAM::RDWBehavior::DONT_CARE);
+	} else {
+		dbg::LogMessage msg;
+
+		msg << rp.node->getGroup() << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+			<< "The read port " << rp.node << " of " << memGrp->getMemory();
+
+		// If the addr comes out of a register, we want to keep potential output registers on the output side, but probably will be fast enough to use the new-data mode if needed.
+		// If not, then a no-conflicts memory may want to forgo the new-data mode by "retiming" the output register to become an addr-input register.
+		// This way, both read and write are again in the same cycle and the read/write order defined in the memory matches the read-during-write mode of the mlab.
+		bool rdAddrDrivenByReg = dynamic_cast<hlim::Node_Register*>(rp.node->getNonSignalDriver((size_t)hlim::Node_MemPort::Inputs::address).node) != nullptr;
+		if (!rdAddrDrivenByReg && !rp.dedicatedReadLatencyRegisters.empty()) {
+			retimeReadPortByOne = true;
+
+			msg
+				<< " has its address not driven by a register but has an output register. Transfering the output register to an (address-)input register allows"
+				<< " the read to happen in the same cycle as the corresponding described write.";
+			
+			if (readFirst) {
+				altdpram->setupMixedPortRdw(ALTDPRAM::RDWBehavior::OLD_DATA);
+				msg << "Since the described memory reads first, choosing a read-during-write mode of OLD_DATA.";
+			} else {
+				altdpram->setupMixedPortRdw(ALTDPRAM::RDWBehavior::DONT_CARE);
+				msg << "Since the described memory read is independent of the write, choosing a read-during-write mode of DONT_CARE.";
+			}
+
+		} else {
+			// Our read happens first wrt. the current write (or it doesn't care), but is supposed to see the result of the previous write.
+			// Due to the input register of the mlab write, the previous write is happening in our read cycle, so by default we need to operate in new-data mode.
+			altdpram->setupMixedPortRdw(ALTDPRAM::RDWBehavior::NEW_DATA_MASKED_UNDEFINED);
+
+			msg << " has to use the NEW_DATA mode because ";
+
+			if (rp.dedicatedReadLatencyRegisters.empty())
+				msg << " it has no output register to compensate and it's read, being an MLAB, happens in the cycle before the described write, thus requiring the read the newly written data of the previous cycle.";
+			else 
+				msg << " its address is directly fed by a register, which means the output register should be kept on the output side and the NEW_DATA penalty is probably acceptable.";
+		}
+		dbg::log(msg);
 
 
-	if (memGrp->getWritePorts().size() > 0) {
 		auto &wp = memGrp->getWritePorts().front();
 		ALTDPRAM::PortSetup portSetup;
 		portSetup.inputRegs = true;
 		altdpram->setupWritePort(portSetup);
 
 		UInt wrData = (UInt) getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
-		UInt addr = (UInt) getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+		UInt wrAddr = (UInt) getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
 		Bit wrEn = getBitBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrEnable}, '1');
 
+		HCL_NAMED(wrData);
+		HCL_NAMED(wrAddr);
+		HCL_NAMED(wrEn);
+
 		altdpram->setInput(ALTDPRAM::Inputs::IN_DATA, (BVec) wrData);
-		altdpram->setInput(ALTDPRAM::Inputs::IN_WRADDRESS, (BVec) addr(0, addrBits));
+		altdpram->setInput(ALTDPRAM::Inputs::IN_WRADDRESS, (BVec) wrAddr(0, addrBits));
 		altdpram->setInput(ALTDPRAM::Inputs::IN_WREN, wrEn);
 
 		altdpram->attachClock(writeClock, (size_t)ALTDPRAM::Clocks::INCLOCK);
@@ -226,16 +273,24 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 
 	{
 		ALTDPRAM::PortSetup portSetup;
-		portSetup.outputRegs = rp.dedicatedReadLatencyRegisters.size() > 0;
+		portSetup.outputRegs = (rp.dedicatedReadLatencyRegisters.size() > 0) && !retimeReadPortByOne;
 		size_t numExternalOutputRegisters = rp.dedicatedReadLatencyRegisters.size()-1;
 		altdpram->setupReadPort(portSetup);
 
-		UInt addr = (UInt) getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
+		UInt rdAddr = (UInt) getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
 		BVec data = hookBVecAfter(rp.dataOutput);
 
-		altdpram->setInput(ALTDPRAM::Inputs::IN_RDADDRESS, (BVec) addr(0, addrBits));
+		HCL_NAMED(rdAddr);
+
+		if (retimeReadPortByOne) {
+			Clock clock(readClock);
+			rdAddr = reg(rdAddr, RegisterSettings{ .clock = clock });
+		}
+
+		altdpram->setInput(ALTDPRAM::Inputs::IN_RDADDRESS, (BVec) rdAddr(0, addrBits));
 
 		BVec readData = altdpram->getOutputBVec(ALTDPRAM::Outputs::OUT_Q);
+		HCL_NAMED(readData);
 		{
 			Clock clock(readClock);
 			ClockScope cscope(clock);

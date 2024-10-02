@@ -15,7 +15,7 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 
 #include "XilinxLutram.h"
 #include "XilinxDevice.h"
@@ -77,6 +77,16 @@ bool XilinxLutram::apply(hlim::NodeGroup *nodeGroup) const
 	auto &circuit = DesignScope::get()->getCircuit();
 	memGrp->convertToReadBeforeWrite(circuit);
 	memGrp->attemptRegisterRetiming(circuit);
+
+	const auto &rp = memGrp->getReadPorts().front();
+	if (rp.dedicatedReadLatencyRegisters.front()->hasEnable()) {
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because read enables are not implemented yet.");
+		return false;
+	}
+
+
 	memGrp->resolveWriteOrder(circuit);
 	memGrp->updateNoConflictsAttrib();
 	memGrp->buildReset(circuit);
@@ -211,7 +221,7 @@ void XilinxLutram::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
 		Clock clock(reg->getClocks()[0]);
 		readData = clock(readData);
 		if (i > 0)
-			attribute(readData, {.allowFusing = false});
+			readData = attribute(readData, {.allowFusing = false});
 	}		
 
 	BVec rdDataHook = hookBVecAfter(rp.dataOutput);

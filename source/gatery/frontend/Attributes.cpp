@@ -24,13 +24,17 @@
 #include "Clock.h"
 
 #include "DesignScope.h"
+#include "../hlim/supportNodes/Node_Attributes.h"
 #include "../hlim/supportNodes/Node_PathAttributes.h"
 
 namespace gtry {
 
-void attribute(ElementarySignal &signal, SignalAttributes attributes)
+SignalReadPort internal::attribute(const ElementarySignal &signal, SignalAttributes attributes)
 {
-	signal.attribute(std::move(attributes));
+	auto* node = DesignScope::createNode<hlim::Node_Attributes>();
+	node->getAttribs() = std::move(attributes);
+	node->connectInput(signal.readPort());
+	return SignalReadPort{ node };
 }
 
 void pathAttribute(ElementarySignal &start, ElementarySignal &end, PathAttributes attributes)

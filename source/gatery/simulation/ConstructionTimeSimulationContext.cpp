@@ -33,9 +33,12 @@
 
 namespace gtry::sim {
 
-void ConstructionTimeSimulationContext::overrideSignal(const SigHandle &handle, const DefaultBitVectorState &state)
+void ConstructionTimeSimulationContext::overrideSignal(const SigHandle &handle, const ExtendedBitVectorState &state)
 {
-	m_overrides[handle.getOutput()] = state;
+	auto converted = sim::tryConvertToDefault(state);
+	HCL_DESIGNCHECK_HINT(converted, "dont_care or high_impedance not supported in overrides for construction time simulation");
+
+	m_overrides[handle.getOutput()] = *converted;
 }
 
 void ConstructionTimeSimulationContext::overrideRegister(const SigHandle &handle, const DefaultBitVectorState &state)
@@ -88,7 +91,7 @@ void ConstructionTimeSimulationContext::getSignal(const SigHandle &handle, Defau
 		if (auto *reg = dynamic_cast<hlim::Node_Register*>(nodePort.node)) {
 			auto type = hlim::getOutputConnectionType(nodePort);
 
-			auto reset = reg->getNonSignalDriver(hlim::Node_Register::Input::RESET_VALUE);
+			auto reset = reg->getNonForwardingDriver(hlim::Node_Register::Input::RESET_VALUE);
 			if (reset.node != nullptr) {
 				outputPorts.insert(reset);
 				openList.push_back(reset);

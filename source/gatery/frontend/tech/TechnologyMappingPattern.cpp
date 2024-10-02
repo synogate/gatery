@@ -18,9 +18,10 @@
 
 #include "gatery/pch.h"
 
-#include "../Scope.h"
-
 #include "TechnologyMappingPattern.h"
+
+#include "../Scope.h"
+#include "../../hlim/NodeGroup.h"
 
 namespace gtry {
 

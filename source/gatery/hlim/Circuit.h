@@ -19,8 +19,8 @@
 
 #include <gatery/utils/StableContainers.h>
 
-#include "../simulation/simProc/SimulationProcess.h"
-#include "../simulation/SimulationVisualization.h"
+//#include "../simulation/simProc/SimulationProcess.h"
+//#include "../simulation/SimulationVisualization.h"
 
 #include "../utils/CppTools.h"
 
@@ -28,6 +28,13 @@
 #include <memory>
 #include <map>
 #include <functional>
+
+namespace gtry::sim {
+	struct SimulationVisualization;
+
+	template<typename ReturnValue>
+	class SimulationFunction;
+}
 
 namespace gtry::hlim {
 
@@ -139,10 +146,12 @@ namespace gtry::hlim {
 		inline const std::vector<std::unique_ptr<BaseNode>>& getNodes() const { return m_nodes; }
 		inline const std::vector<std::unique_ptr<Clock>>& getClocks() const { return m_clocks; }
 
+		BaseNode *findFirstNodeByName(std::string_view name);
+
 		void inferSignalNames();
 
 		void insertConstUndefinedNodes();
-		void disconnectZeroBitSignalNodes();
+		void disconnectZeroBitConnections();
 		void disconnectZeroBitOutputPins();
 		void optimizeRewireNodes(Subnet& subnet);
 		void cullSequentiallyDuplicatedSignalNodes();
@@ -150,8 +159,10 @@ namespace gtry::hlim {
 		void cullOrphanedSignalNodes();
 		void cullUnusedNodes(Subnet& subnet);
 		void mergeMuxes(Subnet& subnet);
+		void breakMutuallyExclusiveMuxChains(Subnet& subnet);
 		void cullMuxConditionNegations(Subnet& subnet);
 		void removeIrrelevantMuxes(Subnet& subnet);
+		void mergeBinaryMuxChain(Subnet& subnet);
 		void removeIrrelevantComparisons(Subnet& subnet);
 		void mergeRewires(Subnet& subnet);
 		void removeNoOps(Subnet& subnet);
@@ -160,9 +171,12 @@ namespace gtry::hlim {
 		void removeConstSelectMuxes(Subnet& subnet);
 		void moveClockDriversToTop();
 		void ensureNoLiteralComparison();
+		void ensureChildNotReadingTristatePin();
 		void removeDisabledWritePorts(Subnet& subnet);
 
 		void removeFalseLoops();
+
+		void shuffleNodes();
 
 		void ensureEntityPortSignalNodes();
 		void ensureSignalNodePlacement();
@@ -233,3 +247,7 @@ namespace gtry::hlim {
 
 
 }
+
+extern template class std::unique_ptr<gtry::hlim::BaseNode>;
+extern template class std::unique_ptr<gtry::hlim::Clock>;
+extern template class std::unique_ptr<gtry::hlim::SignalGroup>;

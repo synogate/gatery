@@ -11,10 +11,7 @@
 #include <gatery/scl/stream/strm.h>
 #include <gatery/scl/io/SpiMaster.h>
 
-#include <gatery/debug/websocks/WebSocksInterface.h>
 #include <gatery/scl/sim/SimulationSequencer.h>
-
-#include "gatery/debug/reporting/ReportInterface.h"
 
 using namespace boost::unit_test;
 using namespace gtry;

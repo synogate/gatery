@@ -3,7 +3,7 @@
 project "gatery-frontend-test"
     kind "ConsoleApp"
     files { "frontend/**.cpp", "frontend/**.h" }
-    links "gatery"
+    links { "gatery_core", "gatery_scl" }
     includedirs { "%{prj.location}/../source", "%{prj.location}/" }
 
     pchheader "frontend/pch.h"
@@ -18,7 +18,7 @@ project "gatery-frontend-test"
 project "gatery-scl-test"
     kind "ConsoleApp"
     files { "scl/**.cpp", "scl/**.h" }
-    links "gatery"
+    links { "gatery_core", "gatery_scl" }
     includedirs { "%{prj.location}/../source", "%{prj.location}/" }
 
     pchheader "scl/pch.h"
@@ -33,7 +33,7 @@ project "gatery-scl-test"
 project "gatery-tutorial-test"
     kind "ConsoleApp"
     files { "tutorial/**.cpp", "tutorial/**.h" }
-    links "gatery"
+    links { "gatery_core", "gatery_scl" }
     includedirs { "%{prj.location}/../source", "%{prj.location}/" }
 
     pchheader "tutorial/pch.h"

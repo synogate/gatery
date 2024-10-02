@@ -17,7 +17,14 @@
 */
 #pragma once
 
-#include <boost/rational.hpp>
+#ifdef _MSC_VER
+# pragma warning(push)
+# pragma warning(disable: 4146)
+# include <boost/rational.hpp>
+# pragma warning(pop)
+#else
+# include <boost/rational.hpp>
+#endif
 
 namespace gtry::hlim {
 	using ClockRational = boost::rational<std::uint64_t>;
@@ -40,6 +47,7 @@ namespace gtry::hlim {
 	inline size_t floor(const ClockRational &v) { return v.numerator() / v.denominator(); }
 	inline size_t ceil(const ClockRational &v) { return (v.numerator() + v.denominator()-1) / v.denominator(); }
 
+	inline double toDouble(const ClockRational &v) { return (double) v.numerator() / v.denominator(); }
 	inline double toNanoseconds(const ClockRational &v) { return v.numerator() * 1e9 / v.denominator(); }
 
 	inline ClockRational operator*(const ClockRational &lhs, int rhs) {

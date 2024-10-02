@@ -281,8 +281,6 @@ namespace gtry {
 
 	void Bit::assign(SignalReadPort in, bool ignoreConditions)
 	{
-		hlim::ConnectionType type = m_node->getOutputConnectionType(0);
-
 		if (m_slice)
 			in = m_slice->assign(rawDriver(), in);
 
@@ -360,6 +358,20 @@ namespace gtry {
 	void Bit::fromBVec(const BVec &bvec)
 	{ 
 		(*this) = bvec.lsb(); 
+	}
+
+	void Bit::resetNode()
+	{
+		HCL_DESIGNCHECK_HINT(!m_slice, "Bit::resetNode is not allowed for alias Bit's.");
+
+		m_node = nullptr;
+		m_slice.reset();
+		m_resetValue.reset();
+
+		if (auto* scope = ConditionalScope::get())
+			m_initialScopeId = scope->getId();	
+
+		createNode();		
 	}
 
 }

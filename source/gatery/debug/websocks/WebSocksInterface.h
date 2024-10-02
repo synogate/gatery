@@ -34,18 +34,13 @@ namespace gtry::hlim {
 	class Circuit;
 }
 
-namespace gtry::dbg {
 
-class JsonSerializer
-{
-	public:
-		std::string serializeAllLogMessages(const std::span<std::string> &logMessages);
-		std::string serializeLogMessage(const LogMessage &logMessage);
-		std::string serializeAllGroups(const hlim::Circuit &circuit);
-		std::string serializeAllNodes(const hlim::Circuit &circuit);
-	protected:
-		void serializeStackTrace(std::ostream &json, const utils::StackTrace &trace, bool resolved);
-};
+/**
+ * @addtogroup gtry_frontend_logging
+ * @{
+ */
+
+namespace gtry::dbg {
 
 class WebSocksInterface : public DebugInterface
 {
@@ -53,6 +48,8 @@ class WebSocksInterface : public DebugInterface
 		virtual ~WebSocksInterface();
 
 		static void create(unsigned port = 1337);
+
+		virtual std::string howToReachLog() override;
 
 		virtual void awaitDebugger() override;
 		virtual void pushGraph() override;
@@ -119,3 +116,5 @@ class WebSocksInterface : public DebugInterface
 };
 
 }
+
+/**@}*/

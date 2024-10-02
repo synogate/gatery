@@ -72,6 +72,17 @@ BOOST_FIXTURE_TEST_CASE(scl_ddr_for_clock, TestWithDefaultDevice<Test_ODDR_ForCl
 
 
 
+BOOST_FIXTURE_TEST_CASE(histogram_noAddress, TestWithDefaultDevice<Test_Histogram>)
+{
+	using namespace gtry;
+	numBuckets = 1;
+	bucketWidth = 8_b;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+
+
 
 BOOST_FIXTURE_TEST_CASE(lutram_1, TestWithDefaultDevice<Test_Histogram>)
 {
@@ -162,5 +173,17 @@ BOOST_FIXTURE_TEST_CASE(external_high_latency, TestWithDefaultDevice<Test_Histog
 }
 
 
+BOOST_FIXTURE_TEST_CASE(readEnable, TestWithDefaultDevice<Test_ReadEnable>)
+{
+	using namespace gtry;
+	execute();
+}
+
+BOOST_FIXTURE_TEST_CASE(readEnable_bram_2Cycle, TestWithDefaultDevice<Test_ReadEnable>)
+{
+	using namespace gtry;
+	twoCycleLatencyBRam = true;
+	execute();
+}
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -16,7 +16,7 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 
 #include "IntelQuartus.h"
 #include "common.h"
@@ -123,7 +123,13 @@ void IntelQuartus::resolveAttributes(const hlim::SignalAttributes &attribs, hlim
 		resolvedAttribs.insert({"maxfan", {"integer", std::to_string(*attribs.maxFanout)}});
 
 	if (attribs.allowFusing && !*attribs.allowFusing)
-		resolvedAttribs.insert({"adv_netlist_opt_allowed", {"boolean", "false"}});
+		resolvedAttribs.insert({"adv_netlist_opt_allowed", {"boolean", "false"}}); // todo: this is not a signal attribute in quartus
+
+	if (attribs.optimizationBarrier)
+		resolvedAttribs.insert({ "keep", {"boolean", *attribs.optimizationBarrier ? "true" : "false"}});
+
+	if (attribs.hardwareDebugSignal)
+		resolvedAttribs.insert({ "preserve", {"boolean", *attribs.hardwareDebugSignal ? "true" : "false"}});
 
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }
@@ -295,11 +301,11 @@ void IntelQuartus::writeConstraintFile(vhdl::VHDLExport &vhdlExport, const hlim:
 				delaySettings << "# " + direction << " pin " << vhdlPinName;
 				if (pinParam.delaySpecifiedElsewhere) {
 					delaySettings << " has its delay defined elsewhere!\n";
-					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_DESIGN << vhdlPinName << " has its delay defined elsewhere!");
+					dbg::log(dbg::LogMessage(portNode->getGroup()) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_DESIGN << vhdlPinName << " has its delay defined elsewhere!");
 				}
 				else {
 					delaySettings << " has no delay setting!\n";
-					dbg::log(dbg::LogMessage() << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_DESIGN << vhdlPinName << " has no delay setting!");
+					dbg::log(dbg::LogMessage(portNode->getGroup()) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_DESIGN << vhdlPinName << " has no delay setting!");
 				}
 			}
 		}
@@ -384,6 +390,8 @@ set_global_assignment -name VHDL_INPUT_VERSION VHDL_2008
 set_instance_assignment -name VIRTUAL_PIN ON -to *
 set_global_assignment -name ALLOW_REGISTER_RETIMING OFF
 set_global_assignment -name NUM_PARALLEL_PROCESSORS ALL
+set_global_assignment -name ALLOW_SHIFT_REGISTER_MERGING_ACROSS_HIERARCHIES ALWAYS
+set_global_assignment -name DISABLE_REGISTER_MERGING_ACROSS_HIERARCHIES OFF
 )";
 
 		if (auto *fpga = DesignScope::get()->getTargetTechnology<scl::arch::FPGADevice>()) {
@@ -512,7 +520,7 @@ set_global_assignment -name NUM_PARALLEL_PROCESSORS ALL
 									d.node->rewireInput(d.port, driver);
 							}
 
-							dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+							dbg::log(dbg::LogMessage{centralEntity} << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
 									<< "Applying workaround for intel quartus entity in out port signal incompatibilities to " << node.get() << " port " << outIdx << " by inserting " << signalNode << " in " << centralEntity);
 						}
 						

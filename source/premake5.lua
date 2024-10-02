@@ -1,3 +1,91 @@
+function Gtry_getFileSize(name)
+    local f = assert(io.open(name, "rb"))
+    return f:seek("end")
+end
+
+function Gtry_ReadFileAsArray(name, out_file)
+    local first_line = true
+    local f = assert(io.open(name, "rb"))
+    while true do
+        local bytes = f:read(24)
+        if not bytes then 
+            break 
+        end
+
+        if first_line then
+            first_line = false
+        else
+            out_file:write(',')
+        end
+        out_file:write("\n\t")
+        for i = 1, #bytes do
+            if i ~= 1 then
+                out_file:write(',')
+            end
+            out_file:write(string.format("0x%02X", bytes:byte(i)))
+        end
+        --out_file:write("")
+    end
+end
+
+function Gtry_EmbedResources(name, namespace, prefix_path, pattern)
+
+    local header = io.open(name .. ".h", "wb")
+    local source = io.open(name .. ".cpp", "wb")
+
+    header:write([[
+#pragma once
+// Generated file, do not modify
+#include <span>
+#include <string_view>
+#include <array>
+#include <cstddef>
+
+namespace ]])
+    header:write(namespace .. "{\n")
+    source:write("#include \"" .. path.getbasename(name) .. ".h\"\n")
+    source:write("namespace " .. namespace .. " {\n\n")
+
+    local manifest_content = ""
+
+    local resource_files = os.matchfiles(prefix_path .. pattern)
+    for i = 1, #resource_files do
+        local file_name = resource_files[i]:sub(#prefix_path + 1)
+        local symbol_name = file_name:gsub('[%p%c%s]', '_')
+
+        io.write("Embed into " .. name .. ": " .. file_name .. "\n")
+
+        local content_size = Gtry_getFileSize(resource_files[i])
+
+        header:write("extern const std::uint8_t " .. symbol_name .. "_data[" .. content_size .. "];\n")
+        header:write("static constexpr size_t " .. symbol_name .. "_size = " .. content_size .. ";\n")
+
+        source:write("const std::uint8_t " .. symbol_name .. "_data[" .. content_size .. "] = {\n")
+        Gtry_ReadFileAsArray(resource_files[i], source)
+        source:write("};\n")
+
+        manifest_content = manifest_content .. "    ManifestEntry{ .filename = \"" .. file_name .. "\"sv, .data = std::span<const std::byte>((const std::byte*) " .. symbol_name .. "_data, " .. symbol_name .. "_size) },\n"
+    end
+
+    source:write("using namespace std::literals;\n")
+    source:write("const std::array<ManifestEntry, " .. #resource_files .. "> manifest = {\n" .. manifest_content .. "};\n")
+
+
+    header:write("\n\n")
+    header:write("struct ManifestEntry { std::string_view filename; std::span<const std::byte> data; };\n\n")
+    header:write("extern const std::array<ManifestEntry, " .. #resource_files .. "> manifest;\n\n")
+
+
+    header:write("}\n")
+    source:write("}\n")
+
+
+    files(name .. ".h")
+    files(name .. ".cpp")
+end
+
+
+
 
 function GateryWorkspaceDefaults()
 
@@ -56,23 +144,52 @@ function GateryProjectDefaults()
 	filter {}
 end
 
-project "gatery"
+project "gatery_core"
     kind "StaticLib"
 
     files { 
         "gatery/export/**.cpp", "gatery/export/**.c", "gatery/export/**.h",
         "gatery/frontend/**.cpp", "gatery/frontend/**.c", "gatery/frontend/**.h",
         "gatery/hlim/**.cpp", "gatery/hlim/**.c", "gatery/hlim/**.h",
-        "gatery/scl/**.cpp", "gatery/scl/**.c", "gatery/scl/**.h",
         "gatery/simulation/**.cpp", "gatery/simulation/**.c", "gatery/simulation/**.h",
         "gatery/utils/**.cpp", "gatery/utils/**.c", "gatery/utils/**.h",
         "gatery/debug/**.cpp", "gatery/debug/**.c", "gatery/debug/**.h",
         "gatery/*"
     }
 
+    removefiles {
+        "gatery/scl/**.cpp", "gatery/scl/**.c", "gatery/scl/**.h",
+        "gatery/scl_pch.cpp", "gatery/scl_pch.h"
+    }
 
     pchsource "gatery/pch.cpp"
     pchheader "gatery/pch.h"
+
+    includedirs "%{prj.location}/"
+    GateryProjectDefaults()
+
+    Gtry_EmbedResources("gen/res/gtry_resources", "gtry::res", "../", "data/**")
+    includedirs "gen/"
+
+    filter "system:windows"
+        flags { "FatalCompileWarnings" }
+    
+    filter "files:gen/**.cpp"
+        flags {"NoPCH"}
+
+    filter "files:**.c"
+        flags {"NoPCH"}
+
+project "gatery_scl"
+    kind "StaticLib"
+
+    files { 
+        "gatery/scl/**.cpp", "gatery/scl/**.c", "gatery/scl/**.h",
+        "gatery/scl_pch.cpp", "gatery/scl_pch.h"
+    }
+
+    pchsource "gatery/scl_pch.cpp"
+    pchheader "gatery/scl_pch.h"
 
     includedirs "%{prj.location}/"
     GateryProjectDefaults()

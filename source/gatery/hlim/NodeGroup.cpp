@@ -18,6 +18,7 @@
 #include "gatery/pch.h"
 #include "NodeGroup.h"
 #include "Circuit.h"
+#include "Node.h"
 
 #include "coreNodes/Node_Signal.h"
 
@@ -29,11 +30,21 @@
 #include <map>
 #include <vector>
 
+namespace boost::container {
+	template class flat_map<std::string, size_t>;
+}
+namespace std {
+	template class vector<gtry::hlim::BaseNode*>;
+	template class unique_ptr<gtry::hlim::NodeGroup>;
+	//template class vector<std::unique_ptr<gtry::hlim::NodeGroup>>;
+	template class unique_ptr<gtry::hlim::NodeGroupMetaInfo>;
+}
+
 namespace gtry::hlim 
 {
 	NodeGroupConfig NodeGroup::ms_config;
 
-	NodeGroup::NodeGroup(Circuit &circuit, GroupType groupType, std::string_view name, NodeGroup* parent) : m_circuit(circuit), m_groupType(groupType), m_parent(parent)
+	NodeGroup::NodeGroup(Circuit &circuit, NodeGroupType groupType, std::string_view name, NodeGroup* parent) : m_circuit(circuit), m_groupType(groupType), m_parent(parent)
 	{
 		if (m_parent)
 		{
@@ -88,7 +99,7 @@ namespace gtry::hlim
 	}
 
 
-	NodeGroup* NodeGroup::addChildNodeGroup(GroupType groupType, std::string_view name)
+	NodeGroup* NodeGroup::addChildNodeGroup(NodeGroupType groupType, std::string_view name)
 	{
 		auto& child = *m_children.emplace_back(std::make_unique<NodeGroup>(m_circuit, groupType, name, this));
 
@@ -151,6 +162,11 @@ namespace gtry::hlim
 		return true;
 	}
 
+	void NodeGroup::setMetaInfo(std::unique_ptr<NodeGroupMetaInfo> metaInfo)
+	{
+		m_metaInfo = std::move(metaInfo);
+	}
+
 	std::string NodeGroup::instancePath() const
 	{
 		std::string ret;
@@ -180,7 +196,20 @@ namespace gtry::hlim
 	{
 		ms_config.load(config);
 	}
-	
+
+	void NodeGroup::configTree(std::string_view instanceFilter, std::string_view attribute, std::string_view value)
+	{
+#ifdef USE_YAMLCPP
+		ms_config.add(attribute, instanceFilter, YAML::Load(std::string{ value }));
+		ms_config.finalize();
+#endif
+	}
+
+	void NodeGroup::configTreeReset()
+	{
+		ms_config.reset();
+	}
+
 	void NodeGroupConfig::load(utils::ConfigTree config)
 	{
 #ifdef USE_YAMLCPP
@@ -240,6 +269,12 @@ namespace gtry::hlim
 			});
 		}
 #endif
+	}
+
+	void NodeGroupConfig::reset()
+	{
+		m_config.clear();
+		m_usedConfig.clear();
 	}
 
 	void NodeGroupConfig::finalize()

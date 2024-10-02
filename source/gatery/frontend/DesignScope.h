@@ -18,7 +18,6 @@
 #pragma once
 
 #include "Comments.h"
-#include <gatery/hlim/NodeGroup.h>
 #include <gatery/hlim/Circuit.h>
 #include <gatery/utils/Preprocessor.h>
 #include <gatery/simulation/ConstructionTimeSimulationContext.h>

@@ -54,4 +54,8 @@ namespace gtry::scl
 		void update(UInt data);
 		UInt checksum() const;
 	};
+
+	uint8_t simu_crc5_usb(uint16_t data, size_t bits);
+	bool simu_crc5_usb_verify(uint16_t data);
+	uint16_t simu_crc5_usb_generate(uint16_t data);
 }

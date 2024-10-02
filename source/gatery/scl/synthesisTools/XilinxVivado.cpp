@@ -17,7 +17,7 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 
 #include "XilinxVivado.h"
 #include "common.h"
@@ -111,6 +111,12 @@ void XilinxVivado::resolveAttributes(const hlim::SignalAttributes &attribs, hlim
 		resolvedAttribs.insert({"SHREG_EXTRACT", {"string", "\"no\""}});
 		resolvedAttribs.insert({"DONT_TOUCH", {"string", "\"true\""}});
 	}
+
+	if(attribs.optimizationBarrier)
+		resolvedAttribs.insert({"DONT_TOUCH", {"string", *attribs.optimizationBarrier ? "\"true\"" : "\"false\""} });
+
+	if(attribs.hardwareDebugSignal)
+		resolvedAttribs.insert({"MARK_DEBUG", {"string", *attribs.hardwareDebugSignal ? "\"true\"" : "\"false\""} });
 
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }

@@ -79,8 +79,8 @@ void SynthesisTool::forEachPathAttribute(vhdl::VHDLExport &vhdlExport, const hli
 {
 	for (auto &n : circuit.getNodes()) {
 		if (auto *pa = dynamic_cast<hlim::Node_PathAttributes*>(n.get())) {
-			auto start = pa->getNonSignalDriver(0);
-			auto end = pa->getNonSignalDriver(1);
+			auto start = pa->getNonForwardingDriver(0);
+			auto end = pa->getNonForwardingDriver(1);
 
 			HCL_ASSERT_HINT(start.node, "Path attribute with unconnected start node");
 			HCL_ASSERT_HINT(end.node, "Path attribute with unconnected end node");

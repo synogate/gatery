@@ -29,60 +29,64 @@
  * @{
  */
 
-namespace gtry::scl::driver {
-
-	class DeviceMemoryAllocator {
-		public:
-			virtual PhysicalAddr allocate(uint64_t bytes, uint64_t alignment = 1) = 0;
-			virtual void reserve(PhysicalAddr deviceAddr, uint64_t bytes) = 0;
-			virtual void free(PhysicalAddr deviceAddr, uint64_t bytes) = 0;
+namespace gtry::scl::driver 
+{
+	class DeviceMemoryAllocator 
+	{
+	public:
+		virtual ~DeviceMemoryAllocator() = default;
+		virtual PhysicalAddr allocate(uint64_t bytes, uint64_t alignment = 1) = 0;
+		virtual void reserve(PhysicalAddr deviceAddr, uint64_t bytes) = 0;
+		virtual void free(PhysicalAddr deviceAddr, uint64_t bytes) = 0;
 	};
 
 
-	class DummyDeviceMemoryAllocator : public DeviceMemoryAllocator {
-		public:
-			DummyDeviceMemoryAllocator(std::uint64_t nextAlloc = 0) : m_nextAlloc(nextAlloc) { }
+	class DummyDeviceMemoryAllocator : public DeviceMemoryAllocator 
+	{
+	public:
+		DummyDeviceMemoryAllocator(std::uint64_t nextAlloc = 0) : m_nextAlloc(nextAlloc) { }
 
-			virtual PhysicalAddr allocate(uint64_t bytes, uint64_t alignment) override {
-				auto res = (m_nextAlloc + alignment-1)/alignment*alignment;
-				m_nextAlloc = res + bytes;
-				return res;
-			}
-			virtual void reserve(PhysicalAddr deviceAddr, uint64_t bytes) override {  } //m_nextAlloc = std::max(m_nextAlloc, deviceAddr + bytes); }
-			virtual void free(PhysicalAddr deviceAddr, uint64_t bytes) override { }
-		protected:
-			std::uint64_t m_nextAlloc = 0;
+		virtual PhysicalAddr allocate(uint64_t bytes, uint64_t alignment) override {
+			auto res = (m_nextAlloc + alignment-1)/alignment*alignment;
+			m_nextAlloc = res + bytes;
+			return res;
+		}
+		virtual void reserve(PhysicalAddr deviceAddr, uint64_t bytes) override {  } //m_nextAlloc = std::max(m_nextAlloc, deviceAddr + bytes); }
+		virtual void free(PhysicalAddr deviceAddr, uint64_t bytes) override { }
+	protected:
+		std::uint64_t m_nextAlloc = 0;
 	};
 
-	class DeviceMemoryBuffer : public MemoryBuffer {
-		public:
-			DeviceMemoryBuffer(std::uint64_t size, PhysicalAddr deviceAddr, DeviceMemoryAllocator &allocator);
-			virtual ~DeviceMemoryBuffer();
+	class DeviceMemoryBuffer : public MemoryBuffer 
+	{
+	public:
+		DeviceMemoryBuffer(std::uint64_t size, PhysicalAddr deviceAddr, DeviceMemoryAllocator &allocator);
+		virtual ~DeviceMemoryBuffer();
 
-			inline PhysicalAddr deviceAddr() const { return m_deviceAddr; }
-		protected:
-			PhysicalAddr m_deviceAddr = 0;
-			DeviceMemoryAllocator &m_allocator;
+		inline PhysicalAddr deviceAddr() const { return m_deviceAddr; }
+	protected:
+		PhysicalAddr m_deviceAddr = 0;
+		DeviceMemoryAllocator &m_allocator;
 	};
 
-	class DeviceMemoryBufferFactory : public MemoryBufferFactory {
-		public:
-			DeviceMemoryBufferFactory(DeviceMemoryAllocator &allocator);
-			virtual ~DeviceMemoryBufferFactory() = default;
+	class DeviceMemoryBufferFactory : public MemoryBufferFactory 
+	{
+	public:
+		DeviceMemoryBufferFactory(DeviceMemoryAllocator &allocator);
+		virtual ~DeviceMemoryBufferFactory() = default;
 
-			virtual std::unique_ptr<MemoryBuffer> alias(PhysicalAddr deviceAddr, uint64_t bytes);
-			virtual std::unique_ptr<MemoryBuffer> allocate(uint64_t bytes) override;
+		virtual std::unique_ptr<MemoryBuffer> alias(PhysicalAddr deviceAddr, uint64_t bytes);
+		virtual std::unique_ptr<MemoryBuffer> allocate(uint64_t bytes) override;
 
-			inline auto allocateDerived(uint64_t bytes) { return allocateDerivedImpl<DeviceMemoryBuffer>(bytes); }
-			inline auto aliasDerived(PhysicalAddr deviceAddr, uint64_t bytes) {
-				auto buf = alias(deviceAddr, bytes);
-				return std::unique_ptr<DeviceMemoryBuffer>(static_cast<DeviceMemoryBuffer*>(buf.release()));
-			}
-		protected:
-			DeviceMemoryAllocator &m_allocator;
-			virtual std::unique_ptr<MemoryBuffer> createBuffer(PhysicalAddr deviceAddr, uint64_t bytes) = 0;
+		inline auto allocateDerived(uint64_t bytes) { return allocateDerivedImpl<DeviceMemoryBuffer>(bytes); }
+		inline auto aliasDerived(PhysicalAddr deviceAddr, uint64_t bytes) {
+			auto buf = alias(deviceAddr, bytes);
+			return std::unique_ptr<DeviceMemoryBuffer>(static_cast<DeviceMemoryBuffer*>(buf.release()));
+		}
+	protected:
+		DeviceMemoryAllocator &m_allocator;
+		virtual std::unique_ptr<MemoryBuffer> createBuffer(PhysicalAddr deviceAddr, uint64_t bytes) = 0;
 	};
-
 }
 
 /**@}*/

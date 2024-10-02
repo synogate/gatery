@@ -1,4 +1,4 @@
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "XilinxPciStructs.h"
 
 namespace gtry::scl::pci::xilinx

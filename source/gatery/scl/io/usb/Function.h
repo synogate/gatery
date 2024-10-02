@@ -19,6 +19,7 @@
 #include "CrcHandler.h"
 #include "Descriptor.h"
 #include "../../TransactionalFifo.h"
+#include "../../stream/Stream.h"
 
 namespace gtry::scl::usb
 {
@@ -37,25 +38,6 @@ namespace gtry::scl::usb
 		UInt wLength = 16_b;
 	};
 
-	enum class SetupRequest
-	{
-		GET_STATUS = 0,
-		CLEAR_FEATURE = 1,
-		SET_FEATURE = 3,
-		SET_ADDRESS = 5,
-		GET_DESCRIPTOR = 6,
-		SET_DESCRIPTOR = 7,
-		GET_CONFIGURATION = 8,
-		SET_CONFIGURATION = 9,
-	};
-
-	enum class Handshake
-	{
-		ACK,
-		NAK,
-		STALL,
-	};
-
 	class Function
 	{
 		enum class State
@@ -65,7 +47,6 @@ namespace gtry::scl::usb
 			sendSetupData,
 			recvSetupData,
 			sendDataPid,
-			waitForSetupAck,
 			ack,
 
 			// used to CDC debugging
@@ -109,6 +90,7 @@ namespace gtry::scl::usb
 
 		Descriptor& descriptor() { return m_descriptor; }
 		void addClassSetupHandler(std::function<Bit(const SetupPacket&)> handler);
+		void addClassDataHandler(std::function<void(const BVec&)> handler);
 		
 		void setup(Phy& phy);
 
@@ -134,6 +116,9 @@ namespace gtry::scl::usb
 		void attachRxFifo(TransactionalFifo<StreamData>& fifo, uint16_t endPointMask = 0xFFFE);
 		void attachTxFifo(TransactionalFifo<StreamData>& fifo, uint16_t endPointMask = 0xFFFE);
 
+		RvStream<BVec> rxEndPointFifo(size_t endPoint, size_t fifoDpeth);
+		void txEndPointFifo(size_t endPoint, size_t fifoDpeth, RvStream<BVec> data);
+
 	protected:
 		void generateCapturePacket();
 
@@ -155,6 +140,7 @@ namespace gtry::scl::usb
 
 		Descriptor m_descriptor;
 		std::vector<std::function<Bit(const SetupPacket&)>> m_classHandler;
+		std::vector<std::function<void(const BVec&)>> m_classDataHandler;
 
 		Reg<Enum<State>> m_state;
 		UInt m_address = 7_b;
@@ -170,6 +156,7 @@ namespace gtry::scl::usb
 		UInt m_pid = 4_b;
 		UInt m_packetData = 8 * 8_b;
 		UInt m_packetLen;
+		UInt m_packetLenTxLimit;
 		size_t m_maxPacketSize = 8;
 
 		UInt m_sendHandshake = 2_b;
@@ -190,6 +177,7 @@ namespace gtry::scl::usb
 
 }
 
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::usb::SetupPacket, requestType, request, wValue, wIndex, wLength);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::usb::Function::RxStream, valid, sop, endPoint, data, eop, error);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::usb::Function::TxStream, ready, commit, rollback, valid, endPoint, data);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::usb::Function::StreamData, data, endPoint);

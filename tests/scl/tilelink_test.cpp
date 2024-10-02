@@ -21,7 +21,6 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
-#include <gatery/debug/websocks/WebSocksInterface.h>
 #include <gatery/scl/synthesisTools/IntelQuartus.h>
 
 #include <gatery/scl/stream/SimuHelpers.h>
@@ -866,7 +865,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_burst_stream_fetch_test, BoostUnitTestSimulatio
 		stopTest();
 		});
 
-	if (true) recordVCD("dut.vcd");
+	if (false) recordVCD("dut.vcd");
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 5, 1'000'000 }));
 }

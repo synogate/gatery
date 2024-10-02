@@ -130,6 +130,9 @@ namespace gtry::hlim {
 
 		template<typename Iterator>
 		void insert(Iterator begin, Iterator end) { m_nodes.insert(begin, end); }
+
+		/// Join two subnets
+		FinalType& add(const FinalType& other) { insert(other.begin(), other.end()); return (FinalType&)*this; }
 	protected:
 		utils::StableSet<NodeType*> m_nodes;
 	};

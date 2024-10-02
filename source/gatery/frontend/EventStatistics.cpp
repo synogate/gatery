@@ -20,6 +20,7 @@
 #include "Clock.h"
 #include "EventStatistics.h"
 #include "SimSigHandle.h"
+#include <gatery/hlim/NodeGroup.h>
 
 
 
@@ -30,7 +31,7 @@ namespace gtry {
 		auto pathName = getNodePath(name);
 		m_counter[pathName] = 0;
 
-		DesignScope::get()->getCircuit().addSimulationProcess([=]()->SimProcess {
+		DesignScope::get()->getCircuit().addSimulationProcess([=, this]()->SimProcess {
 			while (true)
 			{
 				co_await OnClk(clk);

@@ -180,6 +180,7 @@ BOOST_FIXTURE_TEST_CASE(muxUndefined, gtry::GHDLTestFixture)
         pinOut(output).setName("out");
     }
 
+	//DesignScope::visualize("test_muxUndefined_before");
 	testCompilation();
 	//DesignScope::visualize("test_muxUndefined");
 }
@@ -393,6 +394,106 @@ BOOST_FIXTURE_TEST_CASE(GenericMemoryExport_Async_16_w_reset, Test_GenericMemory
 
 
 
+
+BOOST_FIXTURE_TEST_CASE(GenericMemoryExport_Depth1_Sync_1_no_reset, Test_GenericMemoryExport)
+{
+	using namespace gtry;
+
+	registerResetType = memoryResetType = gtry::Clock::ResetType::SYNCHRONOUS;	
+	latency = 1;
+	depth = 1;
+
+	execute();
+
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(GenericMemoryExport_Depth1_Sync_1_w_reset, Test_GenericMemoryExport)
+{
+	using namespace gtry;
+
+	registerResetType = memoryResetType = gtry::Clock::ResetType::SYNCHRONOUS;	
+	latency = 1;
+	latencyRegResetValue = 0;
+	depth = 1;
+
+	execute();
+
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"PROCESS\\(sysclk\\)"}));
+	BOOST_TEST(exportContains(std::regex{"IF \\(reset = '1'\\) THEN"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(GenericMemoryExport_Depth1_Async_1_w_reset, Test_GenericMemoryExport)
+{
+	using namespace gtry;
+
+	registerResetType = memoryResetType = gtry::Clock::ResetType::ASYNCHRONOUS;	
+	latency = 1;
+	latencyRegResetValue = 0;
+	depth = 1;
+
+	execute();
+
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"PROCESS\\(sysclk\\)"}));
+	BOOST_TEST(exportContains(std::regex{"PROCESS\\(sysclk, reset\\)"}));
+	BOOST_TEST(exportContains(std::regex{"IF \\(reset = '1'\\) THEN"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(GenericMemoryExport_Depth1_Sync_16_no_reset, Test_GenericMemoryExport)
+{
+	using namespace gtry;
+
+	registerResetType = memoryResetType = gtry::Clock::ResetType::SYNCHRONOUS;	
+	latency = 16;
+	depth = 1;
+
+	execute();
+
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(GenericMemoryExport_Depth1_Sync_16_w_reset, Test_GenericMemoryExport)
+{
+	using namespace gtry;
+
+	registerResetType = memoryResetType = gtry::Clock::ResetType::SYNCHRONOUS;	
+	latency = 16;
+	latencyRegResetValue = 0;
+	depth = 1;
+
+	execute();
+
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"PROCESS\\(sysclk\\)"}));
+	BOOST_TEST(exportContains(std::regex{"IF \\(reset = '1'\\) THEN"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(GenericMemoryExport_Depth1_Async_16_w_reset, Test_GenericMemoryExport)
+{
+	using namespace gtry;
+
+	registerResetType = memoryResetType = gtry::Clock::ResetType::ASYNCHRONOUS;	
+	latency = 16;
+	latencyRegResetValue = 0;
+	depth = 1;
+
+	execute();
+
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"PROCESS\\(sysclk\\)"}));
+	BOOST_TEST(exportContains(std::regex{"PROCESS\\(sysclk, reset\\)"}));
+	BOOST_TEST(exportContains(std::regex{"IF \\(reset = '1'\\) THEN"}));
+}
+
+
+
+
+
+
+
+
 BOOST_FIXTURE_TEST_CASE(unusedNamedSignalVanishes, gtry::GHDLTestFixture)
 {
 	using namespace gtry;
@@ -440,7 +541,7 @@ BOOST_FIXTURE_TEST_CASE(unusedTappedSignalRemains, gtry::GHDLTestFixture)
 
 	testCompilation();
 
-	BOOST_TEST(exportContains(std::regex{"s_unused <= "}));
+	BOOST_TEST(exportContains(std::regex{"s_unused.* <= "}));
 }
 
 
@@ -464,10 +565,12 @@ BOOST_FIXTURE_TEST_CASE(signalTapForcesVariableToSignal, gtry::GHDLTestFixture)
         pinOut(output).setName("out");
     }
 
+	//design.visualize("before");
 	testCompilation();
+	//design.visualize("after");
 
-	BOOST_TEST(exportContains(std::regex{"SIGNAL s_intermediate : STD_LOGIC;"}));
-	BOOST_TEST(exportContains(std::regex{"<= \\(s_intermediate xor input3\\)"}));
+	BOOST_TEST(exportContains(std::regex{"SIGNAL intermediate : STD_LOGIC;"}));
+	BOOST_TEST(exportContains(std::regex{"intermediate <="}));
 }
 
 
@@ -704,7 +807,7 @@ BOOST_FIXTURE_TEST_CASE(signalAttributes, gtry::GHDLTestFixture)
 
 		SignalAttributes attrib;
 		attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe\""};
-		attribute(input, attrib);
+		input = attribute(input, attrib);
 
 		pinOut(input).setName("output");
 	}
@@ -716,7 +819,7 @@ BOOST_FIXTURE_TEST_CASE(signalAttributes, gtry::GHDLTestFixture)
 
 		SignalAttributes attrib;
 		attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe_single\""};
-		attribute(input, attrib);
+		input = attribute(input, attrib);
 
 		pinOut(input).setName("outputSingle");
 	}	
@@ -727,7 +830,7 @@ BOOST_FIXTURE_TEST_CASE(signalAttributes, gtry::GHDLTestFixture)
 
 		SignalAttributes attrib;
 		attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe_const\""};
-		attribute(input, attrib);
+		input = attribute(input, attrib);
 
 		pinOut(input).setName("outputConst");
 	}	
@@ -741,7 +844,7 @@ BOOST_FIXTURE_TEST_CASE(signalAttributes, gtry::GHDLTestFixture)
 
 		SignalAttributes attrib;
 		attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe_no_signal\""};
-		attribute(input, attrib);
+		input = attribute(input, attrib);
 
 		pinOut(input).setName("output_no_signal");
 	}
@@ -751,7 +854,7 @@ BOOST_FIXTURE_TEST_CASE(signalAttributes, gtry::GHDLTestFixture)
 
 		SignalAttributes attrib;
 		attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe_single_no_signal\""};
-		attribute(input, attrib);
+		input = attribute(input, attrib);
 
 		pinOut(input).setName("outputSingle_no_signal");
 	}	
@@ -760,22 +863,44 @@ BOOST_FIXTURE_TEST_CASE(signalAttributes, gtry::GHDLTestFixture)
 
 		SignalAttributes attrib;
 		attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe_const_no_signal\""};
-		attribute(input, attrib);
+		input = attribute(input, attrib);
 
 		pinOut(input).setName("outputConst_no_signal");
 	}
-//	design.visualize("before");
+	{
+		Bit input = pinIn().setName("input_into_child");
+
+		Bit output;
+		{
+			Area area("child", true);
+
+			SignalAttributes attrib;
+			attrib.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe_input_into_child\""};
+			input = attribute(input, attrib);
+
+			pinOut(input).setName("output_from_within_child");
+
+			output = '0';
+			SignalAttributes attrib2;
+			attrib2.userDefinedVendorAttributes["all"]["something"] = {.type = "string", .value = "\"maybe_output_from_child\""};
+			output = attribute(output, attrib2);
+		}
+		pinOut(output).setName("output_from_child");
+	}
+	//design.visualize("before");
 	testCompilation();
-//	design.visualize("after");
+	//design.visualize("after");
 
 	BOOST_TEST(exportContains(std::regex{"maybe"}));
 	BOOST_TEST(exportContains(std::regex{"maybe_single"}));
 	BOOST_TEST(exportContains(std::regex{"maybe_const"}));
-/*
+
 	BOOST_TEST(exportContains(std::regex{"maybe_no_signal"}));
 	BOOST_TEST(exportContains(std::regex{"maybe_single_no_signal"}));
 	BOOST_TEST(exportContains(std::regex{"maybe_const_no_signal"}));
-*/
+
+	BOOST_TEST(exportContains(std::regex{"maybe_input_into_child"}));
+	BOOST_TEST(exportContains(std::regex{"maybe_output_from_child"}));
 }
 
 
@@ -891,6 +1016,283 @@ BOOST_FIXTURE_TEST_CASE(testReadingInputPins, gtry::GHDLTestFixture)
 	runTest(hlim::ClockRational(200, 1) / clock.getClk()->absoluteFrequency());	
 }
 
+
+BOOST_FIXTURE_TEST_CASE(constantRewireCorrectlyFolds, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	UInt mask = 4_b;
+	{
+		Bit enable = pinIn().setName("input");
+		pinOut(enable & mask[0]).setName("output");
+	}
+	mask = oext(0); // must be here to place a referenced signal node between the unused constant node and the oext-rewire, preventing constant folding into the rewire
+	
+	testCompilation();
+	BOOST_TEST(exportContains(std::regex{"output <= input"}));
+}
+
+
+
+
+
+BOOST_FIXTURE_TEST_CASE(foldBinaryMuxesToCase, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	std::mt19937 rng(267);
+	std::uniform_int_distribution<unsigned> random(0, 1000);
+	std::vector<size_t> table(10);
+	for (auto &e : table) e = random(rng);
+
+
+	UInt output = 32_b;
+	output = dontCare(output);
+
+	UInt selector = pinIn(4_b).setName("selector");
+	for (size_t i = 0; i < table.size(); i++)
+		IF (selector == i)
+			output = table[i];
+
+	pinOut(output).setName("output");
+
+
+	addSimulationProcess([=,this]()->SimProcess {
+
+		co_await OnClk(clock);
+
+		for (size_t i = 0; i < 16; i++) {
+			simu(selector) = i;
+			co_await OnClk(clock);
+
+			if (i < table.size())
+				BOOST_TEST(simu(output) == table[i]);
+			else
+				BOOST_TEST(simu(output).defined() == 0);
+		}
+
+		stopTest();
+	});
+
+	design.getCircuit().shuffleNodes();
+	
+	//design.visualize("before");
+	testCompilation();
+	//design.visualize("after");
+	BOOST_TEST(exportContains(std::regex{"CASE UNSIGNED\\(selector\\) IS"}));
+}
+
+
+
+
+
+
+BOOST_FIXTURE_TEST_CASE(ZeroBitDisconnect, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+
+	Bit in = pinIn().setName("in");
+	UInt muxSelect = 0_b;
+
+	Bit out = mux(muxSelect, { in });
+
+	pinOut(out).setName("out");
+
+	addSimulationProcess([=, this]()->SimProcess {
+		std::mt19937 rng = std::mt19937{ 1337 };
+		
+		for ([[maybe_unused]] auto i : gtry::utils::Range(100)) {
+			bool v = rng() & 1;
+			simu(in) = v;
+			co_await AfterClk(clock);
+			BOOST_TEST(simu(out) == v);
+		}
+
+		stopTest();
+	});
+
+
+	runTest({ 1,1 });
+}
+
+
+BOOST_FIXTURE_TEST_CASE(testCarryAddSingleLine, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+
+	UInt a = pinIn(8_b).setName("a");
+	UInt b = pinIn(8_b).setName("b");
+	Bit c = pinIn().setName("carry");
+
+	UInt out = addC(a, b, c);
+
+	pinOut(out).setName("out");
+
+	//design.visualize("before");
+	testCompilation();
+	//design.visualize("after");
+	//BOOST_TEST(exportContains(std::regex{"CASE UNSIGNED\\(selector\\) IS"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(tristateBit, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+	
+	UInt value = pinIn(10_b).setName("value");
+	Bit enable = pinIn().setName("enable");
+	UInt readback;
+	{
+		Area area("area", true);
+		readback = tristatePin(value, enable).setName("tristatePin");
+		readback = readback + 1;
+	}
+	pinOut(readback).setName("readback");
+
+	//design.visualize("before");
+	testCompilation();
+	//design.visualize("after");
+	BOOST_TEST(exportContains(std::regex{"\\(UNSIGNED\\(tristatePin\\) \\+ \"0000000001\"\\);"}));
+}
+
+
+BOOST_FIXTURE_TEST_CASE(tristateBitIntoSubEntity, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+	
+	UInt value = pinIn(10_b).setName("value");
+	Bit enable = pinIn().setName("enable");
+	UInt readback;
+	readback = tristatePin(value, enable).setName("tristatePin");
+	{
+		Area area("area", true);
+		readback = readback + 1;
+	}
+	pinOut(readback).setName("readback");
+
+	//design.visualize("before");
+	testCompilation();
+	//design.visualize("after");
+	BOOST_TEST(exportContains(std::regex{"s_tristatePin <= UNSIGNED\\(tristatePin\\);"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(tristateBitIntoParent, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+	
+	UInt value = pinIn(10_b).setName("value");
+	Bit enable = pinIn().setName("enable");
+	UInt readback;
+	{
+		Area area("area", true);
+		readback = tristatePin(value, enable).setName("tristatePin");
+	}
+	readback = readback + 1;
+	pinOut(readback).setName("readback");
+
+	//design.visualize("before");
+	testCompilation();
+	//design.visualize("after");
+	BOOST_TEST(exportContains(std::regex{"out_tristatePin <= UNSIGNED\\(tristatePin\\);"}));
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(IgnoreSimulationOnlyPins, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+
+	Bit in = pinIn().setName("in");
+
+	Bit out;
+
+	{
+		Area area("magic", true);
+
+		ExternalModule dut("TestEntity", "work");
+		{
+			dut.in("in_bit", {.type = PinType::STD_LOGIC}) = in;
+			out = dut.out("out_bit", {.type = PinType::STD_LOGIC});
+		}
+
+		auto simProcessIn = pinOut(in, { .simulationOnlyPin = true });
+		auto simOverride = pinIn({ .simulationOnlyPin = true });
+
+		out.simulationOverride((Bit)simOverride);
+
+		DesignScope::get()->getCircuit().addSimulationProcess([=]() -> SimProcess {
+			while (true) {
+				ReadSignalList allInputs;
+				simu(simOverride) = !(bool)simu(simProcessIn);
+
+				co_await allInputs.anyInputChange();
+			}
+			co_return;
+		});		
+	}
+
+	pinOut(out).setName("out");
+
+
+	addCustomVHDL("TestEntity", R"Delim(
+
+		LIBRARY ieee;
+		USE ieee.std_logic_1164.ALL;
+		USE ieee.numeric_std.all;
+
+		ENTITY TestEntity IS 
+			PORT(
+				in_bit : in STD_LOGIC;
+				out_bit : out STD_LOGIC
+			);
+		END TestEntity;
+
+		ARCHITECTURE impl OF TestEntity IS 
+		BEGIN
+			do_stuff : PROCESS (all)
+			begin
+				out_bit <= not(in_bit);
+			end PROCESS;
+		END impl;
+
+	)Delim");	
+
+	addSimulationProcess([=, this]()->SimProcess {
+		std::mt19937 rng = std::mt19937{ 1337 };
+		
+		for ([[maybe_unused]] auto i : gtry::utils::Range(100)) {
+			bool v = rng() & 1;
+			simu(in) = v;
+			co_await AfterClk(clock);
+			BOOST_TEST(simu(out) == !v);
+		}
+
+		stopTest();
+	});
+
+
+	runTest({ 1,1 });
+}
 
 BOOST_FIXTURE_TEST_CASE(constantRewireCorrectlyFolds, gtry::GHDLTestFixture)
 {

@@ -35,7 +35,7 @@ RunTimeSimulationContext::RunTimeSimulationContext(Simulator *simulator) : m_sim
 {
 }
 
-void RunTimeSimulationContext::overrideSignal(const SigHandle &handle, const DefaultBitVectorState &state)
+void RunTimeSimulationContext::overrideSignal(const SigHandle &handle, const ExtendedBitVectorState &state)
 {
 	if (state.size() == 0)
 		return;
@@ -48,7 +48,7 @@ void RunTimeSimulationContext::overrideSignal(const SigHandle &handle, const Def
 		m_sigOverridePinCache[handle.getOutput()] = pin;
 	} else
 		pin = it->second;
-	HCL_DESIGNCHECK_HINT(pin != nullptr, "Only io pin outputs allow run time overrides, but none was found!");
+	HCL_DESIGNCHECK_HINT(pin != nullptr, "Only io pin inputs allow run time overrides, but none was found!");
 	m_simulator->simProcSetInputPin(pin, state);
 }
 
@@ -59,7 +59,7 @@ void RunTimeSimulationContext::overrideRegister(const SigHandle &handle, const D
 
 	auto *node = handle.getOutput().node;
 	if (dynamic_cast<hlim::Node_Signal*>(node))
-		node = node->getNonSignalDriver(0).node;
+		node = node->getNonForwardingDriver(0).node;
 
 	auto *reg = dynamic_cast<hlim::Node_Register*>(node);
 	HCL_DESIGNCHECK_HINT(reg != nullptr, "Trying to override register output, but the signal is not driven by a register.");

@@ -38,6 +38,8 @@ namespace gtry::scl
 
 		bool m_slaveConnected = false;
 		bool m_masterConnected = false;
+		
+		std::shared_ptr<AddressSpaceDescription> m_addrSpaceDescription = std::make_shared<AddressSpaceDescription>();
 	};
 
 	template<TileLinkSignal TLink>
@@ -70,6 +72,8 @@ namespace gtry::scl
 		m_d.setup(depthMin, **link.d);
 		push(m_d, move(*link.d));
 
+		connectAddrDesc(m_addrSpaceDescription, link.addrSpaceDesc);
+
 		return *this;
 	}
 
@@ -83,7 +87,8 @@ namespace gtry::scl
 
 		TLink ret{
 			.a = constructFrom(m_a.peek()),
-			.d = constructFrom(m_d.peek())
+			.d = constructFrom(m_d.peek()),
+			.addrSpaceDesc = m_addrSpaceDescription
 		};
 
 		if (m_a.depth() >= txid(ret.a).width().count())

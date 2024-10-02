@@ -192,7 +192,8 @@ int main()
 
 ## Further Documentation
 
-- @ref gtry_frontend
+- @subpage gtry_frontend_page
+- @subpage gtry_synthesisTools_page
 - @subpage gtry_scl_page
 
 

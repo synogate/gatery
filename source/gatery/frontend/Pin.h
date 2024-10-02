@@ -43,6 +43,7 @@ namespace gtry {
 	};		
 
 	using PinNodeParameter = hlim::Node_Pin::PinNodeParameter;
+	using HighImpedanceValue = hlim::Node_Pin::PinNodeParameter::HighImpedanceValue;
 
 	class BaseOutputPin : public BasePin {
 		public:
@@ -92,12 +93,12 @@ namespace gtry {
 
 	class BaseTristatePin : public BasePin { 
 		public:
-			BaseTristatePin(hlim::NodePort nodePort, std::string name, const Bit &outputEnable);
+			BaseTristatePin(hlim::NodePort nodePort, std::string name, const Bit &outputEnable, const PinNodeParameter& params = {});
 	};
 
 	class TristatePin : public BaseTristatePin {
 		public:
-			TristatePin(const Bit &bit, const Bit &outputEnable);
+			TristatePin(const Bit &bit, const Bit &outputEnable, const PinNodeParameter& params = {});
 			operator Bit () const;
 			inline TristatePin &setName(std::string name) { m_pinNode->setName(std::move(name)); return *this; }
 	};
@@ -105,7 +106,7 @@ namespace gtry {
 	class TristatePins : public BaseTristatePin {
 		public:
 			template<BitVectorDerived T>
-			TristatePins(const T &bitVector, const Bit &outputEnable) : BaseTristatePin(bitVector.readPort(), std::string(bitVector.getName()), outputEnable) { }
+			TristatePins(const T &bitVector, const Bit &outputEnable, const PinNodeParameter& params = {}) : BaseTristatePin(bitVector.readPort(), std::string(bitVector.getName()), outputEnable, params) { }
 
 			operator UInt () const;
 
@@ -158,10 +159,10 @@ namespace gtry {
 	void pinIn(Signal auto&& signal, std::string prefix, const PinNodeParameter& params = {});
 	void pinOut(Signal auto&& signal, std::string prefix, const PinNodeParameter& params = {});
 
-	inline TristatePin tristatePin(const Bit &bit, const Bit &outputEnable) { return TristatePin(bit, outputEnable); }
+	inline TristatePin tristatePin(const Bit &bit, const Bit &outputEnable, const PinNodeParameter& params = {}) { return TristatePin(bit, outputEnable, params); }
 
 	template<BitVectorValue T>
-	inline TristatePins tristatePin(const T &bitVector, const Bit &outputEnable) { return TristatePins((ValueToBaseSignal<T>)bitVector, outputEnable); }
+	inline TristatePins tristatePin(const T &bitVector, const Bit &outputEnable, const PinNodeParameter& params = {}) { return TristatePins((ValueToBaseSignal<T>)bitVector, outputEnable, params); }
 
 	inline BidirPin bidirPin(const Bit &bit) { return BidirPin(bit); }
 

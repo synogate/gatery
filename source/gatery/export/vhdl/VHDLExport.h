@@ -73,6 +73,7 @@ class VHDLExport
 		void operator()(hlim::Circuit &circuit);
 
 		AST *getAST() { return m_ast.get(); }
+		const AST *getAST() const { return m_ast.get(); }
 		utils::FileSystem &getDestination();
 		std::filesystem::path getDestinationPath() const;
 		utils::FileSystem &getTestbenchDestination();
@@ -83,6 +84,7 @@ class VHDLExport
 		void addTestbenchRecorder(sim::Simulator &simulator, const std::string &name, bool inlineTestData = false);
 
 		inline const std::vector<std::unique_ptr<BaseTestbenchRecorder>> &getTestbenchRecorder() const { return m_testbenchRecorder; }
+		inline void clearTestbenchRecorder() { m_testbenchRecorder.clear(); }
 
 		inline const std::string &getProjectFilename() const { return m_projectFilename; }
 		inline const std::string &getConstraintsFilename() const { return m_constraintsFilename; }

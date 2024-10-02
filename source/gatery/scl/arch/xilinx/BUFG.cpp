@@ -15,8 +15,10 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "BUFG.h"
+
+#include <gatery/hlim/NodeGroup.h>
 
 #include <gatery/frontend/GraphTools.h>
 #include <gatery/frontend/DesignScope.h>
@@ -83,7 +85,7 @@ bool BUFGPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 		bufg->setInput(0, input);
 		output.exportOverride(bufg->getOutputBit(0));
 	} else
-		dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+		dbg::log(dbg::LogMessage{nodeGroup} << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
 				<< "Not replacing " << nodeGroup << " with BUFG because the 'globalBufferPlaceholder' signal could not be found or is not a bit!");
 
 

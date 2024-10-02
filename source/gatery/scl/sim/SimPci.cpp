@@ -15,7 +15,7 @@ You should have received a copy of the GNU Lesser General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include <gatery/pch.h>
+#include <gatery/scl_pch.h>
 #include "SimPci.h"
 
 namespace gtry::scl::sim {
@@ -222,7 +222,8 @@ namespace gtry::scl::sim {
 		bool hasPayload;
 		size_t hdrSize;
 
-		switch(inst.opcode){
+		switch(inst.opcode)
+		{
 		case scl::pci::TlpOpcode::memoryReadRequest64bit:
 			isRW = true;
 			hasPayload = false;
@@ -243,6 +244,8 @@ namespace gtry::scl::sim {
 			hasPayload = false;
 			hdrSize = 96;
 			break;
+		default:
+			HCL_ASSERT_HINT(false, "should not happen");
 		}
 
 		if (isRW) {

@@ -15,7 +15,7 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 
 #include "BlockramUltrascale.h"
 #include "XilinxDevice.h"
@@ -35,6 +35,7 @@
 #include <gatery/frontend/Attributes.h>
 
 #include "../general/MemoryTools.h"
+#include <gatery/debug/DebugInterface.h>
 
 #include <iostream>
 
@@ -53,12 +54,41 @@ bool BlockramUltrascale::apply(hlim::NodeGroup *nodeGroup) const
 {
 	auto *memGrp = dynamic_cast<hlim::MemoryGroup*>(nodeGroup->getMetaInfo());
 	if (memGrp == nullptr) return false;
-	if (memGrp->getMemory()->type() == hlim::Node_Memory::MemType::EXTERNAL)
+	if (memGrp->getMemory()->type() == hlim::Node_Memory::MemType::EXTERNAL) {
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because it is external memory.");
 		return false;
+	}
 
-	if (memGrp->getReadPorts().size() != 1) return false;
-	if (memGrp->getWritePorts().size() > 1) return false;
-	if (memGrp->getMemory()->getRequiredReadLatency() == 0) return false;
+	if (memGrp->getReadPorts().size() == 0) {
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because it has no read ports.");
+		return false;
+	}
+
+	if (memGrp->getReadPorts().size() > 1) {
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because it has more than one read port and so far only one read port is supported.");
+		return false;
+	}
+	const auto &rp = memGrp->getReadPorts().front();
+	if (memGrp->getWritePorts().size() > 1) {
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because it has more than one write port and so far only one write port is supported.");
+
+		return false;
+	}
+	if (memGrp->getMemory()->getRequiredReadLatency() == 0) {
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because it is asynchronous (zero latency reads) and the targeted block ram needs at least one cycle latency.");
+
+		return false;
+	}
+
 	if (memGrp->getMemory()->getMinPortWidth() != memGrp->getMemory()->getMaxPortWidth()) return false;
 	//if (!memtools::memoryIsSingleClock(nodeGroup)) return false;
 
@@ -70,6 +100,51 @@ bool BlockramUltrascale::apply(hlim::NodeGroup *nodeGroup) const
 	auto &circuit = DesignScope::get()->getCircuit();
 	memGrp->convertToReadBeforeWrite(circuit);
 	memGrp->attemptRegisterRetiming(circuit);
+
+
+
+	hlim::Clock* writeClock = nullptr;
+	if (memGrp->getWritePorts().size() > 0) {
+		writeClock = memGrp->getWritePorts().front().node->getClocks()[0];
+		if (writeClock->getTriggerEvent() != hlim::Clock::TriggerEvent::RISING) {
+			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+					<< " because its write clock is not triggering on rising clock edges.");
+			return false;
+		}
+	}
+
+	auto *readClock = rp.dedicatedReadLatencyRegisters.front()->getClocks()[0];
+	if (readClock->getTriggerEvent() != hlim::Clock::TriggerEvent::RISING) {
+		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+				<< " because its read clock is not triggering on rising clock edges.");
+		return false;
+	}
+
+	for (auto reg : rp.dedicatedReadLatencyRegisters) {
+		if (reg->hasResetValue()) {
+			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+					<< " because one of its output registers has a reset value.");
+			return false;
+		}
+/*
+		if (reg->hasEnable()) {
+			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+					<< " because one of its output registers has an enable.");
+			return false;
+		}
+*/
+		if (readClock != reg->getClocks()[0]) {
+			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
+					<< " because its output registers have differing clocks.");
+			return false;
+		}
+	}
+
 	memGrp->resolveWriteOrder(circuit);
 	memGrp->updateNoConflictsAttrib();
 	memGrp->buildReset(circuit);
@@ -167,7 +242,7 @@ void BlockramUltrascale::reccursiveBuild(hlim::NodeGroup *nodeGroup) const
 	auto &rp = memGrp->getReadPorts().front();
 	for (auto reg : rp.dedicatedReadLatencyRegisters) {
 		HCL_ASSERT(!reg->hasResetValue());
-		HCL_ASSERT(!reg->hasEnable());
+//		HCL_ASSERT(!reg->hasEnable());
 	}
 
 	GroupScope scope(nodeGroup->getParent());
@@ -217,7 +292,7 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
 	bram->setupPortA(rdPortSetup);
 
 	UInt rdAddr = (UInt) getBVecBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::address});
-	Bit rdEn = getBitBefore({.node = rp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::enable}, '1');
+	Bit rdEn = getBitBefore({.node = rp.dedicatedReadLatencyRegisters[0], .port = (size_t)hlim::Node_Register::ENABLE}, '1');
 
 	bram->connectAddressPortA(rdAddr);
 	bram->setInput(RAMBxE2::Inputs::IN_EN_A_RD_EN, rdEn);
@@ -231,8 +306,9 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
 	for (size_t i = 1; i < rp.dedicatedReadLatencyRegisters.size(); i++) {
 		auto &reg = rp.dedicatedReadLatencyRegisters[i];
 		Clock clock(reg->getClocks()[0]);
-		readData = clock(readData);
-		attribute(readData, {.allowFusing = false});
+		ENIF (getBitBefore({.node = reg, .port = (size_t)hlim::Node_Register::ENABLE}, '1'))
+			readData = clock(readData);
+		readData = attribute(readData, {.allowFusing = false});
 	}		
 
 	BVec rdDataHook = hookBVecAfter(rp.dataOutput);
@@ -348,18 +424,13 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
 
 		ClockScope cscope(clock);
 		for ([[maybe_unused]] auto i : utils::Range(numAdditionalInputRegisters)) {
-			rdAddr = reg(rdAddr);
-			attribute(rdAddr, {.allowFusing = false});
-			rdEn = reg(rdEn);
-			attribute(rdEn, {.allowFusing = false});
+			rdAddr = attribute(reg(rdAddr), {.allowFusing = false});
+			rdEn = attribute(reg(rdEn), {.allowFusing = false});
 
 			if (hasWritePort) {
-				wrAddr = reg(wrAddr);
-				attribute(wrAddr, {.allowFusing = false});
-				wrData = reg(wrData);
-				attribute(wrData, {.allowFusing = false});
-				wrEn = reg(wrEn);
-				attribute(wrEn, {.allowFusing = false});
+				wrAddr = attribute(reg(wrAddr), {.allowFusing = false});
+				wrData = attribute(reg(wrData), {.allowFusing = false});
+				wrEn = attribute(reg(wrEn), {.allowFusing = false});
 			}
 		}
 	}
@@ -423,8 +494,7 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
 
 		ClockScope cscope(clock);
 		for ([[maybe_unused]] auto i : utils::Range(numOutputRegisters)) {
-			readData = reg(readData);
-			attribute(readData, {.allowFusing = false});
+			readData = attribute(reg(readData), {.allowFusing = false});
 		}
 	}
 

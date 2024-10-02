@@ -37,17 +37,21 @@ namespace gtry::vhdl {
 
 FileBasedTestbenchRecorder::FileBasedTestbenchRecorder(VHDLExport &exporter, AST *ast, sim::Simulator &simulator, utils::FileSystem &fileSystem, std::string name) : BaseTestbenchRecorder(ast, simulator, std::move(name)), m_exporter(exporter)
 {
-	m_dependencySortedEntities.push_back(m_name);
+	m_dependencySortedEntities.push_back(m_entityName);
 	m_testVectorFilename = m_name + ".testvectors";
 	m_auxiliaryDataFiles.push_back(m_testVectorFilename);
 
 	m_testvectorFile = fileSystem.writeFile(m_testVectorFilename);
 	m_testbenchFile = fileSystem.writeFile(m_ast->getFilename(m_name));
+
+	auto verilogTBFilename = m_ast->getFilename(m_name);
+	verilogTBFilename.replace_extension("v");
+	m_verilogTestbenchFile = fileSystem.writeFile(verilogTBFilename);
 }
 
 FileBasedTestbenchRecorder::~FileBasedTestbenchRecorder()
 {
-	flush(m_writtenSimulationTime + Seconds{1,1'000'000});
+	flush(m_simulator.getCurrentSimulationTime());// + Seconds{1,1'000'000'000'000ull});
 }
 
 void FileBasedTestbenchRecorder::writeVHDL()
@@ -60,14 +64,12 @@ USE ieee.std_logic_1164.ALL;
 USE ieee.numeric_std.all;
 USE std.textio.all;
 
-ENTITY )" << m_dependencySortedEntities.back() << R"( IS
-END )" << m_dependencySortedEntities.back() << R"(;
+ENTITY )" << m_entityName << R"( IS
+END )" <<m_entityName << R"(;
 
-ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
+ARCHITECTURE tb OF )" << m_entityName << R"( IS
 
 )";
-
-	findClocksAndPorts();
 
 	auto *rootEntity = m_ast->getRootEntity();
 
@@ -113,6 +115,9 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 	)";
 	
 
+	//const std::string assertionSeverity = "warning";
+	const std::string assertionSeverity = "error";
+
 	vhdlFile << "BEGIN" << std::endl;
 
 	cf.indent(vhdlFile, 1);
@@ -123,16 +128,17 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 	cf.indent(vhdlFile, 1);
 	vhdlFile << ");" << std::endl;
 
+	for (auto &clock : m_clocksOfInterest)
+		buildClockProcess(vhdlFile, clock);	
+
 	cf.indent(vhdlFile, 1);
 	vhdlFile << "sim_process : PROCESS" << std::endl;
 
 	for (auto ioPin : m_allIOPins) {
 		const auto &decl = rootEntity->getNamespaceScope().get(ioPin);
 
-		//hlim::ConnectionType conType = ioPin->getConnectionType();
-
-		vhdlFile << "	VARIABLE v_" << decl.name << " : ";
-		cf.formatConnectionType(vhdlFile, decl);
+		vhdlFile << "	VARIABLE v_";
+		cf.formatDeclaration(vhdlFile, decl);
 		vhdlFile << ';' << std::endl;
 	}
 
@@ -226,7 +232,7 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 			else
 				vhdlFile << "bread(v_line, v_" << p.second << ");" << std::endl;
 			cf.indent(vhdlFile, 5);
-			vhdlFile << "ASSERT std_match(" << p.second << ", v_" << p.second << ") severity failure;" << std::endl;
+			vhdlFile << "ASSERT std_match(" << p.second << ", v_" << p.second << ") severity " << assertionSeverity<< ";" << std::endl;
 		}
 		cf.indent(vhdlFile, 4);
 		vhdlFile << "ELSE" << std::endl;
@@ -237,7 +243,7 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 
 		cf.indent(vhdlFile, 4);
 		vhdlFile << "END IF;" << std::endl;
-
+#if 0
 	cf.indent(vhdlFile, 3);
 	vhdlFile << "ELSIF stringcompare(v_line(1 to v_line'length), \"CLK\") THEN" << std::endl;
 
@@ -273,7 +279,7 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 
 		cf.indent(vhdlFile, 4);
 		vhdlFile << "END IF;" << std::endl;
-
+#endif
 	cf.indent(vhdlFile, 3);
 	vhdlFile << "ELSIF stringcompare(v_line(1 to v_line'length), \"RST\") THEN" << std::endl;
 
@@ -339,19 +345,36 @@ ARCHITECTURE tb OF )" << m_dependencySortedEntities.back() << R"( IS
 	vhdlFile << "WAIT;" << std::endl;
 	vhdlFile << "END PROCESS;" << std::endl;
 	vhdlFile << "END;" << std::endl;
-
-	m_writtenSimulationTime = 0;
-	m_flushIntervalStart = 0;
 }
 
 void FileBasedTestbenchRecorder::onPowerOn()
 {
-	writeVHDL();
+	findClocksAndPorts();
+
+	m_writtenSimulationTime = 0;
+	m_flushIntervalStart = 0;
+	m_phases.push_back({});
 }
+
+void FileBasedTestbenchRecorder::onAfterPowerOn()
+{
+	writeVHDL();
+	writeVerilogTestbench();
+}
+
+
 
 void FileBasedTestbenchRecorder::onNewTick(const hlim::ClockRational &simulationTime)
 {
-	flush(simulationTime);
+}
+
+void FileBasedTestbenchRecorder::onNewPhase(size_t phase)
+{
+	if (phase == sim::WaitClock::AFTER) {
+		flush(m_simulator.getCurrentSimulationTime());
+		m_phases.back() = std::move(m_postDuringPhase); // Have all the assignments from the previous DURING phase be the first thing in the next interval
+		m_phases.push_back({});
+	}
 }
 
 void FileBasedTestbenchRecorder::onAfterMicroTick(size_t microTick)
@@ -385,9 +408,6 @@ void FileBasedTestbenchRecorder::flush(const hlim::ClockRational &flushIntervalE
 		if (phase.assertStatements.str().empty() && phase.signalOverrides.empty() && phase.resetOverrides.empty())
 			continue;
 
-		if (phase.assertStatements.str().empty() && phase.signalOverrides.empty() && phase.resetOverrides.empty())
-			continue;
-
 		advanceTimeTo(m_flushIntervalStart + interval * (1 + phaseIdx));
 
 		m_testvectorFile->stream() << phase.assertStatements.str();
@@ -397,7 +417,6 @@ void FileBasedTestbenchRecorder::flush(const hlim::ClockRational &flushIntervalE
 
 		for (const auto &p : phase.resetOverrides) 
 			m_testvectorFile->stream() << "RST\n" << p.first << '\n' << p.second << '\n';
-
 	}
 
 	m_phases.clear();
@@ -408,16 +427,18 @@ void FileBasedTestbenchRecorder::flush(const hlim::ClockRational &flushIntervalE
 
 void FileBasedTestbenchRecorder::onClock(const hlim::Clock *clock, bool risingEdge)
 {
+#if 0
 	if (!m_clocksOfInterest.contains(clock)) return;
 
 	auto *rootEntity = m_ast->getRootEntity();
-// todo
+
 	m_testvectorFile->stream() << "CLK\n" << rootEntity->getNamespaceScope().getClock((hlim::Clock *) clock).name << std::endl;
 
 	if (risingEdge)
 		m_testvectorFile->stream() << "1\n";
 	else
 		m_testvectorFile->stream() << "0\n";
+#endif
 }
 
 void FileBasedTestbenchRecorder::onReset(const hlim::Clock *clock, bool resetAsserted)
@@ -426,10 +447,15 @@ void FileBasedTestbenchRecorder::onReset(const hlim::Clock *clock, bool resetAss
 
 	auto *rootEntity = m_ast->getRootEntity();
 
-	m_phases.back().resetOverrides[rootEntity->getNamespaceScope().getReset((hlim::Clock *) clock).name] = resetAsserted?"1":"0";
+	const std::string rst = rootEntity->getNamespaceScope().getReset((hlim::Clock *) clock).name;
+
+	if (m_simulator.getCurrentPhase() == sim::WaitClock::DURING)
+		m_postDuringPhase.resetOverrides[rst] = resetAsserted?"1":"0";
+	else
+		m_phases.back().resetOverrides[rst] = resetAsserted?"1":"0";
 }
 
-void FileBasedTestbenchRecorder::onSimProcOutputOverridden(const hlim::NodePort &output, const sim::DefaultBitVectorState &state)
+void FileBasedTestbenchRecorder::onSimProcOutputOverridden(const hlim::NodePort &output, const sim::ExtendedBitVectorState &state)
 {
 	const auto *pin = dynamic_cast<const hlim::Node_Pin*>(output.node);
 	HCL_ASSERT(pin);
@@ -442,7 +468,10 @@ void FileBasedTestbenchRecorder::onSimProcOutputOverridden(const hlim::NodePort 
 	std::stringstream str_state;
 	str_state << state;
 
-	m_phases.back().signalOverrides[name_it->second] = str_state.str();
+	if (m_simulator.getCurrentPhase() == sim::WaitClock::DURING)
+		m_postDuringPhase.signalOverrides[name_it->second] = str_state.str();
+	else
+		m_phases.back().signalOverrides[name_it->second] = str_state.str();
 }
 
 void FileBasedTestbenchRecorder::onSimProcOutputRead(const hlim::NodePort &output, const sim::DefaultBitVectorState &state)
@@ -484,11 +513,9 @@ void FileBasedTestbenchRecorder::onSimProcOutputRead(const hlim::NodePort &outpu
 			m_phases.back().assertStatements << "CHECK" << std::endl << name_it->second << std::endl << state << std::endl;
 		}
 	} else {
-		bool allDefined = true;
 		bool anyDefined = false;
 		for (auto i : utils::Range(conType.width)) {
 			bool d = state.get(sim::DefaultConfig::DEFINED, i);
-			allDefined &= d;
 			anyDefined |= d;
 		}
 
@@ -505,6 +532,268 @@ void FileBasedTestbenchRecorder::onSimProcOutputRead(const hlim::NodePort &outpu
 			m_phases.back().assertStatements << std::endl;
 		}
 	}
+}
+
+
+
+
+void FileBasedTestbenchRecorder::writeVerilogTestbench()
+{
+	auto &verilogFile = m_verilogTestbenchFile->stream();
+
+	verilogFile << R"(
+`timescale 1ps/1ps
+
+module )" << m_dependencySortedEntities.back() << "();" << std::endl;
+
+
+	auto *rootEntity = m_ast->getRootEntity();
+
+	CodeFormatting &cf = m_ast->getCodeFormatting();
+
+	declareSignalsVerilog(verilogFile);
+
+	utils::StableMap<hlim::NodePort, bool> outputIsBool;
+	utils::StableSet<hlim::NodePort> outputIsDrivenByNetwork;
+	utils::StableMap<hlim::NodePort, bool> isBidirectional;
+
+	for (auto ioPin : m_allIOPins) {
+		const std::string &name = rootEntity->getNamespaceScope().get(ioPin).name;
+		auto conType = ioPin->getConnectionType();
+
+		if (ioPin->isOutputPin()) {
+			m_outputToIoPinName[ioPin->getDriver(0)] = name;
+			outputIsBool[ioPin->getDriver(0)] = conType.isBool();
+			outputIsDrivenByNetwork.insert(ioPin->getDriver(0));
+		}
+
+		if (ioPin->isInputPin()) {
+			hlim::NodePort pinOutput{const_cast<hlim::Node_Pin*>(ioPin), 0};
+			m_outputToIoPinName[pinOutput] = name;
+			outputIsBool[pinOutput] = conType.isBool();
+			isBidirectional[pinOutput] = ioPin->isBiDirectional();
+		}
+
+	}
+
+	const std::string assertionSeverity = "warning";
+
+
+	cf.indent(verilogFile, 1);
+	verilogFile << rootEntity->getName() << " inst_root (" << std::endl;
+
+	writePortmapVerilog(verilogFile);
+
+	cf.indent(verilogFile, 1);
+	verilogFile << ");" << std::endl;
+
+	for (auto &clock : m_clocksOfInterest)
+		buildClockProcessVerilog(verilogFile, clock);	
+
+	cf.indent(verilogFile, 1);
+	verilogFile << "initial begin" << std::endl;
+
+	cf.indent(verilogFile, 2);
+	verilogFile << "reg [4095:0] line;" << std::endl;
+	cf.indent(verilogFile, 2);
+	verilogFile << "integer time_in_ps;" << std::endl;
+
+	cf.indent(verilogFile, 2);
+	verilogFile << "integer test_vector_file;" << std::endl;
+
+	cf.indent(verilogFile, 2);
+	verilogFile << "reg v_clk;" << std::endl;
+
+	for (auto ioPin : m_allIOPins) {
+		const auto &decl = rootEntity->getNamespaceScope().get(ioPin);
+
+		cf.indent(verilogFile, 2);
+		verilogFile << "reg ";
+		formatDeclarationVerilog(verilogFile, decl);
+		verilogFile << "_TB_helper;" << std::endl;
+	}
+
+
+	cf.indent(verilogFile, 2);
+	verilogFile << "test_vector_file = $fopen(\"" << m_testVectorFilename << "\", \"r\");" << std::endl;
+
+	cf.indent(verilogFile, 2);
+	verilogFile << "if (test_vector_file == 0) begin" << std::endl;
+	cf.indent(verilogFile, 3);
+	verilogFile << "$display(\"The test vector file could not be opened!\");" << std::endl;
+	cf.indent(verilogFile, 3);
+	verilogFile << "$stop;" << std::endl;
+	cf.indent(verilogFile, 2);
+	verilogFile << "end" << std::endl;
+
+	cf.indent(verilogFile, 2);
+	verilogFile << "while (!$feof(test_vector_file)) begin" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "if (!$fgets(line, test_vector_file)) begin" << std::endl;
+	cf.indent(verilogFile, 4);
+	verilogFile << "$stop;" << std::endl;
+	cf.indent(verilogFile, 3);
+	verilogFile << "end" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "else if (line ==  \"SET\\n\") begin" << std::endl;
+
+		cf.indent(verilogFile, 4);
+		verilogFile << "$fgets(line, test_vector_file);" << std::endl;
+
+		cf.indent(verilogFile, 4);
+		verilogFile << "if (0) ;" << std::endl;
+		for (auto &p : m_outputToIoPinName) {
+			if (outputIsDrivenByNetwork.contains(p.first)) continue;
+
+			cf.indent(verilogFile, 4);
+			verilogFile << "else if (line == \"" << p.second << "\\n\") begin" << std::endl;
+
+			cf.indent(verilogFile, 5);
+			verilogFile << "$fgets(line, test_vector_file);" << std::endl;
+
+			cf.indent(verilogFile, 5);
+			verilogFile << "$sscanf(line, \"%b\", " << p.second << "_TB_helper);" << std::endl;
+
+			cf.indent(verilogFile, 5);
+
+#if 0
+			if (isBidirectional[p.first])
+				verilogFile << p.second << "_TB_driver <= " << p.second << "_TB_helper;" << std::endl;
+			else 
+#endif
+				verilogFile << p.second << " <= " << p.second << "_TB_helper;" << std::endl;
+
+			cf.indent(verilogFile, 4);
+			verilogFile << "end" << std::endl;
+		}
+		cf.indent(verilogFile, 4);
+		verilogFile << "else begin" << std::endl;
+		cf.indent(verilogFile, 5);
+		verilogFile << "$display(\"An error occured while parsing the test vector file: unknown signal: %s\", line);" << std::endl;
+		cf.indent(verilogFile, 5);
+		verilogFile << "$finish;" << std::endl;
+
+		cf.indent(verilogFile, 4);
+		verilogFile << "end" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "end" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "else if (line == \"CHECK\\n\") begin" << std::endl;
+
+		cf.indent(verilogFile, 4);
+		verilogFile << "$fgets(line, test_vector_file);" << std::endl;
+
+		cf.indent(verilogFile, 4);
+		verilogFile << "if (0) ;" << std::endl;
+		for (auto &p : m_outputToIoPinName) {
+
+			cf.indent(verilogFile, 4);
+			verilogFile << "else if (line == \"" << p.second << "\\n\") begin" << std::endl;
+
+			cf.indent(verilogFile, 5);
+			verilogFile << "$fgets(line, test_vector_file);" << std::endl;
+
+			cf.indent(verilogFile, 5);
+			verilogFile << "$sscanf(line, \"%b\", " << p.second << "_TB_helper);" << std::endl;
+			cf.indent(verilogFile, 5);
+			verilogFile << "if (" << p.second << " !== " << p.second << "_TB_helper) $fatal(1, \"Check failed on " << p.second << "\");" << std::endl;
+
+			cf.indent(verilogFile, 4);
+			verilogFile << "end" << std::endl;
+		}
+		cf.indent(verilogFile, 4);
+		verilogFile << "else begin" << std::endl;
+		cf.indent(verilogFile, 5);
+		verilogFile << "$display(\"An error occured while parsing the test vector file: unknown signal: %s\", line);" << std::endl;
+		cf.indent(verilogFile, 5);
+		verilogFile << "$finish;" << std::endl;
+
+		cf.indent(verilogFile, 4);
+		verilogFile << "end" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "end" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "else if (line == \"RST\\n\") begin" << std::endl;
+
+		cf.indent(verilogFile, 4);
+		verilogFile << "$fgets(line, test_vector_file);" << std::endl;
+
+		cf.indent(verilogFile, 4);
+		verilogFile << "if (0) ;" << std::endl;
+		for (auto c : m_resetsOfInterest) {
+
+			auto *rootEntity = m_ast->getRootEntity();
+			std::string resetName =  rootEntity->getNamespaceScope().getReset((hlim::Clock *) c).name;
+
+
+			cf.indent(verilogFile, 4);
+			verilogFile << "else if (line == \"" << resetName << "\\n\") begin" << std::endl;
+
+			cf.indent(verilogFile, 5);
+			verilogFile << "$fgets(line, test_vector_file);" << std::endl;
+
+			cf.indent(verilogFile, 5);
+			verilogFile << "$sscanf(line, \"%b\", v_clk);" << std::endl;
+
+			cf.indent(verilogFile, 5);
+			verilogFile << resetName << " <= v_clk;" << std::endl;
+
+			cf.indent(verilogFile, 4);
+			verilogFile << "end" << std::endl;
+		}
+		cf.indent(verilogFile, 4);
+		verilogFile << "else begin" << std::endl;
+
+		cf.indent(verilogFile, 5);
+		verilogFile << "$display(\"An error occured while parsing the test vector file: unknown clock: %s\", line);" << std::endl;
+		cf.indent(verilogFile, 5);
+		verilogFile << "$finish;" << std::endl;
+
+		cf.indent(verilogFile, 4);
+		verilogFile << "end" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "end" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "else if (line == \"ADV\\n\") begin" << std::endl;
+
+		cf.indent(verilogFile, 4);
+		verilogFile << "$fgets(line, test_vector_file);" << std::endl;
+		cf.indent(verilogFile, 4);
+		verilogFile << "$sscanf(line, \"%d\", time_in_ps);" << std::endl;
+		cf.indent(verilogFile, 4);
+		verilogFile << "#time_in_ps;" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "end" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "else begin" << std::endl;
+
+
+	cf.indent(verilogFile, 4);
+	verilogFile << "$display(\"An error occured while parsing the test vector file: Can't parse line: %s\", line);" << std::endl;
+	cf.indent(verilogFile, 4);
+	verilogFile << "$finish;" << std::endl;
+
+	cf.indent(verilogFile, 3);
+	verilogFile << "end" << std::endl;
+
+	cf.indent(verilogFile, 2);
+	verilogFile << "end" << std::endl;
+
+
+	verilogFile << "TB_testbench_is_done <= 1;" << std::endl;
+	verilogFile << "$stop;" << std::endl;
+	verilogFile << "end" << std::endl;
+	verilogFile << "endmodule" << std::endl;
 }
 
 

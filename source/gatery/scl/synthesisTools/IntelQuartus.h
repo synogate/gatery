@@ -25,6 +25,11 @@
 
 namespace gtry {
 
+/**
+ * @addtogroup gtry_synthesisTools
+ * @{
+ */
+
 	class IntelQuartus : public SynthesisTool {
 	public:
 		IntelQuartus();
@@ -48,5 +53,7 @@ namespace gtry {
 		void workaroundReadOut08Bug(hlim::Circuit &circuit) const;
 
 	};
+
+/**@}*/
 
 }

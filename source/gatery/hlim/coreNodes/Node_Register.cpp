@@ -57,7 +57,7 @@ void Node_Register::simulatePowerOn(sim::SimulatorCallbacks &simCallbacks, sim::
 
 void Node_Register::simulateResetChange(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort, bool resetHigh) const
 {
-	bool inReset = (resetHigh ^ !(m_clocks[0]->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH)) && (getNonSignalDriver(RESET_VALUE).node != nullptr);
+	bool inReset = (resetHigh ^ !(m_clocks[0]->getRegAttribs().resetActive == hlim::RegisterAttributes::Active::HIGH)) && (getNonForwardingDriver(RESET_VALUE).node != nullptr);
 	state.set(sim::DefaultConfig::VALUE, internalOffsets[INT_IN_RESET], inReset);
 
 	if (inReset && m_clocks[0]->getRegAttribs().resetType == RegisterAttributes::ResetType::ASYNCHRONOUS) {
@@ -192,7 +192,7 @@ void Node_Register::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size
 
 void Node_Register::writeResetValueTo(sim::DefaultBitVectorState &state, const std::array<size_t, 2> &offsets, size_t width, bool clearDefinedIfUnconnected) const
 {
-	auto resetDriver = getNonSignalDriver(RESET_VALUE);
+	auto resetDriver = getNonForwardingDriver(RESET_VALUE);
 	if (resetDriver.node == nullptr) {
 		if (clearDefinedIfUnconnected)
 			for (auto offset : offsets)
@@ -214,6 +214,11 @@ void Node_Register::writeResetValueTo(sim::DefaultBitVectorState &state, const s
 	HCL_ASSERT_HINT(sim::allDefined(evalState), "Can not determine reset value of register!");	
 	for (auto offset : offsets)
 		state.insert(evalState, offset);
+}
+
+bool Node_Register::inputIsEnable(size_t inputPort) const
+{
+	return inputPort == ENABLE;
 }
 
 }

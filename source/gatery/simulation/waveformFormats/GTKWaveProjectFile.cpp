@@ -125,6 +125,58 @@ void GTKWaveProjectFile::write(const char *filename) const
 		file << "^1 " << e << '\n';
 }
 
+void GTKWaveProjectFile::writeSurferScript(const std::filesystem::path& filename) const
+{
+	if (!filename.parent_path().empty())
+		std::filesystem::create_directories(filename.parent_path());
+
+	std::ofstream file(filename, std::fstream::binary);
+	file << "load_file " << m_waveformFile << '\n';
+	file << "preference_set_clock_highlight Cycle\n";
+	file << "scope_select top\n";
+
+	static std::string_view colorNames[] = { // indigo not supported, use pink instead
+		"normal", "red", "orange", "yellow", "green", "blue", "pink", "violet"
+	};
+	
+	for (size_t i = 0; i < m_signals.size(); ++i) 
+	{
+		const Signal& s = m_signals[i];
+		std::string fixedName = s.signalName;
+
+		// skip array declaration part
+		fixedName = fixedName.substr(0, fixedName.find_first_of('['));
+
+		switch (s.format) 
+		{
+		case Signal::BLANK_LINE:
+			file << "divider_add\n";
+			break;
+		case Signal::COMMENT:
+			break;
+		default:
+			file << "variable_add " << fixedName << '\n';
+			if (s.color != Signal::NORMAL)
+			{
+				std::string prefix;
+				size_t idx = i;
+				do {
+					prefix = std::string(1, 'a' + idx % 16) + prefix;
+					idx /= 16;
+				} while (idx);
+				file << "item_focus " << prefix << '_' << fixedName << '\n';
+
+#ifndef __clang__
+				HCL_ASSERT_HINT(s.color < std::size(colorNames), "Invalid color index");
+#endif
+				file << "item_set_color " << colorNames[s.color] << "\n";
+			}
+			break;
+		}
+	}
+	file << "item_unfocus\n";
+}
+
 void GTKWaveProjectFile::writeEnumFilterFiles()
 {
 	for (const auto& e : KnownEnum::knownEnums())

@@ -24,6 +24,7 @@
 #include "frontend/Bit.h"
 #include "frontend/BitWidth.h"
 #include "frontend/BVec.h"
+#include "frontend/Chrono.h"
 #include "frontend/UInt.h"
 #include "frontend/SInt.h"
 #include "frontend/Enum.h"
@@ -39,7 +40,7 @@
 #include "frontend/ExternalComponent.h"
 #include "frontend/ExternalModule.h"
 #include "frontend/Final.h"
-#include "frontend/FrontendUnitTestSimulationFixture.h"
+//#include "frontend/FrontendUnitTestSimulationFixture.h"
 #include "frontend/FSM.h"
 #include "frontend/GraphTools.h"
 #include "frontend/Memory.h"
@@ -50,6 +51,7 @@
 #include "frontend/PipeBalanceGroup.h"
 #include "frontend/PriorityConditional.h"
 #include "frontend/Reg.h"
+#include "frontend/RetimingBlocker.h"
 #include "frontend/Reverse.h"
 #include "frontend/Scope.h"
 #include "frontend/Signal.h"
@@ -61,11 +63,12 @@
 #include "frontend/SignalLogicOp.h"
 #include "frontend/SignalMiscOp.h"
 #include "frontend/SimSigHandle.h"
-#include "frontend/tech/TechnologyMappingPattern.h"
+//#include "frontend/tech/TechnologyMappingPattern.h"
 #include "frontend/tech/TechnologyCapabilities.h"
-#include "frontend/tech/TargetTechnology.h"
+//#include "frontend/tech/TargetTechnology.h"
 #include "frontend/trace.h"
 #include "frontend/Vector.h"
+#include "frontend/CompoundTemplateInstantiations.h"
 #include "debug/DebugInterface.h"
 
 namespace gtry {
@@ -77,7 +80,7 @@ namespace gtry {
  * @brief Everything needed for composing circuits.
  * 
  * The Gatery frontend encompasses all classes and functions necessary for building 
- * circuits.
+ * circuits. See @ref gtry_frontend_page
  */
 
 

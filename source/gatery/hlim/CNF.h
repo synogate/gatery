@@ -37,14 +37,18 @@ class Conjunction {
 
 		/// @brief Parse the logic feeding into the given input port.
 		/// @details The logic must not have cycles.
-		void parseInput(const NodePort &nodeInput);
+		void parseInput(const NodePort &nodeInput, Subnet *area = nullptr);
 		/// @brief Parse the logic feedung into the given input port.
 		/// @details The logic must not have cycles.
-		void parseOutput(const NodePort &nodeOutput);
+		void parseOutput(const NodePort &nodeOutput, Subnet *area = nullptr);
 
 		bool isEqualTo(const Conjunction &other) const;
 		bool isNegationOf(const Conjunction &other) const;
 		bool isSubsetOf(const Conjunction &other) const;
+
+		/// Returns true if this and other can never both be true.
+		/// @param checkComparisons Extend this check into the terms to check for mutually exclusive comparisons with e.g. states.
+		bool cannotBothBeTrue(const Conjunction &other, bool checkComparisons = false) const;
 
 		/// Returns true if any input feeding into the conjunction is unconnected
 		bool isUndefined() const { return m_undefined; }
@@ -64,8 +68,9 @@ class Conjunction {
 		/// @details Fails if isUndefined() or isContradicting() which might change in the future
 		/// @param targetGroup The node group into which to place the new nodes
 		/// @param newNodes If not nullptr, the area to which to add the new nodes.
+		/// @param allowUnconnected If the conjunction is constant one, allow outputing an unconnected NodePort.
 		/// @return The output port of the final logical AND or {} if the Conjunction is empty (always true)
-		NodePort build(NodeGroup &targetGroup, Subnet *newNodes = nullptr) const;
+		NodePort build(NodeGroup &targetGroup, Subnet *newNodes = nullptr, bool allowUnconnected = true) const;
 
 		struct Term {
 			/// (non-signal) driver of the raw signal that directly or negated enters the conjunction
@@ -76,9 +81,13 @@ class Conjunction {
 			/// @details This is only kept in case the terms are to be used again to build or drive logic to minimize the amount of
 			/// signal nodes that are skipped.
 			NodePort conjunctionDriver;
+
+			auto operator<=>(const Term&) const = default;
 		};
 
 		const utils::UnstableMap<NodePort, Term> &getTerms() const { return m_terms; }
+
+		auto operator<=>(const Conjunction&) const = default;
 	private:
 		/// All terms of the conjunction (the parts that are ANDed together), stored as a map for faster lookup by driver
 		utils::UnstableMap<NodePort, Term> m_terms;

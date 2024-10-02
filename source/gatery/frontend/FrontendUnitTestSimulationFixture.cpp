@@ -23,14 +23,45 @@
 #include <gatery/export/vhdl/VHDLExport.h>
 #include <gatery/hlim/Circuit.h>
 #include <boost/test/unit_test.hpp>
-#include <gatery/debug/websocks/WebSocksInterface.h>
 #include <gatery/frontend/EventStatistics.h>
+
+#include <gatery/debug/DebugInterface.h>
 
 
 namespace gtry {
 
+UnitTestSimulationFixture::UnitTestSimulationFixture()
+{
+	// Reporting must be setup before anything happens that could be reported on.
+
+	const std::string& filename = boost::unit_test::framework::current_test_case().p_name;
+	auto& testSuite = boost::unit_test::framework::master_test_suite();
+	for (int i = 1; i < testSuite.argc; i++) {
+		std::string_view arg(testSuite.argv[i]);
+
+		if (arg == "--report") {
+			if (i+1 >= testSuite.argc)
+				throw std::runtime_error("Missing command line argument after --report"); 
+			i++;
+			std::string_view param(testSuite.argv[i]);
+			if (param == "html")
+				gtry::dbg::logHtml(filename + "_log/");
+			else if (param == "web") {
+				gtry::dbg::logWebsocks(1337);
+			} else
+				throw std::runtime_error("Invalid command line argument after --report");
+		}
+	}
+	gtry::dbg::awaitDebugger();
+}
+
 UnitTestSimulationFixture::~UnitTestSimulationFixture()
 {
+	gtry::dbg::stopInDebugger();
+
+	if (m_vhdlExport)
+		m_vhdlExport->clearTestbenchRecorder();
+
 	// Force destruct of simulator (and all frontend signals held inside coroutines) before destruction of DesignScope in base class.
 	m_simulator.reset(nullptr);
 }
@@ -112,6 +143,7 @@ size_t UnitTestSimulationFixture::countNodes(const std::function<bool(const hlim
 
 void UnitTestSimulationFixture::setup()
 {
+
 }
 
 void UnitTestSimulationFixture::teardown()
@@ -148,6 +180,8 @@ void BoostUnitTestSimulationFixture::prepRun()
 
 		if (arg == "--vcd")
 			recordVCD(filename + ".vcd");
+		else if(arg == "--vcdm")
+			recordVCD(filename + "_with_memories" ".vcd", true);
 		else if (arg == "--vhdl")
 			outputVHDL(filename + ".vhd");
 		else if (arg == "--csv")
@@ -169,17 +203,9 @@ ClockedTest::ClockedTest()
 
 void ClockedTest::teardown()
 {
-	try {
-		design.postprocess();
-		//design.getCircuit().postprocess(hlim::MinimalPostprocessing{});
-		runTest(m_timeout);
-	} catch (const std::exception& e) {
-		std::cerr << e.what() << std::endl;
-
-		gtry::dbg::WebSocksInterface::create(1337);
-		dbg::awaitDebugger();
-		dbg::stopInDebugger();
-	}
+	design.postprocess();
+	//design.getCircuit().postprocess(hlim::MinimalPostprocessing{});
+	runTest(m_timeout);
 
 	BoostUnitTestSimulationFixture::teardown();
 }

@@ -66,7 +66,7 @@ namespace gtry
 		void for_each_base_signal(CompoundSignal auto&& signal, auto&& cb)
 		{
 			for_each_base_signal(
-				boost::pfr::structure_tie(std::forward<decltype(signal)>(signal)), 
+				structure_tie(std::forward<decltype(signal)>(signal)), 
 				std::forward<decltype(cb)>(cb)
 			);
 		}

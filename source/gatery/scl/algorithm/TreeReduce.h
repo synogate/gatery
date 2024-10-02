@@ -21,21 +21,13 @@
 
 #include <gatery/utils/BitManipulation.h>
 #include <gatery/utils/Range.h>
+#include <gatery/scl/ShiftReg.h>
 
 #include <vector>
 
 
 namespace gtry::scl
 {
-	
-	template<typename Signal>
-	Signal delay(Signal signal, unsigned delay) {
-		for (auto i : utils::Range(delay))
-			signal = reg(signal);
-		return signal;
-	}
-	
-
 	template<typename Signal, class Functor>
 	Signal treeReduceImpl(const std::vector<Signal> &input, size_t depth, size_t registersRemaining, size_t registerInterval, Functor functor) {
 		

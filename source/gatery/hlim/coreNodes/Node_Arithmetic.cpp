@@ -30,7 +30,7 @@
 
 namespace gtry::hlim {
 
-Node_Arithmetic::Node_Arithmetic(Op op) : Node(2, 1), m_op(op)
+Node_Arithmetic::Node_Arithmetic(Op op, size_t operands) : Node(operands, 1), m_op(op)
 {
 
 }
@@ -43,21 +43,24 @@ void Node_Arithmetic::connectInput(size_t operand, const NodePort &port)
 
 void Node_Arithmetic::updateConnectionType()
 {
-	auto lhs = getDriver(0);
-	auto rhs = getDriver(1);
+	std::optional<ConnectionType> desiredConnectionType;
+	for (size_t i = 0; i < getNumInputPorts(); i++) {
+		auto driver = getDriver(i);
 
-	ConnectionType desiredConnectionType = getOutputConnectionType(0);
-
-	if (lhs.node != nullptr) {
-		desiredConnectionType = hlim::getOutputConnectionType(lhs);
-		if (rhs.node != nullptr) {
-			desiredConnectionType.width = std::max(desiredConnectionType.width, getOutputWidth(rhs));
-			HCL_ASSERT_HINT(lhs.node->getOutputConnectionType(lhs.port).type == rhs.node->getOutputConnectionType(rhs.port).type, "Mixing different interpretations not yet implemented!");
+		if (driver.node != nullptr) {
+			if (!desiredConnectionType)
+				desiredConnectionType = hlim::getOutputConnectionType(driver);
+			else {
+				desiredConnectionType->width = std::max(desiredConnectionType->width, getOutputWidth(driver));
+				HCL_ASSERT_HINT(desiredConnectionType->type == driver.node->getOutputConnectionType(driver.port).type, "Mixing different interpretations not yet implemented!");
+			}
 		}
-	} else if (rhs.node != nullptr)
-		desiredConnectionType = hlim::getOutputConnectionType(rhs);
+	}
 
-	setOutputConnectionType(0, desiredConnectionType);
+	if (!desiredConnectionType)
+		desiredConnectionType = getOutputConnectionType(0);
+
+	setOutputConnectionType(0, *desiredConnectionType);
 }
 
 
@@ -68,106 +71,122 @@ void Node_Arithmetic::disconnectInput(size_t operand)
 
 void Node_Arithmetic::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
-	auto leftDriver = getDriver(0);
-	auto rightDriver = getDriver(1);
-	if (inputOffsets[0] == ~0ull || inputOffsets[1] == ~0ull ||
-		leftDriver.node == nullptr || rightDriver.node == nullptr) {
-		state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
-		return;
+
+	for (size_t i = 0; i < getNumInputPorts(); i++) {
+		auto driver = getDriver(i);
+		if (inputOffsets[i] == ~0ull || driver.node == nullptr) {
+			state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+			return;
+		}
+
+		const auto &type = hlim::getOutputConnectionType(driver);
+		if (!allDefined(state, inputOffsets[i], type.width)) {
+			state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+			return;
+		}
 	}
 
-	const auto &leftType = hlim::getOutputConnectionType(leftDriver);
-	const auto &rightType = hlim::getOutputConnectionType(rightDriver);
 
-	if (!allDefined(state, inputOffsets[0], leftType.width) || !allDefined(state, inputOffsets[1], rightType.width)) {
-		state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
-		return;
-	}
-	
 	state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, true);
 
-	if (getOutputConnectionType(0).width <= 64 && leftType.width <= 64 && rightType.width <= 64) {
-		std::uint64_t left = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[0], leftType.width);
-		std::uint64_t right = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[1], rightType.width);
-		std::uint64_t result;
+	if (getOutputConnectionType(0).width <= 64) {
+		std::uint64_t result = 0;
 
-		switch (getOutputConnectionType(0).type) {
-			case ConnectionType::BOOL:
-				HCL_ASSERT_HINT(false, "Can't do arithmetic on booleans!");
-			break;
-			case ConnectionType::BITVEC:
-				switch (m_op) {
-					case ADD:
-						result = left + right;
+		for (size_t i = 0; i < getNumInputPorts(); i++) {
+			auto driver = getDriver(i);
+			const auto &type = hlim::getOutputConnectionType(driver);
+		
+			std::uint64_t value = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[i], type.width);
+
+			if (i == 0)
+				result = value;
+			else {
+				switch (getOutputConnectionType(0).type) {
+					case ConnectionType::BOOL:
+						HCL_ASSERT_HINT(false, "Can't do arithmetic on booleans!");
 					break;
-					case SUB:
-						result = left - right;
-					break;
-					case MUL:
-						result = left * right;
-					break;
-					case DIV:
-						if (right != 0)
-							result = left / right;
-						else
-							state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
-					break;
-					case REM:
-						if (right != 0)
-							result = left % right;
-						else
-							state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+					case ConnectionType::BITVEC:
+						switch (m_op) {
+							case ADD:
+								result += value;
+							break;
+							case SUB:
+								result -= value;
+							break;
+							case MUL:
+								result *= value;
+							break;
+							case DIV:
+								if (value != 0)
+									result /= value;
+								else
+									state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+							break;
+							case REM:
+								if (value != 0)
+									result = result % value;
+								else
+									state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+							break;
+							default:
+								HCL_ASSERT_HINT(false, "Unhandled case!");
+						}
 					break;
 					default:
 						HCL_ASSERT_HINT(false, "Unhandled case!");
 				}
-			break;
-			default:
-				HCL_ASSERT_HINT(false, "Unhandled case!");
+			}
 		}
 
 		state.insertNonStraddling(sim::DefaultConfig::VALUE, outputOffsets[0], getOutputConnectionType(0).width, result);
 	} else {
-		sim::BigInt left, right, result;
+		sim::BigInt value, result;
 
-		left = sim::extractBigInt(state, inputOffsets[0], leftType.width);
-		right = sim::extractBigInt(state, inputOffsets[1], rightType.width);
+		for (size_t i = 0; i < getNumInputPorts(); i++) {
+			auto driver = getDriver(i);
+			const auto &type = hlim::getOutputConnectionType(driver);
 
-		switch (getOutputConnectionType(0).type) {
-			case ConnectionType::BOOL:
-				HCL_ASSERT_HINT(false, "Can't do arithmetic on booleans!");
-			break;
-			case ConnectionType::BITVEC:
-				switch (m_op) {
-					case ADD:
-						result = left + right;
+			value = sim::extractBigInt(state, inputOffsets[i], type.width);
+
+			if (i == 0)
+				result = value;
+			else {
+				switch (getOutputConnectionType(0).type) {
+					case ConnectionType::BOOL:
+						HCL_ASSERT_HINT(false, "Can't do arithmetic on booleans!");
 					break;
-					case SUB:
-						result = left - right;
-					break;
-					case MUL:
-						result = left * right;
-					break;
-					case DIV:
-						if (right != 0)
-							result = left / right;
-						else
-							state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
-					break;
-					case REM:
-						if (right != 0)
-							result = left % right;
-						else
-							state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+					case ConnectionType::BITVEC:
+						switch (m_op) {
+							case ADD:
+								result += value;
+							break;
+							case SUB:
+								result -= value;
+							break;
+							case MUL:
+								result *= value;
+							break;
+							case DIV:
+								if (value != 0)
+									result /= value;
+								else
+									state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+							break;
+							case REM:
+								if (value != 0)
+									result = result % value;
+								else
+									state.setRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width, false);
+							break;
+							default:
+								HCL_ASSERT_HINT(false, "Unhandled case!");
+						}
 					break;
 					default:
 						HCL_ASSERT_HINT(false, "Unhandled case!");
 				}
-			break;
-			default:
-				HCL_ASSERT_HINT(false, "Unhandled case!");
+			}
 		}
-
 		sim::insertBigInt(state, outputOffsets[0], getOutputConnectionType(0).width, result);
 	}
 }
@@ -192,7 +211,9 @@ void Node_Arithmetic::assertValidity() const
 
 std::string Node_Arithmetic::getInputName(size_t idx) const
 {
-	return idx==0?"a":"b";
+	std::string name("a");
+	name[0] += (char)idx;
+	return name;
 }
 
 std::string Node_Arithmetic::getOutputName(size_t idx) const
@@ -202,7 +223,7 @@ std::string Node_Arithmetic::getOutputName(size_t idx) const
 
 std::unique_ptr<BaseNode> Node_Arithmetic::cloneUnconnected() const
 {
-	std::unique_ptr<BaseNode> res(new Node_Arithmetic(m_op));
+	std::unique_ptr<BaseNode> res(new Node_Arithmetic(m_op, getNumInputPorts()));
 	copyBaseToClone(res.get());
 	return res;
 }

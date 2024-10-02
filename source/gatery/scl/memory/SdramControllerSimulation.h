@@ -29,7 +29,7 @@ namespace gtry::scl::sdram
 			pinOut(bus.dq).setName(prefix + "DQ_OUT");
 			pinOut(outEnable).setName(prefix + "DQ_OUT_EN");
 
-			BVec moduleData = scl::sdram::moduleSimulation(bus);
+			BVec moduleData = *scl::sdram::moduleSimulation(bus);
 			HCL_NAMED(moduleData);
 
 			m_dataIn = ConstBVec(moduleData.width());

@@ -95,12 +95,12 @@ namespace gtry::scl
 			{
 				f = (b & c) | (~b & d);
 			}
-			ELSE IF(round < 32)
+			ELSEIF(round < 32)
 			{
 				f = (b & d) | (c & ~d);
 				g = g * 5 + 1;
 			}
-			ELSE IF(round < 48)
+			ELSEIF(round < 48)
 			{
 				f = b ^ c ^ d;
 				g = g * 3 + 5;

@@ -34,6 +34,7 @@ namespace gtry::hlim {
 	class Node_Register;
 	class Node_RegSpawner;
 	class Node_RegHint;
+	class Node_Constant;
 	class Subnet;
 
 	sim::DefaultBitVectorState evaluateStatically(Circuit &circuit, hlim::NodePort output);
@@ -85,6 +86,7 @@ namespace gtry::hlim {
 	struct FindDriverOpts {
 		size_t inputPortIdx = 0ull;
 		bool skipSignalNodes = true;
+		bool skipAllForwardingNodes = true;
 		bool skipNamedSignalNodes = true;
 		std::optional<size_t> skipExportOverrideNodes = {};
 	};
@@ -108,4 +110,7 @@ namespace gtry::hlim {
 	};	
 	InterconnectedNodes getAllInterConnected(Node_MultiDriver *mdNode);
 	bool drivenByMultipleIOPins(const InterconnectedNodes &in, Node_Pin *&firstDrivingPin);
+
+	/// Checks is an output is an equality comparison with a constant and if so returns the constant and the compared to value.
+	std::optional<std::pair<Node_Constant*, NodePort>> isComparisonWithConstant(NodePort output);
 }

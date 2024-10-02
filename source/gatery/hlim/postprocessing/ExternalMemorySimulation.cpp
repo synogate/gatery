@@ -22,6 +22,7 @@
 #include "../Circuit.h"
 #include "../Clock.h"
 
+#include "../../simulation/simProc/SimulationProcess.h"
 #include "../../simulation/simProc/SensitivityList.h"
 #include "../../simulation/simProc/WaitChange.h"
 #include "../../simulation/simProc/WaitClock.h"
@@ -112,15 +113,6 @@ struct MemoryState {
 			memory = std::make_unique<MemoryStorageDense>(config.size, config.initialization);
 	}
 };
-
-
-bool anyAsync(const MemorySimConfig &config) {
-	for (const auto &port : config.readPorts)
-		if (port.inputLatency == 0 && port.outputLatency == 0)
-			return true;
-
-	return false;
-}
 
 sim::SimulationFunction<void> handleReadPortOnce(MemorySimConfig &config, size_t rdPortIdx, MemoryState &memState)
 {

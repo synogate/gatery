@@ -26,10 +26,6 @@ namespace gtry::scl
 {
 	class PackedMemoryMap;
 
-	template<class... Capability> struct TileLinkU;
-	using TileLinkUL = TileLinkU<>;
-
-
 /**
  * @addtogroup gtry_scl_memorymaps
  * @{

@@ -26,7 +26,6 @@
 
 #include <gatery/hlim/coreNodes/Node_Rewire.h>
 #include <gatery/hlim/coreNodes/Node_Signal.h>
-#include <gatery/hlim/supportNodes/Node_Attributes.h>
 
 gtry::SignalReadPort gtry::SignalReadPort::expand(size_t width, hlim::ConnectionType::Type resultType) const
 {
@@ -52,11 +51,14 @@ gtry::SignalReadPort gtry::SignalReadPort::expand(size_t width, hlim::Connection
 				rewire->setConcat();
 				break;
 		}
-
+/*
+		// This actually does more harm than good
 		auto* signal = DesignScope::createNode<hlim::Node_Signal>();
 		signal->connectInput({ .node = rewire, .port = 0 });
 		signal->setName(node->getName());
 		ret = hlim::NodePort{ .node = signal, .port = 0 };
+*/
+		ret = hlim::NodePort{ .node = rewire, .port = 0 };
 	}
 	return SignalReadPort{ ret, expansionPolicy };
 }
@@ -71,9 +73,3 @@ gtry::ElementarySignal::~ElementarySignal()
 {
 }
 
-void gtry::ElementarySignal::attribute(const hlim::SignalAttributes &attributes)
-{
-	auto* node = DesignScope::createNode<hlim::Node_Attributes>();
-	node->getAttribs() = std::move(attributes);
-	node->connectInput(readPort());
-}

@@ -20,7 +20,14 @@
 #include "Range.h"
 #include "Exceptions.h"
 
-#include <boost/rational.hpp>
+#ifdef _MSC_VER
+# pragma warning(push)
+# pragma warning(disable: 4146)
+# include <boost/rational.hpp>
+# pragma warning(pop)
+#else
+# include <boost/rational.hpp>
+#endif
 
 
 #include <cstdint>

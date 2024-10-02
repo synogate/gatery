@@ -77,6 +77,7 @@ namespace gtry::sim
 	void VCDSink::writeGtkWaveProjFile()
 	{
 		m_gtkWaveProjectFile.write((m_gtkWaveProjectFile.getWaveformFile()+".gtkw").c_str());
+		m_gtkWaveProjectFile.writeSurferScript(m_gtkWaveProjectFile.getWaveformFile() + ".surfer");
 	}
 
 	void VCDSink::onDebugMessage(const hlim::BaseNode* src, std::string msg)
@@ -227,26 +228,19 @@ namespace gtry::sim
 			auto synthetic_module = m_VCD.beginModule(syntheticModuleName);
 			if (m_includeDebugMessages) {
 				m_debugMessageID = identifierGenerator.getIdentifer();
-				m_VCD.declareReal(m_debugMessageID, debugMessagesLabel);
+				m_VCD.declareString(m_debugMessageID, debugMessagesLabel);
 			}
 			if (m_includeWarnings) {
 				m_warningsID = identifierGenerator.getIdentifer();
-				m_VCD.declareReal(m_warningsID, warningsLabel);
+				m_VCD.declareString(m_warningsID, warningsLabel);
 			}
 			if (m_includeAsserts) {
 				m_assertsID = identifierGenerator.getIdentifer();
-				m_VCD.declareReal(m_assertsID, assertsLabel);
+				m_VCD.declareString(m_assertsID, assertsLabel);
 			}
 		}
 
 		auto dumpvars = m_VCD.beginDumpVars();
-
-		if (m_includeDebugMessages)
-			m_VCD.writeString(m_debugMessageID, "");
-		if (m_includeWarnings)
-			m_VCD.writeString(m_warningsID, "");
-		if (m_includeAsserts)
-			m_VCD.writeString(m_assertsID, "");
 
 		for(auto& c : m_clock2code) {
 			auto value = m_simulator.getValueOfClock(c.first);

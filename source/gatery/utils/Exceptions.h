@@ -29,16 +29,18 @@
 
 namespace gtry::utils {
 
+std::string composeMHDLErrorString(const char *file, size_t line, const std::string &what);
+
+
 template<class BaseError>
 class MHDLError : public BaseError
 {
 	public:
 		MHDLError(const char *file, size_t line, const std::string &what) : 
-				BaseError(what + " Location: " + file + "("+boost::lexical_cast<std::string>(line)+")") {
+				BaseError(composeMHDLErrorString(file, line, what)) {
 					
 			m_trace.record(20, 1);
-		}
-		
+		}		
 		inline const StackTrace &getStackTrace() const { return m_trace; }
 	protected:
 		StackTrace m_trace;
@@ -51,7 +53,8 @@ extern template class MHDLError<std::runtime_error>;
 class InternalError : public MHDLError<std::logic_error>
 {
 	public:
-		InternalError(const char *file, size_t line, const std::string &what) : MHDLError<std::logic_error>(file, line, what) { }
+		InternalError(const char *file, size_t line, const std::string &what);
+		~InternalError();
 };
 
 
@@ -59,7 +62,8 @@ class InternalError : public MHDLError<std::logic_error>
 class DesignError : public MHDLError<std::runtime_error>
 {
 	public:
-		DesignError(const char *file, size_t line, const std::string &what)  : MHDLError<std::runtime_error>(file, line, what) { }
+		DesignError(const char *file, size_t line, const std::string &what);
+		~DesignError();
 };
 
 

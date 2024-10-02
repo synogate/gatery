@@ -86,6 +86,7 @@ namespace gtry {
 			std::vector<std::filesystem::path> m_generatedSourceFiles;
 
 			void prepRun() override;
+			void performVhdlExport(Flavor flavor = TARGET_GHDL);
 	};
 
 }

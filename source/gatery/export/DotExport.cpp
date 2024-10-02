@@ -122,13 +122,13 @@ void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubn
 
 			file << " label=\"" << nodeGroup->getInstanceName() << "\";" << std::endl;
 			switch (nodeGroup->getGroupType()) {
-				case hlim::NodeGroup::GroupType::ENTITY:
+				case hlim::NodeGroupType::ENTITY:
 					file << " color=blue;" << std::endl;
 				break;
-				case hlim::NodeGroup::GroupType::AREA:
+				case hlim::NodeGroupType::AREA:
 					file << " color=black; style=filled; fillcolor=azure; " << std::endl;
 				break;
-				case hlim::NodeGroup::GroupType::SFU:
+				case hlim::NodeGroupType::SFU:
 					file << " color=black; style=filled; fillcolor=beige;" << std::endl;
 				break;
 			}
@@ -158,7 +158,7 @@ void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubn
 						file << ' ' << clk->getName();
 				file << "\"";
 				file << " id=\"" << node->getId() << "\"";
-				if (auto* reg = dynamic_cast<hlim::Node_Signal*>(node))
+				if (dynamic_cast<hlim::Node_Signal*>(node))
 				{
 					file << " tooltip=\"";
 					for (std::string trace : node->getStackTrace().formatEntriesFiltered())
@@ -268,14 +268,14 @@ void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubn
 					file << "DEPENDENCY"; break;
 			}
 
-			if (auto* reg = dynamic_cast<hlim::Node_Register*>(node)) {
+			if (dynamic_cast<hlim::Node_Register*>(node)) {
 				if (port == hlim::Node_Register::Input::RESET_VALUE)
 					file << " (reset)";
 				else if (port == hlim::Node_Register::Input::ENABLE)
 					file << " (en)";
 			}
 
-			if (auto* reg = dynamic_cast<hlim::Node_Multiplexer*>(node)) {
+			if (dynamic_cast<hlim::Node_Multiplexer*>(node)) {
 				if (port == 0)
 					file << " (sel)";
 				else
@@ -400,7 +400,6 @@ void DotExport::writeMergedDotFile(const hlim::Circuit &circuit, const hlim::Con
 		connectedNodes.clear();
 
 		for (auto i : { 0 }) {
-			auto driver = sig->getDriver(i);
 			auto nonSignalDriver = sig->getNonSignalDriver(i);
 			if (nonSignalDriver.node ==  nullptr) continue;
 

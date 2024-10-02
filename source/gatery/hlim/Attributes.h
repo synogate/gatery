@@ -52,8 +52,13 @@ struct SignalAttributes : public Attributes {
 	std::optional<size_t> maxFanout; 
 	/// Whether the signal may be fused away (e.g. signal between regs to shiftreg)
 	std::optional<bool> allowFusing;
+	/// Do not optimize this signal during synthesis and implementation
+	std::optional<bool> optimizationBarrier;
+	/// Preserve this signal for debugging in hardware
+	std::optional<bool> hardwareDebugSignal;
 
 	void fuseWith(const SignalAttributes &rhs);
+	bool preventRetimingOver() const;
 };
 
 struct RegisterAttributes : public Attributes {
@@ -114,3 +119,6 @@ struct MemoryAttributes : public Attributes {
 };
 
 }
+
+extern template class std::map<std::string, gtry::hlim::AttribValue>;
+extern template class std::map<std::string, gtry::hlim::VendorSpecificAttributes>;

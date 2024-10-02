@@ -70,6 +70,9 @@ class MemoryGroup : public NodeGroupMetaInfo
 
 		inline NodeGroup *getNodeGroup() const { return m_nodeGroup; }
 		inline NodeGroup *getFixupNodeGroup() const { return m_fixupNodeGroup; }
+
+		void emulateResetOfOutputRegisters(Circuit &circuit);
+		void emulateResetOfFirstReadPortOutputRegister(Circuit &circuit, ReadPort &rp);
 	protected:
 		NodePtr<Node_Memory> m_memory;
 		std::vector<WritePort> m_writePorts;

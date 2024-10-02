@@ -62,6 +62,7 @@ namespace gtry::scl::sdram
 
 	public:
 		SdramTimer();
+		virtual ~SdramTimer() = default;
 
 		virtual void generate(const Timings& timing, CommandBus cmd, UInt casLength, size_t casLimit);
 		virtual Bit can(Enum<CommandCode> code, UInt bank);

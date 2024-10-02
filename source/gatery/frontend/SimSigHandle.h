@@ -58,6 +58,7 @@ namespace gtry {
 	public:
 		operator sim::DefaultBitVectorState() const { return eval(); }
 		void operator=(const sim::DefaultBitVectorState& state) { this->m_handle = state; }
+		void operator=(const sim::ExtendedBitVectorState& state) { this->m_handle = state; }
 		bool operator==(const sim::DefaultBitVectorState& state) const { ReadSignalList::addToAllScopes(m_handle.getOutput()); return this->m_handle == state; }
 		bool operator!=(const sim::DefaultBitVectorState& state) const { return !this->operator==(state); }
 
@@ -98,11 +99,13 @@ namespace gtry {
 		operator std::vector<T> () const { return this->m_handle.template toVector<T>(); }
 
 		void invalidate() { m_handle.invalidate(); }
+		void stopDriving() { m_handle.stopDriving(); }
 		bool allDefined() const { return m_handle.allDefined(); }
 
 		sim::DefaultBitVectorState eval() const { ReadSignalList::addToAllScopes(m_handle.getOutput()); return m_handle.eval(); }
 
 		inline sim::SigHandle &getBackendHandle() { return m_handle; }
+		inline const sim::SigHandle& getBackendHandle() const { return m_handle; }
 	protected:
 		BaseSigHandle(const hlim::NodePort& np) : m_handle(np) { HCL_DESIGNCHECK(np.node != nullptr); }
 

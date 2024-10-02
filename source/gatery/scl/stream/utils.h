@@ -18,8 +18,11 @@
 #pragma once
 
 #include "../Counter.h"
+#include "Stream.h"
 #include "metaSignals.h"
 #include "../cdc.h"
+#include "StreamBroadcaster.h"
+#include "StreamArbiter.h"
 
 namespace gtry::scl::strm
 {
@@ -143,6 +146,15 @@ namespace gtry::scl::strm
 		return [=](auto&& source) { return stall(std::forward<decltype(source)>(source), stallCondition); };
 	}
 
+	template<StreamSignal StreamT> 
+		requires (StreamT::template has<Ready>() and StreamT::template has<Valid>())
+	StreamT allowanceStall(StreamT&& source, Bit allow, BitWidth allowanceW, size_t initialAllowance = 0);
+
+	inline auto allowanceStall(Bit allow, BitWidth allowanceW, size_t initialAllowance = 0)
+	{
+		return [=](auto&& source) { return allowanceStall(std::forward<decltype(source)>(source), allow, allowanceW, initialAllowance); };
+	}
+		
 	/**
 	 * @brief stalls a packet stream using a stall condition. This function ensures a stream is backpressured without losing any data. It will not interrupt an ongoing packet
 	 * @param source source stream
@@ -162,6 +174,11 @@ namespace gtry::scl::strm
 	template<scl::StreamSignal TStream>
 	TStream dropPacket(TStream&& in, Bit drop);
 
+	inline auto dropPacket(Bit drop)
+	{
+		return [=](auto&& in) { return dropPacket(std::forward<decltype(in)>(in), drop); };
+	}
+
 	/**
 	* @brief Puts a register in the ready, valid and data path.
 	* @param stream Source stream
@@ -170,8 +187,16 @@ namespace gtry::scl::strm
 	*/
 	template<StreamSignal T> 
 	T regDecouple(T& stream, const RegisterSettings& settings = {});
+	template<StreamSignal T> 
+	T regDecouple(T&& stream, const RegisterSettings& settings = {}) { return regDecouple(stream, settings); }
 	template<StreamSignal T>
 	T regDecouple(const T& stream, const RegisterSettings& settings = {});
+
+	//untested
+	inline auto regDecouple(const RegisterSettings& settings = {})
+	{
+		return [=](auto&& in) { return regDecouple(std::forward<decltype(in)>(in), settings); };
+	}
 
 	/**
 	* @brief allows to send a request-acknowledge handshaked data across clock domains
@@ -202,8 +227,14 @@ namespace gtry::scl::strm
 	* @param addr the address stream to look up in memory
 	* @param memory - self explanatory
 	*/
-	template<Signal T, Signal ... Meta, StreamSignal StreamT>
-	StreamT lookup(StreamT& addr, Memory<T>& memory);
+	template<Signal T, Signal ... Meta, Signal Tout>
+	auto lookup(Stream<T, Meta...>&& addr, Memory<Tout>& memory);
+
+	template<Signal Tout>
+	inline auto lookup(Memory<Tout>& memory)
+	{
+		return [&memory](auto&& in) { return lookup(std::forward<decltype(in)>(in), memory); };
+	}
 
 	/**
 	* @brief	Puts a register spawner for retiming in the valid and data path.
@@ -236,6 +267,11 @@ namespace gtry::scl::strm
 		return out;
 	}
 
+	inline auto pipeinput()
+	{
+		return [=](auto&& source) { return pipeinput(std::forward<decltype(source)>(source)); };
+	}
+
 	template<StreamSignal StreamT>
 	Vector<StreamT> serialPushParallelPopBuffer(StreamT&& in, size_t numberOfElements);
 
@@ -248,8 +284,93 @@ namespace gtry::scl::strm
 	/**
 	 * @brief creates a VStream with the payload and valid bits you give it
 	*/
-	template<StreamSignal StreamT>
-	StreamT createVStream(const typename StreamT::Payload& payload, const Bit& validBit) { StreamT ret(payload); valid(ret) = validBit; return ret; }
+	template<Signal Tp>
+	VStream<std::remove_cvref_t<Tp>> createVStream(Tp&& payload, const Bit& validBit) { VStream<std::remove_cvref_t<Tp>> ret(std::forward<Tp>(payload)); valid(ret) = validBit; return ret; }
+
+
+
+	/**
+	 * @brief Stalls both streams to synchonize them, such that every beat on the second stream is lined up and kept constant for all beats of a corresponding packet on the first stream.
+	 * @details If the second stream is not a packet stream, the two streams are simply aligned beat for beat.
+	 * @returns The input streams, but stalling each other to be aligned.
+	 */
+	template<StreamSignal BeatStreamT, StreamSignal PacketStreamT>
+	std::tuple<PacketStreamT, BeatStreamT> replicateForEntirePacket(PacketStreamT &&packetStream, BeatStreamT &&beatStream);
+
+
+	/**
+	 * @brief Computes a meta signal from each packet using the given functor and attaches the result as a meta signal.
+	 * @details The functor returns an RvStream to indicate, when it has completed its computation. It must produce one beat
+	 * for each ingested packet (or for each ingested beat if the input is not a packet stream).
+	 * The packet stream is duplicated into a fifo to ensure on the output side that the meta signal can be joined with the packet such that it is stable
+	 * for the entire duration of the packet.
+	 * @param inputStream The packet stream to processs and return
+	 * @param maxPacketLength The depth of the fifo, which must be at least as big as the maximum packet size in beats.
+	 * @param functor A lambda transforming the input packet stream into a stream of meta information structs.
+	 * @returns A delayed variant of the input stream with the computed meta information attached and stable between sop and eop.
+	 */
+	template<StreamSignal InStreamT, typename Functor>
+	auto addMetaSignalFromPacket(InStreamT &&inputStream, size_t maxPacketLength, Functor functor);
+
+	/**
+	 * @brief Computes a meta signal from each packet using the given functor and attaches the result as a meta signal.
+	 * @details The functor returns an RvStream to indicate, when it has completed its computation. It must produce one beat
+	 * for each ingested packet (or for each ingested beat if the input is not a packet stream).
+	 * The packet stream is duplicated into a fifo to ensure on the output side that the meta signal can be joined with the packet such that it is stable
+	 * for the entire duration of the packet.
+	 * @param maxPacketLength The depth of the fifo, which must be at least as big as the maximum packet size in beats.
+	 * @param functor A lambda transforming the input packet stream into a stream of meta information structs.
+	 */
+	template<typename Functor>
+	inline auto addMetaSignalFromPacket(size_t maxPacketLength, Functor functor) {
+		return [maxPacketLength, functor](auto&& in) { return addMetaSignalFromPacket(std::forward<decltype(in)>(in), maxPacketLength, functor); };
+	}
+
+	/**
+	 * @brief Short hand for creating a StreamArbiter. Streams are arbitrated in the order they are passed to the function.
+	 * @param selector Arbitration policy to use. See StreamArbiter for more information.
+	 * @param in1 First stream to arbitrate.
+	 * @param ...inX Any number of additional streams to arbitrate with.
+	 */
+	template<typename Policy, StreamSignal T, StreamSignal... To>
+	T arbitrateWithPolicy(Policy&& selector, T&& in1, To&&... inX);
+
+	/**
+	 * @brief Short hand for creating a StreamArbiter. Streams are arbitrated in the order they are passed to the function. Same as arbitrateWithPolicy, but with ArbiterPolicyLowest policy.
+	 * @param in1 First stream to arbitrate.
+	 * @param ...inX Any number of additional streams to arbitrate with.
+	 */
+	template<StreamSignal T, StreamSignal... To>
+	T arbitrate(T&& in1, To&&... inX);
+
+	/**
+	* @brief this module does not comply with valid semantics. It can change its payload without transfer,
+	* but this might be acceptable since its use case is only to prevent catastrophic lockup and to give
+	* proper failure reporting possibilities to user, such as the possibility to mapOut the totalLostPackets.
+	*/
+	template<StreamSignal StreamT> requires (!StreamT::template has<Ready>() && !StreamT::template has<Eop>())
+	std::tuple<decltype(StreamT{}.add(Ready{})), UInt> addReadyAndCompensateForLostBeats(StreamT&& in, BitWidth counterW);
+
+	/**
+	 * @brief This overload allows for stream chaining. Please pass in an uninitialized UInt.
+	*/
+	inline auto addReadyAndCompensateForLostBeats(BitWidth counterW, UInt& lostBeatCount) {
+		return [=, &lostBeatCount](auto&& source) {
+			auto [outStream, outLostBeatCount] = addReadyAndCompensateForLostBeats(move(source), counterW);
+			lostBeatCount = outLostBeatCount;
+			return move(outStream);
+		};
+	}
+
+	/**
+	* @brief This overload allows for stream chaining
+	*/
+	inline auto addReadyAndCompensateForLostBeats(BitWidth counterW){
+		return [=](auto&& source) { 
+			auto [outStream, outLostBeatCount] = addReadyAndCompensateForLostBeats(move(source), counterW);
+			return move(outStream);
+		};
+	}
 }
 
 namespace gtry::scl::strm
@@ -327,7 +448,7 @@ namespace gtry::scl::strm
 			Bit valid_reg;
 			auto dsSig = constructFrom(copy(downstream(in)));
 
-			IF(!valid_reg | ready(in))
+			IF(ready(in))
 			{
 				valid_reg = valid(in);
 				dsSig = downstream(in);
@@ -534,6 +655,27 @@ namespace gtry::scl::strm
 		return out;
 	}
 
+	template<StreamSignal StreamT> 
+		requires (StreamT::template has<Ready>() and StreamT::template has<Valid>())
+	StreamT allowanceStall(StreamT&& source, Bit allow, BitWidth allowanceW, size_t initialAllowance) {
+		Area area{ "scl_allowance_stall", true };
+		HCL_DESIGNCHECK(BitWidth::last(initialAllowance) <= allowanceW);
+
+		Bit stallCondition; HCL_NAMED(stallCondition);
+		StreamT stalledSource = move(source) | scl::strm::stall(stallCondition);
+
+		Counter allowance(allowanceW, initialAllowance);
+		IF(allow)
+			allowance.inc();
+		IF(transfer(stalledSource))
+			allowance.dec();
+
+		const Bit initialStall = initialAllowance == 0 ? '1' : '0';
+		stallCondition = reg(allowance.becomesFirst(), initialStall);
+		return stalledSource;
+	}
+
+
 	template<StreamSignal T>
 		requires (T::template has<Ready>() and T::template has<Valid>())
 	T stallPacket(T&& source, Bit stallCondition)
@@ -622,12 +764,12 @@ namespace gtry::scl::strm
 		return out;
 	}
 
-	template<Signal T, Signal ... Meta, StreamSignal StreamT>
-	StreamT lookup(StreamT& addr, Memory<T>& memory)
+	template<Signal T, Signal ... Meta, Signal Tout>
+	auto lookup(Stream<T, Meta...>&& addr, Memory<Tout>& memory) 
 	{
 		auto out = addr.transform([&](const UInt& address) {
 			return memory[address].read();
-			});
+		});
 		if (memory.readLatencyHint())
 		{
 			for (size_t i = 0; i < memory.readLatencyHint() - 1; ++i)
@@ -709,5 +851,83 @@ namespace gtry::scl::strm
 		StreamT out = move(in);
 		eop(out) &= ctr.isLast();
 		return out;
+	}
+
+
+	template<StreamSignal BeatStreamT, StreamSignal PacketStreamT>
+	std::tuple<PacketStreamT, BeatStreamT> replicateForEntirePacket(PacketStreamT &&packetStream, BeatStreamT &&beatStream)
+	{
+		BeatStreamT outBeatStream = constructFrom(beatStream);
+		PacketStreamT outPacketStream = constructFrom(packetStream);
+
+		// Stall packet stream if we don't have anything on the beat stream
+		outPacketStream <<= move(packetStream) | stall(!valid(beatStream)); 
+		// Stall the beat stream until the eop of the packet stream. Compose the transfer(packetStream) from the valid of the input and the ready of the output to not have a dependency on valid(beatStream)
+		outBeatStream <<= move(beatStream) | stall(!(valid(packetStream) & ready(outPacketStream) & eop(packetStream)));
+		// But make the beat stream "duplicate" its output for the entire duration of the packet, i.e.
+		valid(outBeatStream) = valid(beatStream) & valid(packetStream);
+
+		return { move(outPacketStream), move(outBeatStream) };
+	}
+
+	template<StreamSignal InStreamT, typename Functor>
+	auto addMetaSignalFromPacket(InStreamT &&inputStream, size_t maxPacketLength, Functor functor)
+	{
+		Area area("addMetaSignalFromPacket", true);
+		HCL_NAMED(inputStream);
+
+		StreamBroadcaster bcast(move(inputStream));
+		auto metaStream = functor(bcast.bcastTo());
+		HCL_NAMED(metaStream);
+
+		auto resultStream = (bcast.bcastTo() | fifo(maxPacketLength)).add(metaStream);
+		HCL_NAMED(resultStream);
+		return resultStream;
+	}
+
+	template<typename Policy, StreamSignal T, StreamSignal... To>
+	T arbitrateWithPolicy(Policy&& selector, T&& in1, To&&... inX)
+	{
+		StreamArbiter<T, Policy> arbiter{ move(selector) };
+		arbiter.attach(in1);
+		(arbiter.attach(inX), ...);
+		arbiter.generate();
+
+		T out;
+		out <<= arbiter.out();
+		return out;
+	}
+
+	template<StreamSignal StreamT> requires (!StreamT::template has<Ready>() && !StreamT::template has<Eop>())
+	std::tuple<decltype(StreamT{}.add(Ready{})), UInt> addReadyAndCompensateForLostBeats(StreamT&& in, BitWidth counterW) {
+		Area area("scl_addReadyAndCompensateForLostBeats", true);
+
+		auto inWithReady = move(in).add(Ready{});
+		Counter totalLostBeats(counterW);
+		Counter lostBeats(counterW);
+
+		Bit lostBeat = valid(inWithReady) & !ready(inWithReady);
+		sim_debugIf(lostBeat) << __FILE__ << " " << __LINE__ << " this beat, the packet has been lost, but it will be compensated with a garbage beat in the future";
+		IF(lostBeat) {
+			lostBeats.inc();
+			totalLostBeats.inc();
+		}
+
+		Bit garbageBeat = !lostBeats.isFirst() & !valid(inWithReady);
+		IF(garbageBeat) {
+			valid(inWithReady) |= '1';
+			*inWithReady = allZeros(*inWithReady);
+		}
+
+		IF(garbageBeat & transfer(inWithReady))
+			lostBeats.dec();
+
+		return std::make_tuple(move(inWithReady), totalLostBeats.value());
+	}
+
+	template<StreamSignal T, StreamSignal... To>
+	T arbitrate(T&& in1, To&&... inX)
+	{
+		return arbitrateWithPolicy(ArbiterPolicyLowest{}, move(in1), move(inX)...);
 	}
 }

@@ -21,6 +21,7 @@
 #include "../stream/utils.h"
 #include "../stream/Packet.h"
 #include "../utils/OneHot.h"
+#include "../memoryMap/AddressSpaceDescription.h"
 
 namespace gtry::scl
 {
@@ -103,7 +104,11 @@ namespace gtry::scl
 	{
 		BOOST_HANA_DEFINE_STRUCT(TileLinkU,
 			(TileLinkChannelA, a),
-			(Reverse<TileLinkChannelD>, d)
+			(Reverse<TileLinkChannelD>, d),
+		
+			/// Optional, human readable description of the address space to allow interconnects to compose those descriptions.
+			/// Technically this is a Reverse<...> but we handle that with custom code in connect(...)
+			(AddressSpaceDescriptionHandle, addrSpaceDesc)
 		);
 
 		template<class T>
@@ -178,7 +183,31 @@ namespace gtry::scl
 	 * @return the slave-side tileLink handle, where decoupling registers have been inserted in both directions.
 	*/
 	template <TileLinkSignal TLink> TLink tileLinkRegDecouple(TLink&& slave);
+
+	/// Overload to correctly forward addr space description
+	template<TileLinkSignal T>
+	void connect(T& lhs, T& rhs);
 }
+
+
+
+namespace gtry 
+{
+	extern template class Reverse<scl::TileLinkChannelD>;
+
+	// For some reason, the compound constructFrom from ConstructFrom.h does not pick up the constructFrom of AddressSpaceDescriptionHandle
+	// so as a workaround we provide an overload for the entire tilelink struct that picks things up correctly.
+	// It also needs to be defined before the use of constructFrom in tileLinkRegDecouple.
+	template<class... Capability>
+	inline scl::TileLinkU<Capability...> constructFrom(const scl::TileLinkU<Capability...>& val) { 
+		scl::TileLinkU<Capability...> res;
+		res.a = constructFrom(val.a);
+		res.d = constructFrom(val.d);
+		res.addrSpaceDesc = constructFrom(val.addrSpaceDesc);
+		return res;
+	}
+}
+
 
 // impl
 namespace gtry::scl
@@ -296,6 +325,8 @@ namespace gtry::scl
 		(*link.d)->size = sizeWidth;
 		(*link.d)->source = sourceWidth;
 		(*link.d)->sink = 0_b;
+
+		link.addrSpaceDesc = std::make_shared<AddressSpaceDescription>();
 	}
 
 	template<TileLinkSignal TLink>
@@ -317,17 +348,33 @@ namespace gtry::scl
 			.d = constructFrom(*link.d)
 		};
 		*link.d <<= regDecouple(*out.d);
+		
+		out.addrSpaceDesc = link.addrSpaceDesc;
 		return out;
 	}
 
 
 	template <TileLinkSignal TLink>
-	TLink tileLinkRegDecouple(TLink&& slave) {
+	TLink tileLinkRegDecouple(TLink&& slave)
+	{
 		TLink master = constructFrom(slave);
 		TLink masterTemp = constructFrom(master);
 		masterTemp <<= master;
 		slave <<= regDecouple(move(masterTemp));
 		return master;
+	}
+
+	template<TileLinkSignal T>
+	void connect(T& lhs, T& rhs)
+	{
+		using namespace gtry;
+		auto lhsAddrSpaceBefore = lhs.addrSpaceDesc;
+		auto rhsAddrSpaceBefore = rhs.addrSpaceDesc;
+		downstream(lhs) = downstream(rhs);
+		upstream(rhs) = upstream(lhs);
+		lhs.addrSpaceDesc = lhsAddrSpaceBefore;
+		rhs.addrSpaceDesc = rhsAddrSpaceBefore;
+		connectAddrDesc(rhs.addrSpaceDesc, lhs.addrSpaceDesc);
 	}
 
 	extern template struct strm::Stream<TileLinkA, Ready, Valid>;
@@ -343,35 +390,16 @@ namespace gtry::scl
 	extern template Bit eop(const TileLinkChannelD&);
 }
 
-namespace gtry 
-{
-	extern template class Reverse<scl::TileLinkChannelD>;
 
-	extern template void connect(scl::TileLinkUL&, scl::TileLinkUL&);
-	extern template void connect(scl::TileLinkUH&, scl::TileLinkUH&);
-	extern template void connect(scl::TileLinkChannelA&, scl::TileLinkChannelA&);
-	extern template void connect(scl::TileLinkChannelD&, scl::TileLinkChannelD&);
-
-#ifndef __clang__
-	extern template auto upstream(scl::TileLinkUL&);
-	extern template auto upstream(scl::TileLinkUH&);
-	extern template auto upstream(scl::TileLinkChannelA&);
-	extern template auto upstream(scl::TileLinkChannelD&);
-	extern template auto upstream(const scl::TileLinkUL&);
-	extern template auto upstream(const scl::TileLinkUH&);
-	extern template auto upstream(const scl::TileLinkChannelA&);
-	extern template auto upstream(const scl::TileLinkChannelD&);
-
-	extern template auto downstream(scl::TileLinkUL&);
-	extern template auto downstream(scl::TileLinkUH&);
-	extern template auto downstream(scl::TileLinkChannelA&);
-	extern template auto downstream(scl::TileLinkChannelD&);
-	extern template auto downstream(const scl::TileLinkUL&);
-	extern template auto downstream(const scl::TileLinkUH&);
-	extern template auto downstream(const scl::TileLinkChannelA&);
-	extern template auto downstream(const scl::TileLinkChannelD&);
-#endif
-}
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkA, opcode, param, size, source, address, mask, data);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkD, opcode, param, size, source, sink, data, error);
+
+GTRY_EXTERN_TEMPLATE_COMPOUND(gtry::scl::TileLinkD);
+GTRY_EXTERN_TEMPLATE_COMPOUND(gtry::scl::TileLinkA);
+
+GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::TileLinkChannelA);
+GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::TileLinkChannelD);
+GTRY_EXTERN_TEMPLATE_COMPOUND_MINIMAL(gtry::scl::TileLinkUL);
+GTRY_EXTERN_TEMPLATE_COMPOUND_MINIMAL(gtry::scl::TileLinkUB);
+GTRY_EXTERN_TEMPLATE_COMPOUND_MINIMAL(gtry::scl::TileLinkUH);

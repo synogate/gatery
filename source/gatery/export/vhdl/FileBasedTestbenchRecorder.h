@@ -49,7 +49,9 @@ class FileBasedTestbenchRecorder : public BaseTestbenchRecorder
 		~FileBasedTestbenchRecorder();
 
 		virtual void onPowerOn() override;
+		virtual void onAfterPowerOn() override;
 		virtual void onNewTick(const hlim::ClockRational &simulationTime) override;
+		virtual void onNewPhase(size_t phase) override;
 		virtual void onAfterMicroTick(size_t microTick) override;
 		virtual void onCommitState() override;
 		virtual void onClock(const hlim::Clock *clock, bool risingEdge) override;
@@ -59,13 +61,15 @@ class FileBasedTestbenchRecorder : public BaseTestbenchRecorder
 		virtual void onWarning(const hlim::BaseNode *src, std::string msg) override;
 		virtual void onAssert(const hlim::BaseNode *src, std::string msg) override;
 		*/
-		virtual void onSimProcOutputOverridden(const hlim::NodePort &output, const sim::DefaultBitVectorState &state) override;
+		virtual void onSimProcOutputOverridden(const hlim::NodePort &output, const sim::ExtendedBitVectorState &state) override;
 		virtual void onSimProcOutputRead(const hlim::NodePort &output, const sim::DefaultBitVectorState &state) override;
 
+		void writeVerilogTestbench();
 	protected:
 		VHDLExport &m_exporter;
 		std::unique_ptr<utils::FileSink> m_testvectorFile;
 		std::unique_ptr<utils::FileSink> m_testbenchFile;
+		std::unique_ptr<utils::FileSink> m_verilogTestbenchFile;
 		hlim::ClockRational m_writtenSimulationTime;
 		hlim::ClockRational m_flushIntervalStart;
 

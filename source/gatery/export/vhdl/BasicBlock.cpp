@@ -33,6 +33,7 @@
 #include "../../hlim/coreNodes/Node_MultiDriver.h"
 #include "../../hlim/coreNodes/Node_Pin.h"
 #include "../../hlim/supportNodes/Node_ExportOverride.h"
+#include "../../hlim/supportNodes/Node_Attributes.h"
 #include "../../hlim/GraphTools.h"
 #include "../../hlim/Clock.h"
 
@@ -173,8 +174,12 @@ void BasicBlock::allocateNames()
 	for (auto &constant : m_constants)
 		m_namespaceScope.allocateName(constant, findNearestDesiredName(constant), chooseDataTypeFromOutput(constant), CodeFormatting::SIG_CONSTANT);
 
-	for (auto &local : m_localSignals)
-		m_namespaceScope.allocateName(local, findNearestDesiredName(local), chooseDataTypeFromOutput(local), CodeFormatting::SIG_LOCAL_SIGNAL);
+	for (auto &local : m_localSignals) {
+		if (local.node->isA<hlim::Node_Attributes>())
+			m_namespaceScope.allocateName(local, findNearestDesiredName(local), chooseDataTypeFromOutput(local), CodeFormatting::SIG_ATTRIBUTED_SIGNAL);
+		else
+			m_namespaceScope.allocateName(local, findNearestDesiredName(local), chooseDataTypeFromOutput(local), CodeFormatting::SIG_LOCAL_SIGNAL);
+	}
 
 	for (auto &bidir : m_bidirSignals) {
 		hlim::NodePort output = {.node = bidir.first, .port = 0ull};
@@ -282,14 +287,14 @@ void BasicBlock::collectInstantiations(hlim::NodeGroup *nodeGroup, bool reccursi
 			if (m_ast.isEmpty(childGroup.get(), true))
 				continue;
 			switch (childGroup->getGroupType()) {
-				case hlim::NodeGroup::GroupType::ENTITY:
+				case hlim::NodeGroupType::ENTITY:
 					handleEntityInstantiation(childGroup.get());
 				break;
-				case hlim::NodeGroup::GroupType::AREA:
+				case hlim::NodeGroupType::AREA:
 					if (reccursive)
 						nodeGroupStack.push_back(childGroup.get());
 				break;
-				case hlim::NodeGroup::GroupType::SFU:
+				case hlim::NodeGroupType::SFU:
 					handleSFUInstantiation(childGroup.get());
 				break;
 			}
@@ -495,7 +500,7 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
 
 		if (reccursive)
 			for (const auto &childGroup : group->getChildren())
-				if (childGroup->getGroupType() == hlim::NodeGroup::GroupType::AREA)
+				if (childGroup->getGroupType() == hlim::NodeGroupType::AREA)
 					nodeGroupStack.push_back(childGroup.get());
 	}
 

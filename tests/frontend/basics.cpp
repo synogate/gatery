@@ -21,8 +21,6 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
-#include <gatery/debug/websocks/WebSocksInterface.h>
-#include "gatery/debug/reporting/ReportInterface.h"
 
 using namespace boost::unit_test;
 
@@ -1100,6 +1098,131 @@ BOOST_FIXTURE_TEST_CASE(MultiElseConditionalAssignment, BoostUnitTestSimulationF
 	runEvalOnlyTest();
 }
 
+BOOST_FIXTURE_TEST_CASE(NestedElseIf, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Bit a1 = pinIn();	HCL_NAMED(a1);
+	Bit a2 = pinIn();	HCL_NAMED(a2);
+	Bit a3 = pinIn();	HCL_NAMED(a3);
+	Bit a4 = pinIn();	HCL_NAMED(a4);
+	Bit b1 = pinIn();	HCL_NAMED(b1);
+	Bit b2 = pinIn();	HCL_NAMED(b2);
+	Bit b3 = pinIn();	HCL_NAMED(b3);
+	Bit b4 = pinIn();	HCL_NAMED(b4);
+
+	UInt result = ConstUInt(8_b);
+	IF(a1)
+	{
+		IF(b1)
+			result = 1;
+		ELSE IF(b2)
+			result = 2;
+		ELSE IF(b3)
+			result = 3;
+		ELSE
+			result = 4;
+	}
+	ELSE IF(a2)
+	{
+		IF(b1)
+			result = 5;
+		ELSEIF(b2)
+			result = 6;
+		ELSE IF(b3)
+			result = 7;
+		ELSE
+			result = 8;
+	}
+	ELSE IF(a3)
+	{
+		IF(b1)
+			result = 9;
+		ELSE IF(b2)
+			result = 10;
+		ELSEIF(b3)
+			result = 11;
+		ELSE
+			result = 12;
+	}
+	ELSE
+	{
+		IF(b1)
+			result = 13;
+		ELSEIF(b2)
+			result = 14;
+		ELSEIF(b3)
+			result = 15;
+		ELSE
+			result = 16;
+	}
+
+	pinOut(result, "result");
+
+	addSimulationProcess([&, clock = ClockScope::getClk()]() -> SimProcess {
+		for (size_t i = 0; i < 1 << 8; ++i)
+		{
+			simu(a1) = (i & 1) != 0;
+			simu(a2) = (i & 2) != 0;
+			simu(a3) = (i & 4) != 0;
+			simu(a4) = (i & 8) != 0;
+			simu(b1) = (i & 16) != 0;
+			simu(b2) = (i & 32) != 0;
+			simu(b3) = (i & 64) != 0;
+			simu(b4) = (i & 128) != 0;
+			co_await OnClk(clock);
+
+			if(simu(a1))
+			{
+				if (simu(b1))
+					BOOST_TEST(simu(result) == 1);
+				else if (simu(b2))
+					BOOST_TEST(simu(result) == 2);
+				else if (simu(b3))
+					BOOST_TEST(simu(result) == 3);
+				else
+					BOOST_TEST(simu(result) == 4);
+			}
+			else if (simu(a2))
+			{
+				if (simu(b1))
+					BOOST_TEST(simu(result) == 5);
+				else if (simu(b2))
+					BOOST_TEST(simu(result) == 6);
+				else if (simu(b3))
+					BOOST_TEST(simu(result) == 7);
+				else
+					BOOST_TEST(simu(result) == 8);
+			}
+			else if (simu(a3))
+			{
+				if (simu(b1))
+					BOOST_TEST(simu(result) == 9);
+				else if (simu(b2))
+					BOOST_TEST(simu(result) == 10);
+				else if (simu(b3))
+					BOOST_TEST(simu(result) == 11);
+				else
+					BOOST_TEST(simu(result) == 12);
+			}
+			else
+			{
+				if (simu(b1))
+					BOOST_TEST(simu(result) == 13);
+				else if (simu(b2))
+					BOOST_TEST(simu(result) == 14);
+				else if (simu(b3))
+					BOOST_TEST(simu(result) == 15);
+				else
+					BOOST_TEST(simu(result) == 16);
+			}
+		}
+		stopTest();
+	});
+
+	//design.postprocess();
+	runTest({1,1});
+}
 BOOST_FIXTURE_TEST_CASE(MultiLevelConditionalAssignmentWithPreviousAssignmentNoElse, BoostUnitTestSimulationFixture)
 {
 	using namespace gtry;
@@ -1502,6 +1625,132 @@ BOOST_FIXTURE_TEST_CASE(tristateBit, gtry::BoostUnitTestSimulationFixture)
 	runTest({ 1,1 });
 }
 
+struct TristateHighImpedance : public gtry::BoostUnitTestSimulationFixture
+{
+	gtry::PinNodeParameter::HighImpedanceValue highImpedanceValue = gtry::PinNodeParameter::HighImpedanceValue::UNDEFINED;
+
+	void execute() {
+		using namespace gtry;
+
+		Clock clock({ .absoluteFrequency = 10'000 });
+		ClockScope clockScope(clock);
+		
+		UInt value = pinIn(10_b).setName("value");
+		Bit enable = pinIn().setName("enable");
+		auto tsPin = tristatePin(value, enable, { .highImpedanceValue = highImpedanceValue }).setName("tristatePin");
+		UInt readbackValue = tsPin;
+		auto readback = pinOut(readbackValue).setName("readback");
+
+		addSimulationProcess([=, this]()->SimProcess {
+
+			auto verifyHighImpedance = [&]{
+				switch (highImpedanceValue) {
+					case gtry::PinNodeParameter::HighImpedanceValue::UNDEFINED:
+						BOOST_TEST(!simu(readback).allDefined());
+					break;
+					case gtry::PinNodeParameter::HighImpedanceValue::PULL_UP:
+						BOOST_TEST(simu(readback) == "10b1111111111");
+					break;
+					case gtry::PinNodeParameter::HighImpedanceValue::PULL_DOWN:
+						BOOST_TEST(simu(readback) == "10b0000000000");
+					break;
+				}
+			};
+
+
+			simu(value) = 10;
+			simu(enable) = '1';
+
+			co_await AfterClk(clock);
+
+			BOOST_TEST(simu(readback) == 10);
+			BOOST_TEST(simu(readback).allDefined());
+
+			co_await AfterClk(clock);
+
+			simu(enable) = '0';
+
+			co_await AfterClk(clock);
+
+			verifyHighImpedance();
+
+			co_await AfterClk(clock);
+
+			simu(enable).invalidate();
+
+			co_await AfterClk(clock);
+
+			BOOST_TEST(!simu(readback).allDefined());
+
+			co_await AfterClk(clock);
+
+			simu(enable) = '1';
+			simu(value).invalidate();
+
+			co_await AfterClk(clock);
+
+			BOOST_TEST(!simu(readback).allDefined());
+
+			co_await AfterClk(clock);
+
+			simu(enable) = '0';
+			simu(value) = 10;
+			simu(tsPin) = 42;
+
+			co_await AfterClk(clock);
+
+			BOOST_TEST(simu(readback) == 42);
+
+			co_await AfterClk(clock);
+
+			simu(tsPin) = "10bzzzzzzzzzz";
+
+			co_await AfterClk(clock);
+
+			verifyHighImpedance();
+
+			co_await AfterClk(clock);
+
+			simu(tsPin) = 42;
+
+			co_await AfterClk(clock);
+
+			BOOST_TEST(simu(readback) == 42);
+
+			co_await AfterClk(clock);
+
+			simu(tsPin).stopDriving();
+			co_await AfterClk(clock);
+
+			verifyHighImpedance();
+
+
+			stopTest();
+		});
+
+		design.postprocess();
+		runTest({ 1,1 });
+	}
+}; 
+
+BOOST_FIXTURE_TEST_CASE(tristateBitHZ_Undefined, TristateHighImpedance)
+{
+	highImpedanceValue = gtry::PinNodeParameter::HighImpedanceValue::UNDEFINED;
+	execute();
+}
+
+BOOST_FIXTURE_TEST_CASE(tristateBitHZ_PullUp, TristateHighImpedance)
+{
+	highImpedanceValue = gtry::PinNodeParameter::HighImpedanceValue::PULL_UP;
+	execute();
+}
+
+BOOST_FIXTURE_TEST_CASE(tristateBitHZ_PullDown, TristateHighImpedance)
+{
+	highImpedanceValue = gtry::PinNodeParameter::HighImpedanceValue::PULL_DOWN;
+	execute();
+}
+
 
 
 BOOST_FIXTURE_TEST_CASE(testUndefinedDontCareComparison, gtry::BoostUnitTestSimulationFixture)
@@ -1674,3 +1923,37 @@ BOOST_FIXTURE_TEST_CASE(simuOnExportOverride, gtry::BoostUnitTestSimulationFixtu
 	design.postprocess();
 	runTest({ 1,1 });
 }
+
+
+
+BOOST_FIXTURE_TEST_CASE(ZeroBitDisconnect, gtry::BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+
+	Bit in = pinIn().setName("in");
+	UInt muxSelect = 0_b;
+
+	Bit out = mux(muxSelect, { in });
+
+	pinOut(out).setName("out");
+
+	addSimulationProcess([=, this]()->SimProcess {
+		std::mt19937 rng = std::mt19937{ 1337 };
+		
+		for ([[maybe_unused]] auto i : gtry::utils::Range(100)) {
+			bool v = rng() & 1;
+			simu(in) = v;
+			co_await AfterClk(clock);
+			BOOST_TEST(simu(out) == v);
+		}
+
+		stopTest();
+	});
+
+	design.postprocess();
+	runTest({ 1,1 });
+}
+

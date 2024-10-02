@@ -15,7 +15,7 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "OneHot.h"
 
 #include <boost/format.hpp>
@@ -50,6 +50,18 @@ std::vector<gtry::scl::VStream<gtry::UInt>> gtry::scl::makeIndexList(const UInt&
 		*ret[i] = i;
 		valid(ret[i]) = valids[i];
 	}
+	return ret;
+}
+
+UInt gtry::scl::countLeadingZeros(const BVec& in) {
+	//could also use priority encoder, but default case of all zeros is mishandled;
+	Area area{ "scl_count_leading_zeros", true};
+
+	UInt ret = in.size();
+	for (size_t i = 0; i < in.size(); i++)
+		IF(in[i])
+			ret = in.size() - i - 1;
+
 	return ret;
 }
 

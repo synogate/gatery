@@ -18,6 +18,8 @@
 */
 #include "gatery/pch.h"
 #include "DesignScope.h"
+#include "../hlim/Node.h"
+#include "../hlim/NodeGroup.h"
 
 #include "Clock.h"
 

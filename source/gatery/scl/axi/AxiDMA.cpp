@@ -15,7 +15,7 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "AxiDMA.h"
 
 #include "../stream/streamFifo.h"
@@ -33,7 +33,7 @@ namespace gtry::scl
 
 		RvStream<AxiAddress> out;
 		out->addr = config.addrW;
-		out->id = ConstBVec(cmd->id ,config.idW);
+		out->id = zext(cmd->id, config.idW);
 		out->user = ConstBVec(config.arUserW);
 
 		HCL_DESIGNCHECK_HINT(cmd->bytesPerBurst >= config.alignedDataW().bytes(), "Burst size must be at least as large as the data width of the AXI interface.");
@@ -97,8 +97,8 @@ namespace gtry::scl
 		HCL_NAMED(axi);
 		HCL_NAMED(cmd);
 
-		*axi.ar <<= axiGenerateAddressFromCommand(move(cmd), axi.config());
-		Stream out = axiToStream(move(axi.r));
+		*axi.r.a <<= axiGenerateAddressFromCommand(move(cmd), axi.config());
+		Stream out = axiToStream(move(axi.r.d));
 		HCL_NAMED(out);
 		return out;
 	}
@@ -126,9 +126,9 @@ namespace gtry::scl
 		HCL_NAMED(cmd);
 		
 
-		*axi.aw <<= axiGenerateAddressFromCommand(move(cmd), axi.config());
-		axiFromStream(move(data), *axi.w, cmd->bytesPerBurst / axi.config().alignedDataW().bytes());
-		ready(axi.b) = '1';
+		*axi.w.a <<= axiGenerateAddressFromCommand(move(cmd), axi.config());
+		axiFromStream(move(data), *axi.w.d, cmd->bytesPerBurst / axi.config().alignedDataW().bytes());
+		ready(axi.w.b) = '1';
 		HCL_NAMED(axi);
 	}
 
@@ -140,22 +140,23 @@ namespace gtry::scl
 		HCL_NAMED(mid);
 
 		if (dataFifoDepth > 1)
-			mid = strm::fifo(move(mid), dataFifoDepth, gtry::scl::FallThrough::on);
+			mid = strm::fifo(move(mid), dataFifoDepth, FifoLatency(0));
 		if (dataFifoDepth > 0)
 			mid = strm::regDownstream(move(mid));
 
 		scl::axiFromStream(move(storeCmd), mid.template remove<scl::Eop>(), axi);
 	}
+
 	AxiTransferReport axiTransferAuditor(const Axi4& streamToSniff, BitWidth bitsPerBurst, BitWidth counterW)
 	{
 		Area area{ "scl_axiTransferAuditor", true };
 		Counter burstCounter(counterW.last());
-		IF(transfer(streamToSniff.b))
+		IF(transfer(streamToSniff.w.b))
 			burstCounter.inc();
 
 		Counter failCounter(counterW.last());
-		IF(transfer(streamToSniff.b))
-			IF(streamToSniff.b->resp == (size_t) AxiResponseCode::SLVERR | streamToSniff.b->resp == (size_t) AxiResponseCode::DECERR)
+		IF(transfer(streamToSniff.w.b))
+			IF(streamToSniff.w.b->resp == (size_t) AxiResponseCode::SLVERR | streamToSniff.w.b->resp == (size_t) AxiResponseCode::DECERR)
 				failCounter.inc();
 
 		return AxiTransferReport{.burstCount = burstCounter.value(), .failCount = failCounter.value(), .bitsPerBurst = bitsPerBurst.bits()};

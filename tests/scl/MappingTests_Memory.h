@@ -27,6 +27,7 @@ struct Test_Histogram : public gtry::GHDLTestFixture
 	gtry::BitWidth bucketWidth = gtry::BitWidth(8);
 	size_t iterationFactor = 8;
 	bool highLatencyExternal = false;
+	bool twoCycleLatencyBRam = false;
 	bool forceMemoryResetLogic = false;
 	bool forceNoInitialization = false;
 	bool forceNoEnable = false;
@@ -50,6 +51,17 @@ struct Test_SDP_DualClock : public gtry::GHDLTestFixture
 	size_t numWrites = 1000;
 	bool forceMemoryResetLogic = false;
 	bool forceNoInitialization = false;
+	void execute();
+};
+
+
+struct Test_ReadEnable : public gtry::GHDLTestFixture
+{
+	size_t numElements = 32;
+	gtry::BitWidth elementWidth = gtry::BitWidth(8);
+	size_t iterationFactor = 8;
+	bool highLatencyExternal = false;
+	bool twoCycleLatencyBRam = false;
 	void execute();
 };
 

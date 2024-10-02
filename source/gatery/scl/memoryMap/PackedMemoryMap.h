@@ -44,12 +44,13 @@ namespace gtry::scl
 				const CompoundMemberAnnotation *annotation;
 			};
 
-			struct PhysicalRegister {
+			struct PhysicalRegister {			
 				std::optional<BVec> readSignal;
 				std::optional<BVec> writeSignal;
 				std::optional<Bit> onWrite;
 
-				AddressSpaceDescription description;
+				std::uint64_t offsetInBits = ~0ull;
+				std::shared_ptr<AddressSpaceDescription> description;
 			};
 
 			struct Scope {
@@ -57,9 +58,10 @@ namespace gtry::scl
 				const CompoundAnnotation *annotation;
 
 				std::list<RegisteredBaseSignal> registeredSignals;
-				std::list<PhysicalRegister> physicalRegisters;
+				std::list<PhysicalRegister> physicalRegisters; // todo: move out of Scope
 
-				AddressSpaceDescription physicalDescription;
+				std::uint64_t offsetInBits = ~0ull;
+				std::shared_ptr<AddressSpaceDescription> physicalDescription;
 
 				std::list<Scope> subScopes;
 			};

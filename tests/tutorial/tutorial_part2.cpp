@@ -31,7 +31,7 @@ If any of these are updated, please also update the tutorial / documentation!!!
 
 BOOST_AUTO_TEST_CASE(tutorial_part2_signals)
 {
-    DesignScope design;
+	DesignScope design;
 
 	UInt undefined_8_wide_uint = 8_b;
 	UInt undefined_10_wide_uint = BitWidth(10);
@@ -39,7 +39,7 @@ BOOST_AUTO_TEST_CASE(tutorial_part2_signals)
 	UInt undefined_16_wide_uint;
 	undefined_16_wide_uint = BitWidth(16);
 
-    design.postprocess();
+	design.postprocess();
 }
 
 BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_1, BoostUnitTestSimulationFixture)
@@ -110,9 +110,9 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_5, BoostUnitTestSimulationFixtu
 
 BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_typecasts, BoostUnitTestSimulationFixture)
 {
-    UInt uint_signal = 42;
-    BVec bvec_signal = (BVec) uint_signal;
-    SInt sint_signal = (SInt) bvec_signal;
+	UInt uint_signal = 42;
+	BVec bvec_signal = (BVec) uint_signal;
+	SInt sint_signal = (SInt) bvec_signal;
 
 
 	runEvalOnlyTest();
@@ -275,32 +275,32 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_14, BoostUnitTestSimulationFixt
 
 BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_15, BoostUnitTestSimulationFixture)
 {
-    UInt ieee_float_32 = "32b0";
+	UInt ieee_float_32 = "32b0";
 
-    UInt mantissa = ieee_float_32(0, 23_b); // Extract 23 bits from bit 0 onwards
-    UInt exponent = ieee_float_32(23, 8_b); // Extract 8 bits from bit 23 onwards
-    Bit sign = ieee_float_32[31];         // Extract bit 31
+	UInt mantissa = ieee_float_32(0, 23_b); // Extract 23 bits from bit 0 onwards
+	UInt exponent = ieee_float_32(23, 8_b); // Extract 8 bits from bit 23 onwards
+	Bit sign = ieee_float_32[31];         // Extract bit 31
 
 	runEvalOnlyTest();
 }
 
 BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_16, BoostUnitTestSimulationFixture)
 {
-    UInt bvec = "10b0";
-    
-    // Least and most significant bits, independent of size of bvec
-    Bit bvec_lsb_1 = bvec[0];
-    Bit bvec_msb_1 = bvec[-1];
+	UInt bvec = "10b0";
+	
+	// Least and most significant bits, independent of size of bvec
+	Bit bvec_lsb_1 = bvec[0];
+	Bit bvec_msb_1 = bvec[-1];
 
-    // Least and most significant bits, independent of size of bvec
-    Bit bvec_lsb_2 = bvec.lsb();
-    Bit bvec_msb_2 = bvec.msb();
+	// Least and most significant bits, independent of size of bvec
+	Bit bvec_lsb_2 = bvec.lsb();
+	Bit bvec_msb_2 = bvec.msb();
 
-    // Iterating over each bit in bvec in turn
-    for (auto &b : bvec) {
-        //do_sth_with_bit(b);
+	// Iterating over each bit in bvec in turn
+	for (auto &b : bvec) {
+		//do_sth_with_bit(b);
 		b = '1';
-    }
+	}
 
 	runEvalOnlyTest();
 }
@@ -308,28 +308,28 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_16, BoostUnitTestSimulationFixt
 
 BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_17, BoostUnitTestSimulationFixture)
 {
-    UInt bvec = "32b0";
-    UInt index = "4b0";
-    
-    Bit bit = bvec[index];
-    UInt subrange = bvec(index, 2_b);
+	UInt bvec = "32b0";
+	UInt index = "4b0";
+	
+	Bit bit = bvec[index];
+	UInt subrange = bvec(index, 2_b);
 
 	runEvalOnlyTest();
 }
 
 BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_cat_pack, BoostUnitTestSimulationFixture)
 {
-    UInt mantissa = "23b0";
-    UInt exponent = "8b0";
-    Bit sign = '1';
+	UInt mantissa = "23b0";
+	UInt exponent = "8b0";
+	Bit sign = '1';
 
-    // Concatenates all arguments, putting the last
-    // argument (mantissa) into the least significant bits.
-    UInt ieee_float_32 = cat(sign, exponent, mantissa);
+	// Concatenates all arguments, putting the last
+	// argument (mantissa) into the least significant bits.
+	UInt ieee_float_32 = cat(sign, exponent, mantissa);
 
-    // Packs all arguments, putting the first
-    // argument (mantissa) into the least significant bits.
-    UInt same_ieee_float_32 = pack(mantissa, exponent, sign);
+	// Packs all arguments, putting the first
+	// argument (mantissa) into the least significant bits.
+	UInt same_ieee_float_32 = pack(mantissa, exponent, sign);
 
 	sim_assert(ieee_float_32[-1] == '1');
 	sim_assert(same_ieee_float_32[-1] == '1');
@@ -339,10 +339,10 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_cat_pack, BoostUnitTestSimulati
 
 BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_shift, BoostUnitTestSimulationFixture)
 {
-    UInt value = "10d8";
+	UInt value = "10d8";
 
-    UInt value_times_4 = value << 2;
-    UInt value_div_4 = value >> 2;
+	UInt value_times_4 = value << 2;
+	UInt value_div_4 = value >> 2;
 
 
 	BOOST_TEST(value_times_4.width() == value.width());
@@ -356,9 +356,9 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_shift, BoostUnitTestSimulationF
 
 BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_shiftr_signed, BoostUnitTestSimulationFixture)
 {
-    SInt value = (SInt)"2b10";
+	SInt value = (SInt)"2b10";
 
-    SInt value_2 = value >> 1;
+	SInt value_2 = value >> 1;
 
 
 	BOOST_TEST(value_2.width() == value.width());
@@ -369,10 +369,10 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_shiftr_signed, BoostUnitTestSim
 
 BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_rot, BoostUnitTestSimulationFixture)
 {
-    UInt value = "5b11000";
+	UInt value = "5b11000";
 
-    UInt value_rotated_left_2 = rotl(value, 2);
-    UInt value_rotated_right_2 = rotr(value, 2);
+	UInt value_rotated_left_2 = rotl(value, 2);
+	UInt value_rotated_right_2 = rotr(value, 2);
 
 
 	BOOST_TEST(value_rotated_left_2.width() == value.width());
@@ -387,13 +387,13 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_rot, BoostUnitTestSimulationFix
 
 BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_arithmetic, BoostUnitTestSimulationFixture)
 {
-    UInt a = "23d10";
-    UInt b = "23d4";
+	UInt a = "23d10";
+	UInt b = "23d4";
 
-    UInt a_plus_b = a + b; // Exported to VHDL as a+b
-    UInt a_minus_b = a - b; // Exported to VHDL as a-b
-    UInt a_times_b = a * b; // Exported to VHDL as a*b so your mileage may vary
-    UInt a_div_b = a / b; // Exported to VHDL as a/b so your mileage may vary
+	UInt a_plus_b = a + b; // Exported to VHDL as a+b
+	UInt a_minus_b = a - b; // Exported to VHDL as a-b
+	UInt a_times_b = a * b; // Exported to VHDL as a*b so your mileage may vary
+	UInt a_div_b = a / b; // Exported to VHDL as a/b so your mileage may vary
 
 	sim_assert(a_plus_b == 14);
 	sim_assert(a_minus_b == 6);
@@ -405,50 +405,50 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_arithmetic, BoostUnitTestSimula
 
 BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_comparisons, BoostUnitTestSimulationFixture)
 {
-    UInt a = "10b0";
-    UInt b = "10b0";
+	UInt a = "10b0";
+	UInt b = "10b0";
 
-    // Less / greater
-    Bit a_lt_b = a < b;
-    Bit a_gt_b = a > b;
-    
-    // Less or equal / greater or equal
-    Bit a_le_b = a <= b;
-    Bit a_ge_b = a >= b;
+	// Less / greater
+	Bit a_lt_b = a < b;
+	Bit a_gt_b = a > b;
+	
+	// Less or equal / greater or equal
+	Bit a_le_b = a <= b;
+	Bit a_ge_b = a >= b;
 
-    // Equal / not equal
-    Bit a_eq_b = a == b;
-    Bit a_ne_b = a != b;
+	// Equal / not equal
+	Bit a_eq_b = a == b;
+	Bit a_ne_b = a != b;
 
 	runEvalOnlyTest();	
 }
 
 BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_mux, BoostUnitTestSimulationFixture)
 {
-    UInt idx = 2_b;
-    idx = 2; // Can be anything from 0..3
+	UInt idx = 2_b;
+	idx = 2; // Can be anything from 0..3
 
-    UInt a_0 = 10_b;
-    UInt a_1 = 10_b;
-    UInt a_2 = 10_b;
-    UInt a_3 = 10_b;
+	UInt a_0 = 10_b;
+	UInt a_1 = 10_b;
+	UInt a_2 = 10_b;
+	UInt a_3 = 10_b;
 
-    UInt a = mux(idx, {a_0, a_1, a_2, a_3});
+	UInt a = mux(idx, {a_0, a_1, a_2, a_3});
 
 	runEvalOnlyTest();	
 }
 
 BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_pins, BoostUnitTestSimulationFixture)
 {
-    UInt push_buttons = pinIn(4_b);
-    Bit single_button = pinIn();
+	UInt push_buttons = pinIn(4_b);
+	Bit single_button = pinIn();
 
-    UInt color_led = 3_b;
-    color_led = 1;
-    pinOut(color_led);
+	UInt color_led = 3_b;
+	color_led = 1;
+	pinOut(color_led);
 
-    Bit led = '0';
-    pinOut(led);
+	Bit led = '0';
+	pinOut(led);
 
 	runEvalOnlyTest();	
 }
@@ -457,18 +457,18 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_operators_pins, BoostUnitTestSimulationFi
 
 BOOST_FIXTURE_TEST_CASE(tutorial_part2_mutable_expl, BoostUnitTestSimulationFixture)
 {
-    UInt value = 4_b;
-    
-    value = 0;
-    UInt a = value;
+	UInt value = 4_b;
+	
+	value = 0;
+	UInt a = value;
 
-    value = 1;
-    UInt b = value;
+	value = 1;
+	UInt b = value;
 
-    value = 2;
-    UInt c = value;
-    
-    // a is 0, b is 1, c is 2
+	value = 2;
+	UInt c = value;
+	
+	// a is 0, b is 1, c is 2
 
 	sim_assert(a == 0);
 	sim_assert(b == 1);
@@ -479,18 +479,18 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_mutable_expl, BoostUnitTestSimulationFixt
 
 BOOST_FIXTURE_TEST_CASE(tutorial_part2_mutable_parity, BoostUnitTestSimulationFixture)
 {
-    UInt value = 10_b;
-    value = 42;
+	UInt value = 10_b;
+	value = 42;
 
-    // Start with true
-    Bit parity = true;
+	// Start with true
+	Bit parity = true;
 
-    // Xor all bits together by "accumulating" them
-    // one by one into the parity.
-    for (auto &b : value)
-        parity = parity ^ b;
+	// Xor all bits together by "accumulating" them
+	// one by one into the parity.
+	for (auto &b : value)
+		parity = parity ^ b;
 
-    // Now parity is true iff number of set bits in value is odd.
+	// Now parity is true iff number of set bits in value is odd.
 
 	sim_assert(parity == '0');
 
@@ -500,23 +500,23 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_mutable_parity, BoostUnitTestSimulationFi
 
 BOOST_FIXTURE_TEST_CASE(tutorial_part2_mutable_inplace, BoostUnitTestSimulationFixture)
 {
-    UInt a = 10_b;
-    a = 41;
-    UInt b = 10_b;
-    b = 42;
+	UInt a = 10_b;
+	a = 41;
+	UInt b = 10_b;
+	b = 42;
 
 
-    a &= b; // compute b & a and store in a
-    a |= b; // compute b | a and store in a
-    // ... 
-    // Also holds for Bit    
+	a &= b; // compute b & a and store in a
+	a |= b; // compute b | a and store in a
+	// ... 
+	// Also holds for Bit    
 
-    a += b; // add b to a and store in a
-    a -= b; // subtract b from a and store in a
-    // ...
+	a += b; // add b to a and store in a
+	a -= b; // subtract b from a and store in a
+	// ...
 
-    a <<= 2; // Shift a by 2 bits to the left and store in a
-    a >>= 2; // Shift a by 2 bits to the right and store in a
+	a <<= 2; // Shift a by 2 bits to the left and store in a
+	a >>= 2; // Shift a by 2 bits to the right and store in a
 
 	runEvalOnlyTest();		
 }
@@ -524,12 +524,12 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_mutable_inplace, BoostUnitTestSimulationF
 
 BOOST_FIXTURE_TEST_CASE(tutorial_part2_mutable_write_slice, BoostUnitTestSimulationFixture)
 {
-    UInt ieee_float_32 = "32b0";
+	UInt ieee_float_32 = "32b0";
 
-    // Lets build a 1.0f float
-    ieee_float_32[31] = '0';  // The sign is positive
-    ieee_float_32(0, 23_b) = 0; // The mantissa is all 0 (the "1." is implicit with floats)
-    ieee_float_32(23, 8_b) = 127; // The exponent is exactly the bias to end up with 2^0.
+	// Lets build a 1.0f float
+	ieee_float_32[31] = '0';  // The sign is positive
+	ieee_float_32(0, 23_b) = 0; // The mantissa is all 0 (the "1." is implicit with floats)
+	ieee_float_32(23, 8_b) = 127; // The exponent is exactly the bias to end up with 2^0.
 
 	sim_assert(ieee_float_32 == "32b00111111100000000000000000000000") << "got " << ieee_float_32;
 
@@ -538,14 +538,14 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_mutable_write_slice, BoostUnitTestSimulat
 
 BOOST_FIXTURE_TEST_CASE(tutorial_part2_mutable_condition_scopes, BoostUnitTestSimulationFixture)
 {
-    UInt value = 4_b;
-    value = 1;
+	UInt value = 4_b;
+	value = 1;
 
-    Bit do_mul_2 = '1';
+	Bit do_mul_2 = '1';
 
-    // Do the multiplication only if do_mul_2 is asserted
-    IF (do_mul_2)
-        value <<= 1; // Left shift by one bit to multiply with 2
+	// Do the multiplication only if do_mul_2 is asserted
+	IF (do_mul_2)
+		value <<= 1; // Left shift by one bit to multiply with 2
 
 	sim_assert(value == 2);
 
@@ -554,15 +554,15 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_mutable_condition_scopes, BoostUnitTestSi
 
 BOOST_FIXTURE_TEST_CASE(tutorial_part2_mutable_condition_scopes_2, BoostUnitTestSimulationFixture)
 {
-    UInt value = 4_b;
-    value = 1;
+	UInt value = 4_b;
+	value = 1;
 
-    Bit do_mul_2_inc = '1';
+	Bit do_mul_2_inc = '1';
 
-    IF (do_mul_2_inc) {
-        value <<= 1; // Left shift by one bit to multiply with 2
-        value += 1; // Increment
-    }
+	IF (do_mul_2_inc) {
+		value <<= 1; // Left shift by one bit to multiply with 2
+		value += 1; // Increment
+	}
 
 	sim_assert(value == 3);
 
@@ -571,16 +571,16 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_mutable_condition_scopes_2, BoostUnitTest
 
 BOOST_FIXTURE_TEST_CASE(tutorial_part2_mutable_condition_scopes_3, BoostUnitTestSimulationFixture)
 {
-    UInt value = 4_b;
-    value = 1;
+	UInt value = 4_b;
+	value = 1;
 
-    Bit some_condition = '1';
+	Bit some_condition = '1';
 
-    IF (some_condition) {
-        value <<= 1;
-    } ELSE {
-        value += 1;
-    }
+	IF (some_condition) {
+		value <<= 1;
+	} ELSE {
+		value += 1;
+	}
 
 	sim_assert(value == 2);
 
@@ -599,12 +599,12 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_structs_packing, BoostUnitTestSimulationF
 		unsigned biasOffset = 127;
 	};
 
-    MyFloat myFloat;
+	MyFloat myFloat;
 //    myFloat.mantissa = ...;
 
-    // Packs the struct into one 32-bit word with the
-    // last member (mantissa) in the most significant bits
-    UInt packed_float = pack(myFloat);
+	// Packs the struct into one 32-bit word with the
+	// last member (mantissa) in the most significant bits
+	UInt packed_float = pack(myFloat);
 	
 	BOOST_TEST(packed_float.size() == 32);
 
@@ -614,27 +614,27 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_structs_packing, BoostUnitTestSimulationF
 
 BOOST_FIXTURE_TEST_CASE(tutorial_part2_structs_unpacking, BoostUnitTestSimulationFixture)
 {
-    struct MyFloat {
-        // Signals
-        UInt mantissa = 23_b; // This works like the constructor in the previous example
-        UInt exponent = 8_b;
-        Bit sign;
+	struct MyFloat {
+		// Signals
+		UInt mantissa = 23_b; // This works like the constructor in the previous example
+		UInt exponent = 8_b;
+		Bit sign;
 
-        // Meta Information
-        unsigned biasOffset = 127;
-    };
+		// Meta Information
+		unsigned biasOffset = 127;
+	};
 
-    MyFloat myFloat; // Constructor resizes all members
-    myFloat.mantissa = 42;
+	MyFloat myFloat; // Constructor resizes all members
+	myFloat.mantissa = 42;
 
-    // Packs the struct into one 32-bit word with the
-    // last member (mantissa) in the most significant bits
-    UInt packed_float = pack(myFloat);
+	// Packs the struct into one 32-bit word with the
+	// last member (mantissa) in the most significant bits
+	UInt packed_float = pack(myFloat);
 
-    MyFloat myFloat2; // Constructor resizes all members
+	MyFloat myFloat2; // Constructor resizes all members
 
-    // Unpacks the contents of packed_float into the signals of myFloat2
-    unpack(packed_float, myFloat2);
+	// Unpacks the contents of packed_float into the signals of myFloat2
+	unpack(packed_float, myFloat2);
 	
 	BOOST_TEST(packed_float.size() == 32);
 	sim_assert(myFloat2.mantissa == 42);
@@ -644,22 +644,22 @@ BOOST_FIXTURE_TEST_CASE(tutorial_part2_structs_unpacking, BoostUnitTestSimulatio
 
 BOOST_FIXTURE_TEST_CASE(tutorial_part2_structs_constructFrom, BoostUnitTestSimulationFixture)
 {
-    struct MyFloat {
-        // Signals
-        UInt mantissa = 23_b; // This works like the constructor in the previous example
-        UInt exponent = 8_b;
-        Bit sign;
+	struct MyFloat {
+		// Signals
+		UInt mantissa = 23_b; // This works like the constructor in the previous example
+		UInt exponent = 8_b;
+		Bit sign;
 
-        // Meta Information
-        unsigned biasOffset = 127;
-    };
+		// Meta Information
+		unsigned biasOffset = 127;
+	};
 
-    MyFloat myFloat;
-    myFloat.exponent = "10b0";
-    myFloat.biasOffset = 511;
+	MyFloat myFloat;
+	myFloat.exponent = "10b0";
+	myFloat.biasOffset = 511;
 
 
-    MyFloat myFloat2 = constructFrom(myFloat);
+	MyFloat myFloat2 = constructFrom(myFloat);
 
 	BOOST_TEST(myFloat2.exponent.size() == 10);
 	BOOST_TEST(myFloat2.biasOffset == 511);

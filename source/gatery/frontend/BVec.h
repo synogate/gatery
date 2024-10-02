@@ -20,14 +20,17 @@
 #include "BitVector.h"
 
 namespace gtry {
+	class BVec;
+}
+
+extern template class std::map<std::variant<gtry::BitVectorSliceStatic, gtry::BitVectorSliceDynamic>, gtry::BVec>;
+
+namespace gtry {
 
 /**
  * @addtogroup gtry_signals
  * @{
  */
-
-
-	class BVec;
 
 	class BVecDefault : public BaseBitVectorDefault {
 		public:

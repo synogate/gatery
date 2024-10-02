@@ -15,7 +15,7 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "TileLinkStreamFetch.h"
 #include <gatery/scl/utils/OneHot.h>
 #include <gatery/scl/utils/BitCount.h>
@@ -138,3 +138,11 @@ namespace gtry::scl
 	}
 }
 
+namespace gtry 
+{
+	template void connect(scl::TileLinkStreamFetch::Command&, scl::TileLinkStreamFetch::Command&);
+#if !defined(__clang__) || __clang_major__ >= 14
+	template auto upstream(scl::TileLinkStreamFetch::Command&);
+	template auto downstream(scl::TileLinkStreamFetch::Command&);
+#endif
+}

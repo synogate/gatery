@@ -15,7 +15,7 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "sdram.h"
 
 #include "../Counter.h"
@@ -243,7 +243,7 @@ Controller::CommandStream Controller::translateCommand(const BankState& state, c
 	{
 		cmd->code = CommandCode::Precharge;
 		cmd->address[10] = '0';
-	} ELSE IF(!state.rowActive)
+	} ELSEIF(!state.rowActive)
 	{
 		cmd->code = CommandCode::Activate;
 		cmd->address = zext((BVec)request->address(m_mapping.row));
@@ -308,7 +308,7 @@ void Controller::makeBusPins(const CommandBus& in, std::string prefix)
 	pinOut(bus.ba).setName(prefix + "BA");
 	pinOut(bus.dqm).setName(prefix + "DQM");
 
-	m_dataIn = scl::sdram::moduleSimulation(bus);
+	m_dataIn = *scl::sdram::moduleSimulation(bus);
 
 	HCL_NAMED(outEnable);
 	BVec m_dataInPin = (BVec)tristatePin(bus.dq, outEnable).setName(prefix + "DQ");
@@ -617,11 +617,20 @@ Controller::CommandStream gtry::scl::sdram::Controller::refreshSequence(const Bi
 	return cmd;
 }
 
-gtry::BVec gtry::scl::sdram::moduleSimulation(const CommandBus& cmd)
+struct BankState
 {
-	auto scope = Area{ "scl_moduleSimulation" }.enter();
+	gtry::Bit rowActive;
+	gtry::BVec activeRow;
+};
+BOOST_HANA_ADAPT_STRUCT(BankState, rowActive, activeRow);
 
-	BitWidth addrWidth = cmd.ba.width() + cmd.a.width() + 8_b;
+gtry::scl::VStream<gtry::BVec> gtry::scl::sdram::moduleSimulation(const CommandBus& cmd, Standard standard)
+{
+	Area ent{ "scl_moduleSimulation", true };
+	HCL_NAMED(cmd);
+
+	BitWidth colAddrW = standard == Standard::sdram ? 8_b : 10_b;
+	BitWidth addrWidth = cmd.ba.width() + cmd.a.width() + colAddrW;
 	Memory<BVec> storage{ addrWidth.count(), cmd.dq.width() };
 	storage.noConflicts();
 	storage.setType(MemType::DONT_CARE, 0);
@@ -636,12 +645,10 @@ gtry::BVec gtry::scl::sdram::moduleSimulation(const CommandBus& cmd)
 	HCL_NAMED(modeCL);
 	modeWriteBurstLength = reg(modeWriteBurstLength, '0');
 	HCL_NAMED(modeWriteBurstLength);
-
-	struct BankState
-	{
-		Bit rowActive;
-		BVec activeRow;
-	};
+	UInt writeDelay = "3b0";
+	if (standard != Standard::sdram)
+		writeDelay = modeCL - 1;
+	HCL_NAMED(writeDelay);
 
 	Vector<BankState> state(cmd.ba.width().count());
 	for (auto& s : state)
@@ -669,26 +676,34 @@ gtry::BVec gtry::scl::sdram::moduleSimulation(const CommandBus& cmd)
 	{
 		UInt code = cat(!cmd.wen, !cmd.casn, !cmd.rasn);
 		HCL_NAMED(code);
-		
+		BankState bankState = mux(cmd.ba, state);
+		HCL_NAMED(bankState);
+
 		IF(code == (size_t)CommandCode::Activate)
 		{
-			sim_assert(!mux(cmd.ba, state).rowActive) << "activate while not in idle state";
-			demux(cmd.ba, state, {
-				.rowActive = '1',
-				.activeRow = cmd.a,
-			});
+			sim_assert(!bankState.rowActive) << "activate while not in idle state";
+			bankState.rowActive = '1';
+			bankState.activeRow = cmd.a;
 		}
 		IF(code == (size_t)CommandCode::Read)
 		{
-			sim_assert(mux(cmd.ba, state).rowActive) << "read in idle state";
+			sim_assert(bankState.rowActive) << "read in idle state";
 
-			address = cat(cmd.ba, mux(cmd.ba, state).activeRow, cmd.a(0, 8_b));
+			address = cat(cmd.ba, bankState.activeRow, cmd.a(0, colAddrW));
 			bank = cmd.ba;
+			bankState.rowActive = !cmd.a[10];
 
 			writeBursts = 0;
 			readBursts = ConstUInt(1, readBursts.width()) << modeBurstLength;
-			IF(modeBurstLength == 7)
-				readBursts = 256;
+			if (standard == Standard::sdram)
+			{
+				IF(modeBurstLength == 7)
+					readBursts = 256;
+			}
+			else
+			{
+				readBursts >>= 1;
+			}
 		}
 		IF(code == (size_t)CommandCode::BurstStop)
 		{
@@ -696,11 +711,8 @@ gtry::BVec gtry::scl::sdram::moduleSimulation(const CommandBus& cmd)
 		}
 		IF(code == (size_t)CommandCode::Precharge)
 		{
-			const BankState blank{
-				.rowActive = '0',
-				.activeRow = ConstBVec(cmd.a.width()),
-			};
-			demux(cmd.ba, state, blank);
+			bankState.rowActive = '0';
+			bankState.activeRow = ConstBVec(cmd.a.width());
 		
 			// PrefetchAll special case
 			IF(cmd.a[10])
@@ -715,17 +727,25 @@ gtry::BVec gtry::scl::sdram::moduleSimulation(const CommandBus& cmd)
 		}
 		IF(code == (size_t)CommandCode::Write)
 		{
-			sim_assert(mux(cmd.ba, state).rowActive) << "write in idle state";
+			sim_assert(bankState.rowActive) << "write in idle state";
 
-			address = cat(cmd.ba, mux(cmd.ba, state).activeRow, cmd.a(0, 8_b));
+			address = cat(cmd.ba, bankState.activeRow, cmd.a(0, colAddrW));
 			bank = cmd.ba;
+			bankState.rowActive = !cmd.a[10];
 
 			readBursts = 0;
 			writeBursts = ConstUInt(1, writeBursts.width()) << modeBurstLength;
-			IF(modeBurstLength == 7)
-				writeBursts = 256;
-			IF(modeWriteBurstLength)
-				writeBursts = 1;
+			if (standard == Standard::sdram)
+			{
+				IF(modeBurstLength == 7)
+					writeBursts = 256;
+				IF(modeWriteBurstLength)
+					writeBursts = 1;
+			}
+			else
+			{
+				writeBursts >>= 1;
+			}
 		}
 		IF(code == (size_t)CommandCode::ModeRegisterSet)
 		{
@@ -734,45 +754,58 @@ gtry::BVec gtry::scl::sdram::moduleSimulation(const CommandBus& cmd)
 				modeBurstLength = (UInt)cmd.a(0, 3_b);
 				sim_assert(cmd.a[3] == '0') << "interleaved burst mode not implemented";
 				modeCL = (UInt)cmd.a(4, 3_b);
-				sim_assert(cmd.a(7, 2_b) == 0) << "test mode is not allowed";
-				modeWriteBurstLength = cmd.a[9];
+				sim_assert(cmd.a[7] == '0') << "test mode is not allowed";
+
+				if (standard == Standard::sdram)
+					modeWriteBurstLength = cmd.a[9];
 			}
 
-			if(cmd.ba.width().bits() > 0)
-				sim_assert(cmd.ba.upper(-1_b) == 0) << "unsupported MRS command";
-			sim_assert(cmd.a.upper(cmd.a.width() - 10) == 0) << "reserved bits must be zero";
-			//sim_assert(modeRegister(4, 3_b) != 0) << "zero CAS Latency not implemented";
+			if (standard == Standard::sdram)
+			{
+				if(cmd.ba.width().bits() > 0)
+					sim_assert(cmd.ba.upper(-1_b) == 0) << "unsupported MRS command";
+				sim_assert(cmd.a.upper(cmd.a.width() - 10) == 0) << "reserved bits must be zero";
+				//sim_assert(modeRegister(4, 3_b) != 0) << "zero CAS Latency not implemented";
+			}
 		}
+
+		demux(cmd.ba, state, bankState);
 	}
 	HCL_NAMED(readBursts);
 	HCL_NAMED(writeBursts);
 	HCL_NAMED(address);
 
+
 	// write to memory
-	IF(writeBursts != 0)
+	UInt writeAddr = delay(address, writeDelay);
+	HCL_NAMED(writeAddr);
+	
+	IF(delay(writeBursts, writeDelay) != 0)
 	{
-		BVec data = storage[address];
+		BVec writeData = storage[writeAddr];
 		for (size_t i = 0; i < cmd.dqm.size(); ++i)
 		{
 			IF(!cmd.dqm[i])
-				data(i * 8, 8_b) = cmd.dq(i * 8, 8_b);
+				writeData(i * 8, 8_b) = cmd.dq(i * 8, 8_b);
 		}
-		setName(data, "writeData");
-		storage[address] = data;
+		HCL_NAMED(writeAddr);
+		storage[writeAddr] = writeData;
 	}
 
 	// delay read data to simulate data bus
 	ShiftReg readDelay{ std::tuple(storage[address].read(), readBursts != 0)};
-	ShiftReg readMaskDelay{ cmd.dqm };
 
-	address(0, 8_b) += 1;
+	address(0, colAddrW) += 1;
 
 	// drive output
 	BVec out = ConstBVec(cmd.dq.width());
 	auto [readData, readActive] = readDelay[modeCL - 1];
 	HCL_NAMED(readActive);
 	HCL_NAMED(readData);
-	BVec readMask = readMaskDelay[1];
+
+	BVec readMask = reg(cmd.dqm);
+	if(standard != Standard::sdram)
+		readMask = 0;
 	HCL_NAMED(readMask);
 
 	IF(readActive & readMask != readMask.width().mask())
@@ -784,7 +817,7 @@ gtry::BVec gtry::scl::sdram::moduleSimulation(const CommandBus& cmd)
 				out(i * 8, 8_b) = readData(i * 8, 8_b);
 	}
 	HCL_NAMED(out);
-	return out;
+	return strm::createVStream(out, readActive);
 }
 
 Controller& gtry::scl::sdram::Controller::timings(const Timings& timingsInNs)

@@ -17,9 +17,13 @@
 */
 #pragma once
 
-namespace gtry::utils {
+namespace gtry::utils 
+{
+	template <typename T>
+	class RestrictTo { friend T; RestrictTo() {} };
 
-template <typename T>
-class RestrictTo { friend T; RestrictTo() {} };
-
+	template<size_t SIZE, class T>
+	constexpr size_t array_size(T(&arr)[SIZE]) {
+		return SIZE;
+	}
 }

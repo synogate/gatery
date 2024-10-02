@@ -36,6 +36,8 @@ namespace gtry
 	{
 		PinType type = PinType::STD_LOGIC;
 		std::optional<Clock> clockOverride;
+		/// Only valid for input bits. Returns true, if the module's outputs do not change when this input is deasserted (e.g. like a register's enable signal).
+		bool isEnableSignal = false;
 	};
 
 	class ExternalModule
@@ -62,8 +64,8 @@ namespace gtry
 		BVec				out(std::string_view name, BitWidth W, PinConfig cfg = {});
 		Bit					out(std::string_view name, PinConfig cfg = {});
 
-		void inoutPin(std::string_view portName, std::string_view pinName, BitWidth W, PinConfig cfg = {});
-		void inoutPin(std::string_view portName, std::string_view pinName, PinConfig cfg = {});
+		ExternalModule& inoutPin(std::string_view portName, std::string_view pinName, BitWidth W, PinConfig cfg = {});
+		ExternalModule& inoutPin(std::string_view portName, std::string_view pinName, PinConfig cfg = {});
 
 		void isEntity(bool b) { m_node.isEntity(b); }
 		void requiresComponentDeclaration(bool b) { m_node.requiresComponentDeclaration(b); }
@@ -109,6 +111,8 @@ namespace gtry
 			std::vector<hlim::OutputClockRelation> m_outClockRelations;
 
 			void declareLastIOPairBidir() { declBidirPort(m_inputPorts.size()-1, m_outputPorts.size()-1); }
+
+			using Node_External::declareInputIsEnable;
 		};
 
 		Node_External_Exposed& m_node;

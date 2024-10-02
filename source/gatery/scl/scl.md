@@ -1,4 +1,4 @@
-# Gatery - Standard Component Library (scl) {#gtry_scl_page}
+@page gtry_scl_page Standard Component Library (scl)
 
 Submodules:
 - @subpage gtry_scl_memorymaps_page

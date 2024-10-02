@@ -16,7 +16,7 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "PackedMemoryMap.h"
 
 #include <ranges>
@@ -112,19 +112,20 @@ void PackedMemoryMap::packRegisters(BitWidth registerWidth)
 	HCL_DESIGNCHECK_HINT(!m_alreadyPacked, "Memory map can only be packed once!");
 	m_alreadyPacked = true;
 
-	m_scope.physicalDescription.offsetInBits = 0;
+	m_scope.offsetInBits = 0;
 	packRegisters(registerWidth, m_scope);
 }
 
 void PackedMemoryMap::packRegisters(BitWidth registerWidth, Scope &scope)
 {
-	scope.physicalDescription.name = scope.name;
+	scope.physicalDescription = std::make_shared<AddressSpaceDescription>();
+	scope.physicalDescription->name = scope.name;
 	if (scope.annotation != nullptr) {
-		scope.physicalDescription.descShort = std::string(scope.annotation->shortDesc);
-		scope.physicalDescription.descLong = std::string(scope.annotation->longDesc);
+		scope.physicalDescription->descShort = scope.annotation->shortDesc;
+		scope.physicalDescription->descLong = scope.annotation->longDesc;
 	}
 
-	scope.physicalDescription.size = 0_b;
+	scope.physicalDescription->size = 0_b;
 	for (auto & signal : scope.registeredSignals) {
 		BitWidth signalWidth;
 		if (signal.readSignal)
@@ -141,12 +142,11 @@ void PackedMemoryMap::packRegisters(BitWidth registerWidth, Scope &scope)
 		if (signal.writeSignal)
 			oldWriteSignal = *signal.writeSignal;
 
-		AddressSpaceDescription description;
-		description.offsetInBits = scope.physicalDescription.offsetInBits + scope.physicalDescription.size.bits();
-		description.size = signalWidth;
-		description.name = signal.name;
+		auto description = std::make_shared<AddressSpaceDescription>();
+		description->size = signalWidth;
+		description->name = signal.name;
 		if (signal.annotation != nullptr)
-			description.descShort = std::string(signal.annotation->shortDesc);
+			description->descShort = signal.annotation->shortDesc;
 
 		for (auto i : utils::Range(numRegisters)) {
 			size_t startOffset = i * registerWidth.bits();
@@ -154,30 +154,31 @@ void PackedMemoryMap::packRegisters(BitWidth registerWidth, Scope &scope)
 
 			scope.physicalRegisters.push_back({});
 			auto &physReg = scope.physicalRegisters.back();
+			physReg.offsetInBits = scope.physicalDescription->size.bits() + startOffset;
 			if (numRegisters > 1) {
-				physReg.description.name = signal.name+"_bits_"+std::to_string(startOffset) + "_to_"+std::to_string(startOffset + chunkSize.bits());
-				physReg.description.offsetInBits = description.offsetInBits + startOffset;
-				physReg.description.size = chunkSize;
+				physReg.description = std::make_shared<AddressSpaceDescription>();
+				physReg.description->name = signal.name+"_bits_"+std::to_string(startOffset) + "_to_"+std::to_string(startOffset + chunkSize.bits()-1);
+				physReg.description->size = chunkSize;
 				if (signal.annotation != nullptr)
-					physReg.description.descShort = std::string(signal.annotation->shortDesc);
+					physReg.description->descShort = signal.annotation->shortDesc;
 		
-				description.children.emplace_back(physReg.description);
+				description->children.emplace_back(startOffset, physReg.description);
 			} else
 				physReg.description = description;
 
 			if (signal.readSignal) {
 				physReg.readSignal = (*signal.readSignal)(startOffset, chunkSize);
-				setName(*physReg.readSignal, std::string(physReg.description.name)+"_readOut");
+				setName(*physReg.readSignal, physReg.description->name+"_readOut");
 			}
 			if (signal.writeSignal) {
 				physReg.writeSignal = chunkSize;
 				physReg.onWrite = Bit{};
 
 				// Hook write signal in order to default to no-change
-				setName(*physReg.writeSignal, std::string(physReg.description.name)+"_writeIn");
+				setName(*physReg.writeSignal, physReg.description->name+"_writeIn");
 				writeParts[i] = *physReg.writeSignal;
 				*physReg.writeSignal = oldWriteSignal(startOffset, chunkSize);
-				setName(*physReg.writeSignal, std::string(physReg.description.name)+"_writeOut");
+				setName(*physReg.writeSignal, physReg.description->name+"_writeOut");
 
 				// Don't hook the onWrite in order to default to '0'
 				*signal.onWrite = *physReg.onWrite;
@@ -185,8 +186,9 @@ void PackedMemoryMap::packRegisters(BitWidth registerWidth, Scope &scope)
 			}
 		}
 
-		scope.physicalDescription.size += numRegisters * registerWidth;
-		scope.physicalDescription.children.emplace_back(description);
+
+		scope.physicalDescription->children.emplace_back(scope.physicalDescription->size.bits(), description);
+		scope.physicalDescription->size += numRegisters * registerWidth;
 
 		if (signal.writeSignal)
 			*signal.writeSignal = (BVec) pack(writeParts);
@@ -194,10 +196,10 @@ void PackedMemoryMap::packRegisters(BitWidth registerWidth, Scope &scope)
 	}
 
 	for (auto &s : scope.subScopes) {
-		s.physicalDescription.offsetInBits = scope.physicalDescription.offsetInBits + scope.physicalDescription.size.bits();
+		s.offsetInBits = scope.physicalDescription->size.bits();
 		packRegisters(registerWidth, s);
-		scope.physicalDescription.size += s.physicalDescription.size;
-		scope.physicalDescription.children.emplace_back(s.physicalDescription);
+		scope.physicalDescription->children.emplace_back(scope.physicalDescription->size.bits(), s.physicalDescription);
+		scope.physicalDescription->size += s.physicalDescription->size;
 	}
 }
 

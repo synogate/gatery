@@ -28,7 +28,6 @@
 #include <gatery/scl/stream/strm.h>
 #include <gatery/scl/io/SpiMaster.h> 
 
-#include <gatery/debug/websocks/WebSocksInterface.h>
 #include <gatery/scl/sim/SimulationSequencer.h>
 #include <gatery/scl/stream/SimuHelpers.h>
 #include <gatery/scl/flag.h>
@@ -355,14 +354,14 @@ BOOST_FIXTURE_TEST_CASE(stream_reg_chaining, StreamTransferFixture)
 	runTicks(m_clock.getClk(), 1024);
 }
 
-BOOST_FIXTURE_TEST_CASE(stream_fifo, StreamTransferFixture)
+BOOST_FIXTURE_TEST_CASE(stream_fifo_0, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
 
 	scl::RvStream<UInt> in{ .data = 10_b };
 	In(in);
 
-	scl::RvStream<UInt> out = scl::strm::fifo(move(in));
+	scl::RvStream<UInt> out = scl::strm::fifo(move(in), 16, scl::FifoLatency(0));
 	Out(out);
 
 	transfers(500);
@@ -372,6 +371,43 @@ BOOST_FIXTURE_TEST_CASE(stream_fifo, StreamTransferFixture)
 	design.postprocess();
 	runTicks(m_clock.getClk(), 1024);
 }
+
+BOOST_FIXTURE_TEST_CASE(stream_fifo_1, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::RvStream<UInt> in{ .data = 10_b };
+	In(in);
+
+	scl::RvStream<UInt> out = scl::strm::fifo(move(in), 16, scl::FifoLatency(1));
+	Out(out);
+
+	transfers(500);
+	simulateTransferTest(in, out);
+
+	//recordVCD("stream_fifo.vcd");
+	design.postprocess();
+	runTicks(m_clock.getClk(), 1024);
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_fifo_2, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::RvStream<UInt> in{ .data = 10_b };
+	In(in);
+
+	scl::RvStream<UInt> out = scl::strm::fifo(move(in), 16, scl::FifoLatency(2));
+	Out(out);
+
+	transfers(500);
+	simulateTransferTest(in, out);
+
+	//recordVCD("stream_fifo.vcd");
+	design.postprocess();
+	runTicks(m_clock.getClk(), 1024);
+}
+
 BOOST_FIXTURE_TEST_CASE(streamArbiter_low1, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
@@ -1787,7 +1823,7 @@ BOOST_FIXTURE_TEST_CASE(stream_shift_right_better_rework_playground, stream_shif
 	numPackets = 10;
 	waitBetweenPackets = 0;
 	size_t offset = 0;
-	size_t packetSize = 12;
+	//size_t packetSize = 12;
 	getPacketSize = [&]() { return 20; };//return (rng() & 0x3F) + 1; };//1 to 64
 	getShiftAmt = [&]() { return offset++; };// rng() & 0xF;}; //0 to 15
 
@@ -2579,4 +2615,292 @@ BOOST_FIXTURE_TEST_CASE(credit_broadcaster_test, BoostUnitTestSimulationFixture)
 	BOOST_TEST(!runHitsTimeout({ 10, 1'000'000 }));
 }
 
+BOOST_FIXTURE_TEST_CASE(stream_allowance_stall_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
 
+	const size_t allowance = 15;
+
+	BitWidth allowanceW = 8_b;
+
+	Bit allow;
+	pinIn(allow, "allow");
+
+	scl::RvStream<Bit> in('0');
+	pinIn(in, "in");
+
+	auto out = move(in) | scl::strm::allowanceStall(allow, allowanceW);
+
+	pinOut(out, "out");
+
+	addSimulationProcess([&, this]()->SimProcess { return scl::strm::readyDriverRNG(out, clk, 50); });
+
+	std::mt19937 rng(647489);
+	addSimulationProcess([&, this]()->SimProcess {
+		while (true) {
+			co_await scl::strm::sendBeat(in, '1', clk);
+			size_t wait = rng() & 0xF;
+			for (size_t i = 0; i < wait; i++)
+				co_await OnClk(clk);
+		}
+	}); 
+
+	addSimulationProcess([&, this]()->SimProcess {
+		simu(allow) = '0';
+		for (size_t i = 0; i < allowance; i++)
+		{
+			simu(allow) = '1';
+			co_await OnClk(clk);
+			simu(allow) = '0';
+			size_t wait = rng() & 0x3;
+			for (size_t i = 0; i < wait; i++)
+				co_await OnClk(clk);
+		}
+	});
+
+	size_t received = 0;
+	addSimulationProcess([&, this]()->SimProcess {
+		while (received < allowance) {
+			co_await scl::strm::performTransferWait(out, clk);
+			received++;
+		}
+	}); 
+
+	addSimulationProcess([&, this]()->SimProcess {
+		for (size_t i = 0; i < 200; i++){
+			co_await OnClk(clk);
+		}
+		BOOST_TEST(received == allowance);
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 100, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_add_ready_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+
+	const size_t expectedBeats = 15;
+
+	BitWidth lostPacketCounterW = 8_b;
+
+	scl::VStream<Bit> in('0');
+	pinIn(in, "in");
+	UInt lostPacketCount;
+
+	auto out = move(in) | scl::strm::addReadyAndCompensateForLostBeats(lostPacketCounterW, lostPacketCount);
+
+	pinOut(lostPacketCount, "lost_packet_count");
+	pinOut(out, "out");
+
+	addSimulationProcess([&, this]()->SimProcess { return scl::strm::readyDriverRNG(out, clk, 20); });
+
+	std::mt19937 rng(647489);
+	addSimulationProcess([&, this]()->SimProcess {
+		for (size_t i = 0; i < expectedBeats; i++)
+		{
+			co_await scl::strm::sendBeat(in, '1', clk);
+			size_t wait = rng() & 0xF;
+			for (size_t i = 0; i < wait; i++)
+				co_await OnClk(clk);
+		}
+	});
+
+	size_t received = 0;
+	addSimulationProcess([&, this]()->SimProcess {
+		while (true) {
+			co_await scl::strm::performTransferWait(out, clk);
+			received++;
+		}
+		}); 
+
+	addSimulationProcess([&, this]()->SimProcess {
+		for (size_t i = 0; i < 200; i++){
+			co_await OnClk(clk);
+		}
+		BOOST_TEST(received == expectedBeats);
+		BOOST_TEST(simu(lostPacketCount) != 0);
+		stopTest();
+		});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 100, 1'000'000 }));
+} 
+
+
+
+
+BOOST_FIXTURE_TEST_CASE(stream_allowance_initial_allowance, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clk);
+
+	const size_t initialAllowance = 15;
+
+	BitWidth allowanceW = 8_b;
+
+	Bit allow;
+	pinIn(allow, "allow");
+
+	scl::RvStream<Bit> in('0');
+	pinIn(in, "in");
+
+	auto out = move(in) | scl::strm::allowanceStall(allow, allowanceW, initialAllowance);
+
+	pinOut(out, "out");
+
+	addSimulationProcess([&, this]()->SimProcess { return scl::strm::readyDriver(out, clk); });
+
+	std::mt19937 rng(647489);
+	addSimulationProcess([&, this]()->SimProcess {
+		while (true) {
+			co_await scl::strm::sendBeat(in, '1', clk);
+		}
+		});
+
+	size_t received = 0;
+	addSimulationProcess([&, this]()->SimProcess {
+		while (received < initialAllowance) {
+			co_await scl::strm::performTransferWait(out, clk);
+			received++;
+		}
+		}); 
+
+	addSimulationProcess([&, this]()->SimProcess {
+		for (size_t i = 0; i < 200; i++){
+			co_await OnClk(clk);
+		}
+		BOOST_TEST(received == initialAllowance);
+		stopTest();
+		});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 100, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(sequencer_fuzz_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 100'000'000, .memoryResetType = ClockConfig::ResetType::NONE });
+	ClockScope clkScp(clk);
+
+	BitWidth txidW = 6_b;
+
+	scl::RvStream<UInt, scl::TxId> in{ txidW };
+	txid(in) = txidW;
+	pinIn(in, "in");
+
+	scl::RvStream<UInt, scl::TxId> out = move(in) | scl::strm::sequencer();
+	pinOut(out, "out");
+
+	std::vector<size_t> unusedTxId(txidW.count());
+	std::iota(unusedTxId.begin(), unusedTxId.end(), 0);
+
+	addSimulationProcess([&, this]()->SimProcess {
+		std::mt19937 rng{ 5434 };
+		while (true)
+		{
+			while (unusedTxId.size() <= rng() % (txidW.count() / 2))
+				co_await OnClk(clk);
+
+			std::vector<size_t>::iterator it = unusedTxId.begin() + (rng() % unusedTxId.size());
+			simu(*in) = *it;
+			simu(txid(in)) = *it;
+			unusedTxId.erase(it);
+			co_await scl::strm::performTransfer(in, clk);
+		}
+	});
+
+	addSimulationProcess([&, this]()->SimProcess {
+		fork(scl::strm::readyDriverRNG(out, clk, 50));
+
+		for (size_t i = 0;; i++)
+		{
+			co_await scl::strm::performTransferWait(out, clk);
+			size_t id = simu(txid(out));
+			BOOST_TEST(id == i % txidW.count());
+			BOOST_TEST(id == simu(*out));
+			BOOST_TEST((std::find(unusedTxId.begin(), unusedTxId.end(), id) == unusedTxId.end()));
+			unusedTxId.push_back(id);
+		}
+	});
+
+	design.postprocess();
+	runHitsTimeout({ 800, 1'000'000 });
+}
+
+BOOST_FIXTURE_TEST_CASE(sequencer_fill_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 100'000'000, .memoryResetType = ClockConfig::ResetType::NONE });
+	ClockScope clkScp(clk);
+
+	BitWidth txidW = 4_b;
+
+	scl::RvStream<UInt, scl::TxId> in{ txidW };
+	txid(in) = txidW;
+	pinIn(in, "in");
+
+	scl::RvStream<UInt, scl::TxId> out = move(in) | scl::strm::sequencer();
+	pinOut(out, "out");
+
+	addSimulationProcess([&, this]()->SimProcess {
+		for (size_t t = 0; t < 2; ++t)
+		{
+			// send every txid except for the first one
+			for (size_t i = 1; i < txidW.count(); i++)
+			{
+				size_t prime = t ? 6089 : 2539;
+				size_t id = i * prime;
+				simu(*in) = id;
+				simu(txid(in)) = id;
+				co_await scl::strm::performTransfer(in, clk);
+			}
+
+			// send missing txid
+			simu(*in) = 0;
+			simu(txid(in)) = 0;
+			co_await scl::strm::performTransfer(in, clk);
+
+			// wait for flush
+			co_await scl::strm::performTransferWait(out, clk);
+			while (simu(valid(out)) == '1')
+				co_await OnClk(clk);
+		}
+	});
+
+	addSimulationProcess([&, this]()->SimProcess {
+		simu(ready(out)) = '1';
+		for (size_t i = 0; i < txidW.count(); i++)
+		{
+			co_await scl::strm::performTransferWait(out, clk);
+			size_t id = simu(txid(out));
+			BOOST_TEST(id == i);
+			BOOST_TEST(id == simu(*out));
+		}
+
+		simu(ready(out)) = '0';
+
+		// wait until all txids are sent again
+		for (size_t i = 0; i < txidW.count(); i++)
+			co_await performTransferWait(in, clk);
+		while (simu(valid(out)) == '0')
+			co_await OnClk(clk);
+		co_await OnClk(clk);
+
+		simu(ready(out)) = '1';
+		for (size_t i = 0; i < txidW.count(); i++)
+		{
+			co_await scl::strm::performTransferWait(out, clk);
+			size_t id = simu(txid(out));
+			BOOST_TEST(id == i);
+			BOOST_TEST(id == simu(*out));
+		}
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}

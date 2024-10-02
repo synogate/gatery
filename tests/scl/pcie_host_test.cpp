@@ -406,7 +406,7 @@ BOOST_FIXTURE_TEST_CASE(host_unsupported_completer, BoostUnitTestSimulationFixtu
 		stopTest();
 		});
 
-	recordVCD("dut.vcd");
+	//recordVCD("dut.vcd");
 	design.postprocess();
 
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));

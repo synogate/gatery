@@ -127,7 +127,7 @@ namespace gtry::scl::strm
 		HCL_DESIGNCHECK(maxDelay > 2);
 		T out = constructFrom(in);
 
-		const std::string groupName = ent.getNodeGroup()->instancePath();
+		const std::string groupName = ent.instancePath();
 
 		// downstream signals
 		{

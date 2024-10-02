@@ -16,7 +16,7 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include <gatery/pch.h>
+#include <gatery/scl_pch.h>
 
 #include "Host.h"
 
@@ -52,7 +52,7 @@ void Host::instantiateHostMemory()
 	}
 }
 
-std::tuple<FlatAddressSpaceDescription, std::unique_ptr<driver::MemoryMapInterface>> Host::addMemoryMap(scl::PackedMemoryMap &memoryMap)
+std::tuple<FlatAddressSpaceDescription, AddressSpaceDescriptionHandle, std::unique_ptr<driver::MemoryMapInterface>> Host::addMemoryMap(scl::PackedMemoryMap &memoryMap)
 {
 	auto fromMemoryMap = scl::toTileLinkUL(memoryMap, 32_b, width(scl::pci::TlpAnswerInfo{}));
 
@@ -84,8 +84,10 @@ std::tuple<FlatAddressSpaceDescription, std::unique_ptr<driver::MemoryMapInterfa
 
 	exposeMemoryMapTL(cpuPort);
 
+	auto [flatDesc, desc] = gtry::scl::exportAddressSpaceDescription(fromMemoryMap->addrSpaceDesc);
+
 	return std::make_tuple(
-			gtry::scl::exportAddressSpaceDescription(memoryMap.getTree().physicalDescription), 
+			flatDesc, desc, 
 			std::make_unique<scl::driver::SimulationFiberMapped32BitTileLink>(linkModel, ClockScope::getClk()));
 }
 

@@ -43,7 +43,7 @@ namespace gtry::scl
 			virtual scl::pci::RequesterInterface addHostMemory(BitWidth tlpStreamW);
 			virtual hlim::MemoryStorage &simuHostMemory();
 
-			virtual std::tuple<FlatAddressSpaceDescription, std::unique_ptr<driver::MemoryMapInterface>> addMemoryMap(scl::PackedMemoryMap &memoryMap);
+			virtual std::tuple<FlatAddressSpaceDescription, AddressSpaceDescriptionHandle, std::unique_ptr<driver::MemoryMapInterface>> addMemoryMap(scl::PackedMemoryMap &memoryMap);
 		protected:
 			virtual void instantiateHostMemory();
 			virtual void exposeMemoryMapTL(scl::TileLinkUL &cpuPort);

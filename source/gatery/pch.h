@@ -36,8 +36,14 @@
 #include <boost/spirit/home/support/container.hpp>
 #include <boost/spirit/home/x3.hpp>
 #include <boost/stacktrace.hpp>
-#include <boost/process.hpp>
+//#include <boost/process.hpp>
 #include <boost/optional.hpp>
+#include <boost/container/flat_map.hpp>
+#include <boost/multiprecision/debug_adaptor.hpp>
+#include <boost/multiprecision/number.hpp>
+//#include <boost/multiprecision/mpfi.hpp>
+#include <boost/multiprecision/cpp_int.hpp>
+#include <boost/flyweight.hpp>
 
 #include <external/magic_enum.hpp>
 
@@ -70,6 +76,8 @@
 #include <utility>
 #include <variant>
 #include <vector>
+#include <span>
+#include <regex>
 
 #if __has_include(<yaml-cpp/yaml.h>)
 
@@ -90,7 +98,23 @@
 # pragma message ("yaml-cpp not found. compiling without config file support")
 #endif
 
-extern template class boost::rational<std::uint64_t>;
+namespace boost {
+	extern template class rational<std::uint64_t>;
+	extern template class basic_format<char>;
+	extern template std::basic_string<char> lexical_cast<std::basic_string<char>>(const unsigned long&);
+}
+
+namespace std {
+	extern template class std::vector<std::uint64_t>;
+	extern template class std::span<std::byte>;
+	extern template class std::span<const std::byte>;
+}
+
+namespace boost::multiprecision {
+	//extern template class number<cpp_int_backend<>>;
+}
+
+
 
 #ifdef _WIN32
 #pragma warning(pop)

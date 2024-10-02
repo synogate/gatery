@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="css/styles.css">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+        <script src="js/hierarchy.js"></script>
+        <title>Gatery Hierarchy</title>
+    </head>
+    <body>
+        <nav class="navbar navbar-expand-lg">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="index.html">Gatery Report</a>
+                <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item"><a class="nav-link" href="gatery_hierarchy.html">Hierarchy</a></li>
+                        <li class="nav-item"><a class="nav-link" href="gatery_log.html">Log Messages</a></li>
+                        <li class="nav-item"><a class="nav-link" href="gatery_loops.html">Loops</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        
+        <div class="content-wrapper">
+
+            <div id="errorMessageTarget"></div>
+
+            <div class="custom-container">
+                <div class="child-div">
+                    <div class="accordion custom-padded" id="nodeAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#node-collapse" aria-expanded="false" aria-controls="node-collapse">Nodes:</button>
+                            </h2>
+                            <div id="node-collapse" class="accordion-collapse collapse">
+                                <div class="accordion-body">
+                                    <ul class="node-info" id="nodeTarget"></ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="child-div">
+                    <div class="accordion custom-padded" id="groupAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#group-collapse" aria-expanded="false" aria-controls="group-collapse">Groups:</button>
+                            </h2>
+                            <div id="group-collapse" class="accordion-collapse collapse">
+                                <div class="accordion-body">
+                                    <ul class="node-info" id="groupTarget"></ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- <h3>Nodes:</h3> -->
+
+
+            <!-- <h3>Node Groups:</h3> -->
+            
+
+            <div id="offcanvasTarget"></div>
+
+            
+<!-- TEMPLATES: populate DOM with objects from external files using javascrip -->
+
+            <!-- Node information template. Gets placed in the node accordion -->
+            <template>
+                <div>
+                    <!-- <button id="button1" type="button" class="btn btn-link">Node: <a href="gatery_log.html"></a></button> -->
+                    <p>Node: <a class="custom-link btn" data-bs-toggle="offcanvas" role="button" aria-controls="offcanvasExample"></a></p>
+                    <button type="button" class="btn btn-sm custom-button" data-bs-toggle="popover" data-bs-title="Node Details" data-bs-content="">More Info</button>
+                </div>
+            </template>
+
+            <!-- Node group information template. Gets placed in the group accordion -->
+            <template>
+                <div>
+                    
+                    <p>Group: <a class="custom-link btn" data-bs-toggle="offcanvas" role="button" aria-controls="offcanvasExample"></a></p>
+                    <button type="button" class="btn btn-sm custom-button" data-bs-toggle="popover" data-bs-title="Group Details" data-bs-content="">More Info</button>
+                </div>
+            </template>
+
+            <!-- Offcanvas template for extended node information -->
+            <template>
+                <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasExample" aria-labelledby="offcanvasExampleLabel">
+                    <div class="offcanvas-header">
+                        <h5 class="offcanvas-title" id="offcanvasExampleLabel"></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                    </div>
+                    <div class="offcanvas-body">
+                        <div id="undefined"></div>
+                        <div id="id"></div>
+                        <div id="name"></div>
+                        <div id="group"></div>
+                        <div id="stacktrace"></div>
+                        <div id="type"></div>
+                        <div id="meta"></div>
+                        <div id="clocks"></div>
+                        <div id="inputPorts"></div>
+                        <div id="outputPorts"></div>
+                        <!-- for groups -->
+                        <div id="instanceName"></div>
+                        <div id="children"></div>
+                    </div>
+                </div>
+            </template>
+
+        </div>
+    </body>
+</html>

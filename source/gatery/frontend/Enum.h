@@ -87,6 +87,8 @@ namespace gtry {
 			void addToSignalGroup(hlim::SignalGroup *signalGroup);
 
 			hlim::Node_Signal* node() const { return m_node.get(); }
+
+			void resetNode() override;
 		protected:
 			virtual void createNode();
 			void assign(size_t v, std::string_view name);
@@ -131,17 +133,21 @@ namespace gtry {
 
 		Enum<T>& operator=(T rhs);
 
-		void exportOverride(const Enum<T>& exportOverride) { exportOverride(exportOverride.readPort); }
+		void exportOverride(const Enum<T>& exportOverride) { BaseEnum::exportOverride(exportOverride.readPort()); }
 
 		void resetValue(T v);
 		std::optional<T> resetValue() const { return m_resetValue; }
 		Enum<T> final() const;
 
-		constexpr BitWidth width() const override final;
+		BitWidth width() const override final;
 
 		virtual BVec toBVec() const override { return (BVec) numericalValue(); }
 		virtual void fromBVec(const BVec &bvec) override { (*this) = Enum<T>((UInt)bvec); }
 
+		void resetNode() override {
+			BaseEnum::resetNode();
+			m_resetValue.reset();
+		}
 	protected:
 		virtual void createNode() override;
 		void assignEnum(T);
@@ -280,7 +286,7 @@ namespace gtry {
 	}
 
 	template<EnumType T>
-	constexpr BitWidth Enum<T>::width() const
+	BitWidth Enum<T>::width() const
 	{
 		BitWidth maxWidth = 0_b;
 		for(auto v : magic_enum::enum_values<T>())

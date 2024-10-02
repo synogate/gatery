@@ -26,7 +26,19 @@
 namespace gtry::scl::strm
 {
 	template<class T>
-	concept PacketStreamSignal = StreamSignal<T> and T::template has<Eop>();
+	concept PacketStreamSignal = StreamSignal<T> and std::remove_cvref_t<T>::template has<Eop>();
+
+	template<Signal MetaT, StreamSignal StreamT>
+	void initStreamMeta(StreamT &stream, MetaT &meta) { }
+
+	template<Signal MetaT, StreamSignal StreamT> requires (std::same_as<std::remove_cvref_t<MetaT>, Empty>)
+	void initStreamMeta(StreamT &stream, MetaT &meta);
+
+	template<Signal MetaT, StreamSignal StreamT> requires (std::same_as<std::remove_cvref_t<MetaT>, EmptyBits>)
+	void initStreamMeta(StreamT &stream, MetaT &meta);
+
+	template<StreamSignal T>
+	T makeStream(BitWidth width);
 
 	template<StreamSignal T>
 	requires (T::template has<Valid>() or T::template has<Eop>())
@@ -46,11 +58,14 @@ namespace gtry::scl::strm
 	template<BaseSignal Payload, Signal... Meta>
 	auto streamShiftLeft(Stream<Payload, Meta...>& in, UInt shift, Bit reset = '0');
 
+	template<BaseSignal Payload, Signal... Meta>
+	auto streamShiftLeftBytes(Stream<Payload, Meta...>& in, UInt shift, Bit reset = '0');
+
 	/**
 	* @brief applies a shift on a packetStream's data. Also computes new EmptyBits signal. As a side-effect, it can also be used to get rid of packet headers.
-	* the shift is sampled on sop and valid of the packet
+	* the shift is sampled on sop and valid of the packet. Any signal can be used as payload or metadata if an appropriate shiftRightMeta overload is provided.
 	*/
-	template<scl::strm::PacketStreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
+	template<StreamSignal StreamT>
 	StreamT streamShiftRight(StreamT&& source, const UInt& shift);
 
 	UInt streamPacketBeatCounter(const StreamSignal auto& in, BitWidth counterW);
@@ -90,12 +105,62 @@ namespace gtry::scl::strm
 	/**
 	* @brief append the tail stream to the head stream, as long as the tail is immediately available
 	*/
-	template<StreamSignal StreamT> requires (StreamT::template has<scl::Eop>() && StreamT::template has<scl::EmptyBits>() && std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
-	StreamT appendStream(StreamT&& head, StreamT&& tail);
+	template<StreamSignal StreamT>
+	StreamT streamAppend(StreamT&& head, StreamT&& tail);
+
+	/**
+	 * @brief helper to count bits in a packet stream
+	 * @return running count of bits in current packet, combinational with transfer
+	*/
+	template<scl::StreamSignal StreamT>
+	UInt countPacketSize(const StreamT& in, BitWidth maxPacketW);
+
+	/**
+	 * @brief helper to count bits in a packet stream
+	 * @return Returns a single beat of the count once it is fully computed.
+	*/
+	template<scl::StreamSignal StreamT>
+	RvStream<UInt> packetSize(StreamT&& in, BitWidth maxPacketW);
+
+	/**
+	 * @brief drops tail of a packet stream with bit granularity. Can be used to keep only the header of a packet stream
+	 * /!\ sim asserts if input packet is too small.
+	 * @param bitCutoff Size at which to cut off the packet (size of the resulting packet). Must be stable during sop.
+	*/
+	template<scl::StreamSignal StreamT> requires (std::remove_cvref_t<StreamT>::template has<EmptyBits>())
+	StreamT streamDropTail(StreamT&& in, const UInt& bitCutoff, BitWidth maxPacketW);
+
+	/**
+	 * @brief drops tail of a packet stream with byte granularity. Can be used to keep only the header of a packet stream
+	 * /!\ sim asserts if input packet is too small.
+	 * @param bitCutoff Size at which to cut off the packet (size of the resulting packet). Must be stable during sop.
+	*/
+	template<scl::StreamSignal StreamT> requires (std::remove_cvref_t<StreamT>::template has<Empty>())
+	auto streamDropTailBytes(StreamT&& in, const UInt& byteCutoff, BitWidth maxPacketW);
 }
 
 namespace gtry::scl::strm
 {
+
+	template<Signal MetaT, StreamSignal StreamT> requires (std::same_as<std::remove_cvref_t<MetaT>, Empty>)
+	void initStreamMeta(StreamT &stream, MetaT &meta) {
+		meta.empty = BitWidth::count(stream->width().bytes());
+	}
+
+	template<Signal MetaT, StreamSignal StreamT> requires (std::same_as<std::remove_cvref_t<MetaT>, EmptyBits>)
+	void initStreamMeta(StreamT &stream, MetaT &meta) {
+		meta.emptyBits = BitWidth::count(stream->width().bits());
+	}
+
+	template<StreamSignal T>
+	T makeStream(BitWidth width) {
+		T res{ width };
+		std::apply([&](auto& ...meta) {
+				(initStreamMeta(res, meta), ...);
+			}, res._sig);
+		return res;
+	}
+
 
 	template<StreamSignal T>
 	class SimuStreamPerformTransferWait {
@@ -282,6 +347,14 @@ namespace gtry::scl::strm
 		}
 		HCL_NAMED(out);
 		return out;
+	}
+
+	template<BaseSignal Payload, Signal... Meta>
+	auto streamShiftLeftBytes(Stream<Payload, Meta...>& in, UInt shift, Bit reset)
+	{
+		auto outBits = streamShiftLeft(in, cat(shift, "3b0"), reset);
+		UInt outEmptyBits = emptyBits(outBits);
+		return outBits.template remove<EmptyBits>().template add<Empty>({outEmptyBits.upper(-3_b)});	
 	}
 
 
@@ -728,125 +801,125 @@ namespace gtry::scl::strm
 			HCL_DESIGNCHECK_HINT(false, "something went terribly wrong if this failed");
 	}
 
-	enum class ShiftRightState{
-		normalOp,
-		transferPrevious,
-		consumePrevious
-	};
-
-	struct ShiftRightMetaParams {
-		Enum<ShiftRightState> state;
-		Bit mustAnticipateEnd;
-		Bit isSingleBeat;
-	};
-
-	struct ShiftRightSteadyShift {
-		UInt shift;
-	};
-
-	template<BitVectorSignal T>
-	T shiftRightPayload(T& in, auto& inStream, auto& inStreamPrevious, const ShiftRightMetaParams& param)
+	namespace internal
 	{
-		T doubleVec = (T) cat(*inStream, *inStreamPrevious);
-		T ret = doubleVec(inStreamPrevious.template get<ShiftRightSteadyShift>().shift, in.width());
+		enum class ShiftRightState {
+			normalOp,
+			transferPrevious,
+			consumePrevious
+		};
 
-		return ret;
-	}
+		struct ShiftRightMetaParams {
+			Enum<ShiftRightState> state;
+			Bit mustAnticipateEnd;
+			Bit isSingleBeat;
+		};
+
+		struct ShiftRightSteadyShift {
+			UInt shift;
+		};
+
+		scl::Valid shiftRightMeta(const scl::Valid& in, const auto& inStream, const auto& inStreamPrevious, const ShiftRightMetaParams& param)
+		{
+			scl::Valid ret = { valid(inStreamPrevious) & valid(inStream) };
+
+			IF(param.isSingleBeat)
+				ret.valid = valid(inStreamPrevious);
+
+			IF(param.state == ShiftRightState::transferPrevious)
+				ret.valid = valid(inStreamPrevious);
+
+			IF(param.state == ShiftRightState::consumePrevious)
+				ret.valid = '0';
 
 
-	scl::Valid shiftRightMeta(scl::Valid& in, auto& inStream, auto& inStreamPrevious, const ShiftRightMetaParams& param)
-	{
-		scl::Valid ret = { valid(inStreamPrevious) & valid(inStream)};
-
-		IF(param.isSingleBeat)
-			ret.valid = valid(inStreamPrevious);
-
-		IF(param.state == ShiftRightState::transferPrevious) 
-			ret.valid = valid(inStreamPrevious);
-
-		IF(param.state == ShiftRightState::consumePrevious) 
-			ret.valid = '0'; 
-
-
-		return ret;
-	}
-
-	scl::Eop shiftRightMeta(scl::Eop& in, auto& inStream, auto& inStreamPrevious, const ShiftRightMetaParams& param)
-	{
-		scl::Eop ret = { eop(inStreamPrevious) };
-
-		IF(valid(inStream) & eop(inStream) & param.mustAnticipateEnd)
-			ret.eop = eop(inStream);
-
-		IF(param.state == ShiftRightState::transferPrevious)
-			ret.eop = eop(inStreamPrevious);
-
-		IF(param.state == ShiftRightState::consumePrevious)
-			ret.eop = '0'; 
-
-		return ret;
-	}
-
-	scl::Ready shiftRightMeta(scl::Ready& in, auto& inStream, auto& inStreamPrevious, const ShiftRightMetaParams& param)
-	{
-		scl::Ready ret;
-
-		Bit bothValid = valid(inStream) & valid(inStreamPrevious);
-		ready(inStream)			= *ret.ready & bothValid;
-		ready(inStreamPrevious) = *ret.ready & bothValid;
-
-		IF(param.isSingleBeat) {
-			ready(inStream) = '0';
-			ready(inStreamPrevious) = *ret.ready;
+			return ret;
 		}
 
-		IF(param.state == ShiftRightState::transferPrevious) {
-			ready(inStream) = '0';
-			ready(inStreamPrevious) = *ret.ready;
+		scl::Eop shiftRightMeta(const scl::Eop& in, const auto& inStream, const auto& inStreamPrevious, const ShiftRightMetaParams& param)
+		{
+			scl::Eop ret = { eop(inStreamPrevious) };
+
+			IF(valid(inStream) & eop(inStream) & param.mustAnticipateEnd)
+				ret.eop = eop(inStream);
+
+			IF(param.state == ShiftRightState::transferPrevious)
+				ret.eop = eop(inStreamPrevious);
+
+			IF(param.state == ShiftRightState::consumePrevious)
+				ret.eop = '0';
+
+			return ret;
 		}
 
-		IF(param.state == ShiftRightState::consumePrevious) {
-			ready(inStream) = '0';
-			ready(inStreamPrevious) = '1';
+		scl::Ready shiftRightMeta(scl::Ready& in, const auto& inStream, auto& inStreamPrevious, const ShiftRightMetaParams& param)
+		{
+			scl::Ready ret;
+
+			Bit bothValid = valid(inStream) & valid(inStreamPrevious);
+			*in.ready = *ret.ready & bothValid;
+			ready(inStreamPrevious) = *ret.ready & bothValid;
+
+			IF(param.isSingleBeat) {
+				*in.ready = '0';
+				ready(inStreamPrevious) = *ret.ready;
+			}
+
+			IF(param.state == ShiftRightState::transferPrevious) {
+				*in.ready = '0';
+				ready(inStreamPrevious) = *ret.ready;
+			}
+
+			IF(param.state == ShiftRightState::consumePrevious) {
+				*in.ready = '0';
+				ready(inStreamPrevious) = '1';
+			}
+
+			return ret;
 		}
 
-		return ret;
+		scl::EmptyBits shiftRightMeta(const scl::EmptyBits& in, const auto& inStream, const auto& inStreamPrevious, const ShiftRightMetaParams& param)
+		{
+			HCL_DESIGNCHECK_HINT(std::popcount(inStream->width().bits()) == 1, "only for streams with powers of 2 data bus widths");
+
+			scl::EmptyBits ret = { emptyBits(inStreamPrevious) + zext(inStreamPrevious.template get<ShiftRightSteadyShift>().shift) };
+
+			IF(valid(inStream) & eop(inStream) & param.mustAnticipateEnd)
+				ret = { emptyBits(inStream) + zext(inStream.template get<ShiftRightSteadyShift>().shift) };
+
+			IF(param.state == ShiftRightState::transferPrevious)
+				ret = { emptyBits(inStreamPrevious) + zext(inStreamPrevious.template get<ShiftRightSteadyShift>().shift) };
+
+			return ret;
+		}
+
+		template<BitVectorSignal T>
+		T shiftRightMeta(const T& in, const StreamSignal auto& inStream, const StreamSignal auto& inStreamPrevious, const ShiftRightMetaParams& param)
+		{
+			T doubleVec = (T)cat(in, *inStreamPrevious);
+			T ret = doubleVec(inStreamPrevious.template get<ShiftRightSteadyShift>().shift, in.width());
+			return ret;
+		}
+
+		template<Signal SigT>
+		SigT shiftRightMeta(const SigT& in, const auto& inStream, const auto& inStreamPrevious, const ShiftRightMetaParams& param)
+		{
+			SigT ret = inStreamPrevious.template get<SigT>();
+			return ret;
+		}
 	}
 
-
-	scl::EmptyBits shiftRightMeta(scl::EmptyBits& in, auto& inStream, auto& inStreamPrevious, const ShiftRightMetaParams& param)
-	{
-		HCL_DESIGNCHECK_HINT(std::popcount(inStream->width().bits()) == 1, "only for streams with powers of 2 data bus widths");
-
-		scl::EmptyBits ret = { emptyBits(inStreamPrevious) + zext(inStreamPrevious.template get<ShiftRightSteadyShift>().shift) };
-
-		IF(valid(inStream) & eop(inStream) & param.mustAnticipateEnd)
-			ret = { emptyBits(inStream) + zext(inStream.template get<ShiftRightSteadyShift>().shift) };
-
-		IF(param.state == ShiftRightState::transferPrevious)
-			ret = { emptyBits(inStreamPrevious) + zext(inStreamPrevious.template get<ShiftRightSteadyShift>().shift) };
-
-		return ret;
-	}
-
-
-	template<Signal SigT>
-	SigT shiftRightMeta(SigT& in, auto& inStream, auto& inStreamPrevious, const ShiftRightMetaParams& param)
-	{
-		SigT ret = inStreamPrevious.template get<SigT>();
-		return ret;
-	}
-
-	template<scl::strm::PacketStreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
+	template<StreamSignal StreamT>
 	StreamT streamShiftRight(StreamT&& source, const UInt& shift)
 	{
+		using namespace internal;
 		auto scope = Area{ "scl_streamShiftRight" }.enter();
 
 		UInt steadyShift = capture(shift, valid(source) & sop(source));
 		StreamBroadcaster sourceCaster(move(source).add(ShiftRightSteadyShift{ steadyShift }));
 
-		auto currentSource = sourceCaster.bcastTo() | strm::eraseBeat(0, 1);
-		auto previousSource = sourceCaster.bcastTo() | strm::regReady() | strm::delay(1);
+		scl::Stream currentSource = sourceCaster.bcastTo() | strm::eraseBeat(0, 1);
+		scl::Stream previousSource = sourceCaster.bcastTo() | strm::regReady() | strm::delay(1);
 
 		UInt fullBits = capture(currentSource->width().bits() - zext(emptyBits(currentSource)), valid(currentSource) & eop(currentSource)); HCL_NAMED(fullBits);
 		Bit mustAnticipateEnd = zext(currentSource.template get<ShiftRightSteadyShift>().shift) >= fullBits; HCL_NAMED(mustAnticipateEnd);
@@ -855,7 +928,6 @@ namespace gtry::scl::strm
 		state.setName("state");
 
 		//next state logic
-		state = state.current();
 		IF(state.current() == ShiftRightState::normalOp) {
 			IF(transfer(currentSource) & eop(currentSource) & mustAnticipateEnd)
 				state = ShiftRightState::consumePrevious;
@@ -882,149 +954,157 @@ namespace gtry::scl::strm
 		HCL_NAMED(previousSource);
 
 		auto ret = scl::Stream{
-			.data = shiftRightPayload(*currentSource, currentSource, previousSource, params),
+			.data = shiftRightMeta(*currentSource, currentSource, previousSource, params),
 			._sig = std::apply([&](auto& ...meta) {
 				return std::tuple{ shiftRightMeta(meta, currentSource, previousSource, params)... };
-				}, currentSource._sig)
+			}, currentSource._sig)
 		};
 
 		HCL_NAMED(ret);
 		return ret.template remove<ShiftRightSteadyShift>();
 	}
 
-	//the head state deals with sending the head and the first portion 
-	//of the tail that fits inside the beat which contains the head's eop
-	enum class AppendStreamState{
-		head,
-		tail
-	};
-
-	struct AppendStreamMetaParams {
-		Enum<AppendStreamState> currentState;
-		UInt tailShiftAmt;
-	};
-
-	template<BitVectorSignal SigT, StreamSignal StreamT>
-	SigT appendStreamPayload(SigT& in, StreamT& headStrm, StreamT& shiftedTailStrm, const AppendStreamMetaParams& param) {
-		Area area{ "scl_appendStream_payload" , true};
-		//adapting head stream to be or-able with tail stream
-		// -replacing undefines with zeros during the partial-beat
-		BitWidth tailW = shiftedTailStrm->width();
-		auto tempTail = (typename StreamT::Payload) ConstUInt(0, 2 * tailW); HCL_NAMED(tempTail);
-		tempTail(param.tailShiftAmt, tailW) |= '1';
-		IF(valid(shiftedTailStrm) & sop(shiftedTailStrm))
-			*shiftedTailStrm &= tempTail.lower(tailW);
-		setName(*shiftedTailStrm, "orable_tail_payload");
-
-		// -setting empty bits to 0 during the partial beat
-		BitWidth headW = headStrm->width();
-		auto tempHead = (typename StreamT::Payload) ConstUInt(0, 2 * headW); HCL_NAMED(tempHead);
-		tempHead.lower(headW) = *headStrm;
-		tempHead(headW.bits() - zext(emptyBits(headStrm)), headW) = 0;
-		IF(valid(headStrm) & eop(headStrm))
-			*headStrm = tempHead.lower(headW);
-		setName(*headStrm, "orable_head_payload");
-
-		SigT ret = *headStrm;
-		IF(valid(headStrm) & eop(headStrm) & valid(shiftedTailStrm) & emptyBits(headStrm) != 0)
-			ret |= *shiftedTailStrm;
-
-		IF(param.currentState == AppendStreamState::tail)
-			ret = *shiftedTailStrm;
-		return ret;
-	}
-
-	scl::Eop appendStreamMeta(scl::Eop& in, auto& headStrm, auto& shiftedTailStrm,  const AppendStreamMetaParams& param)
+	namespace internal
 	{
-		scl::Eop ret = { '0' };
-		IF(eop(headStrm)) {
-			ret.eop = '1';
-			IF(valid(shiftedTailStrm)) {
-				ret.eop = '0';
-				IF(emptyBits(headStrm) != 0 & eop(shiftedTailStrm))
-					ret.eop = '1';
+		//the head state deals with sending the head and the first portion 
+		//of the tail that fits inside the beat which contains the head's eop
+		enum class AppendStreamState {
+			head,
+			tail
+		};
+
+		struct AppendStreamMetaParams {
+			Enum<AppendStreamState> currentState;
+			UInt tailShiftAmt;
+		};
+
+		scl::Eop streamAppendMeta(const scl::Eop& in, const StreamSignal auto& headStrm, const StreamSignal auto& shiftedTailStrm, const AppendStreamMetaParams& param)
+		{
+			scl::Eop ret = in;
+			IF(in.eop) {
+				IF(valid(shiftedTailStrm)) {
+					ret.eop = '0';
+					IF(emptyBits(headStrm) != 0 & eop(shiftedTailStrm))
+						ret.eop = '1';
+				}
 			}
-		}
-		IF(param.currentState == AppendStreamState::tail)
-			ret.eop = eop(shiftedTailStrm);
+			IF(param.currentState == AppendStreamState::tail)
+				ret.eop = eop(shiftedTailStrm);
 
-		return ret;
-	}
-
-	scl::Ready appendStreamMeta(scl::Ready& in, auto& headStrm, auto& shiftedTailStrm,  const AppendStreamMetaParams& param)
-	{
-		scl::Ready ret;
-
-		ready(shiftedTailStrm) = '0';
-		ready(headStrm) = *ret.ready;
-		IF(transfer(headStrm) & eop(headStrm) & emptyBits(headStrm) != 0)
-			ready(shiftedTailStrm) = '1';
-
-		IF(param.currentState == AppendStreamState::tail) {
-			ready(headStrm) = '0';
-			ready(shiftedTailStrm) = *ret.ready;
+			return ret;
 		}
 
-		return ret;
+		scl::Ready streamAppendMeta(scl::Ready& in, StreamSignal auto& headStrm, StreamSignal auto& shiftedTailStrm, const AppendStreamMetaParams& param)
+		{
+			scl::Ready ret;
+
+			ready(shiftedTailStrm) = '0';
+			*in.ready = *ret.ready;
+			IF(transfer(headStrm) & eop(headStrm) & emptyBits(headStrm) != 0)
+				ready(shiftedTailStrm) = '1';
+
+			IF(param.currentState == AppendStreamState::tail) {
+				*in.ready = '0';
+				ready(shiftedTailStrm) = *ret.ready;
+			}
+
+			return ret;
+		}
+
+		scl::Valid streamAppendMeta(const scl::Valid& in, const StreamSignal auto&, const StreamSignal auto& shiftedTailStrm, const AppendStreamMetaParams& param)
+		{
+			scl::Valid ret = in;
+
+			IF(param.currentState == AppendStreamState::tail)
+				ret.valid = valid(shiftedTailStrm);
+
+			return ret;
+		}
+
+		scl::EmptyBits streamAppendMeta(const scl::EmptyBits& in, const StreamSignal auto& headStrm, const StreamSignal auto& shiftedTailStrm, const AppendStreamMetaParams& param)
+		{
+			scl::EmptyBits ret = in;
+
+			IF(eop(headStrm) & eop(shiftedTailStrm) & valid(shiftedTailStrm))
+				ret.emptyBits = emptyBits(shiftedTailStrm); // because the tail has already been shifted to perfectly fit the head
+
+			IF(param.currentState == AppendStreamState::tail)
+				ret.emptyBits = emptyBits(shiftedTailStrm);
+
+			return ret;
+		}
+
+		scl::Empty streamAppendMeta(const scl::Empty& in, const StreamSignal auto& headStrm, const StreamSignal auto& shiftedTailStrm, const AppendStreamMetaParams& param)
+		{
+			scl::Empty ret = in;
+
+			IF(eop(headStrm) & eop(shiftedTailStrm) & valid(shiftedTailStrm))
+				ret.empty = empty(shiftedTailStrm); // because the tail has already been shifted to perfectly fit the head
+
+			IF(param.currentState == AppendStreamState::tail)
+				ret.empty = empty(shiftedTailStrm);
+
+			return ret;
+		}
+
+		template<BitVectorSignal SigT, StreamSignal StreamT>
+		SigT streamAppendMeta(const SigT& in, const StreamT& headStrm, const StreamT& shiftedTailStrm, const AppendStreamMetaParams& param) 
+		{
+			SigT ret = in;
+
+			IF(valid(headStrm) & eop(headStrm))
+			{
+				for (size_t i = 0; i < ret.size(); i++)
+					IF(i >= param.tailShiftAmt)
+						ret[i] = shiftedTailStrm->at(i);
+			}
+
+			IF(param.currentState == AppendStreamState::tail)
+				ret = *shiftedTailStrm;
+
+			return ret;
+		}
+
+		template<Signal SigT>
+		SigT streamAppendMeta(const SigT& in, const auto&, const auto&, const AppendStreamMetaParams&)
+		{
+			return in;
+		}
 	}
 
-	scl::Valid appendStreamMeta(scl::Valid& in, auto& headStrm, auto& shiftedTailStrm,  const AppendStreamMetaParams& param)
-	{
-		scl::Valid ret = { valid(headStrm) };
-
-		IF(param.currentState == AppendStreamState::tail)
-			ret.valid = valid(shiftedTailStrm);
-
-		return ret;
-	}
-
-	scl::EmptyBits appendStreamMeta(scl::EmptyBits& in, auto& headStrm, auto& shiftedTailStrm,  const AppendStreamMetaParams& param)
-	{
-		scl::EmptyBits ret = { emptyBits(headStrm) };
-
-		IF(eop(headStrm) & eop(shiftedTailStrm) & valid(shiftedTailStrm))
-			ret.emptyBits = emptyBits(shiftedTailStrm); // because the tail has already been shifted to perfectly fit the head
-
-		IF(param.currentState == AppendStreamState::tail)
-			ret.emptyBits = emptyBits(shiftedTailStrm);
-
-		return ret;
-	}
-
-	template<Signal SigT>
-	SigT appendStreamMeta(SigT& in, auto& headStrm, auto& shiftedTailStrm,  const AppendStreamMetaParams& param)
-	{
-		SigT ret = headStrm.template get<SigT>();
-
-		return ret;
-	}
-
-
-	template<StreamSignal StreamT> requires (StreamT::template has<scl::Eop>() && StreamT::template has<scl::EmptyBits>() && std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
-	StreamT appendStream(StreamT&& head, StreamT&& tail) {
+	template<StreamSignal StreamT>
+	StreamT streamAppend(StreamT&& head, StreamT&& tail) {
+		using namespace internal;
 		Area area{ "scl_stream_append", true };
 		HCL_DESIGNCHECK_HINT(head->width() == tail->width(), "the BitWidths do not match");
+		HCL_NAMED(head);
+		HCL_NAMED(tail);
 
-		UInt tailShiftAmt = capture((head->width().bits() - zext(emptyBits(head))).lower(-1_b), transfer(head) & eop(head)); HCL_NAMED(tailShiftAmt);
-		StreamT shiftedTail = strm::streamShiftLeft(tail, tailShiftAmt);
+		UInt tailShiftAmt = capture(
+			head->width().bits() - zext(emptyBits(head)), 
+			transfer(head) & eop(head)
+		); 
+		HCL_NAMED(tailShiftAmt);
+		StreamT shiftedTail = constructFrom(head);
+		if constexpr (StreamT::template has<EmptyBits>())
+		 	shiftedTail <<= strm::streamShiftLeft(tail, tailShiftAmt.lower(-1_b));
+		else {
+			static_assert(StreamT::template has<Empty>());
+			shiftedTail <<= strm::streamShiftLeftBytes(tail, tailShiftAmt.lower(-1_b).upper(-3_b));
+		}
+		HCL_NAMED(shiftedTail);
+			
 
 		Reg<Enum<AppendStreamState>> state{ AppendStreamState::head };
 		state.setName("state");
 
 		//next state logic:
-		state = state.current();
-		IF(state.current() == AppendStreamState::head) {
-			IF(transfer(head) & eop(head) & valid(shiftedTail)) {
+		IF(state.current() == AppendStreamState::head)
+			IF(transfer(head) & eop(head) & valid(shiftedTail))
 				state = AppendStreamState::tail;
-				IF(ready(shiftedTail) & eop(shiftedTail))
-					state = AppendStreamState::head;
-			}
-		}
-		IF(state.current() == AppendStreamState::tail) {
-			IF(transfer(shiftedTail) & eop(shiftedTail)) {
-				state = AppendStreamState::head;
-			}
-		}
+
+		IF(transfer(shiftedTail) & eop(shiftedTail))
+			state = AppendStreamState::head;
 
 		AppendStreamMetaParams params{
 			.currentState = state.current(),
@@ -1032,15 +1112,103 @@ namespace gtry::scl::strm
 		};
 
 		auto ret = scl::Stream{
-			.data = appendStreamPayload(*head, head, shiftedTail, params),
+			.data = streamAppendMeta(*head, head, shiftedTail, params),
 			._sig = std::apply([&](auto& ... meta) {
-				return std::tuple{ appendStreamMeta(meta, head, shiftedTail, params)... };
+				return std::tuple{ streamAppendMeta(meta, head, shiftedTail, params)... };
 				}, head._sig)
 		};
+		HCL_NAMED(ret);
+		return ret;
+	}
+
+	template<scl::StreamSignal StreamT>
+	UInt countPacketSize(const StreamT& in, BitWidth maxPacketW) {
+		Area area{ "scl_count_packet_size", true };
+		UInt bits = BitWidth::last(maxPacketW.bits());
+
+		IF(transfer(in) & eop(in))
+			bits = 0;
+
+		bits = reg(bits, 0);
+
+		UInt fullBits = in->width().bits() - zext(emptyBits(in)); HCL_NAMED(fullBits);
+		IF(transfer(in)) {
+			IF(eop(in))
+				bits += zext(fullBits);
+			ELSE
+				bits += zext(in->width().bits());
+		}
+
+		HCL_NAMED(bits);
+		return bits;
+	}
+
+	template<scl::StreamSignal StreamT>
+	RvStream<UInt> packetSize(StreamT&& in, BitWidth maxPacketW) {
+		RvStream<UInt> result = { countPacketSize(in, maxPacketW) };
+		ready(in) = ready(result);
+		valid(result) = valid(in) & eop(in);
+		return result;
+	}
+
+	template<scl::StreamSignal StreamT> requires (std::remove_cvref_t<StreamT>::template has<EmptyBits>())
+	StreamT streamDropTail(StreamT&& in, const UInt& bitCutoff, BitWidth maxPacketW) {
+		Area area{ "scl_stream_drop_tail", true };
+		UInt localCutoff = capture(bitCutoff, valid(in) & sop(in));
+
+		UInt packetBitCount = countPacketSize(in, maxPacketW);
+		IF(transfer(in) & eop(in))
+			sim_assert(packetBitCount >= zext(localCutoff)) << "input packet too small with respect to bit cutoff";
+		UInt bitsLeft = BitWidth::last(maxPacketW.bits());
+		bitsLeft = reg(bitsLeft);
+
+		IF(valid(in) & sop(in))
+			bitsLeft = zext(localCutoff);
+		HCL_NAMED(bitsLeft);
+
+		Bit lastBeat = bitsLeft <= in->width().bits(); HCL_NAMED(lastBeat);
+		Bit drop = scl::flag(transfer(in) & lastBeat, transfer(in) & eop(in), '0'); HCL_NAMED(drop);
+
+		StreamT ret = constructFrom(in);
+		ret <<= move(in);
+		ready(in) |= drop;
+		valid(ret) &= !drop;
+		eop(ret) |= lastBeat;
+
+		if (utils::isPow2(in->width().bits()))
+		{
+			emptyBits(ret) = (ret->width().bits() - zext(bitCutoff.lower(emptyBits(ret).width()))).lower(-1_b);
+		}
+		else
+		{
+			UInt emptyBitsFull = ret->width().bits() - bitsLeft.lower(BitWidth::last(ret->width().bits()));
+			emptyBits(ret) = emptyBitsFull.lower(emptyBits(ret).width());
+		}
+
+		IF(transfer(ret))
+			bitsLeft -= ret->width().bits();
 
 		return ret;
 	}
+	extern template RvPacketStream<BVec, EmptyBits> streamDropTail(RvPacketStream<BVec, EmptyBits> &&in, const UInt& bitCutoff, BitWidth maxPacketW);
+
+	template<scl::StreamSignal StreamT> requires (std::remove_cvref_t<StreamT>::template has<Empty>())
+	auto streamDropTailBytes(StreamT&& in, const UInt& byteCutoff, BitWidth maxPacketW) {
+		UInt inEmptyBytes = empty(in);
+		auto inBits = in.template remove<Empty>().template add<EmptyBits>({cat(inEmptyBytes, "3b0")});
+		auto outBits = streamDropTail(move(inBits), cat(byteCutoff, "3b0"), maxPacketW);
+		UInt outEmptyBits = emptyBits(outBits);
+		return outBits.template remove<EmptyBits>().template add<Empty>({outEmptyBits.upper(-3_b)});
+	}
+	extern template auto streamDropTailBytes(RvPacketStream<BVec, Empty> &&in, const UInt& byteCutoff, BitWidth maxPacketW);
+
 }
 
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::ShiftRightMetaParams, state, mustAnticipateEnd, isSingleBeat);
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::ShiftRightSteadyShift, shift);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::internal::ShiftRightMetaParams, state, mustAnticipateEnd, isSingleBeat);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::internal::ShiftRightSteadyShift, shift);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::internal::AppendStreamMetaParams, currentState, tailShiftAmt);
+
+namespace gtry {
+	extern template class Enum<scl::strm::internal::ShiftRightState>;
+	extern template class Enum<scl::strm::internal::AppendStreamState>;
+}

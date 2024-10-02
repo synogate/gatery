@@ -17,12 +17,11 @@
 */
 #pragma once
 
-#include "Node.h"
-
 #include "Attributes.h"
 
 #include "../utils/StackTrace.h"
 #include "../utils/ConfigTree.h"
+#include "NodeGroupType.h"
 
 #include <vector>
 #include <string>
@@ -36,19 +35,30 @@
 namespace gtry::hlim {
 
 	class Circuit;
+	class BaseNode;
 	class Node_Signal;
 	class Node_Register;
+}
 
-	class NodeGroupMetaInfo {
-	public:
-		virtual ~NodeGroupMetaInfo() = default;
-	};
+
+namespace boost::container {
+	extern template class flat_map<std::string, size_t>;
+}
+namespace std {
+	extern template class vector<gtry::hlim::BaseNode*>;
+	extern template class unique_ptr<gtry::hlim::NodeGroup>;
+	//extern template class vector<std::unique_ptr<gtry::hlim::NodeGroup>>;
+	extern template class unique_ptr<gtry::hlim::NodeGroupMetaInfo>;
+}
+
+namespace gtry::hlim {
 
 	class NodeGroupConfig
 	{
 	public:
 		void load(utils::ConfigTree config);
 		void add(std::string_view key, std::string_view filter, utils::ConfigTree setting);
+		void reset();
 		void finalize();
 
 		std::optional<utils::ConfigTree> operator ()(std::string_view key, std::string_view instancePath) const;
@@ -68,13 +78,7 @@ namespace gtry::hlim {
 	class NodeGroup
 	{
 	public:
-		enum class GroupType {
-			ENTITY = 0x01,
-			AREA = 0x02,
-			SFU = 0x03,
-		};
-
-		NodeGroup(Circuit &circuit, GroupType groupType, std::string_view name, NodeGroup* parent);
+		NodeGroup(Circuit &circuit, NodeGroupType groupType, std::string_view name, NodeGroup* parent);
 		virtual ~NodeGroup();
 
 		void recordStackTrace() { m_stackTrace.record(10, 1); }
@@ -83,7 +87,7 @@ namespace gtry::hlim {
 		void setInstanceName(std::string name) { m_instanceName = std::move(name); }
 		void setComment(std::string comment) { m_comment = std::move(comment); }
 
-		NodeGroup* addChildNodeGroup(GroupType groupType, std::string_view name);
+		NodeGroup* addChildNodeGroup(NodeGroupType groupType, std::string_view name);
 		NodeGroup* findChild(std::string_view name);
 
 		void moveInto(NodeGroup* newParent);
@@ -115,17 +119,28 @@ namespace gtry::hlim {
 
 		utils::ConfigTree config(std::string_view attribute);
 
-		inline void setGroupType(GroupType groupType) { m_groupType = groupType; }
-		inline GroupType getGroupType() const { return m_groupType; }
+		inline void setGroupType(NodeGroupType groupType) { m_groupType = groupType; }
+		inline NodeGroupType getGroupType() const { return m_groupType; }
 
 		template<typename MetaType, typename... Args>
 		MetaType *createMetaInfo(Args&&... args);
+		void setMetaInfo(std::unique_ptr<NodeGroupMetaInfo> metaInfo);
 
 		void dropMetaInfo() { m_metaInfo.reset(); }
 
 		NodeGroupMetaInfo* getMetaInfo() { return m_metaInfo.get(); }
 
 		static void configTree(utils::ConfigTree config);
+
+		/**
+		 * @brief An alternative way to programatically add settings to the config tree outside of YAML loading. 
+		 * @param instanceFilter Path to the instance to apply the setting to. You can use * to match substings and / to seperate instances. A leading / marks an absolute path. "SipHashRound*" would match all sip hash round instances. 
+					Note that the area name is not the instance name. All instances have a running index suffix.
+		 * @param value The value currently gets converted to a ConfigTree node. That can be interpreted as anything including enums and trees by the Area.
+		 * @warning This function does not do anything if gatery is not compiled with YamlCpp.
+		 */
+		static void configTree(std::string_view instanceFilter, std::string_view attribute, std::string_view value);
+		static void configTreeReset();
 
 		inline Circuit &getCircuit() { return m_circuit; }
 
@@ -145,7 +160,7 @@ namespace gtry::hlim {
 		std::string m_name;
 		std::string m_instanceName;
 		std::string m_comment;
-		GroupType m_groupType;
+		NodeGroupType m_groupType;
 		utils::PropertyTree m_properties;
 		utils::PropertyTree m_usedSettings;
 		GroupAttributes m_groupAttributes;
@@ -171,7 +186,9 @@ namespace gtry::hlim {
 	template<typename MetaType, typename... Args>
 	MetaType *NodeGroup::createMetaInfo(Args&&... args)
 	{
-		m_metaInfo.reset(new MetaType(std::forward<Args>(args)...));
+		setMetaInfo(std::make_unique<MetaType>(std::forward<Args>(args)...));
 		return (MetaType*)m_metaInfo.get();
 	}
 }
+
+

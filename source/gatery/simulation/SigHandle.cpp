@@ -32,12 +32,14 @@ size_t SigHandle::getWidth() const
 void SigHandle::operator=(std::uint64_t v)
 {
 	auto width = getWidth();
-	DefaultBitVectorState state;
+	ExtendedBitVectorState state;
 	state.resize(width);
-	state.setRange(DefaultConfig::DEFINED, 0, width);
-	state.clearRange(DefaultConfig::VALUE, 0, width);
+	state.setRange(ExtendedConfig::DEFINED, 0, width);
+	state.clearRange(ExtendedConfig::VALUE, 0, width);
+	state.clearRange(ExtendedConfig::DONT_CARE, 0, width);
+	state.clearRange(ExtendedConfig::HIGH_IMPEDANCE, 0, width);
 	if (width)
-		state.data(DefaultConfig::VALUE)[0] = v;
+		state.data(ExtendedConfig::VALUE)[0] = v;
 
 	operator=(state);
 }
@@ -45,19 +47,21 @@ void SigHandle::operator=(std::uint64_t v)
 void SigHandle::operator=(std::int64_t v)
 {
 	auto width = getWidth();
-	DefaultBitVectorState state;
+	ExtendedBitVectorState state;
 	state.resize(width);
-	state.setRange(DefaultConfig::DEFINED, 0, width);
-	state.setRange(DefaultConfig::VALUE, 0, width, (v >> 63) & 1); // prefill with sign bit
+	state.setRange(ExtendedConfig::DEFINED, 0, width);
+	state.setRange(ExtendedConfig::VALUE, 0, width, (v >> 63) & 1); // prefill with sign bit
+	state.clearRange(ExtendedConfig::DONT_CARE, 0, width);
+	state.clearRange(ExtendedConfig::HIGH_IMPEDANCE, 0, width);
 	if (width)
-		state.data(DefaultConfig::VALUE)[0] = v;
+		state.data(ExtendedConfig::VALUE)[0] = v;
 	operator=(state);
 }
 
 void SigHandle::operator=(std::string_view v)
 {
 	auto width = getWidth();
-	DefaultBitVectorState state = sim::parseBitVector(v);
+	ExtendedBitVectorState state = sim::parseExtendedBitVector(v);
 	HCL_ASSERT(width == state.size());
 	operator=(state);
 }
@@ -65,42 +69,69 @@ void SigHandle::operator=(std::string_view v)
 void SigHandle::operator=(char v)
 {
 	auto width = getWidth();
-	DefaultBitVectorState state = sim::parseBit(v);
+	ExtendedBitVectorState state = sim::parseExtendedBit(v);
 	HCL_ASSERT(width == state.size());
 	operator=(state);
 }
 
 void SigHandle::operator=(const DefaultBitVectorState &state)
 {
-	if (m_overrideRegister)
+	if (m_overrideRegister) {
 		SimulationContext::current()->overrideRegister(*this, state);
-	else
+	} else {
+		SimulationContext::current()->overrideSignal(*this, sim::convertToExtended(state));
+	}
+}
+
+
+void SigHandle::operator=(const ExtendedBitVectorState &state)
+{
+	if (m_overrideRegister) {
+		auto converted = sim::tryConvertToDefault(state);
+		HCL_DESIGNCHECK_HINT(converted, "Can not assign dont_care or high_impedance to registers");
+		SimulationContext::current()->overrideRegister(*this, *converted);
+	} else
 		SimulationContext::current()->overrideSignal(*this, state);
 }
+
 
 void SigHandle::operator=(std::span<const std::byte> rhs)
 {
 	auto width = getWidth();
 	HCL_DESIGNCHECK_HINT(width == rhs.size() * 8, "The array that is to be assigned to the simulation signal has the wrong size!");
-	auto state = sim::createDefaultBitVectorState(rhs.size()*8, rhs.data());
 
 	if (m_overrideRegister)
-		SimulationContext::current()->overrideRegister(*this, state);
+		SimulationContext::current()->overrideRegister(*this, sim::createDefaultBitVectorState(rhs.size()*8, rhs.data()));
 	else
-		SimulationContext::current()->overrideSignal(*this, state);	
+		SimulationContext::current()->overrideSignal(*this, sim::createExtendedBitVectorState(rhs.size()*8, rhs.data()));	
 }
 
 void SigHandle::invalidate()
 {
 	auto width = getWidth();
-	DefaultBitVectorState state;
-	state.resize(width);
-	if (m_overrideRegister)
+	if (m_overrideRegister) {
+		DefaultBitVectorState state;
+		state.resize(width);
 		SimulationContext::current()->overrideRegister(*this, state);
-	else
+	} else {
+		ExtendedBitVectorState state;
+		state.resize(width);
 		SimulationContext::current()->overrideSignal(*this, state);
+	}
 }
 
+void SigHandle::stopDriving()
+{
+	auto width = getWidth();
+	if (m_overrideRegister) {
+		HCL_DESIGNCHECK_HINT(false, "Can not stop driving registers, as any register output override is anyways only valid until the next clock cycle of that register!");
+	} else {
+		ExtendedBitVectorState state;
+		state.resize(width);
+		state.setRange(ExtendedConfig::HIGH_IMPEDANCE, 0, width);
+		SimulationContext::current()->overrideSignal(*this, state);
+	}
+}
 
 std::uint64_t SigHandle::value() const
 {
@@ -159,15 +190,12 @@ struct StateBlockOutputIterator {
 void SigHandle::assign(const sim::BigInt &v)
 {
 	auto width = getWidth();
-	DefaultBitVectorState state;
+	ExtendedBitVectorState state;
 	state.resize(width);
-	state.setRange(DefaultConfig::DEFINED, 0, width);
+	state.setRange(ExtendedConfig::DEFINED, 0, width);
 	sim::insertBigInt(state, 0, width, v);
 
-	if (m_overrideRegister)
-		SimulationContext::current()->overrideRegister(*this, state);
-	else
-		SimulationContext::current()->overrideSignal(*this, state);
+	(*this) = state;
 }
 
 SigHandle::operator sim::BigInt () const
@@ -241,7 +269,9 @@ bool SigHandle::operator==(std::string_view v) const
 
 	HCL_ASSERT(state.size() == targetState.size());
 
-	for (auto i : utils::Range(state.size()))
+	for (auto i : utils::Range(state.size())) {
+		HCL_DESIGNCHECK_HINT(!targetState.get(sim::ExtendedConfig::HIGH_IMPEDANCE, i), "Can not compare with high impedance, you probably meant to compare with dont_care!");
+
 		if (!targetState.get(sim::ExtendedConfig::DONT_CARE, i)) {
 
 			if (targetState.get(sim::ExtendedConfig::DEFINED, i) != state.get(sim::DefaultConfig::DEFINED, i))
@@ -251,6 +281,7 @@ bool SigHandle::operator==(std::string_view v) const
 				if (targetState.get(sim::ExtendedConfig::VALUE, i) != state.get(sim::DefaultConfig::VALUE, i))
 					return false;
 		}
+	}
 	
 	return true;
 }
@@ -290,7 +321,7 @@ bool SigHandle::operator==(std::span<const std::byte> rhs) const
 void SigHandle::overrideDrivingRegister()
 {
 	if (auto *reg = dynamic_cast<hlim::Node_Register*>(m_output.node))
-		m_output = reg->getNonSignalDriver(hlim::Node_Register::DATA);
+		m_output = reg->getNonForwardingDriver(hlim::Node_Register::DATA);
 	
 	m_overrideRegister = true;
 }

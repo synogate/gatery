@@ -112,10 +112,19 @@ class BaseNode : public NodeIO
 		inline bool nameWasInferred() const { return m_nameInferred; }
 		inline bool hasGivenName() const { return !m_name.empty() && !m_nameInferred; }
 
+		template<typename T>
+		inline bool isA() const { return dynamic_cast<const T*>(this) != nullptr; }
+
 		bool isOrphaned() const;
 		virtual bool hasSideEffects() const;
+		virtual bool canBeRetimedOver() const { return !hasSideEffects(); }
+		virtual std::optional<size_t> forwardsInputToOutput(size_t outputPort = 0) const { return {}; }
+		virtual bool allOutputsForwarded() const;
 		virtual bool isCombinatorial(size_t port) const;
 		virtual bool outputIsConstant(size_t port) const { return false; }
+
+		/// Returns true, if the node's outputs do not change when this input is deasserted (e.g. like a register's enable signal).
+		virtual bool inputIsEnable(size_t inputPort) const { return false; }
 
 		/// Returns true if the node has no side effects and given its configuration and inputs, the node is not actually needed.
 		virtual bool isNoOp() const { return false; }

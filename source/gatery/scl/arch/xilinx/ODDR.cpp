@@ -15,7 +15,7 @@
 	License along with this library; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "ODDR.h"
 
 #include <gatery/hlim/coreNodes/Node_Register.h>
@@ -92,19 +92,19 @@ bool ODDRPattern::performReplacement(hlim::NodeGroup *nodeGroup, ReplaceInfo &re
 {
 	auto *params = dynamic_cast<gtry::scl::DDROutParams*>(nodeGroup->getMetaInfo());
 	if (params == nullptr) {
-		dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+		dbg::log(dbg::LogMessage{nodeGroup} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
 				<< "Not replacing " << nodeGroup << " with " << m_patternName << " because it doesn't have the DDROutParams meta parameters attached!");
 		return false;
 	}
 
 	if (!params->inputRegs) {
-		dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+		dbg::log(dbg::LogMessage{nodeGroup} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
 				<< "Not replacing " << nodeGroup << " with " << m_patternName << " because the area doesn't have input registers (which "<<m_patternName<<" requires).");
 		return false;
 	}
 
 	if (params->outputRegs) {
-		dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+		dbg::log(dbg::LogMessage{nodeGroup} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
 				<< "Not replacing " << nodeGroup << " with " << m_patternName << " because the area has output registers (which "<<m_patternName<<" doesn't support).");
 		return false;
 	}
@@ -113,7 +113,7 @@ bool ODDRPattern::performReplacement(hlim::NodeGroup *nodeGroup, ReplaceInfo &re
 
 	if (attr.resetType != hlim::RegisterAttributes::ResetType::NONE && 
 		attr.resetType != hlim::RegisterAttributes::ResetType::SYNCHRONOUS) {
-		dbg::log(dbg::LogMessage{} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
+		dbg::log(dbg::LogMessage{nodeGroup} << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING 
 				<< "Not replacing " << nodeGroup << " with " << m_patternName << " because only synchronous and no resets are supported and the used clock is neither.");
 		return false;
 	}

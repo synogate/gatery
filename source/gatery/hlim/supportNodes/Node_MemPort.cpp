@@ -167,6 +167,9 @@ void Node_MemPort::simulatePowerOn(sim::SimulatorCallbacks &simCallbacks, sim::D
 
 void Node_MemPort::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *inputOffsets, const size_t *outputOffsets) const
 {
+	if (internalOffsets[(size_t)RefInternal::memory] == ~0ull)
+		return;
+
 	const auto &addrType = getDriverConnType((size_t)Inputs::address);
 
 	// optional enables, defaults to true
@@ -269,6 +272,9 @@ void Node_MemPort::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
 
 void Node_MemPort::simulateAdvance(sim::SimulatorCallbacks &simCallbacks, sim::DefaultBitVectorState &state, const size_t *internalOffsets, const size_t *outputOffsets, size_t clockPort) const
 {
+	if (internalOffsets[(size_t)RefInternal::memory] == ~0ull)
+		return;
+
 	if (isWritePort()) {
 		bool doWrite = state.get(sim::DefaultConfig::VALUE, internalOffsets[(size_t)Internal::wrEnable]);
 

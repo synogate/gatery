@@ -34,7 +34,7 @@ namespace gtry::utils {
 		std::string to_string(const boost::stacktrace::frame& frame);
 
 	private:
-#ifdef WIN32
+#ifdef BOOST_MSVC
 		boost::stacktrace::detail::debugging_symbols idebug; 
 #endif
 	};
@@ -51,6 +51,7 @@ namespace gtry::utils {
 	};
 
 	std::ostream &operator<<(std::ostream &stream, const StackTrace &trace);
-
-
 }
+
+extern template class std::vector<boost::stacktrace::frame>;
+
