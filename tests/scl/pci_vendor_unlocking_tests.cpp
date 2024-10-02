@@ -60,7 +60,7 @@ BOOST_FIXTURE_TEST_CASE(ptile_vhdl_test, BoostUnitTestSimulationFixture)
 	valid(txStream) = '0';
 	ptileInstance.tx(move(txStream));
 	
-	scl::strm::RvPacketStream rxStream(move(ptileInstance.rx()));
+	auto rxStream(move(ptileInstance.rx()));
 	ready(rxStream) = '1';
 	
 	design.postprocess();
