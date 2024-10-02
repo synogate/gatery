@@ -323,7 +323,7 @@ namespace gtry::scl::strm
 			.template remove<scl::Empty>()
 			| attach(Eop{eop(in)})
 			| attach(EmptyBits{ emptyBits(in) });
-		UInt& emptyBits = out.template get<EmptyBits>().emptyBits;
+		UInt& emptyBits = get<EmptyBits>(out).emptyBits;
 
 		Bit delayedEop;			HCL_NAMED(delayedEop);
 		Bit shouldDelayEop = valid(in) & eop(in) & zext(emptyBits) < zext(shift);
@@ -379,7 +379,7 @@ namespace gtry::scl::strm
 		if constexpr (In::template has<scl::EmptyBits>())
 		{
 			IF(eop(in))
-				len = in->width().bits() - zext(in.template get<scl::EmptyBits>().emptyBits);
+				len = in->width().bits() - zext(get<scl::EmptyBits>(in).emptyBits);
 		}
 		else if constexpr (requires { empty(in); })
 		{
@@ -881,13 +881,13 @@ namespace gtry::scl::strm
 		{
 			HCL_DESIGNCHECK_HINT(std::popcount(inStream->width().bits()) == 1, "only for streams with powers of 2 data bus widths");
 
-			scl::EmptyBits ret = { emptyBits(inStreamPrevious) + zext(inStreamPrevious.template get<ShiftRightSteadyShift>().shift) };
+			scl::EmptyBits ret = { emptyBits(inStreamPrevious) + zext(get<ShiftRightSteadyShift>(inStreamPrevious).shift) };
 
 			IF(valid(inStream) & eop(inStream) & param.mustAnticipateEnd)
-				ret = { emptyBits(inStream) + zext(inStream.template get<ShiftRightSteadyShift>().shift) };
+				ret = { emptyBits(inStream) + zext(get<ShiftRightSteadyShift>(inStream).shift) };
 
 			IF(param.state == ShiftRightState::transferPrevious)
-				ret = { emptyBits(inStreamPrevious) + zext(inStreamPrevious.template get<ShiftRightSteadyShift>().shift) };
+				ret = { emptyBits(inStreamPrevious) + zext(get<ShiftRightSteadyShift>(inStreamPrevious).shift) };
 
 			return ret;
 		}
@@ -896,14 +896,14 @@ namespace gtry::scl::strm
 		T shiftRightMeta(const T& in, const StreamSignal auto& inStream, const StreamSignal auto& inStreamPrevious, const ShiftRightMetaParams& param)
 		{
 			T doubleVec = (T)cat(in, *inStreamPrevious);
-			T ret = doubleVec(inStreamPrevious.template get<ShiftRightSteadyShift>().shift, in.width());
+			T ret = doubleVec(get<ShiftRightSteadyShift>(inStreamPrevious).shift, in.width());
 			return ret;
 		}
 
 		template<Signal SigT>
 		SigT shiftRightMeta(const SigT& in, const auto& inStream, const auto& inStreamPrevious, const ShiftRightMetaParams& param)
 		{
-			SigT ret = inStreamPrevious.template get<SigT>();
+			SigT ret = get<SigT>(inStreamPrevious);
 			return ret;
 		}
 	}
@@ -921,7 +921,7 @@ namespace gtry::scl::strm
 		scl::Stream previousSource = sourceCaster.bcastTo() | strm::regReady() | strm::delay(1);
 
 		UInt fullBits = capture(currentSource->width().bits() - zext(emptyBits(currentSource)), valid(currentSource) & eop(currentSource)); HCL_NAMED(fullBits);
-		Bit mustAnticipateEnd = zext(currentSource.template get<ShiftRightSteadyShift>().shift) >= fullBits; HCL_NAMED(mustAnticipateEnd);
+		Bit mustAnticipateEnd = zext(get<ShiftRightSteadyShift>(currentSource).shift) >= fullBits; HCL_NAMED(mustAnticipateEnd);
 
 		Reg<Enum<ShiftRightState>> state{ ShiftRightState::normalOp };
 		state.setName("state");

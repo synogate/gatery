@@ -102,9 +102,6 @@ namespace gtry::scl::strm
 		template<Signal T>
 		static constexpr bool has();
 
-		template<Signal T> constexpr T& get() { return std::get<T>(_sig); }
-		template<Signal T> constexpr const T& get() const { return std::get<T>(_sig); }
-
 		auto transform(std::invocable<Payload> auto&& fun);
 		auto transform(std::invocable<Payload> auto&& fun) const requires(!GTRY_STREAM_BIDIR);
 
@@ -139,6 +136,10 @@ namespace gtry::scl::strm
 	*/
 	template<Signal Wrapper, StreamSignal T, Signal PayloadT, Signal ...MetaT> auto attachAs(Stream<PayloadT, MetaT...>&& stream, T&& metaStream);
 	template<Signal Wrapper, StreamSignal T> auto attachAs(T&& metaStream);
+
+	template<Signal T, StreamSignal StreamT> constexpr T& get(StreamT&& stream);
+	template<Signal T, StreamSignal StreamT> constexpr const T& get(const StreamT& stream);
+	template<Signal T> auto get();
 }
 
 namespace gtry::scl::strm
@@ -156,6 +157,26 @@ namespace gtry::scl::strm
 			ret |= (std::is_same_v<std::remove_reference_t<Meta>, std::remove_reference_t<T>> | ...);
 		return ret;
 	}
+
+	template<Signal T, StreamSignal StreamT>
+	constexpr T& get(StreamT&& stream)
+	{
+		return std::get<T>(stream._sig);
+	}
+
+	template<Signal T, StreamSignal StreamT>
+	constexpr const T& get(const StreamT& stream)
+	{
+		return std::get<T>(stream._sig);
+	}
+
+	template<Signal T> auto get()
+	{
+		return [&](auto&& in) -> T& {
+			return ::gtry::scl::strm::get<T>(std::forward<decltype(in)>(in));
+		};
+	}
+
 	template<Signal AddT, Signal PayloadT, Signal ...MetaT>
 	auto attach(Stream<PayloadT, MetaT...>&& stream, AddT&& signal)
 	{
@@ -188,10 +209,10 @@ namespace gtry::scl::strm
 				// This is a bit of a hack, all meta signals should have some kind of deterministic ordering instead
 				Stream<PayloadT, Ready, MetaT...> ret;
 				connect(*ret, stream.data);
-				ret.template get<Ready>() <<= signal;
+				get<Ready>(ret) <<= signal;
 
 				std::apply([&](auto& ...meta) {
-					((ret.template get<std::remove_reference_t<decltype(meta)>>() <<= meta), ...);
+					((get<std::remove_reference_t<decltype(meta)>>(ret) <<= meta), ...);
 					}, stream._sig);
 				return ret;
 			}
@@ -199,10 +220,10 @@ namespace gtry::scl::strm
 			{
 				Stream<PayloadT, MetaT..., Tplain> ret;
 				connect(*ret, stream.data);
-				ret.template get<Tplain>() <<= signal;
+				get<Tplain>(ret) <<= signal;
 
 				std::apply([&](auto& ...meta) {
-					((ret.template get<std::remove_reference_t<decltype(meta)>>() <<= meta), ...);
+					((get<std::remove_reference_t<decltype(meta)>>(ret) <<= meta), ...);
 					}, stream._sig);
 				return ret;
 			}
@@ -223,11 +244,11 @@ namespace gtry::scl::strm
 		else if constexpr (std::is_same_v<Tplain, Ready>)
 		{
 			Stream<PayloadT, Ready, MetaT...> ret{ stream.data };
-			ret.template get<Ready>() <<= signal;
+			get<Ready>(ret) <<= signal;
 
 			std::apply([&](auto& ...meta) {
-				((ret.template get<std::remove_cvref_t<decltype(meta)>>() = meta), ...);
-				}, stream._sig);
+				((get<std::remove_cvref_t<decltype(meta)>>(ret) = meta), ...);
+			}, stream._sig);
 			return ret;
 		}
 		else
@@ -235,8 +256,8 @@ namespace gtry::scl::strm
 			return Stream<PayloadT, MetaT..., Tplain>{
 				stream.data,
 					std::apply([&](auto&... element) {
-					return std::tuple(element..., std::forward<AddT>(signal));
-						}, stream._sig)
+						return std::tuple(element..., std::forward<AddT>(signal));
+					}, stream._sig)
 			};
 		}
 	}
@@ -333,7 +354,7 @@ namespace gtry::scl::strm
 		T ret{ data };
 		std::apply([&](auto&... meta) {
 			ignoreAll(reductionChecker<std::remove_cvref_t<decltype(meta)>>(*this)...);
-			((ret.template get<std::remove_cvref_t<decltype(meta)>>() = meta), ...);
+			((get<std::remove_cvref_t<decltype(meta)>>(ret) = meta), ...);
 		}, ret._sig);
 		return ret;
 	}
@@ -347,7 +368,7 @@ namespace gtry::scl::strm
 
 		auto assignIfExist = [&](auto&& ms) {
 			if constexpr (T::template has<std::remove_cvref_t<decltype(ms)>>())
-				ret.template get<std::remove_cvref_t<decltype(ms)>>() <<= ms;
+				get<std::remove_cvref_t<decltype(ms)>>(ret) <<= ms;
 		};
 
 		std::apply([&](auto&... meta) {

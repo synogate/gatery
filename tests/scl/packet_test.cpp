@@ -1272,7 +1272,7 @@ struct AddStreamAsMetaDataSimulationFixture : public BoostUnitTestSimulationFixt
 				scl::strm::SimuStreamPerformTransferWait<decltype(out)> streamTransfer;
 				do {
 					co_await streamTransfer.wait(out, clk);
-					BOOST_TEST(simu(out.template get<MyMeta>().myMeta) == d);
+					BOOST_TEST(simu(get<MyMeta>(out).myMeta) == d);
 				} while (!simuEop(out));
 			}
 			stopTest();
@@ -1352,7 +1352,7 @@ struct AddMetaSignalFromPacketSimulationFixture : public BoostUnitTestSimulation
 				scl::strm::SimuStreamPerformTransferWait<decltype(out)> streamTransfer;
 				do {
 					co_await streamTransfer.wait(out, clk);
-					BOOST_TEST(simu(out.template get<MyMeta>().myMeta) == packet.size());
+					BOOST_TEST(simu(get<MyMeta>(out).myMeta) == packet.size());
 				} while (!simuEop(out));
 			}
 			stopTest();

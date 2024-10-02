@@ -112,8 +112,8 @@ gtry::Bit gtry::scl::usb::GpioPhy::setup(OpMode mode)
 		valid(lineIn) = '0';
 
 	IF(valid(lineIn)) {
-		m_status.lineState.lsb() = *lineIn & !lineIn.template get<scl::SingleEnded>().zero;
-		m_status.lineState.msb() = !*lineIn & !lineIn.template get<scl::SingleEnded>().zero;
+		m_status.lineState.lsb() = *lineIn & !get<scl::SingleEnded>(lineIn).zero;
+		m_status.lineState.msb() = !*lineIn & !get<scl::SingleEnded>(lineIn).zero;
 	}
 	m_status.lineState = reg(m_status.lineState);
 	m_status.sessEnd = '0';
@@ -128,10 +128,10 @@ gtry::Bit gtry::scl::usb::GpioPhy::setup(OpMode mode)
 	HCL_NAMED(lineInDecoded);
 
 
-	m_status.rxActive = flagInstantSet(valid(lineInDecoded), valid(lineInDecoded) & lineInDecoded.template get<SingleEnded>().zero, '0');
+	m_status.rxActive = flagInstantSet(valid(lineInDecoded), valid(lineInDecoded) & get<SingleEnded>(lineInDecoded).zero, '0');
 	HCL_NAMED(m_status);
 
-	m_se0 = lineInDecoded.template get<SingleEnded>().zero;
+	m_se0 = get<SingleEnded>(lineInDecoded).zero;
 	HCL_NAMED(m_se0);
 
 	generateCrc();
@@ -425,7 +425,7 @@ void gtry::scl::usb::GpioPhy::generateRx(const VStream<Bit, SingleEnded>& in)
 				state = data;
 		}
 
-		Bit se0 = in.template get<SingleEnded>().zero;
+		Bit se0 = get<SingleEnded>(in).zero;
 		HCL_NAMED(se0);
 
 		IF(transfer(in) & se0)

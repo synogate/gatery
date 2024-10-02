@@ -66,9 +66,9 @@ namespace gtry::scl::strm {
 	};
 
 	template<StreamSignal StreamT> requires (StreamT::template has<Ready>())
-		Bit& ready(StreamT& stream) { return *stream.template get<Ready>().ready; }
+		Bit& ready(StreamT& stream) { return *get<Ready>(stream).ready; }
 	template<StreamSignal StreamT> requires (StreamT::template has<Ready>())
-		const Bit& ready(const StreamT& stream) { return *stream.template get<Ready>().ready; }
+		const Bit& ready(const StreamT& stream) { return *get<Ready>(stream).ready; }
 
 
 	struct Valid
@@ -78,9 +78,9 @@ namespace gtry::scl::strm {
 	};
 
 	template<StreamSignal StreamT> requires (StreamT::template has<Valid>())
-		Bit& valid(StreamT& stream) { return stream.template get<Valid>().valid; }
+		Bit& valid(StreamT& stream) { return get<Valid>(stream).valid; }
 	template<StreamSignal StreamT> requires (StreamT::template has<Valid>())
-		const Bit& valid(const StreamT& stream) { return stream.template get<Valid>().valid; }
+		const Bit& valid(const StreamT& stream) { return get<Valid>(stream).valid; }
 
 
 	struct ByteEnable
@@ -88,18 +88,18 @@ namespace gtry::scl::strm {
 		BVec byteEnable;
 	};
 	template<StreamSignal StreamT> requires (StreamT::template has<ByteEnable>())
-		BVec& byteEnable(StreamT& stream) { return stream.template get<ByteEnable>().byteEnable; }
+		BVec& byteEnable(StreamT& stream) { return get<ByteEnable>(stream).byteEnable; }
 	template<StreamSignal StreamT> requires (StreamT::template has<ByteEnable>())
-		const BVec& byteEnable(const StreamT& stream) { return stream.template get<ByteEnable>().byteEnable; }
+		const BVec& byteEnable(const StreamT& stream) { return get<ByteEnable>(stream).byteEnable; }
 
 	struct DwordEnable
 	{
 		BVec dwordEnable;
 	};
 	template<StreamSignal T> requires (T::template has<DwordEnable>())
-		BVec& dwordEnable(T& stream) { return stream.template get<DwordEnable>().dwordEnable; }
+		BVec& dwordEnable(T& stream) { return get<DwordEnable>(stream).dwordEnable; }
 	template<StreamSignal T> requires (T::template has<DwordEnable>())
-		const BVec& dwordEnable(const T& stream) { return stream.template get<DwordEnable>().dwordEnable; }
+		const BVec& dwordEnable(const T& stream) { return get<DwordEnable>(stream).dwordEnable; }
 
 	struct Error
 	{
@@ -107,9 +107,9 @@ namespace gtry::scl::strm {
 	};
 
 	template<StreamSignal StreamT> requires (StreamT::template has<Error>())
-		Bit& error(StreamT& stream) { return stream.template get<Error>().error; }
+		Bit& error(StreamT& stream) { return get<Error>(stream).error; }
 	template<StreamSignal StreamT> requires (StreamT::template has<Error>())
-		const Bit& error(const StreamT& stream) { return stream.template get<Error>().error; }
+		const Bit& error(const StreamT& stream) { return get<Error>(stream).error; }
 
 
 	struct TxId
@@ -118,9 +118,9 @@ namespace gtry::scl::strm {
 	};
 
 	template<StreamSignal StreamT> requires (StreamT::template has<TxId>())
-		UInt& txid(StreamT& stream) { return stream.template get<TxId>().txid; }
+		UInt& txid(StreamT& stream) { return get<TxId>(stream).txid; }
 	template<StreamSignal StreamT> requires (StreamT::template has<TxId>())
-		const UInt& txid(const StreamT& stream) { return stream.template get<TxId>().txid; }
+		const UInt& txid(const StreamT& stream) { return get<TxId>(stream).txid; }
 
 	struct Eop
 	{
@@ -128,9 +128,9 @@ namespace gtry::scl::strm {
 	};
 
 	template<StreamSignal StreamT> requires (StreamT::template has<Eop>())
-		Bit& eop(StreamT& stream) { return stream.template get<Eop>().eop; }
+		Bit& eop(StreamT& stream) { return get<Eop>(stream).eop; }
 	template<StreamSignal StreamT> requires (StreamT::template has<Eop>())
-		const Bit& eop(const StreamT& stream) { return stream.template get<Eop>().eop; }
+		const Bit& eop(const StreamT& stream) { return get<Eop>(stream).eop; }
 	template<StreamSignal StreamT> requires (StreamT::template has<Valid>() and StreamT::template has<Eop>())
 		const Bit sop(const StreamT& signal) { return !flag(transfer(signal), transfer(signal) & eop(signal)); }
 
@@ -142,9 +142,9 @@ namespace gtry::scl::strm {
 	};
 
 	template<StreamSignal StreamT> requires (StreamT::template has<Sop>())
-		Bit& sop(StreamT& stream) { return stream.template get<Sop>().sop; }
+		Bit& sop(StreamT& stream) { return get<Sop>(stream).sop; }
 	template<StreamSignal StreamT> requires (StreamT::template has<Sop>())
-		const Bit& sop(const StreamT& stream) { return stream.template get<Sop>().sop; }
+		const Bit& sop(const StreamT& stream) { return get<Sop>(stream).sop; }
 	template<StreamSignal StreamT> requires (!StreamT::template has<Valid>() and StreamT::template has<Sop>() and StreamT::template has<Eop>())
 		const Bit valid(const StreamT& signal) { return flag(sop(signal) & ready(signal), eop(signal) & ready(signal)) | sop(signal); }
 
@@ -155,9 +155,9 @@ namespace gtry::scl::strm {
 	};
 
 	template<StreamSignal StreamT> requires (StreamT::template has<Empty>())
-		UInt& empty(StreamT& stream) { return stream.template get<Empty>().empty; }
+		UInt& empty(StreamT& stream) { return get<Empty>(stream).empty; }
 	template<StreamSignal StreamT> requires (StreamT::template has<Empty>())
-		const UInt& empty(const StreamT& stream) { return stream.template get<Empty>().empty; }
+		const UInt& empty(const StreamT& stream) { return get<Empty>(stream).empty; }
 
 
 	// for internal use only, we should introduce a symbol width and remove this
@@ -173,10 +173,10 @@ namespace gtry::scl::strm {
 	const UInt emptyBits(const StreamT& in) { return cat(empty(in), "b000"); }
 	
 	template<StreamSignal StreamT> requires (StreamT::template has<EmptyBits>())
-	UInt& emptyBits(StreamT& in) { return in.template get<EmptyBits>().emptyBits; }
+	UInt& emptyBits(StreamT& in) { return get<EmptyBits>(in).emptyBits; }
 	
 	template<StreamSignal StreamT> requires (StreamT::template has<EmptyBits>())
-	const UInt& emptyBits(const StreamT& in) { return in.template get<EmptyBits>().emptyBits; }
+	const UInt& emptyBits(const StreamT& in) { return get<EmptyBits>(in).emptyBits; }
 
 
 
@@ -185,10 +185,10 @@ namespace gtry::scl::strm {
 	const BVec emptyMask(const StreamT& in) { return ~ConstBVec(0, in->width()); }
 
 	template<StreamSignal StreamT> requires (not StreamT::template has<EmptyBits>() and StreamT::template has<Empty>())
-	const BVec emptyMask(const StreamT& in) { return emptyMaskGenerator(in.template get<Empty>().empty, 8_b, in->width()); }
+	const BVec emptyMask(const StreamT& in) { return emptyMaskGenerator(get<Empty>(in).empty, 8_b, in->width()); }
 	
 	template<StreamSignal StreamT> requires (StreamT::template has<EmptyBits>())
-	const BVec emptyMask(const StreamT& in) { return emptyMaskGenerator(in.template get<EmptyBits>().emptyBits, 1_b, in->width()); }
+	const BVec emptyMask(const StreamT& in) { return emptyMaskGenerator(get<EmptyBits>(in).emptyBits, 1_b, in->width()); }
 
 
 

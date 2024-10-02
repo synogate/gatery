@@ -1918,7 +1918,7 @@ BOOST_FIXTURE_TEST_CASE(streamInsert_fuzz_test, BoostUnitTestSimulationFixture)
 	scl::RvPacketStream<BVec, scl::EmptyBits> inInsert{ inBase->width() };
 
 	for (scl::RvPacketStream<BVec, scl::EmptyBits>& in : { std::ref(inBase), std::ref(inInsert) })
-		in.template get<scl::EmptyBits>().emptyBits = BitWidth::count(inBase->width().bits());
+		get<scl::EmptyBits>(in).emptyBits = BitWidth::count(inBase->width().bits());
 
 	auto out = scl::strm::insert(move(inBase), std::move(inInsert), std::move(inOffset));
 
@@ -2543,7 +2543,7 @@ BOOST_FIXTURE_TEST_CASE(credit_broadcaster_test, BoostUnitTestSimulationFixture)
 	scl::RvStream<UInt> in0{ .data = 4_b };
 	auto in0WithCredits = scl::strm::creditStream(move(in0)); HCL_NAMED(in0WithCredits);
 	pinIn(in0WithCredits, "in0WithCredits");
-	Bit& in0_credits = *in0WithCredits.template get<scl::strm::Credit>().increment;
+	Bit& in0_credits = *get<scl::strm::Credit>(in0WithCredits).increment;
 
 	scl::StreamBroadcaster caster(move(in0WithCredits));
 
@@ -2552,8 +2552,8 @@ BOOST_FIXTURE_TEST_CASE(credit_broadcaster_test, BoostUnitTestSimulationFixture)
 	auto out1WithCredits = caster.bcastTo();
 	pinOut(out1WithCredits, "out1WithCredits");
 
-	Bit& out0_credits = *out0WithCredits.template get<scl::strm::Credit>().increment;
-	Bit& out1_credits = *out1WithCredits.template get<scl::strm::Credit>().increment;
+	Bit& out0_credits = *get<scl::strm::Credit>(out0WithCredits).increment;
+	Bit& out1_credits = *get<scl::strm::Credit>(out1WithCredits).increment;
 
 	std::mt19937 mt(9384);
 	//check that the downstream signals are being properly forward broadcasted to all sinks

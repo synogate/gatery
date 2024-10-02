@@ -70,7 +70,7 @@ namespace gtry::scl
 		ready(cmd) = '0';
 		IF(state.combinatorial() == TRANSFER)
 		{
-			IF(transfer(out) & address == cmd.template get<LastAddress>().addr)
+			IF(transfer(out) & address == get<LastAddress>(cmd).addr)
 			{
 				ready(cmd) = '1';
 				state = IDLE;

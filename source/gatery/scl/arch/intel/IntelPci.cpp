@@ -30,7 +30,7 @@ namespace gtry::scl::arch::intel {
 		//base stream is the stream comprised of the header. It is a one-beat packetStream.
 		//we must construct it from scratch
 		TlpPacketStream<EmptyBits, PTileBarRange> hdr(rxW);
-		*hdr = zext(capture(swapEndian(rx.template get<PTileHeader>().header), valid(rx) & sop(rx)));
+		*hdr = zext(capture(swapEndian(get<PTileHeader>(rx).header), valid(rx) & sop(rx)));
 
 		Bit hasAlreadyCapturedHdr = flag(valid(rx) & sop(rx), transfer(rx) & eop(rx), '0');//these two lines seem like overkill, there must be an easier logic
 		valid(hdr) = flagInstantSet(valid(rx) & sop(rx) & !hasAlreadyCapturedHdr, ready(hdr), '0');
@@ -38,7 +38,7 @@ namespace gtry::scl::arch::intel {
 		emptyBits(hdr) = rxW.bits() - 128; //4DW
 		IF(valid(hdr) & HeaderCommon::fromRawDw0(hdr->lower(32_b)).is3dw())
 			emptyBits(hdr) = rxW.bits() - 96; //3DW
-		hdr.template get<PTileBarRange>() = rx.template get<PTileBarRange>();
+		get<PTileBarRange>(hdr) = get<PTileBarRange>(rx);
 	
 		TlpPacketStream<EmptyBits, PTileBarRange> dataStrm = rx
 			.template remove<PTilePrefix>()

@@ -69,7 +69,7 @@ namespace gtry::scl::strm
 
 		auto outputStream = (move(memoryElement)
 			| attach(Ready{})
-			| attach(Valid{ outputValidityPolarity == memoryElement.template get<Validity>().validity })
+			| attach(Valid{ outputValidityPolarity == get<Validity>(memoryElement).validity })
 			| attach(TxId{ currentTxid }))
 			.template remove<Validity>();
 		HCL_NAMED(outputStream);
@@ -78,7 +78,7 @@ namespace gtry::scl::strm
 			orderCtr.inc();
 		
 		//input logic
-		inputWithValidity.template get<Validity>().validity = outputValidityPolarity ^ (txid(inputWithValidity) < currentTxid);
+		get<Validity>(inputWithValidity).validity = outputValidityPolarity ^ (txid(inputWithValidity) < currentTxid);
 		if constexpr (StreamT::template has<Ready>())
 			ready(inputWithValidity) = '1';
 

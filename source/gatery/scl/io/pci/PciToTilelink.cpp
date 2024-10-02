@@ -46,7 +46,7 @@ namespace gtry::scl::pci {
 		Area area{ "scl_CRToTileLinkA", true };
 		TlpPacketStream<EmptyBits, BarInfo> complReq(tlpStreamW);
 		HCL_DESIGNCHECK_HINT(complReq->width() >= 128_b, "this design is limited to completion widths that can accommodate an entire 4dw header into one beat");
-		complReq.template get<EmptyBits>().emptyBits = BitWidth::count(tlpStreamW.bits());
+		get<EmptyBits>(complReq).emptyBits = BitWidth::count(tlpStreamW.bits());
 
 		RequestHeader reqHdr = RequestHeader::fromRaw(complReq->lower(128_b));
 		HCL_NAMED(reqHdr);
@@ -55,7 +55,7 @@ namespace gtry::scl::pci {
 
 		//make sure that the bar aperture is large enough to accommodate the TileLink interface
 
-		answerInfo.error |= complReq.get<BarInfo>().logByteAperture < a->address.width().bits();
+		answerInfo.error |= get<BarInfo>(complReq).logByteAperture < a->address.width().bits();
 		//IF(valid(complReq))
 		//	sim_assert(complReq.get<BarInfo>().logByteAperture >= a->address.width().bits()) << "the bar aperture is not adequate";
 		UInt byteAddress = cat(reqHdr.wordAddress, "2b00").lower(a->address.width());
@@ -101,7 +101,7 @@ namespace gtry::scl::pci {
 
 		TlpPacketStream<EmptyBits> complCompl(tlpStreamW);
 		HCL_DESIGNCHECK_HINT(complCompl->width() >= 96_b, "this design is limited to completion widths that can accommodate an entire 3dw header into one beat");
-		complCompl.get<EmptyBits>().emptyBits = BitWidth::count(tlpStreamW.bits());
+		get<EmptyBits>(complCompl).emptyBits = BitWidth::count(tlpStreamW.bits());
 		(*complCompl) = ConstBVec(complCompl->width());
 		(*complCompl)(96, 32_b) = d->data;
 		complCompl->lower(96_b) = (BVec) completionHdr;
