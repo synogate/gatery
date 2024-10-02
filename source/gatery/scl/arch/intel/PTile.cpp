@@ -17,15 +17,20 @@ using namespace gtry::scl;
 namespace gtry::scl::arch::intel {
 	PTile::PTile(Settings cfg, std::string_view name):
 		ExternalModule(name, name),
-		m_usrClk(clockOut("coreclkout_hip", "p0_pin_perst_n", ClockConfig{
-		.absoluteFrequency = hlim::ClockRational{ cfg.userClkFrequency, 1 },
-		.name = "pcie_usr_clk",
-		.resetType = ClockConfig::ResetType::ASYNCHRONOUS,
-		.memoryResetType = ClockConfig::ResetType::NONE,
-		.initializeMemory = true,
-		.resetActive = ClockConfig::ResetActive::LOW,
-			})),
-			m_cfg(cfg)
+		m_cfg(cfg),
+		m_usrClk(
+			clockOut("coreclkout_hip", "p0_pin_perst_n", 
+				ClockConfig
+				{
+					.absoluteFrequency = hlim::ClockRational{ cfg.userClkFrequency, 1 },
+					.name = "pcie_usr_clk",
+					.resetType = ClockConfig::ResetType::ASYNCHRONOUS,
+					.memoryResetType = ClockConfig::ResetType::NONE,
+					.initializeMemory = true,
+					.resetActive = ClockConfig::ResetActive::LOW,
+				}
+			)
+		)
 	{
 		buildSignals();
 	}
@@ -81,8 +86,6 @@ namespace gtry::scl::arch::intel {
 
 	void PTile::buildSignals()
 	{
-		const PinConfig pinCfg{ .type = PinType::STD_LOGIC };
-
 		m_outputConfig.func	= out("p0_tl_cfg_func_o", 3_b);
 		m_outputConfig.Addr	= out("p0_tl_cfg_add_o" , 5_b);
 		m_outputConfig.Ctl	= out("p0_tl_cfg_ctl_o" ,16_b);
