@@ -102,15 +102,6 @@ namespace gtry::scl::strm
 		template<Signal T>
 		static constexpr bool has();
 
-		//template<Signal T> requires (!StreamSignal<T>) inline auto add(T&& signal);
-		//template<Signal T> requires (!StreamSignal<T>) inline auto add(T&& signal) const requires (GTRY_STREAM_ASSIGNABLE);
-
-
-		/**
-		 * @brief Adds the payload of a stream as a metadata field to another stream, encapsulating it in a wrapper struct to make it identifyable with the ::get, ::has, and ::remove member functions.
-		 */
-		template<Signal Wrapper, StreamSignal T> inline auto addAs(T&& stream) && { return attach(move(*this), stream.transform([](const auto &v) { return Wrapper{ v }; })); }
-
 		template<Signal T> constexpr T& get() { return std::get<T>(_sig); }
 		template<Signal T> constexpr const T& get() const { return std::get<T>(_sig); }
 
@@ -142,6 +133,12 @@ namespace gtry::scl::strm
 	*/
 	template<Signal AddPayloadT, Signal ...AddMetaT, Signal PayloadT, Signal ...Meta> auto attach(Stream<PayloadT, Meta...>&& stream, Stream<AddPayloadT, AddMetaT...>&& metaStream);
 	template<Signal AddT> auto attach(AddT&& signal);
+
+	/**
+	* @brief Adds the payload of a stream as a metadata field to another stream, encapsulating it in a wrapper struct to make it identifyable with the ::get, ::has, and ::remove member functions.
+	*/
+	template<Signal Wrapper, StreamSignal T, Signal PayloadT, Signal ...MetaT> auto attachAs(Stream<PayloadT, MetaT...>&& stream, T&& metaStream);
+	template<Signal Wrapper, StreamSignal T> auto attachAs(T&& metaStream);
 }
 
 namespace gtry::scl::strm
@@ -263,6 +260,19 @@ namespace gtry::scl::strm
 	{
 		return [&](auto&& in) {
 			return ::gtry::scl::strm::attach(std::forward<decltype(in)>(in), std::forward<AddT>(signal));
+		};
+	}
+
+	template<Signal Wrapper, StreamSignal T, Signal PayloadT, Signal ...MetaT>
+	auto attachAs(Stream<PayloadT, MetaT...>&& stream, T&& metaStream) 
+	{
+		return attach(move(stream), metaStream.transform([](const auto& v) { return Wrapper{ v }; }));
+	}
+
+	template<Signal Wrapper, StreamSignal T> auto attachAs(T&& metaStream)
+	{
+		return [&](auto&& in) {
+			return ::gtry::scl::strm::attachAs<Wrapper>(std::forward<decltype(in)>(in), std::forward<T>(metaStream));
 		};
 	}
 

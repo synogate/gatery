@@ -1221,7 +1221,7 @@ struct AddStreamAsMetaDataSimulationFixture : public BoostUnitTestSimulationFixt
 		//HCL_NAMED(wrappped);
 		//auto out = move(in).add(move(wrappped));
 
-		auto out = move(in).addAs<MyMeta>(move(metaIn));
+		auto out = move(in) | scl::strm::attachAs<MyMeta>(move(metaIn));
 		pinOut(out, "out");
 
 		addSimulationProcess([&, this]()->SimProcess {
