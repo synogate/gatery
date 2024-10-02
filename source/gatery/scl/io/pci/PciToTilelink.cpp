@@ -26,7 +26,7 @@ namespace gtry::scl::pci {
 
 	void TlpAnswerInfo::setErrorFromLimitations(RequestHeader reqHdr) 
 	{
-		error |= reqHdr.firstDWByteEnable != 0xF;	// no byte addressability yet
+		error |= reqHdr.firstDWByteEnable != 0xF;	//no byte addressability yet
 		error |= reqHdr.lastDWByteEnable != 0x0;	//payload = 1dw -> this needs to be zero;
 		error |= reqHdr.common.length != 1;			//one word allowed only
 	}
@@ -45,7 +45,7 @@ namespace gtry::scl::pci {
 	{
 		Area area{ "scl_CRToTileLinkA", true };
 		TlpPacketStream<EmptyBits, BarInfo> complReq(tlpStreamW);
-		HCL_DESIGNCHECK_HINT(complReq->width() >= 128_b, "this design is limited to completion widths that can accommodate an entire 3dw header into one beat");
+		HCL_DESIGNCHECK_HINT(complReq->width() >= 128_b, "this design is limited to completion widths that can accommodate an entire 4dw header into one beat");
 		complReq.set(EmptyBits{ BitWidth::count(tlpStreamW.bits()) });
 
 		RequestHeader reqHdr = RequestHeader::fromRaw(complReq->lower(128_b));
@@ -60,18 +60,17 @@ namespace gtry::scl::pci {
 		//	sim_assert(complReq.get<BarInfo>().logByteAperture >= a->address.width().bits()) << "the bar aperture is not adequate";
 		UInt byteAddress = cat(reqHdr.wordAddress, "2b00").lower(a->address.width());
 
+		answerInfo.error |= !reqHdr.common.isMemRead() & !reqHdr.common.isMemWrite();
+
 		a->setupGet(byteAddress, pack(answerInfo), 2);
 
-		IF(reqHdr.common.isMemWrite()) {
+		IF(reqHdr.common.isMemWrite() & !answerInfo.error) {
 			BVec data = (*complReq)(128, 32_b);
 			a->setupPut(byteAddress, data, pack(answerInfo), 2);
 		}
 
-		answerInfo.error |= !reqHdr.common.isMemRead() & !reqHdr.common.isMemWrite();
-
 		valid(a) = valid(complReq);
 		ready(complReq) = ready(a);
-
 		HCL_NAMED(complReq);
 		return complReq;
 	}

@@ -33,7 +33,7 @@ namespace gtry::scl::pci
 		Area area{ "scl_interfaceSplitterRx", true };
 
 		Bit isCompletion = capture(
-			HeaderCommon::fromRawDw0(*rx).isCompletion(),
+			HeaderCommon::fromRawDw0(rx->lower(32_b)).isCompletion(),
 			valid(rx) & sop(rx)
 		);
 		HCL_NAMED(isCompletion);
@@ -43,5 +43,19 @@ namespace gtry::scl::pci
 		HCL_NAMED(completerRequest);
 		requesterCompletion <<= rxDemux.out(1).template remove<BarInfo>();
 		HCL_NAMED(requesterCompletion);
+	}
+
+	TlpPacketStream<EmptyBits> interfaceSplitterTx(TlpPacketStream<EmptyBits>&& completerCompletion, TlpPacketStream<EmptyBits>&& requesterRequest)
+	{
+		Area area{ "scl_interfaceSplitterTx", true };
+
+		HCL_NAMED(completerCompletion);
+		HCL_NAMED(requesterRequest);
+
+		StreamArbiter<TlpPacketStream<EmptyBits>> txArbiter;
+		txArbiter.attach(completerCompletion);
+		txArbiter.attach(requesterRequest);
+		txArbiter.generate();
+		return move(txArbiter.out());
 	}
 }

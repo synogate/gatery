@@ -30,6 +30,7 @@
 
 #include <gatery/scl/sim/SimulationSequencer.h>
 #include <gatery/scl/stream/SimuHelpers.h>
+#include <gatery/scl/flag.h>
 
 using namespace boost::unit_test;
 using namespace gtry;

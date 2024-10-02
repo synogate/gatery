@@ -189,6 +189,7 @@ namespace gtry::scl::pci
 		UInt logByteAperture = 6_b; //0-> 1B | 10 -> 1kB | 20 -> 1MB | 30 -> 1GB | etc.
 	};
 
+	//to do: needs to make one into reverse signal
 	struct CompleterInterface {
 		TlpPacketStream<EmptyBits, BarInfo> request;
 		TlpPacketStream<EmptyBits> completion;
@@ -207,6 +208,3 @@ BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::RequesterInterface, request, completion)
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::HeaderCommon, poisoned, digest, processingHintPresence, attributes, addressType, trafficClass, fmt, type, length);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::RequestHeader, common, requesterId, tag, lastDWByteEnable, firstDWByteEnable, wordAddress, processingHint);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::pci::CompletionHeader, common, requesterId, tag, completerId, byteCount, byteCountModifier, lowerByteAddress, completionStatus);
-
-
-

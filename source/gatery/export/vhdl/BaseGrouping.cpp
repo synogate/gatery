@@ -182,6 +182,7 @@ void BaseGrouping::formatConstant(std::ostream &stream, const hlim::Node_Constan
 	}
 }
 
+
 void BaseGrouping::declareLocalSignals(std::ostream &stream, bool asVariables, unsigned indentation)
 {
    CodeFormatting &cf = m_ast.getCodeFormatting();

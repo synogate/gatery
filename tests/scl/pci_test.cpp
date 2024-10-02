@@ -186,6 +186,50 @@ BOOST_FIXTURE_TEST_CASE(tlp_RequestHeader_test, BoostUnitTestSimulationFixture) 
 	BOOST_TEST(!runHitsTimeout({1,1'000'000}));
 }
 
+BOOST_FIXTURE_TEST_CASE(pci_requestHeader_fromRaw_test, BoostUnitTestSimulationFixture) {
+
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	BVec rawHeader = 128_b;
+	pinIn(rawHeader, "in_raw", {.simulationOnlyPin = true});
+
+	scl::pci::RequestHeader reqHdr = scl::pci::RequestHeader::fromRaw(rawHeader);
+
+	pinOut(reqHdr, "out",  {.simulationOnlyPin = true});
+
+	addSimulationProcess(
+		[&, this]()->SimProcess {
+			simu(rawHeader) = "128b1010000000000000000000000000000000000000000000000000000000000000011111110111111001101101010110000000100000000X000X0X000100000";
+			co_await WaitFor(Seconds{ 0,1 });
+			BOOST_TEST(simu(reqHdr.common.type) == 0);
+			BOOST_TEST(simu(reqHdr.common.fmt) == 1);
+			BOOST_TEST(simu(reqHdr.common.addressType) == 0);
+			BOOST_TEST(simu(reqHdr.processingHint) == 0);
+			BOOST_TEST(simu(reqHdr.common.processingHintPresence) == '0');
+			BOOST_TEST(simu(reqHdr.common.attributes.idBasedOrdering) == '0');
+			BOOST_TEST(simu(reqHdr.common.attributes.noSnoop) == '0');
+			BOOST_TEST(simu(reqHdr.common.attributes.relaxedOrdering) == '0');
+			BOOST_TEST(simu(reqHdr.common.digest) == '0');
+			BOOST_TEST(simu(reqHdr.common.poisoned) == '0');
+			BOOST_TEST(simu(reqHdr.common.length) == 1);
+			BOOST_TEST(simu(reqHdr.common.trafficClass) == 0);
+
+			BOOST_TEST(simu(reqHdr.firstDWByteEnable) == 0xF);
+			BOOST_TEST(simu(reqHdr.lastDWByteEnable) == 0);
+			BOOST_TEST(simu(reqHdr.requesterId) == 0xABCD);
+			BOOST_TEST(simu(reqHdr.tag) == 0xEF);
+			BOOST_TEST(simu(reqHdr.wordAddress) == 5);
+			co_await OnClk(clk);
+			stopTest();
+		}
+	);
+
+	design.postprocess();
+
+	BOOST_TEST(!runHitsTimeout({1,1'000'000}));
+}
+
 BOOST_FIXTURE_TEST_CASE(tlp_CompletionHeader_test, BoostUnitTestSimulationFixture) {
 
 	using namespace scl::pci;

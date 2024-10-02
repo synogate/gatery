@@ -16,20 +16,14 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
-
 #include <gatery/frontend.h>
-#include <gatery/scl/io/pci/pci.h>
 
-namespace gtry::scl::pci 
+namespace gtry::scl::arch::intel
 {
-	/**
-	 * @brief	Splits the TLP rx/tx streams into our vendor independent interface of 
-	 *			completer request/response (CompleterInterface) and requester request/response (RequesterInterface).
-	 *				rx -> (completer request | requester completion)
-	 *				(completer completion | requester request) -> tx
-	 */
-	TlpPacketStream<EmptyBits>	interfaceSplitter(CompleterInterface&& compInt, RequesterInterface&& reqInt, TlpPacketStream<EmptyBits, BarInfo>&& rx);
-
-	void						interfaceSplitterRx(TlpPacketStream<EmptyBits, BarInfo>&& completerRequest, TlpPacketStream<EmptyBits>&& requesterCompletion, TlpPacketStream<EmptyBits, BarInfo>&& rx);
-	TlpPacketStream<EmptyBits>	interfaceSplitterTx(TlpPacketStream<EmptyBits>&& completerCompletion, TlpPacketStream<EmptyBits>&& requesterRequest);
+	class IntelResetIP : public gtry::ExternalModule
+	{
+	public:
+		IntelResetIP() : ExternalModule("reset_release", "reset_release"){}
+		gtry::Bit ninit_done() { return out("ninit_done"); }
+	};
 }
