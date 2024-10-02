@@ -338,7 +338,7 @@ BOOST_FIXTURE_TEST_CASE(tlp_to_tilelink_rw64_1dw, BoostUnitTestSimulationFixture
 
 	auto completerInterface = makeTileLinkMaster(move(ul), tlpW);
 	TlpPacketStream<scl::EmptyBits, BarInfo>& in = completerInterface.request;
-	in.set(BarInfo{ ConstBVec(0, 3_b) , 12});
+	in.template get<BarInfo>() = { ConstBVec(0, 3_b), 12 };
 	pinIn(in, "in");
 
 	TlpPacketStream<scl::EmptyBits>& out = completerInterface.completion;

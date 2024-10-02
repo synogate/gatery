@@ -118,7 +118,6 @@ namespace gtry::scl::strm
 
 		template<Signal T> constexpr T& get() { return std::get<T>(_sig); }
 		template<Signal T> constexpr const T& get() const { return std::get<T>(_sig); }
-		template<Signal T> constexpr void set(T&& signal) { get<T>() = std::forward<T>(signal); }
 
 		auto transform(std::invocable<Payload> auto&& fun);
 		auto transform(std::invocable<Payload> auto&& fun) const requires(!GTRY_STREAM_BIDIR);

@@ -142,7 +142,7 @@ namespace gtry::scl::pci::xilinx {
 		*ret = *in;
 		IF(sop(in))
 			ret->lower(128_b) = (BVec) hdr;
-		ret.set(BarInfo{ .id = desc.barId, .logByteAperture = desc.barAperture });
+		ret.get<BarInfo>() = BarInfo{ .id = desc.barId, .logByteAperture = desc.barAperture };
 
 		//Handshake assignments
 		ready(in) = ready(ret);
@@ -203,7 +203,7 @@ namespace gtry::scl::pci::xilinx {
 
 		Axi4PacketStream<RQUser> ret(in->width());
 		dwordEnable(ret) = ret->width() / 32;
-		ret.set(RQUser{ConstBVec(ret->width() == 512_b ? 137_b : 62_b)}); //no logic here, just documentation
+		ret.template get<RQUser>() = RQUser{ConstBVec(ret->width() == 512_b ? 137_b : 62_b)}; //no logic here, just documentation
 		if(ret->width() == 512_b) {
 			ret.template get<RQUser>().raw.lower(4_b) = hdr.firstDWByteEnable;
 			ret.template get<RQUser>().raw(8, 4_b) = hdr.lastDWByteEnable;

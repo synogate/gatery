@@ -46,7 +46,7 @@ namespace gtry::scl::pci {
 		Area area{ "scl_CRToTileLinkA", true };
 		TlpPacketStream<EmptyBits, BarInfo> complReq(tlpStreamW);
 		HCL_DESIGNCHECK_HINT(complReq->width() >= 128_b, "this design is limited to completion widths that can accommodate an entire 4dw header into one beat");
-		complReq.set(EmptyBits{ BitWidth::count(tlpStreamW.bits()) });
+		complReq.template get<EmptyBits>().emptyBits = BitWidth::count(tlpStreamW.bits());
 
 		RequestHeader reqHdr = RequestHeader::fromRaw(complReq->lower(128_b));
 		HCL_NAMED(reqHdr);
@@ -101,7 +101,7 @@ namespace gtry::scl::pci {
 
 		TlpPacketStream<EmptyBits> complCompl(tlpStreamW);
 		HCL_DESIGNCHECK_HINT(complCompl->width() >= 96_b, "this design is limited to completion widths that can accommodate an entire 3dw header into one beat");
-		complCompl.set(EmptyBits{ BitWidth::count(tlpStreamW.bits()) });
+		complCompl.get<EmptyBits>().emptyBits = BitWidth::count(tlpStreamW.bits());
 		(*complCompl) = ConstBVec(complCompl->width());
 		(*complCompl)(96, 32_b) = d->data;
 		complCompl->lower(96_b) = (BVec) completionHdr;
