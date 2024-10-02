@@ -9,7 +9,7 @@ This program is distributed WITHOUT ANY WARRANTY; without even the
 implied warranty of MERCHANTABILITY.
 */
 
-#include "gatery/pch.h"
+#include "gatery/scl_pch.h"
 #include "PTile.h"
 
 using namespace gtry;

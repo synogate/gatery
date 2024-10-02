@@ -16,7 +16,7 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
-#include <gatery/pch.h>
+#include <gatery/scl_pch.h>
 #include "IntelPci.h"
 #include <gatery/scl/stream/strm.h>
 
@@ -54,7 +54,7 @@ namespace gtry::scl::arch::intel {
 		HCL_NAMED(dataStrm);
 	
 		//insert the header into the data stream
-		return strm::appendStream(
+		return strm::streamAppend(
 			move(hdr),
 			move(dataStrm)
 			)
