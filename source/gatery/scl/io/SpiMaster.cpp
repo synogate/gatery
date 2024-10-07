@@ -27,7 +27,8 @@ gtry::scl::RvStream<gtry::BVec> gtry::scl::SpiMaster::generate(RvStream<BVec>& i
 
 	// generate msb first bit stream
 	*in = swapEndian(*in, 1_b);
-	RvStream<Bit> inBit = strm::reduceWidth(move(in), 1_b, !valid(in)).transform([](const BVec& v) { return v.lsb(); });
+	RvStream<Bit> inBit = strm::reduceWidth(move(in), 1_b, !valid(in)) 
+		| strm::transform((Bit& (BVec::*)())&BVec::lsb);
 	HCL_NAMED(inBit);
 
 	Counter stepCounter{ m_clockDiv };
@@ -72,7 +73,7 @@ gtry::scl::RvStream<gtry::BVec> gtry::scl::SpiMaster::generate(RvStream<BVec>& i
 		}
 	}
 
-	RvStream<BVec> outBitVec = outBit.transform([](const Bit& b) { 
+	RvStream<BVec> outBitVec = transform(move(outBit), [](const Bit& b) {
 		BVec r = ConstBVec(1_b); 
 		r.lsb() = b; 
 		return r; 

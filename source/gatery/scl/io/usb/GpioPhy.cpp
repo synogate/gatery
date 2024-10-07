@@ -350,7 +350,7 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 	HCL_NAMED(txPreambledStream);
 	auto txBitVecStream = strm::reduceWidth(move(txPreambledStream), 1_b);
 	HCL_NAMED(txBitVecStream);
-	auto txBitStream = generateTxCrcAppend(txBitVecStream.transform([](const UInt& in) { return in.lsb(); }));
+	auto txBitStream = generateTxCrcAppend(transform(move(txBitVecStream), [](const UInt& in) { return in.lsb(); }));
 	HCL_NAMED(txBitStream);
 	auto txStuffedStream = bitStuff(txBitStream, 6);
 	nrzi(txStuffedStream);
@@ -388,7 +388,7 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 
 void gtry::scl::usb::GpioPhy::generateRx(const VStream<Bit, SingleEnded>& in)
 {
-	VStream<UInt, SingleEnded> inBit = in.transform([](const Bit& in)->UInt{
+	VStream<UInt, SingleEnded> inBit = transform(in, [](const Bit& in)->UInt{
 		return zext(in, 1_b);
 	});
 

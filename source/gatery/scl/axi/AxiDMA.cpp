@@ -89,7 +89,7 @@ namespace gtry::scl
 
 	RvPacketStream<BVec> axiToStream(RvPacketStream<AxiReadData>&& dataStream)
 	{
-		return dataStream.transform(&AxiReadData::data);
+		return transform(move(dataStream), &AxiReadData::data);
 	}
 
 	RvPacketStream<BVec> axiToStream(RvStream<AxiToStreamCmd>&& cmd, Axi4& axi)
@@ -108,7 +108,7 @@ namespace gtry::scl
 	{
 		scl::Counter beatCtr{ beatsPerBurst };
 		HCL_DESIGNCHECK_HINT(in->width() == out->data.width(), "the data stream and axi data widths do not match");
-		out <<= in.transform([&](const BVec& data) {
+		out <<= transform(move(in), [&](const BVec& data) {
 			return AxiWriteData{
 				.data = data,
 				.strb = BVec{out->strb.width().mask()},

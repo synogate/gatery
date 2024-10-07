@@ -102,9 +102,6 @@ namespace gtry::scl::strm
 		template<Signal T>
 		static constexpr bool has();
 
-		auto transform(std::invocable<Payload> auto&& fun);
-		auto transform(std::invocable<Payload> auto&& fun) const requires(!GTRY_STREAM_BIDIR);
-
 		template<StreamSignal T> T reduceTo();
 		template<StreamSignal T> T reduceTo() const requires(GTRY_STREAM_ASSIGNABLE);
 
@@ -140,6 +137,19 @@ namespace gtry::scl::strm
 	template<Signal T, StreamSignal StreamT> constexpr T& get(StreamT&& stream);
 	template<Signal T, StreamSignal StreamT> constexpr const T& get(const StreamT& stream);
 	template<Signal T> auto get();
+
+	/**
+	 * @brief Transforms the stream payload using a provided function.
+	 *
+	 * This function applies a transformation function to the stream, allowing for modification
+	 * of the stream's payload. The transformation function should accept the payload
+	 * as an argument and return the new payload.
+	 */
+	template<StreamSignal StreamT, typename FunT>
+	auto transform(StreamT&& stream, FunT&& fun);
+
+	template<typename FunT>
+	auto transform(FunT&& fun);
 }
 
 namespace gtry::scl::strm
@@ -262,6 +272,10 @@ namespace gtry::scl::strm
 		}
 	}
 
+	// Forward declared here, actually in utils.h
+	template<StreamSignal BeatStreamT, StreamSignal PacketStreamT>
+	std::tuple<PacketStreamT, BeatStreamT> replicateForEntirePacket(PacketStreamT&& packetStream, BeatStreamT&& beatStream);
+
 	template<Signal AddPayloadT, Signal ...AddMetaT, Signal PayloadT, Signal ...Meta> 
 	auto attach(Stream<PayloadT, Meta...>&& stream, Stream<AddPayloadT, AddMetaT...>&& metaStream) 
 	{
@@ -287,7 +301,7 @@ namespace gtry::scl::strm
 	template<Signal Wrapper, StreamSignal T, Signal PayloadT, Signal ...MetaT>
 	auto attachAs(Stream<PayloadT, MetaT...>&& stream, T&& metaStream) 
 	{
-		return attach(move(stream), metaStream.transform([](const auto& v) { return Wrapper{ v }; }));
+		return attach(move(stream), transform(std::forward<T>(metaStream), [](const auto& v) { return Wrapper{ v }; }));
 	}
 
 	template<Signal Wrapper, StreamSignal T> auto attachAs(T&& metaStream)
@@ -297,31 +311,21 @@ namespace gtry::scl::strm
 		};
 	}
 
-	// Forward declared here, actually in utils.h
-	template<StreamSignal BeatStreamT, StreamSignal PacketStreamT>
-	std::tuple<PacketStreamT, BeatStreamT> replicateForEntirePacket(PacketStreamT &&packetStream, BeatStreamT &&beatStream);
-
-
-	template<Signal PayloadT, Signal ...Meta>
-	inline auto Stream<PayloadT, Meta...>::transform(std::invocable<Payload> auto&& fun)
+	template<StreamSignal StreamT, typename FunT>
+	auto transform(StreamT&& stream, FunT&& fun)
 	{
-		using gtry::connect;
-
-		auto&& result = std::invoke(fun, data);
-		Stream<std::remove_cvref_t<decltype(result)>, Meta...> ret;
-		connect(ret.data, result);
-		ret._sig <<= _sig;
-		return ret;
+		return Stream{
+			std::invoke(std::forward<FunT>(fun), std::forward<StreamT>(stream).data),
+			connect(std::forward<StreamT>(stream)._sig)
+		};
 	}
 
-	template<Signal PayloadT, Signal ...Meta>
-	inline auto Stream<PayloadT, Meta...>::transform(std::invocable<Payload> auto&& fun) const requires(!GTRY_STREAM_BIDIR)
+	template<typename FunT>
+	auto transform(FunT&& fun)
 	{
-		auto&& result = std::invoke(fun, data);
-		Stream<std::remove_cvref_t<decltype(result)>, Meta...> ret;
-		ret.data = result;
-		ret._sig = _sig;
-		return ret;
+		return [&](StreamSignal auto&& in) {
+			return ::gtry::scl::strm::transform(std::forward<decltype(in)>(in), std::forward<FunT>(fun));
+		};
 	}
 
 	template<typename ...T>

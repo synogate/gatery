@@ -28,9 +28,9 @@ namespace gtry::scl::strm
 
 	template<class T>
 	concept StreamSignal = CompoundSignal<T> and requires (T stream) { 
-		{ *stream } -> std::assignable_from<typename std::remove_cvref_t<T>::Payload>;
-		{ *stream.operator ->() } -> std::assignable_from<typename std::remove_cvref_t<T>::Payload>;
 		requires Signal<typename std::remove_cvref_t<T>::Payload>;
+		{ *stream } -> Signal;
+		{ *stream.operator ->() } -> Signal;
 
 		// Very expensive to check
 		//{ stream.template add<internal::TestMeta>(internal::TestMeta{}) } -> Signal;

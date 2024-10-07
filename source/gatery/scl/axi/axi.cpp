@@ -119,7 +119,7 @@ namespace gtry::scl
 		scl::Axi4 master = scl::Axi4::fromConfig(cfg);
 
 		*slave.w.a <<= *master.w.a;
-		*slave.w.d <<= master.w.d->transform(
+		*slave.w.d <<= transform(move(*master.w.d),
 			[&](const scl::AxiWriteData& awd) {
 				return scl::AxiWriteData{
 					.data = awd.data.lower((*slave.w.d)->data.width()),
@@ -144,7 +144,7 @@ namespace gtry::scl
 			(*master.w.a)->addr.resetNode();
 			(*master.w.a)->addr = addressW;
 			HCL_DESIGNCHECK_HINT(addressW <= (*slave.w.a)->addr.width(), "you are trying to extend the address space instead of constraining it");
-			*slave.w.a <<= master.w.a->transform(
+			*slave.w.a <<= transform(move(*master.w.a),
 				[&](const scl::AxiAddress& aa) {
 					scl::AxiAddress ret = aa;
 					ret.addr.resetNode();
@@ -159,7 +159,7 @@ namespace gtry::scl
 			(*master.r.a)->addr.resetNode();
 			(*master.r.a)->addr = addressW;
 			HCL_DESIGNCHECK_HINT(addressW <= (*slave.r.a)->addr.width(), "you are trying to extend the address space instead of constraining it");
-			*slave.r.a <<= master.r.a->transform(
+			*slave.r.a <<= transform(move(*master.r.a),
 				[&](const scl::AxiAddress& aa) {
 					scl::AxiAddress ret = aa;
 					ret.addr.resetNode();

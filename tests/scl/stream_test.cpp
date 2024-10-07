@@ -258,7 +258,7 @@ BOOST_FIXTURE_TEST_CASE(stream_transform, StreamTransferFixture)
 		const scl::VStream<UInt, scl::Eop> vs{ 5_b };
 		auto res = vs.remove<scl::Eop>();
 		auto rsr = vs.reduceTo<scl::Stream<UInt>>();
-		auto vso = vs.transform(std::identity{});
+		auto vso = transform(vs, std::identity{});
 	}
 
 	scl::RvStream<UInt> in = scl::RvPacketStream<UInt, scl::Sop>{ 5_b }
@@ -275,11 +275,11 @@ BOOST_FIXTURE_TEST_CASE(stream_transform, StreamTransferFixture)
 
 	scl::RvStream<Intermediate> im = in
 		.reduceTo<scl::RvStream<UInt>>()
-		.transform([](const UInt& data) {
+		| scl::strm::transform([](const UInt& data) {
 			return Intermediate{ data, '1' };
 		});
 
-	scl::RvStream<UInt> out = im.transform(&Intermediate::data);
+	scl::RvStream<UInt> out = transform(move(im), &Intermediate::data);
 	Out(out);
 
 	simulateTransferTest(in, out);
@@ -908,10 +908,10 @@ BOOST_FIXTURE_TEST_CASE(spi_stream_test, StreamTransferFixture)
 	scl::RvStream<UInt> in{ .data = 8_b };
 	In(in);
 
-	scl::RvStream<BVec> inBVec = in.transform([](const UInt& v) { return (BVec)v; });
+	scl::RvStream<BVec> inBVec = move(in)  | scl::strm::transform([](const UInt& v) { return (BVec)v; });
 	scl::RvStream<BVec> outBVec = scl::SpiMaster{}.pinTestLoop().clockDiv(3).generate(inBVec);
 
-	scl::RvStream<UInt> out = outBVec.transform([](const BVec& v) { return (UInt)v; });
+	scl::RvStream<UInt> out = transform(move(outBVec), [](const BVec& v) { return (UInt)v; });
 	Out(out);
 
 	simulateTransferTest(in, out);

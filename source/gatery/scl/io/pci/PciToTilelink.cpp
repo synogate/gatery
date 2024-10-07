@@ -376,24 +376,20 @@ namespace gtry::scl::pci {
 		TileLinkChannelA a = constructFrom(ret.a);
 		a <<= ret.a;
 
-
-		auto rr = tileLinkAToRequesterRequest(move(a));
+		TlpPacketStream rr = tileLinkAToRequesterRequest(move(a));
 		if (tag)
-			rr = rr.transform([&](const BVec& in) {
-				BVec ret = in;
-				IF(valid(rr) & sop(rr)) {
-					auto hdr = RequestHeader::fromRaw(ret.lower(128_b));
-					hdr.tag = zext(*tag);
-					ret.lower(128_b) = hdr;
-				}
-				return ret;
-			});
+		{
+			IF(valid(rr) & sop(rr)) 
+			{
+				auto hdr = RequestHeader::fromRaw(rr->lower(128_b));
+				hdr.tag = zext(*tag);
+				rr->lower(128_b) = hdr;
+			}
+		}
 	
 		*reqInt.request <<= rr;
 		*ret.d = requesterCompletionToTileLinkDCheapBurst(move(reqInt.completion), sizeW);
-
 		HCL_NAMED(ret);
-
 		return ret;
 	}
 }

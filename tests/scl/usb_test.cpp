@@ -442,7 +442,7 @@ BOOST_FIXTURE_TEST_CASE(usb_to_uart_cyc1000, SingleEndpointUsbFixture, *boost::u
 		scl::TransactionalFifo<scl::usb::Function::StreamData> host2uartFifo{ 16 };
 		m_func->attachRxFifo(host2uartFifo, 1 << 1);
 		Bit tx = strm::pop(host2uartFifo)
-			.transform([](const scl::usb::Function::StreamData& in) { return (BVec)in.data; })
+			| strm::transform([](const scl::usb::Function::StreamData& in) { return (BVec)in.data; })
 			| scl::uartTx(baudRate);
 		pinOut(reg(tx, '1'), "TX");
 		host2uartFifo.generate();
@@ -452,7 +452,7 @@ BOOST_FIXTURE_TEST_CASE(usb_to_uart_cyc1000, SingleEndpointUsbFixture, *boost::u
 
 		Bit rx;
 		scl::uartRx(reg(rx, '1'), baudRate)
-			.transform([](const BVec& in) { return scl::usb::Function::StreamData{ .data = (UInt)in, .endPoint = 1 }; })
+			| strm::transform([](const BVec& in) { return scl::usb::Function::StreamData{ .data = (UInt)in, .endPoint = 1 }; })
 			| attach(Ready{})
 			| strm::push(uart2hostFifo);
 		pinIn(rx, "RX");
@@ -515,10 +515,10 @@ BOOST_FIXTURE_TEST_CASE(usb_to_bitbang_max10deca, SingleEndpointUsbFixture, *boo
 		m_func->attachTxFifo(uart2hostFifo, 1 << 1);
 		
 		RvStream<BVec> command = strm::pop(host2uartFifo)
-			.transform([](const scl::usb::Function::StreamData& in) { return (BVec)in.data; });
+			| strm::transform([](const scl::usb::Function::StreamData& in) { return (BVec)in.data; });
 
 		bitbang.generate(move(command), 16)
-			.transform([](const BVec& d) { return usb::Function::StreamData{ .data = (UInt)d, .endPoint = 1 }; })
+			| strm::transform([](const BVec& d) { return usb::Function::StreamData{ .data = (UInt)d, .endPoint = 1 }; })
 			| strm::push(uart2hostFifo);
 
 		bitbang.io(0).pin("SCL");

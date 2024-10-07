@@ -1316,11 +1316,13 @@ struct AddMetaSignalFromPacketSimulationFixture : public BoostUnitTestSimulation
 		emptyBits(in) = BitWidth::count(in->width().bits());
 		pinIn(in, "in");
 
-		scl::RvPacketStream<UInt, scl::EmptyBits, MyMeta> out = move(in) | 
-					scl::strm::addMetaSignalFromPacket(maxPacketW.bits() / streamW.bits() + 1, 
-								[&](scl::RvPacketStream<UInt, scl::EmptyBits> &&in) {
-									return scl::strm::packetSize(move(in), maxPacketW).transform([](const UInt &size) { return MyMeta{ size }; }) | scl::strm::regDownstream();
-								});
+		scl::RvPacketStream<UInt, scl::EmptyBits, MyMeta> out = move(in) 
+			| scl::strm::addMetaSignalFromPacket(maxPacketW.bits() / streamW.bits() + 1, 
+				[&](scl::RvPacketStream<UInt, scl::EmptyBits> &&in) {
+					return scl::strm::packetSize(move(in), maxPacketW) 
+						| scl::strm::transform([](const UInt &size) { return MyMeta{ size }; }) 
+						| scl::strm::regDownstream();
+				});
 
 		pinOut(out, "out");
 
