@@ -256,15 +256,15 @@ BOOST_FIXTURE_TEST_CASE(stream_transform, StreamTransferFixture)
 	{
 		// const compile test
 		const scl::VStream<UInt, scl::Eop> vs{ 5_b };
-		auto res = vs.remove<scl::Eop>();
+		auto res = remove<scl::Eop>(vs);
 		auto rsr = vs.reduceTo<scl::Stream<UInt>>();
 		auto vso = transform(vs, std::identity{});
 	}
 
-	scl::RvStream<UInt> in = scl::RvPacketStream<UInt, scl::Sop>{ 5_b }
-								.remove<scl::Sop>()
-								.reduceTo<scl::RvStream<UInt>>()
-								.remove<scl::Eop>();
+	scl::RvStream<UInt> in = (scl::RvPacketStream<UInt, scl::Sop>{ 5_b }
+								| scl::strm::remove<scl::Sop>()
+								).reduceTo<scl::RvStream<UInt>>()
+								| scl::strm::remove<scl::Eop>();
 	In(in);
 
 	struct Intermediate

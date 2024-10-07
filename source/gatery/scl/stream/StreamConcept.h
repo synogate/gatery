@@ -42,7 +42,7 @@ namespace gtry::scl::strm
 	};
 
 	template<StreamSignal StreamT>
-	using StreamData = decltype(std::declval<StreamT>().removeFlowControl());
+	using StreamData = decltype(removeFlowControl(std::declval<StreamT>()));
 }
 namespace gtry::scl {
 	using strm::StreamSignal;

@@ -266,14 +266,14 @@ BOOST_FIXTURE_TEST_CASE(ptile_hail_mary_completer, BoostUnitTestSimulationFixtur
 	get<PTileHeader>(rxSim) = simOverride(get<PTileHeader>(rxSim), PTileHeader{ swapEndian(intelHeader) });
 
 	auto rxUnlocked = ptileRxVendorUnlocking(simOverrideDownstream(ptileInstance.rx(), move(rxSim)) | strm::regDownstream())
-		.template remove<PTileBarRange>()
+		| strm::remove<PTileBarRange>()
 		| strm::attach(BarInfo{ .id = ConstBVec(0, 3_b), .logByteAperture = ConstUInt(20, 6_b)});//log byte aperture should be set to ip value
 	HCL_NAMED(rxUnlocked);
 	complInt.request <<= move(rxUnlocked);
 
 	auto [txLocked, txSim] = simOverrideUpstream(ptileTxVendorUnlocking(move(complInt.completion)));
 	HCL_NAMED(txLocked);
-	ptileInstance.tx(move(txLocked).template remove<EmptyBits>());
+	ptileInstance.tx(move(txLocked) | strm::remove<EmptyBits>());
 	pinOut(txSim, "txSim", { .simulationOnlyPin = true });
 
 

@@ -40,9 +40,9 @@ namespace gtry::scl::arch::intel {
 			emptyBits(hdr) = rxW.bits() - 96; //3DW
 		get<PTileBarRange>(hdr) = get<PTileBarRange>(rx);
 	
-		TlpPacketStream<EmptyBits, PTileBarRange> dataStrm = rx
-			.template remove<PTilePrefix>()
-			.template remove<PTileHeader>();
+		TlpPacketStream<EmptyBits, PTileBarRange> dataStrm = move(rx)
+			| strm::remove<PTilePrefix>()
+			| strm::remove<PTileHeader>();
 			
 		//must mask dataStrm if the header claims there is no data and signal ready upstream
 		IF(transfer(hdr) & !HeaderCommon::fromRawDw0(hdr->lower(32_b)).hasData()) {

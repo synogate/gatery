@@ -728,9 +728,9 @@ namespace gtry::scl::strm
 	{
 		Area area("synchronizeStreamReqAck", true);
 		ClockScope csIn{ inClock };
-		auto crossingStream = in
-			.template remove<Ready>()
-			.template remove<Valid>();
+		auto crossingStream = move(in)
+			| remove<Ready>()
+			| remove<Valid>();
 
 		Bit eventIn;
 		Bit idle = flag(ready(in), eventIn, '1');

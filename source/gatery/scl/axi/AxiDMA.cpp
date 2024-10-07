@@ -145,7 +145,7 @@ namespace gtry::scl
 		if (dataFifoDepth > 0)
 			mid = strm::regDownstream(move(mid));
 
-		scl::axiFromStream(move(storeCmd), mid.template remove<scl::Eop>(), axi);
+		scl::axiFromStream(move(storeCmd), remove<scl::Eop>(move(mid)), axi);
 	}
 
 	AxiTransferReport axiTransferAuditor(const Axi4& streamToSniff, BitWidth bitsPerBurst, BitWidth counterW)

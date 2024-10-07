@@ -320,7 +320,7 @@ namespace gtry::scl::strm
 		HCL_NAMED(shift);
 
 		Stream out = in
-			.template remove<scl::Empty>()
+			| remove<Empty>()
 			| attach(Eop{eop(in)})
 			| attach(EmptyBits{ emptyBits(in) });
 		UInt& emptyBits = get<EmptyBits>(out).emptyBits;
@@ -960,7 +960,7 @@ namespace gtry::scl::strm
 		};
 
 		HCL_NAMED(ret);
-		return ret.template remove<ShiftRightSteadyShift>();
+		return remove<ShiftRightSteadyShift>(move(ret));
 	}
 
 	namespace internal
@@ -1194,10 +1194,10 @@ namespace gtry::scl::strm
 	template<scl::StreamSignal StreamT> requires (std::remove_cvref_t<StreamT>::template has<Empty>())
 	auto streamDropTailBytes(StreamT&& in, const UInt& byteCutoff, BitWidth maxPacketW) {
 		UInt inEmptyBytes = empty(in);
-		auto inBits = in.template remove<Empty>() | attach(EmptyBits{cat(inEmptyBytes, "3b0")});
+		auto inBits = move(in) | remove<Empty>() | attach(EmptyBits{cat(inEmptyBytes, "3b0")});
 		auto outBits = streamDropTail(move(inBits), cat(byteCutoff, "3b0"), maxPacketW);
 		UInt outEmptyBits = emptyBits(outBits);
-		return outBits.template remove<EmptyBits>() | attach(Empty{ outEmptyBits.upper(-3_b) });
+		return move(outBits) | remove<EmptyBits>() | attach(Empty{ outEmptyBits.upper(-3_b) });
 	}
 	extern template auto streamDropTailBytes(RvPacketStream<BVec, Empty> &&in, const UInt& byteCutoff, BitWidth maxPacketW);
 

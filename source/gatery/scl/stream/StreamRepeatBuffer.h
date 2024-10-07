@@ -82,7 +82,7 @@ namespace gtry::scl::strm {
 	template<StreamSignal StreamT>
 	inline StreamT repeatBuffer(StreamT&& in, const RepeatBufferStreamSettings &settings)
 	{
-		RepeatBuffer<StreamData<StreamT>> inst{ settings.minDepth, in.removeFlowControl() };
+		RepeatBuffer<StreamData<StreamT>> inst{ settings.minDepth, in | removeFlowControl() };
 		if (settings.wrapAround.valid())
 			inst.wrapAround(settings.wrapAround);
 
@@ -173,7 +173,7 @@ namespace gtry::scl::strm {
 					sim_assert(eop(in) == repeatBuffer.wrIsLast()) << "eop of input stream should match wrap around of repeat buffer";
 			}
 
-			repeatBuffer.wrPush(in.removeFlowControl());
+			repeatBuffer.wrPush(in | removeFlowControl());
 		}
 	}
 }

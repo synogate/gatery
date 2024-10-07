@@ -36,7 +36,7 @@ namespace gtry::scl::strm
 		HCL_DESIGNCHECK(maxCredit != 0);
 		HCL_DESIGNCHECK(initialCredit <= maxCredit);
 
-		Stream out = in.template remove<scl::Ready>() | attach(Credit{
+		Stream out = std::forward<T>(in) | remove<scl::Ready>() | attach(Credit{
 			.initialCredit = initialCredit,
 			.maxCredit = maxCredit
 		});
@@ -87,7 +87,7 @@ namespace gtry::scl::strm
 		Credit& inCredit = get<Credit>(in);
 
 		HCL_DESIGNCHECK_HINT(inCredit.initialCredit != 0, "Initial credit is 0. This will cause a deadlock.");
-		auto out = fifo(in.template remove<Credit>() | attach(Ready{}), inCredit.initialCredit);
+		auto out = fifo(in | remove<Credit>() | attach(Ready{}), inCredit.initialCredit);
 		*inCredit.increment = transfer(out);
 		return out;
 	}

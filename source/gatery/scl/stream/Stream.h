@@ -108,15 +108,6 @@ namespace gtry::scl::strm
 		template<StreamSignal T> explicit operator T ();
 		template<StreamSignal T> explicit operator T () const requires(GTRY_STREAM_ASSIGNABLE);
 
-		/**
-		* @brief removes the MetaSignal T from the stream. Does not affect the payload
-		*/
-		template<Signal T> auto remove();
-		template<Signal T> auto remove() const requires(GTRY_STREAM_ASSIGNABLE);
-		auto removeUpstream() { return remove<Ready>(); }
-		auto removeUpstream() const requires(GTRY_STREAM_ASSIGNABLE) { return this->data; }
-		auto removeFlowControl() { return remove<Ready>().template remove<Valid>().template remove<Sop>(); }
-		auto removeFlowControl() const requires(GTRY_STREAM_ASSIGNABLE) { return remove<Valid>().template remove<Sop>(); }
 	};
 
 	template<Signal AddT, Signal PayloadT, Signal ...MetaT>	auto attach(Stream<PayloadT, MetaT...>&& stream, AddT&& signal);
@@ -133,6 +124,23 @@ namespace gtry::scl::strm
 	*/
 	template<Signal Wrapper, StreamSignal T, Signal PayloadT, Signal ...MetaT> auto attachAs(Stream<PayloadT, MetaT...>&& stream, T&& metaStream);
 	template<Signal Wrapper, StreamSignal T> auto attachAs(T&& metaStream);
+
+	/**
+	 * @brief inverse of attach
+	 */
+	template<Signal T, StreamSignal StreamT>
+	auto remove(StreamT&& stream);
+
+	template<Signal SigT>
+	auto remove();
+
+	template<StreamSignal StreamT>
+	auto removeUpstream(StreamT&& stream);
+	auto removeUpstream();
+
+	template<StreamSignal StreamT>
+	auto removeFlowControl(StreamT&& stream);
+	auto removeFlowControl();
 
 	template<Signal T, StreamSignal StreamT> constexpr T& get(StreamT&& stream);
 	template<Signal T, StreamSignal StreamT> constexpr const T& get(const StreamT& stream);
@@ -454,33 +462,49 @@ namespace gtry::scl::strm
 		}
 	}
 
-	template<Signal PayloadT, Signal ...Meta>
-	template<Signal T>
-	inline auto Stream<PayloadT, Meta...>::remove()
+	template<Signal T, StreamSignal StreamT>
+	auto remove(StreamT&& stream)
 	{
-		auto metaRefs = internal::remove_from_tuple<T>(_sig);
+		auto metaRefs = internal::remove_from_tuple<T>(stream._sig);
 
 		return std::apply([&](auto&... meta) {
-			Stream<PayloadT, std::remove_cvref_t<decltype(meta)>...> ret;
-			connect(ret.data, this->data);
+			using PayloadT = std::remove_cvref_t<decltype(stream.data)>;
+
+			Stream<PayloadT, std::remove_cvref_t<decltype(meta)>...> ret{
+				connect(std::forward<StreamT>(stream).data),
+			};
 			downstream(ret._sig) = downstream(metaRefs);
 			upstream(metaRefs) = upstream(ret._sig);
 			return ret;
 		}, metaRefs);
 	}
 
-	template<Signal PayloadT, Signal ...Meta>
-	template<Signal T>
-	inline auto Stream<PayloadT, Meta...>::remove() const requires(GTRY_STREAM_ASSIGNABLE)
+	template<Signal SigT>
+	auto remove()
 	{
-		auto metaRefs = internal::remove_from_tuple<T>(_sig);
+		return [&](StreamSignal auto&& in) {
+			return ::gtry::scl::strm::remove<SigT>(std::forward<decltype(in)>(in));
+		};
+	}
 
-		return std::apply([&](auto&... meta) {
-			return Stream<PayloadT, std::remove_cvref_t<decltype(meta)>...>{
-				// this cast is necessary for clang compatibility
-				this->data, (std::tuple<std::remove_cvref_t<decltype(meta)>...>)metaRefs
-			};
-		}, metaRefs);
+	template<StreamSignal StreamT>
+	auto removeUpstream(StreamT&& stream) { return ::gtry::scl::strm::remove<Ready>(std::forward<StreamT>(stream)); }
+
+	inline auto removeUpstream()
+	{
+		return [&](StreamSignal auto&& in) {
+			return ::gtry::scl::strm::removeUpstream(std::forward<decltype(in)>(in));
+		};
+	}
+
+	template<StreamSignal StreamT>
+	auto removeFlowControl(StreamT&& stream) { return std::forward<StreamT>(stream) | remove<Ready>() | remove<Valid>() | remove<Sop>(); }
+
+	inline auto removeFlowControl()
+	{
+		return [&](StreamSignal auto&& in) {
+			return ::gtry::scl::strm::removeFlowControl(std::forward<decltype(in)>(in));
+		};
 	}
 }
 
