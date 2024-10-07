@@ -228,7 +228,6 @@ namespace gtry
 	template<gtry::Signal T>
 	void connect(T& lhs, T& rhs)
 	{
-		using namespace gtry;
 		downstream(lhs) = downstream(rhs);
 		upstream(rhs) = upstream(lhs);
 	}
@@ -240,6 +239,21 @@ namespace gtry
 	requires (Connectable<Ta, Tb> and not BaseSignal<Ta>)
 	void operator <<= (Ta&& lhs, Tb&& rhs) { connect(lhs, rhs); }
 
+	template<typename T>
+	T connect(T&& rhs)
+	{
+		if constexpr (!std::is_rvalue_reference_v<decltype(rhs)>)
+		{
+			static_assert(requires(std::remove_cvref_t<T>& dst) { dst = rhs; }, "Use move to connect signals that contain upstream signals.");
+			return rhs;
+		}
+		else
+		{
+			T ret;
+			connect(ret, rhs);
+			return ret;
+		}
+	}
 
 	template<Signal T>
 	void resetSignal(Reverse<T>& val)
