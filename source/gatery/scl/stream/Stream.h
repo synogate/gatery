@@ -192,7 +192,7 @@ namespace gtry::scl::strm
 	{
 		using Tplain = std::remove_reference_t<AddT>;
 
-		if constexpr (stream.template has<Tplain>())
+		if constexpr (Stream<PayloadT, MetaT...>::template has<Tplain>())
 		{
 			Stream<PayloadT, MetaT...> ret;
 			connect(ret.data, stream.data);
@@ -245,7 +245,7 @@ namespace gtry::scl::strm
 	{
 		using Tplain = std::remove_reference_t<AddT>;
 
-		if constexpr (stream.template has<Tplain>())
+		if constexpr (Stream<PayloadT, MetaT...>::template has<Tplain>())
 		{
 			Stream<PayloadT, MetaT...> ret = stream;
 			ret.set(std::forward<AddT>(signal));
