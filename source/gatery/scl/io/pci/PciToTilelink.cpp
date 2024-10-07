@@ -376,7 +376,7 @@ namespace gtry::scl::pci {
 		TileLinkChannelA a = constructFrom(ret.a);
 		a <<= ret.a;
 
-		TlpPacketStream rr = tileLinkAToRequesterRequest(move(a));
+		TlpPacketStream<strm::EmptyBits> rr = tileLinkAToRequesterRequest(move(a));
 		if (tag)
 		{
 			IF(valid(rr) & sop(rr)) 
