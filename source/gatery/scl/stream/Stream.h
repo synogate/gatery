@@ -102,9 +102,6 @@ namespace gtry::scl::strm
 		template<Signal T>
 		static constexpr bool has();
 
-		template<StreamSignal T> T reduceTo();
-		template<StreamSignal T> T reduceTo() const requires(GTRY_STREAM_ASSIGNABLE);
-
 		template<StreamSignal T> explicit operator T ();
 		template<StreamSignal T> explicit operator T () const requires(GTRY_STREAM_ASSIGNABLE);
 
@@ -158,6 +155,17 @@ namespace gtry::scl::strm
 
 	template<typename FunT>
 	auto transform(FunT&& fun);
+
+	/**
+	 * @brief Cast Stream into a different Stream type that has the same payload but a subset of the meta signals.
+	 * 
+	 * This function is also used to reorder the meta signals, as a work around until attach can insert meta signal in sorted order.
+	 */
+	template<StreamSignal T, StreamSignal srcT>
+	T reduceTo(srcT&& stream);
+
+	template<StreamSignal SigT>
+	auto reduceTo();
 }
 
 namespace gtry::scl::strm
@@ -336,41 +344,36 @@ namespace gtry::scl::strm
 		};
 	}
 
-	template<typename ...T>
-	void ignoreAll(T ...t) { }
-
-	template<typename QueryMeta, Signal PayloadT, Signal ...Meta>
-	int reductionChecker(const Stream<PayloadT, Meta...>&) { 
-		static_assert(Stream<PayloadT, Meta...>::template has<QueryMeta>(), "Trying to reduce to a stream type that actually has additional meta flags in its signature.");
-		return 0;
+	namespace internal
+	{
+		template<typename QueryMeta, Signal PayloadT, Signal ...Meta>
+		int reductionChecker(const Stream<PayloadT, Meta...>&) { 
+			static_assert(Stream<PayloadT, Meta...>::template has<QueryMeta>(), "Trying to reduce to a stream type that actually has additional meta flags in its signature.");
+			return 0;
+		}
 	}
 
-	template<Signal PayloadT, Signal ...Meta>
-	template<StreamSignal T>
-	inline T Stream<PayloadT, Meta...>::reduceTo()
+	template<StreamSignal T, StreamSignal srcT>
+	T reduceTo(srcT&& stream)
 	{
-		T ret;
-		connect(ret.data, data);
+		T ret{
+			connect(std::forward<srcT>(stream).data)
+		};
 
 		std::apply([&](auto&... meta) {
-			ignoreAll(reductionChecker<std::remove_cvref_t<decltype(meta)>>(*this)...);
-			((meta <<= std::get<std::remove_cvref_t<decltype(meta)>>(_sig)), ...);
+			(internal::reductionChecker<std::remove_cvref_t<decltype(meta)>>(stream), ...);
+			((meta <<= std::get<std::remove_cvref_t<decltype(meta)>>(std::forward<srcT>(stream)._sig)), ...);
 		}, ret._sig);
 		return ret;
 	}
 
-	template<Signal PayloadT, Signal ...Meta>
-	template<StreamSignal T>
-	inline T Stream<PayloadT, Meta...>::reduceTo() const requires(GTRY_STREAM_ASSIGNABLE)
+	template<StreamSignal SigT>
+	auto reduceTo()
 	{
-		T ret{ data };
-		std::apply([&](auto&... meta) {
-			ignoreAll(reductionChecker<std::remove_cvref_t<decltype(meta)>>(*this)...);
-			((get<std::remove_cvref_t<decltype(meta)>>(ret) = meta), ...);
-		}, ret._sig);
-		return ret;
+		return [&](StreamSignal auto&& in) {
+			return ::gtry::scl::strm::reduceTo<SigT>(std::forward<decltype(in)>(in));
+		};
 	}
-
 
 	template<Signal PayloadT, Signal ...Meta>
 	template<StreamSignal T> 

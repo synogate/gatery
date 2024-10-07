@@ -113,10 +113,10 @@ namespace gtry::scl::strm {
 	template<StreamSignal StreamT>
 	StreamT pop(RepeatBuffer<StreamData<StreamT>>& repeatBuffer, const RepeatBufferStreamSettings &settings)
 	{
-		auto ret = (repeatBuffer.rdPeek()
+		auto ret = repeatBuffer.rdPeek()
 			| strm::attach(Ready{})
 			| strm::attach(Valid{ '1' })
-			).template reduceTo<StreamT>();
+			| strm::reduceTo<StreamT>();
 
 		valid(ret) = internal::buildValidLatch(settings.releaseNextPacket, repeatBuffer.rdIsLast(), ready(ret));
 

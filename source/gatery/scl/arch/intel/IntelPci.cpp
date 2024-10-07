@@ -78,11 +78,9 @@ namespace gtry::scl::arch::intel {
 		IF(pci::HeaderCommon::fromRawDw0(rawHdr.lower(32_b)).is3dw())
 			headerSizeInBits = 96;
 
-		return (strm::streamShiftRight(move(localTx), headerSizeInBits)
+		return strm::streamShiftRight(move(localTx), headerSizeInBits)
 			| strm::attach(Error{ '0' })
 			| strm::attach(PTilePrefix{ BVec{"32d0"} })
-			).template reduceTo<scl::strm::RvPacketStream<BVec, EmptyBits, scl::Error, PTileHeader, PTilePrefix>>();
+			| strm::reduceTo<strm::RvPacketStream<BVec, EmptyBits, scl::Error, PTileHeader, PTilePrefix>>();
 	}
 }
-
-

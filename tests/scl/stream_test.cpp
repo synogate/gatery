@@ -257,13 +257,13 @@ BOOST_FIXTURE_TEST_CASE(stream_transform, StreamTransferFixture)
 		// const compile test
 		const scl::VStream<UInt, scl::Eop> vs{ 5_b };
 		auto res = remove<scl::Eop>(vs);
-		auto rsr = vs.reduceTo<scl::Stream<UInt>>();
+		auto rsr = reduceTo<scl::Stream<UInt>>(vs);
 		auto vso = transform(vs, std::identity{});
 	}
 
-	scl::RvStream<UInt> in = (scl::RvPacketStream<UInt, scl::Sop>{ 5_b }
+	scl::RvStream<UInt> in = scl::RvPacketStream<UInt, scl::Sop>{ 5_b }
 								| scl::strm::remove<scl::Sop>()
-								).reduceTo<scl::RvStream<UInt>>()
+								| scl::strm::reduceTo<scl::RvStream<UInt>>()
 								| scl::strm::remove<scl::Eop>();
 	In(in);
 
@@ -273,8 +273,8 @@ BOOST_FIXTURE_TEST_CASE(stream_transform, StreamTransferFixture)
 		Bit test;
 	};
 
-	scl::RvStream<Intermediate> im = in
-		.reduceTo<scl::RvStream<UInt>>()
+	scl::RvStream<Intermediate> im = move(in)
+		| scl::strm::reduceTo<scl::RvStream<UInt>>()
 		| scl::strm::transform([](const UInt& data) {
 			return Intermediate{ data, '1' };
 		});

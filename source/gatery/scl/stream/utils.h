@@ -751,10 +751,10 @@ namespace gtry::scl::strm
 			crossingStream = reg(crossingStream, RegisterSettings{ .clock = dontSimplifyEnableRegClk });
 		}
 
-		StreamT out = (move(crossingStream)
+		StreamT out = move(crossingStream)
 			| attach(Ready{})
 			| attach(Valid{})
-			).template reduceTo<StreamT>();
+			| reduceTo<StreamT>();
 
 		Bit outValid;
 		outValid = flag(outputEnableCondition, outValid & ready(out));
