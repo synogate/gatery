@@ -298,9 +298,9 @@ namespace gtry::scl::strm
 		auto [result, duplicated] = replicateForEntirePacket(move(stream), move(metaStream));
 		ready(duplicated) = '1';
 
-		auto out = strm::attach(move(result), move(*duplicated));
+		Stream<PayloadT, Meta..., AddPayloadT> out = strm::attach(move(result), move(*duplicated));
 
-		if constexpr (stream.template has<Error>() && out.template has<Error>())
+		if constexpr (Stream<PayloadT, Meta...>::template has<Error>())
 			error(out) |= error(duplicated);
 
 		return out;
