@@ -67,19 +67,17 @@ namespace gtry::scl::strm
 	template<StreamSignal StreamT>
 	StreamT regDownstream(StreamT&& in, const RegisterSettings& settings = {});
 
-	//untested
 	inline auto regDownstream(const RegisterSettings& settings = {})
 	{
 		return [=](auto&& in) { return regDownstream(std::forward<decltype(in)>(in), settings); };
 	}
 
 	template<StreamSignal StreamT>
-	StreamT delay(StreamT&& in, size_t minCycles);
+	StreamT delay(StreamT&& in, size_t cycles, const RegisterSettings& settings = {});
 
-	//untested
-	inline auto delay(size_t minCycles)
+	inline auto delay(size_t cycles, const RegisterSettings& settings = {})
 	{
-		return [=](auto&& in) { return delay(std::forward<decltype(in)>(in), minCycles); };
+		return [=](auto&& in) { return delay(std::forward<decltype(in)>(in), cycles, settings); };
 	}
 
 	/**
@@ -471,11 +469,14 @@ namespace gtry::scl::strm
 
 
 	template<StreamSignal StreamT>
-	StreamT delay(StreamT&& in, size_t minCycles) {
-		StreamT ret = move(in);
+	StreamT delay(StreamT&& in, size_t cycles, const RegisterSettings& settings) {
+		StreamT ret = std::forward<StreamT>(in);
 
-		for (int i = 0; i < ((int) minCycles) - 1; i++) {
-			ret = regDownstreamBlocking(move(ret));
+		if(cycles > 0)
+		{
+			for (size_t i = 0; i < cycles - 1; i++)
+				ret = regDownstreamBlocking(move(ret), settings);
+			ret = regDownstream(move(ret), settings);
 		}
 
 		if(minCycles > 0 ) {
