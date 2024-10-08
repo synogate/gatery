@@ -1221,7 +1221,7 @@ struct AddStreamAsMetaDataSimulationFixture : public BoostUnitTestSimulationFixt
 		//HCL_NAMED(wrappped);
 		//auto out = move(in).add(move(wrappped));
 
-		auto out = move(in).addAs<MyMeta>(move(metaIn));
+		auto out = move(in) | scl::strm::attachAs<MyMeta>(move(metaIn));
 		pinOut(out, "out");
 
 		addSimulationProcess([&, this]()->SimProcess {
@@ -1272,7 +1272,7 @@ struct AddStreamAsMetaDataSimulationFixture : public BoostUnitTestSimulationFixt
 				scl::strm::SimuStreamPerformTransferWait<decltype(out)> streamTransfer;
 				do {
 					co_await streamTransfer.wait(out, clk);
-					BOOST_TEST(simu(out.template get<MyMeta>().myMeta) == d);
+					BOOST_TEST(simu(get<MyMeta>(out).myMeta) == d);
 				} while (!simuEop(out));
 			}
 			stopTest();
@@ -1316,11 +1316,13 @@ struct AddMetaSignalFromPacketSimulationFixture : public BoostUnitTestSimulation
 		emptyBits(in) = BitWidth::count(in->width().bits());
 		pinIn(in, "in");
 
-		scl::RvPacketStream<UInt, scl::EmptyBits, MyMeta> out = move(in) | 
-					scl::strm::addMetaSignalFromPacket(maxPacketW.bits() / streamW.bits() + 1, 
-								[&](scl::RvPacketStream<UInt, scl::EmptyBits> &&in) {
-									return scl::strm::packetSize(move(in), maxPacketW).transform([](const UInt &size) { return MyMeta{ size }; }) | scl::strm::regDownstream();
-								});
+		scl::RvPacketStream<UInt, scl::EmptyBits, MyMeta> out = move(in) 
+			| scl::strm::addMetaSignalFromPacket(maxPacketW.bits() / streamW.bits() + 1, 
+				[&](scl::RvPacketStream<UInt, scl::EmptyBits> &&in) {
+					return scl::strm::packetSize(move(in), maxPacketW) 
+						| scl::strm::transform([](const UInt &size) { return MyMeta{ size }; }) 
+						| scl::strm::regDownstream();
+				});
 
 		pinOut(out, "out");
 
@@ -1352,7 +1354,7 @@ struct AddMetaSignalFromPacketSimulationFixture : public BoostUnitTestSimulation
 				scl::strm::SimuStreamPerformTransferWait<decltype(out)> streamTransfer;
 				do {
 					co_await streamTransfer.wait(out, clk);
-					BOOST_TEST(simu(out.template get<MyMeta>().myMeta) == packet.size());
+					BOOST_TEST(simu(get<MyMeta>(out).myMeta) == packet.size());
 				} while (!simuEop(out));
 			}
 			stopTest();

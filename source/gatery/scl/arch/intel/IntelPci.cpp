@@ -30,7 +30,7 @@ namespace gtry::scl::arch::intel {
 		//base stream is the stream comprised of the header. It is a one-beat packetStream.
 		//we must construct it from scratch
 		TlpPacketStream<EmptyBits, PTileBarRange> hdr(rxW);
-		*hdr = zext(capture(swapEndian(rx.template get<PTileHeader>().header), valid(rx) & sop(rx)));
+		*hdr = zext(capture(swapEndian(get<PTileHeader>(rx).header), valid(rx) & sop(rx)));
 
 		Bit hasAlreadyCapturedHdr = flag(valid(rx) & sop(rx), transfer(rx) & eop(rx), '0');//these two lines seem like overkill, there must be an easier logic
 		valid(hdr) = flagInstantSet(valid(rx) & sop(rx) & !hasAlreadyCapturedHdr, ready(hdr), '0');
@@ -38,11 +38,11 @@ namespace gtry::scl::arch::intel {
 		emptyBits(hdr) = rxW.bits() - 128; //4DW
 		IF(valid(hdr) & HeaderCommon::fromRawDw0(hdr->lower(32_b)).is3dw())
 			emptyBits(hdr) = rxW.bits() - 96; //3DW
-		hdr.template get<PTileBarRange>() = rx.template get<PTileBarRange>();
+		get<PTileBarRange>(hdr) = get<PTileBarRange>(rx);
 	
-		TlpPacketStream<EmptyBits, PTileBarRange> dataStrm = rx
-			.template remove<PTilePrefix>()
-			.template remove<PTileHeader>();
+		TlpPacketStream<EmptyBits, PTileBarRange> dataStrm = move(rx)
+			| strm::remove<PTilePrefix>()
+			| strm::remove<PTileHeader>();
 			
 		//must mask dataStrm if the header claims there is no data and signal ready upstream
 		IF(transfer(hdr) & !HeaderCommon::fromRawDw0(hdr->lower(32_b)).hasData()) {
@@ -71,7 +71,7 @@ namespace gtry::scl::arch::intel {
 		IF(pci::HeaderCommon::fromRawDw0(rawHdr.lower(32_b)).is3dw())
 			rawHdr.upper(32_b) = 0;
 		
-		TlpPacketStream<EmptyBits, PTileHeader> localTx = move(tx).add(PTileHeader{ swapEndian(rawHdr) });
+		TlpPacketStream<EmptyBits, PTileHeader> localTx = attach(move(tx), PTileHeader{ swapEndian(rawHdr) });
 		
 		//remove header from front of TLP
 		UInt headerSizeInBits = 128;
@@ -79,10 +79,8 @@ namespace gtry::scl::arch::intel {
 			headerSizeInBits = 96;
 
 		return strm::streamShiftRight(move(localTx), headerSizeInBits)
-			.add(Error{ '0' })
-			.add(PTilePrefix{ BVec{"32d0"} })
-			.template reduceTo<scl::strm::RvPacketStream<BVec, EmptyBits, scl::Error, PTileHeader, PTilePrefix>>();
+			| strm::attach(Error{ '0' })
+			| strm::attach(PTilePrefix{ BVec{"32d0"} })
+			| strm::reduceTo<strm::RvPacketStream<BVec, EmptyBits, scl::Error, PTileHeader, PTilePrefix>>();
 	}
 }
-
-

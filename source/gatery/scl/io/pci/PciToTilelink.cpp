@@ -46,7 +46,7 @@ namespace gtry::scl::pci {
 		Area area{ "scl_CRToTileLinkA", true };
 		TlpPacketStream<EmptyBits, BarInfo> complReq(tlpStreamW);
 		HCL_DESIGNCHECK_HINT(complReq->width() >= 128_b, "this design is limited to completion widths that can accommodate an entire 4dw header into one beat");
-		complReq.set(EmptyBits{ BitWidth::count(tlpStreamW.bits()) });
+		get<EmptyBits>(complReq).emptyBits = BitWidth::count(tlpStreamW.bits());
 
 		RequestHeader reqHdr = RequestHeader::fromRaw(complReq->lower(128_b));
 		HCL_NAMED(reqHdr);
@@ -55,7 +55,7 @@ namespace gtry::scl::pci {
 
 		//make sure that the bar aperture is large enough to accommodate the TileLink interface
 
-		answerInfo.error |= complReq.get<BarInfo>().logByteAperture < a->address.width().bits();
+		answerInfo.error |= get<BarInfo>(complReq).logByteAperture < a->address.width().bits();
 		//IF(valid(complReq))
 		//	sim_assert(complReq.get<BarInfo>().logByteAperture >= a->address.width().bits()) << "the bar aperture is not adequate";
 		UInt byteAddress = cat(reqHdr.wordAddress, "2b00").lower(a->address.width());
@@ -101,7 +101,7 @@ namespace gtry::scl::pci {
 
 		TlpPacketStream<EmptyBits> complCompl(tlpStreamW);
 		HCL_DESIGNCHECK_HINT(complCompl->width() >= 96_b, "this design is limited to completion widths that can accommodate an entire 3dw header into one beat");
-		complCompl.set(EmptyBits{ BitWidth::count(tlpStreamW.bits()) });
+		get<EmptyBits>(complCompl).emptyBits = BitWidth::count(tlpStreamW.bits());
 		(*complCompl) = ConstBVec(complCompl->width());
 		(*complCompl)(96, 32_b) = d->data;
 		complCompl->lower(96_b) = (BVec) completionHdr;
@@ -376,24 +376,20 @@ namespace gtry::scl::pci {
 		TileLinkChannelA a = constructFrom(ret.a);
 		a <<= ret.a;
 
-
-		auto rr = tileLinkAToRequesterRequest(move(a));
+		TlpPacketStream<strm::EmptyBits> rr = tileLinkAToRequesterRequest(move(a));
 		if (tag)
-			rr = rr.transform([&](const BVec& in) {
-				BVec ret = in;
-				IF(valid(rr) & sop(rr)) {
-					auto hdr = RequestHeader::fromRaw(ret.lower(128_b));
-					hdr.tag = zext(*tag);
-					ret.lower(128_b) = hdr;
-				}
-				return ret;
-			});
+		{
+			IF(valid(rr) & sop(rr)) 
+			{
+				auto hdr = RequestHeader::fromRaw(rr->lower(128_b));
+				hdr.tag = zext(*tag);
+				rr->lower(128_b) = hdr;
+			}
+		}
 	
 		*reqInt.request <<= rr;
 		*ret.d = requesterCompletionToTileLinkDCheapBurst(move(reqInt.completion), sizeW);
-
 		HCL_NAMED(ret);
-
 		return ret;
 	}
 }

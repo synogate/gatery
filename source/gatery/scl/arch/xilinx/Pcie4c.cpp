@@ -46,7 +46,7 @@ namespace gtry::scl::arch::xilinx {
 		Axi4PacketStream<CQUser> cq;
 	
 		*cq = out("m_axis_cq_tdata", m_cfg.dataBusW);
-		cq.template get<CQUser>() = { out("m_axis_cq_tuser", m_cfg.dataBusW == 512_b? 183_b: 88_b) };
+		get<CQUser>(cq) = { out("m_axis_cq_tuser", m_cfg.dataBusW == 512_b? 183_b: 88_b) };
 	
 		valid(cq) = out("m_axis_cq_tvalid");
 		dwordEnable(cq) = out("m_axis_cq_tkeep", BitWidth(m_cfg.dataBusW.bits()/32));
@@ -65,7 +65,7 @@ namespace gtry::scl::arch::xilinx {
 		in("s_axis_cc_tkeep", BitWidth(m_cfg.dataBusW.bits()/32)) = dwordEnable(cc);
 	
 		in("s_axis_cc_tlast") = eop(cc);
-		in("s_axis_cc_tuser", m_cfg.dataBusW == 512_b? 81_b: 33_b) = cc.template get<CCUser>().raw;
+		in("s_axis_cc_tuser", m_cfg.dataBusW == 512_b? 81_b: 33_b) = get<CCUser>(cc).raw;
 		in("s_axis_cc_tvalid") = valid(cc);
 	
 		ready(cc) = out("s_axis_cc_tready", 4_b).lsb(); //all 4 bits indicate the same value, "any of the bit" can be used
@@ -79,7 +79,7 @@ namespace gtry::scl::arch::xilinx {
 		Axi4PacketStream<RCUser> rc;
 	
 		*rc = out("m_axis_rc_tdata", m_cfg.dataBusW);
-		rc.template get<RCUser>() = { out("m_axis_rc_tuser", m_cfg.dataBusW == 512_b ? 161_b : 75_b) };
+		get<RCUser>(rc) = { out("m_axis_rc_tuser", m_cfg.dataBusW == 512_b ? 161_b : 75_b) };
 	
 		valid(rc) = out("m_axis_rc_tvalid");
 		dwordEnable(rc) = out("m_axis_rc_tkeep", BitWidth(m_cfg.dataBusW.bits()/32));
@@ -98,7 +98,7 @@ namespace gtry::scl::arch::xilinx {
 		in("s_axis_rq_tkeep", BitWidth(m_cfg.dataBusW.bits()/32)) = dwordEnable(rq);
 	
 		in("s_axis_rq_tlast") = eop(rq);
-		in("s_axis_rq_tuser", m_cfg.dataBusW == 512_b ? 137_b : 62_b) = rq.template get<RQUser>().raw;
+		in("s_axis_rq_tuser", m_cfg.dataBusW == 512_b ? 137_b : 62_b) = get<RQUser>(rq).raw;
 		in("s_axis_rq_tvalid") = valid(rq);
 	
 		ready(rq) = out("s_axis_rq_tready", 4_b).lsb();

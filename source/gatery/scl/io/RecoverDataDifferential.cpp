@@ -48,7 +48,7 @@ namespace gtry::scl {
 
 		// sample data based on clock estimate
 		VStream<Bit, SingleEnded> out = strm::createVStream(p, phaseCounter.isLast())
-			.add(SingleEnded{.zero = se0});
+			| strm::attach(SingleEnded{.zero = se0});
 
 		// recover clock and shift sample point
 		IF(p != reg(p, '1') | n != reg(n, '0'))
@@ -78,7 +78,7 @@ namespace gtry::scl {
 		p = reg(p); HCL_NAMED(p);
 		n = reg(n); HCL_NAMED(n);
 
-		VStream<Bit, SingleEnded> out = strm::createVStream(p, '1').add(SingleEnded{ .zero = se0 });
+		VStream<Bit, SingleEnded> out = strm::createVStream(p, '1') | strm::attach(SingleEnded{ .zero = se0 });
 		valid(out) &= !flag(se0, !se0);
 
 		return out;

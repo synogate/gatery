@@ -181,7 +181,8 @@ BOOST_FIXTURE_TEST_CASE(io_uart_fifo_cyc1000, BoostUnitTestSimulationFixture, *b
 
 	size_t baudRate = 115'200;
 	Bit rx = pinIn().setName("RX");
-	Bit tx = scl::uartRx(reg(rx, '1'), baudRate).add(scl::Ready{}) 
+	Bit tx = scl::uartRx(reg(rx, '1'), baudRate)
+		| attach(scl::Ready{}) 
 		| scl::strm::fifo(256) 
 		| scl::uartTx(baudRate);
 	pinOut(tx, "TX");
@@ -227,8 +228,8 @@ void setup_recoverDataDifferential(hlim::ClockRational actualBusClockFrequency, 
 	scl::VStream<Bit, scl::SingleEnded> patch = scl::recoverDataDifferential(busClock, ioP, ioN);
 
 	scl::VStream<gtry::UInt> stream("2b0");
-	stream->lsb() = *patch & !patch.template get<scl::SingleEnded>().zero;
-	stream->msb() = !*patch & !patch.template get<scl::SingleEnded>().zero;
+	stream->lsb() = *patch & !get<scl::SingleEnded>(patch).zero;
+	stream->msb() = !*patch & !get<scl::SingleEnded>(patch).zero;
 	valid(stream) = valid(patch);
 
 	auto streamValid = valid(stream);

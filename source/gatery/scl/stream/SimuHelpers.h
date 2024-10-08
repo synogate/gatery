@@ -182,7 +182,7 @@ namespace gtry::scl::strm
 		if constexpr (StreamT::template has<Empty>())
 			simu(empty(stream)).invalidate();
 		if constexpr (StreamT::template has<EmptyBits>())
-			simu(stream.template get<EmptyBits>().emptyBits).invalidate();
+			simu(get<EmptyBits>(stream).emptyBits).invalidate();
 
 		simu(*stream).invalidate();
 
@@ -267,7 +267,7 @@ namespace gtry::scl::strm
 
 			if constexpr (StreamT::template has<scl::EmptyBits>())
 			{
-				const UInt& emptyBits = stream.template get<scl::EmptyBits>().emptyBits;
+				const UInt& emptyBits = get<scl::EmptyBits>(stream).emptyBits;
 				simu(emptyBits).invalidate();
 				if (isLastBeat) {
 					simu(emptyBits) = stream->size() - (packet.payload.size() % stream->size());
@@ -375,7 +375,7 @@ namespace gtry::scl::strm
 				// Potentially crop off bytes in last beat
 				if constexpr (StreamT::template has<scl::EmptyBits>())
 				{
-					size_t numBitsToCrop = simu(stream.template get<scl::EmptyBits>().emptyBits);
+					size_t numBitsToCrop = simu(get<scl::EmptyBits>(stream).emptyBits);
 					HCL_DESIGNCHECK(numBitsToCrop < beatPayload.size());
 					beatPayload.resize(beatPayload.size() - numBitsToCrop);
 				}

@@ -36,7 +36,7 @@ namespace gtry::scl::strm
 		HCL_DESIGNCHECK(maxCredit != 0);
 		HCL_DESIGNCHECK(initialCredit <= maxCredit);
 
-		Stream out = in.template remove<scl::Ready>().add(Credit{
+		Stream out = std::forward<T>(in) | remove<scl::Ready>() | attach(Credit{
 			.initialCredit = initialCredit,
 			.maxCredit = maxCredit
 		});
@@ -47,7 +47,7 @@ namespace gtry::scl::strm
 		HCL_NAMED(credits);
 
 		UInt change = ConstUInt(0, credits.width());
-		const Bit& incCredit = *out.template get<Credit>().increment;
+		const Bit& incCredit = *get<Credit>(out).increment;
 
 		IF(transfer(in) & !incCredit)
 			change |= '1'; //effectively makes change = -1
@@ -70,8 +70,8 @@ namespace gtry::scl::strm
 	template<StreamSignal T>
 	auto creditStreamToVStream(T&& in, Bit incrementCredit)
 	{
-		*in.template get<Credit>().increment = incrementCredit;
-		return in.template remove<Credit>();
+		*get<Credit>(in).increment = incrementCredit;
+		return remove<Credit>(in);
 	}
 
 	inline auto creditStreamToVStream(Bit incrementCredit)
@@ -84,10 +84,10 @@ namespace gtry::scl::strm
 	{
 		Area ent{ "scl_creditStreamToRvStream", true };
 
-		Credit& inCredit = in.template get<Credit>();
+		Credit& inCredit = get<Credit>(in);
 
 		HCL_DESIGNCHECK_HINT(inCredit.initialCredit != 0, "Initial credit is 0. This will cause a deadlock.");
-		auto out = fifo(in.template remove<Credit>().add(Ready{}), inCredit.initialCredit);
+		auto out = fifo(in | remove<Credit>() | attach(Ready{}), inCredit.initialCredit);
 		*inCredit.increment = transfer(out);
 		return out;
 	}
@@ -104,7 +104,7 @@ namespace gtry::scl::strm
 	{
 		T out = constructFrom(in);
 		valid(in).resetValue('0');
-		out.template get<Credit>().increment->resetValue('0');
+		get<Credit>(out).increment->resetValue('0');
 
 		downstream(out) = reg(copy(downstream(in)), settings);
 		upstream(in) = reg(copy(upstream(out)), settings);
@@ -147,7 +147,7 @@ namespace gtry::scl::strm
 			regAttr.autoPipelineLimit = maxDelay - 2;
 			regAttr.autoPipelineGroup = groupName + "_up";
 
-			out.template get<Credit>().increment->resetValueRemove();
+			get<Credit>(out).increment->resetValueRemove();
 			upstream(in) = reg(reg(copy(upstream(out)), { .clock = autoPipelineClkUp }));
 		}
 

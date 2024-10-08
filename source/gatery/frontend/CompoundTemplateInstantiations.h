@@ -76,7 +76,7 @@
 	GTRY_EXTERN_TEMPLATE_COMPOUND_MINIMAL(__VA_ARGS__) \
 	extern template __VA_ARGS__ gtry::scl::strm::regDownstreamBlocking(__VA_ARGS__&&, const RegisterSettings&); \
 	extern template __VA_ARGS__ gtry::scl::strm::regReady(__VA_ARGS__&&, const RegisterSettings&); \
-	extern template __VA_ARGS__ gtry::scl::strm::delay(__VA_ARGS__&&, size_t); \
+	extern template __VA_ARGS__ gtry::scl::strm::delay(__VA_ARGS__&&, size_t, const RegisterSettings&); \
 	extern template __VA_ARGS__ gtry::scl::strm::regDecouple(__VA_ARGS__&, const RegisterSettings&); \
 	extern template __VA_ARGS__ gtry::scl::strm::pipeinput(__VA_ARGS__&&);
 
@@ -85,7 +85,7 @@
 	GTRY_INSTANTIATE_TEMPLATE_COMPOUND_MINIMAL(__VA_ARGS__) \
 	template __VA_ARGS__ gtry::scl::strm::regDownstreamBlocking(__VA_ARGS__&&, const RegisterSettings&); \
 	template __VA_ARGS__ gtry::scl::strm::regReady(__VA_ARGS__&&, const RegisterSettings&); \
-	template __VA_ARGS__ gtry::scl::strm::delay(__VA_ARGS__&&, size_t); \
+	template __VA_ARGS__ gtry::scl::strm::delay(__VA_ARGS__&&, size_t, const RegisterSettings&); \
 	template __VA_ARGS__ gtry::scl::strm::regDecouple(__VA_ARGS__&, const RegisterSettings&); \
 	template __VA_ARGS__ gtry::scl::strm::pipeinput(__VA_ARGS__&&);
 

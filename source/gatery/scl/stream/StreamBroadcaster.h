@@ -48,7 +48,7 @@ namespace gtry::scl
 				if constexpr (StreamT::template has<Ready>())
 					ready(m_helper->source) = '1';
 				if constexpr (StreamT::template has<scl::strm::Credit>()) {
-					auto& sourceCredit = m_helper->source.template get<scl::strm::Credit>();
+					auto& sourceCredit = get<scl::strm::Credit>(m_helper->source);
 					*sourceCredit.increment = '1';
 				}
 			}
@@ -75,14 +75,14 @@ namespace gtry::scl
 
 				if constexpr (StreamT::template has<scl::strm::Credit>()) {
 
-					UInt counter = BitWidth::last(m_helper->source.template get<scl::strm::Credit>().maxCredit);
+					UInt counter = BitWidth::last(get<scl::strm::Credit>(m_helper->source).maxCredit);
 					counter = reg(counter, 0);
 
-					auto& sourceCredit = m_helper->source.template get<scl::strm::Credit>();
+					auto& sourceCredit = get<scl::strm::Credit>(m_helper->source);
 					IF(counter == 0)
 						*sourceCredit.increment = '0';
 					
-					Bit increment = *sink.template get<scl::strm::Credit>().increment;
+					Bit increment = *get<scl::strm::Credit>(sink).increment;
 					Bit decrement = final(*sourceCredit.increment);
 					
 					UInt change = ConstUInt(0, counter.width());

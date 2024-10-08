@@ -256,15 +256,15 @@ BOOST_FIXTURE_TEST_CASE(stream_transform, StreamTransferFixture)
 	{
 		// const compile test
 		const scl::VStream<UInt, scl::Eop> vs{ 5_b };
-		auto res = vs.remove<scl::Eop>();
-		auto rsr = vs.reduceTo<scl::Stream<UInt>>();
-		auto vso = vs.transform(std::identity{});
+		auto res = remove<scl::Eop>(vs);
+		auto rsr = reduceTo<scl::Stream<UInt>>(vs);
+		auto vso = transform(vs, std::identity{});
 	}
 
 	scl::RvStream<UInt> in = scl::RvPacketStream<UInt, scl::Sop>{ 5_b }
-								.remove<scl::Sop>()
-								.reduceTo<scl::RvStream<UInt>>()
-								.remove<scl::Eop>();
+								| scl::strm::remove<scl::Sop>()
+								| scl::strm::reduceTo<scl::RvStream<UInt>>()
+								| scl::strm::remove<scl::Eop>();
 	In(in);
 
 	struct Intermediate
@@ -273,13 +273,13 @@ BOOST_FIXTURE_TEST_CASE(stream_transform, StreamTransferFixture)
 		Bit test;
 	};
 
-	scl::RvStream<Intermediate> im = in
-		.reduceTo<scl::RvStream<UInt>>()
-		.transform([](const UInt& data) {
+	scl::RvStream<Intermediate> im = move(in)
+		| scl::strm::reduceTo<scl::RvStream<UInt>>()
+		| scl::strm::transform([](const UInt& data) {
 			return Intermediate{ data, '1' };
 		});
 
-	scl::RvStream<UInt> out = im.transform(&Intermediate::data);
+	scl::RvStream<UInt> out = transform(move(im), &Intermediate::data);
 	Out(out);
 
 	simulateTransferTest(in, out);
@@ -908,10 +908,10 @@ BOOST_FIXTURE_TEST_CASE(spi_stream_test, StreamTransferFixture)
 	scl::RvStream<UInt> in{ .data = 8_b };
 	In(in);
 
-	scl::RvStream<BVec> inBVec = in.transform([](const UInt& v) { return (BVec)v; });
+	scl::RvStream<BVec> inBVec = move(in)  | scl::strm::transform([](const UInt& v) { return (BVec)v; });
 	scl::RvStream<BVec> outBVec = scl::SpiMaster{}.pinTestLoop().clockDiv(3).generate(inBVec);
 
-	scl::RvStream<UInt> out = outBVec.transform([](const BVec& v) { return (UInt)v; });
+	scl::RvStream<UInt> out = transform(move(outBVec), [](const BVec& v) { return (UInt)v; });
 	Out(out);
 
 	simulateTransferTest(in, out);
@@ -1918,7 +1918,7 @@ BOOST_FIXTURE_TEST_CASE(streamInsert_fuzz_test, BoostUnitTestSimulationFixture)
 	scl::RvPacketStream<BVec, scl::EmptyBits> inInsert{ inBase->width() };
 
 	for (scl::RvPacketStream<BVec, scl::EmptyBits>& in : { std::ref(inBase), std::ref(inInsert) })
-		in.template get<scl::EmptyBits>().emptyBits = BitWidth::count(inBase->width().bits());
+		get<scl::EmptyBits>(in).emptyBits = BitWidth::count(inBase->width().bits());
 
 	auto out = scl::strm::insert(move(inBase), std::move(inInsert), std::move(inOffset));
 
@@ -2543,7 +2543,7 @@ BOOST_FIXTURE_TEST_CASE(credit_broadcaster_test, BoostUnitTestSimulationFixture)
 	scl::RvStream<UInt> in0{ .data = 4_b };
 	auto in0WithCredits = scl::strm::creditStream(move(in0)); HCL_NAMED(in0WithCredits);
 	pinIn(in0WithCredits, "in0WithCredits");
-	Bit& in0_credits = *in0WithCredits.template get<scl::strm::Credit>().increment;
+	Bit& in0_credits = *get<scl::strm::Credit>(in0WithCredits).increment;
 
 	scl::StreamBroadcaster caster(move(in0WithCredits));
 
@@ -2552,8 +2552,8 @@ BOOST_FIXTURE_TEST_CASE(credit_broadcaster_test, BoostUnitTestSimulationFixture)
 	auto out1WithCredits = caster.bcastTo();
 	pinOut(out1WithCredits, "out1WithCredits");
 
-	Bit& out0_credits = *out0WithCredits.template get<scl::strm::Credit>().increment;
-	Bit& out1_credits = *out1WithCredits.template get<scl::strm::Credit>().increment;
+	Bit& out0_credits = *get<scl::strm::Credit>(out0WithCredits).increment;
+	Bit& out1_credits = *get<scl::strm::Credit>(out1WithCredits).increment;
 
 	std::mt19937 mt(9384);
 	//check that the downstream signals are being properly forward broadcasted to all sinks

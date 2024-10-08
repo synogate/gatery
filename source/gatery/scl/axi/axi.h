@@ -158,18 +158,19 @@ namespace gtry::scl
 	template<Signal T>
 	inline RvPacketStream<AxiReadData> connectMemoryReadPort(Memory<T>& mem, RvStream<AxiAddress>&& req)
 	{
-		RvPacketStream<AxiReadData> resp = axiAddBurst(move(req)).transform([&](const AxiAddress& ar) {
-			BitWidth dataW = width(mem.defaultValue());
-			BitWidth wordAddrW = BitWidth::count(dataW.bytes());
+		RvPacketStream<AxiReadData> resp = axiAddBurst(move(req)) | 
+			strm::transform([&](const AxiAddress& ar) {
+				BitWidth dataW = width(mem.defaultValue());
+				BitWidth wordAddrW = BitWidth::count(dataW.bytes());
 
-			UInt wordAddr = ar.addr.upper(-wordAddrW);
-			return AxiReadData{
-				.id = ar.id,
-				.data = (BVec)pack(mem[wordAddr]),
-				.resp = ConstBVec((size_t)AxiResponseCode::OKAY, 2_b),
-				.user = BVec{0}
-			};
-		});
+				UInt wordAddr = ar.addr.upper(-wordAddrW);
+				return AxiReadData{
+					.id = ar.id,
+					.data = (BVec)pack(mem[wordAddr]),
+					.resp = ConstBVec((size_t)AxiResponseCode::OKAY, 2_b),
+					.user = BVec{0}
+				};
+			});
 
 		for (size_t i = 0; i < mem.readLatencyHint(); ++i)
 			resp = strm::regDownstreamBlocking(move(resp), { .allowRetimingBackward = true });

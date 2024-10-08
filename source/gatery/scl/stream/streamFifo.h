@@ -90,7 +90,7 @@ namespace gtry::scl::strm {
 
 
 	template<StreamSignal T>
-	using StreamDataNoError = decltype(std::declval<T>().removeFlowControl().template remove<Error>());
+	using StreamDataNoError = decltype(std::declval<T>() | removeFlowControl() | remove<Error>());
 
 	/**
 	 * @brief Same as push but packets are stored in full before calling rollback or commit based on error of in.
@@ -134,7 +134,7 @@ namespace gtry::scl::strm {
 
 		ready(in) = !instance.full();
 		IF(transfer(in))
-			instance.push(in.removeFlowControl());
+			instance.push(removeFlowControl(move(in)));
 
 		return ret;
 	}
@@ -143,7 +143,7 @@ namespace gtry::scl::strm {
 	inline StreamT fifo(StreamT&& in, size_t minDepth, FifoLatency fifoLatency)
 	{
 		// This is a workaround until we properly move the fifoLatency == 0 case into the fifo implementation.
-		Fifo<StreamData<StreamT>> inst{ minDepth, in.removeFlowControl(), fifoLatency == 0 ? FifoLatency(1) : fifoLatency };
+		Fifo<StreamData<StreamT>> inst{ minDepth, removeFlowControl(move(in)), fifoLatency == 0 ? FifoLatency(1) : fifoLatency };
 		StreamT ret = fifo(move(in), inst, fifoLatency);
 		inst.generate();
 
@@ -153,10 +153,10 @@ namespace gtry::scl::strm {
 	template<StreamSignal StreamT>
 	auto storeForwardFifo(StreamT& in, size_t minElements, FifoLatency fifoLatency)
 	{
-		TransactionalFifo fifo(minElements, in
-			.removeFlowControl()
-			.template remove<Error>()
-			.template remove<Sop>(),
+		TransactionalFifo fifo(minElements, move(in)
+			| removeFlowControl()
+			| remove<Error>()
+			| remove<Sop>(),
 			fifoLatency);
 
 		pushStoreForward(fifo, in);
@@ -180,10 +180,10 @@ namespace gtry::scl::strm {
 	template<Signal PayloadT, Signal... Meta>
 	RvStream<PayloadT, Meta...> pop(Fifo<Stream<PayloadT, Meta...>>& fifo)
 	{
-		auto ret = fifo.peek()
-			.add(Ready{})
-			.add(Valid{ !fifo.empty() })
-			.template reduceTo<RvStream<PayloadT, Meta...>>();
+		auto ret = move(fifo.peek())
+			| attach(Ready{})
+			| attach(Valid{ !fifo.empty() })
+			| reduceTo<RvStream<PayloadT, Meta...>>();
 
 		IF(transfer(ret))
 			fifo.pop();
@@ -204,7 +204,7 @@ namespace gtry::scl::strm {
 	{
 		ready(in) = !fifo.full();
 		IF(transfer(in))
-			fifo.push(in.removeFlowControl());
+			fifo.push(in | removeFlowControl());
 	}
 
 	template<Signal PayloadT, StreamSignal StreamT>
@@ -230,6 +230,6 @@ namespace gtry::scl::strm {
 	void pushStoreForward(TransactionalFifo<StreamDataNoError<StreamT>>& fifo, StreamT&& in)
 	{
 		commitOrRollbackOnEop(fifo, in);
-		push(fifo, move(in).template remove<Error>());
+		push(fifo, remove<Error>(move(in)));
 	}
 }

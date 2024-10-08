@@ -521,7 +521,7 @@ namespace gtry::scl
 		scl::Stream<Vector<BVec>, MetaOutput...> fieldStream;
 		extractFields(fieldStream, packetStream, fields);
 
-		output <<= fieldStream.transform([&output](const Vector<BVec> &fields) {
+		output <<= transform(move(fieldStream), [&output](const Vector<BVec> &fields) {
 			Header header = constructFrom(*output);
 			unpack(fields[0], header);
 			return header;

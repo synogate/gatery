@@ -44,8 +44,8 @@ namespace gtry::scl::arch::intel {
 
 		in("p0_tx_st_data_i", m_cfg.dataBusW) = *stream;
 
-		in("p0_tx_st_hdr_i", 128_b) = stream.get<PTileHeader>().header;
-		in("p0_tx_st_tlp_prfx_i", 32_b) = stream.get<PTilePrefix>().prefix;
+		in("p0_tx_st_hdr_i", 128_b) = get<PTileHeader>(stream).header;
+		in("p0_tx_st_tlp_prfx_i", 32_b) = get<PTilePrefix>(stream).prefix;
 		;
 		in("p0_tx_st_valid_i", 1_b).lsb() = valid(stream);
 		in("p0_tx_st_sop_i", 1_b).lsb() = sop(stream);
@@ -67,9 +67,9 @@ namespace gtry::scl::arch::intel {
 		RvPacketStream<BVec, EmptyBits,  PTileHeader,  PTilePrefix, PTileBarRange> rx;
 
 		*rx = out("p0_rx_st_data_o", m_cfg.dataBusW);
-		rx.get<PTileHeader>().header = out("p0_rx_st_hdr_o", 128_b);
-		rx.get<PTilePrefix>().prefix = out("p0_rx_st_tlp_prfx_o", 32_b);
-		rx.get<PTileBarRange>() = PTileBarRange{ out("p0_rx_st_bar_range_o", 3_b) };
+		get<PTileHeader>(rx).header = out("p0_rx_st_hdr_o", 128_b);
+		get<PTilePrefix>(rx).prefix = out("p0_rx_st_tlp_prfx_o", 32_b);
+		get<PTileBarRange>(rx) = PTileBarRange{ out("p0_rx_st_bar_range_o", 3_b) };
 
 		//p0_rx_st_tlp_abort_o : does not apply to non-bypass tlp mode
 		//p0_rx_par_err_o

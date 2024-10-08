@@ -17,6 +17,7 @@
 */
 #pragma once
 
+#include "Stream.h"
 #include "StreamConcept.h" 
 #include "metaSignals.h"
 #include "../RepeatBuffer.h"
@@ -81,7 +82,7 @@ namespace gtry::scl::strm {
 	template<StreamSignal StreamT>
 	inline StreamT repeatBuffer(StreamT&& in, const RepeatBufferStreamSettings &settings)
 	{
-		RepeatBuffer<StreamData<StreamT>> inst{ settings.minDepth, in.removeFlowControl() };
+		RepeatBuffer<StreamData<StreamT>> inst{ settings.minDepth, in | removeFlowControl() };
 		if (settings.wrapAround.valid())
 			inst.wrapAround(settings.wrapAround);
 
@@ -113,9 +114,9 @@ namespace gtry::scl::strm {
 	StreamT pop(RepeatBuffer<StreamData<StreamT>>& repeatBuffer, const RepeatBufferStreamSettings &settings)
 	{
 		auto ret = repeatBuffer.rdPeek()
-			.add(Ready{})
-			.add(Valid{ '1' })
-			.template reduceTo<StreamT>();
+			| strm::attach(Ready{})
+			| strm::attach(Valid{ '1' })
+			| strm::reduceTo<StreamT>();
 
 		valid(ret) = internal::buildValidLatch(settings.releaseNextPacket, repeatBuffer.rdIsLast(), ready(ret));
 
@@ -172,7 +173,7 @@ namespace gtry::scl::strm {
 					sim_assert(eop(in) == repeatBuffer.wrIsLast()) << "eop of input stream should match wrap around of repeat buffer";
 			}
 
-			repeatBuffer.wrPush(in.removeFlowControl());
+			repeatBuffer.wrPush(in | removeFlowControl());
 		}
 	}
 }

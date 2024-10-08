@@ -51,9 +51,9 @@ namespace gtry::scl::strm
 		struct Validity {
 			Bit validity;
 		};
-		auto inputWithValidity = move(input).add(Validity{});
+		auto inputWithValidity = move(input) | attach(Validity{});
 
-		Memory reorderBuffer(txid(input).width().count(), inputWithValidity.removeFlowControl().template remove<TxId>());
+		Memory reorderBuffer(txid(input).width().count(), inputWithValidity | removeFlowControl() | remove<TxId>());
 		reorderBuffer.initZero();
 		// we synchronize through memory content, so we dont need to add latency to the write port during retiming
 		reorderBuffer.allowArbitraryPortRetiming();
@@ -67,23 +67,23 @@ namespace gtry::scl::strm
 		for(size_t i = 0; i < reorderBuffer.readLatencyHint(); i++)
 			memoryElement = pipestage(memoryElement);
 
-		auto outputStream = move(memoryElement)
-			.add(Ready{})
-			.add(Valid{ outputValidityPolarity == memoryElement.template get<Validity>().validity })
-			.add(TxId{ currentTxid })
-			.template remove<Validity>();
+		auto outputStream = (move(memoryElement)
+			| attach(Ready{})
+			| attach(Valid{ outputValidityPolarity == get<Validity>(memoryElement).validity })
+			| attach(TxId{ currentTxid }))
+			| remove<Validity>();
 		HCL_NAMED(outputStream);
 
 		IF(transfer(outputStream))
 			orderCtr.inc();
 		
 		//input logic
-		inputWithValidity.template get<Validity>().validity = outputValidityPolarity ^ (txid(inputWithValidity) < currentTxid);
+		get<Validity>(inputWithValidity).validity = outputValidityPolarity ^ (txid(inputWithValidity) < currentTxid);
 		if constexpr (StreamT::template has<Ready>())
 			ready(inputWithValidity) = '1';
 
 		IF(transfer(inputWithValidity))
-			reorderBuffer[txid(inputWithValidity)] = move(inputWithValidity).removeFlowControl().template remove<TxId>();
+			reorderBuffer[txid(inputWithValidity)] = inputWithValidity | removeFlowControl() | remove<TxId>();
 
 		return move(outputStream) | scl::strm::regDownstream();
 	};

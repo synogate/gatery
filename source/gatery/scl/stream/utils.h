@@ -67,19 +67,17 @@ namespace gtry::scl::strm
 	template<StreamSignal StreamT>
 	StreamT regDownstream(StreamT&& in, const RegisterSettings& settings = {});
 
-	//untested
 	inline auto regDownstream(const RegisterSettings& settings = {})
 	{
 		return [=](auto&& in) { return regDownstream(std::forward<decltype(in)>(in), settings); };
 	}
 
 	template<StreamSignal StreamT>
-	StreamT delay(StreamT&& in, size_t minCycles);
+	StreamT delay(StreamT&& in, size_t cycles, const RegisterSettings& settings = {});
 
-	//untested
-	inline auto delay(size_t minCycles)
+	inline auto delay(size_t cycles, const RegisterSettings& settings = {})
 	{
-		return [=](auto&& in) { return delay(std::forward<decltype(in)>(in), minCycles); };
+		return [=](auto&& in) { return delay(std::forward<decltype(in)>(in), cycles, settings); };
 	}
 
 	/**
@@ -227,8 +225,8 @@ namespace gtry::scl::strm
 	* @param addr the address stream to look up in memory
 	* @param memory - self explanatory
 	*/
-	template<Signal T, Signal ... Meta, Signal Tout>
-	auto lookup(Stream<T, Meta...>&& addr, Memory<Tout>& memory);
+	template<StreamSignal StreamT, Signal Tout>
+	auto lookup(StreamT&& addr, Memory<Tout>& memory);
 
 	template<Signal Tout>
 	inline auto lookup(Memory<Tout>& memory)
@@ -349,7 +347,7 @@ namespace gtry::scl::strm
 	* proper failure reporting possibilities to user, such as the possibility to mapOut the totalLostPackets.
 	*/
 	template<StreamSignal StreamT> requires (!StreamT::template has<Ready>() && !StreamT::template has<Eop>())
-	std::tuple<decltype(StreamT{}.add(Ready{})), UInt> addReadyAndCompensateForLostBeats(StreamT&& in, BitWidth counterW);
+	std::tuple<decltype(attach(StreamT{}, Ready{})), UInt> addReadyAndCompensateForLostBeats(StreamT&& in, BitWidth counterW);
 
 	/**
 	 * @brief This overload allows for stream chaining. Please pass in an uninitialized UInt.
@@ -471,15 +469,14 @@ namespace gtry::scl::strm
 
 
 	template<StreamSignal StreamT>
-	StreamT delay(StreamT&& in, size_t minCycles) {
-		StreamT ret = move(in);
+	StreamT delay(StreamT&& in, size_t cycles, const RegisterSettings& settings) {
+		StreamT ret = std::forward<StreamT>(in);
 
-		for (int i = 0; i < ((int) minCycles) - 1; i++) {
-			ret = regDownstreamBlocking(move(ret));
-		}
-
-		if(minCycles > 0 ) {
-			ret = regDownstream(move(ret));
+		if(cycles > 0)
+		{
+			for (size_t i = 0; i < cycles - 1; i++)
+				ret = regDownstreamBlocking(move(ret), settings);
+			ret = regDownstream(move(ret), settings);
 		}
 		return ret;
 	}
@@ -513,7 +510,8 @@ namespace gtry::scl::strm
 		IF(reset)
 			counter.reset();
 
-		auto ret = source.add(
+		auto ret = attach(
+			move(source),
 			Valid{ counter.isLast() & valid(source) }
 		);
 		if constexpr (T::template has<Ready>())
@@ -632,7 +630,7 @@ namespace gtry::scl::strm
 
 	template<Signal SignalT, StreamSignal StreamT> requires (StreamT::template has<SignalT>()) 
 		auto extractMeta(StreamT&& in) {
-		return in.transform([&](auto&& payload) { return in.template get<SignalT>(); }).template remove<SignalT>();
+		return in.transform([&](auto&& payload) { return get<SignalT>(in); }).template remove<SignalT>();
 	}
 
 	template<StreamSignal StreamT> 
@@ -727,9 +725,9 @@ namespace gtry::scl::strm
 	{
 		Area area("synchronizeStreamReqAck", true);
 		ClockScope csIn{ inClock };
-		auto crossingStream = in
-			.template remove<Ready>()
-			.template remove<Valid>();
+		auto crossingStream = move(in)
+			| remove<Ready>()
+			| remove<Valid>();
 
 		Bit eventIn;
 		Bit idle = flag(ready(in), eventIn, '1');
@@ -750,10 +748,10 @@ namespace gtry::scl::strm
 			crossingStream = reg(crossingStream, RegisterSettings{ .clock = dontSimplifyEnableRegClk });
 		}
 
-		StreamT out = crossingStream
-			.add(Ready{})
-			.add(Valid{})
-			.template reduceTo<StreamT>();
+		StreamT out = move(crossingStream)
+			| attach(Ready{})
+			| attach(Valid{})
+			| reduceTo<StreamT>();
 
 		Bit outValid;
 		outValid = flag(outputEnableCondition, outValid & ready(out));
@@ -764,19 +762,12 @@ namespace gtry::scl::strm
 		return out;
 	}
 
-	template<Signal T, Signal ... Meta, Signal Tout>
-	auto lookup(Stream<T, Meta...>&& addr, Memory<Tout>& memory) 
+	template<StreamSignal StreamT, Signal Tout>
+	auto lookup(StreamT&& addr, Memory<Tout>& memory) 
 	{
-		auto out = addr.transform([&](const UInt& address) {
-			return memory[address].read();
-		});
-		if (memory.readLatencyHint())
-		{
-			for (size_t i = 0; i < memory.readLatencyHint() - 1; ++i)
-				out <<= scl::strm::regDownstreamBlocking(move(out), { .allowRetimingBackward = true });
-			return strm::regDownstream(move(out),{ .allowRetimingBackward = true });
-		}
-		return out;
+		return std::forward<StreamT>(addr) | 
+			transform([&](const auto& address) { return memory[address].read(); }) |
+			delay(memory.readLatencyHint(), { .allowRetimingBackward = true });
 	}
 
 	template<StreamSignal StreamT>
@@ -880,7 +871,9 @@ namespace gtry::scl::strm
 		auto metaStream = functor(bcast.bcastTo());
 		HCL_NAMED(metaStream);
 
-		auto resultStream = (bcast.bcastTo() | fifo(maxPacketLength)).add(metaStream);
+		auto resultStream = bcast.bcastTo() 
+			| fifo(maxPacketLength) 
+			| attach(move(metaStream));
 		HCL_NAMED(resultStream);
 		return resultStream;
 	}
@@ -899,10 +892,10 @@ namespace gtry::scl::strm
 	}
 
 	template<StreamSignal StreamT> requires (!StreamT::template has<Ready>() && !StreamT::template has<Eop>())
-	std::tuple<decltype(StreamT{}.add(Ready{})), UInt> addReadyAndCompensateForLostBeats(StreamT&& in, BitWidth counterW) {
+	std::tuple<decltype(attach(StreamT{}, Ready{})), UInt> addReadyAndCompensateForLostBeats(StreamT&& in, BitWidth counterW) {
 		Area area("scl_addReadyAndCompensateForLostBeats", true);
 
-		auto inWithReady = move(in).add(Ready{});
+		auto inWithReady = attach(move(in), Ready{});
 		Counter totalLostBeats(counterW);
 		Counter lostBeats(counterW);
 

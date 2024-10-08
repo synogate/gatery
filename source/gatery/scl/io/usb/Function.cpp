@@ -163,9 +163,8 @@ gtry::scl::RvStream<gtry::BVec> gtry::scl::usb::Function::rxEndPointFifo(size_t 
 	TransactionalFifo<StreamData> fifo{ fifoDpeth };
 	attachRxFifo(fifo, 1 << endPoint);
 
-	RvStream<BVec> out =
-		strm::pop(fifo)
-		.transform([](const StreamData& data) { return (BVec)data.data; });
+	RvStream<BVec> out = strm::pop(fifo)
+		| strm::transform([](const StreamData& data) { return (BVec)data.data; });
 
 	fifo.generate();
 	setName(out, "usbep" + std::to_string(endPoint) + "_rx");
@@ -177,8 +176,8 @@ void gtry::scl::usb::Function::txEndPointFifo(size_t endPoint, size_t fifoDpeth,
 	TransactionalFifo<StreamData> fifo{ fifoDpeth };
 	attachTxFifo(fifo, 1 << endPoint);
 
-	data
-		.transform([=](const BVec& d) { return StreamData{ .data = (UInt)d, .endPoint = endPoint }; })
+	move(data)
+		| strm::transform([=](const BVec& d) { return StreamData{ .data = (UInt)d, .endPoint = endPoint }; })
 		| strm::push(fifo);
 
 	fifo.generate();

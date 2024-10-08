@@ -58,7 +58,7 @@ namespace gtry::scl::arch::sky130 {
 
 		p = reg(p, '0'); HCL_NAMED(p); //temporary: should be removed because there is no cyclic dependency through the pins ( normally )
 
-		VStream<Bit, SingleEnded> out = strm::createVStream(p, '1').add(SingleEnded{ .zero = se0 });
+		VStream<Bit, SingleEnded> out = strm::createVStream(p, '1') | strm::attach(SingleEnded{ .zero = se0 });
 		valid(out) &= !flag(se0, !se0);
 
 		return out;

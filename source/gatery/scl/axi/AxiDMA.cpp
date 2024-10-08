@@ -28,7 +28,8 @@ namespace gtry::scl
 
 		// improve timing by first calculating the last address
 		struct LastAddress { UInt addr; };
-		scl::Stream cmd = cmdIn.add(LastAddress{ cmdIn->endAddress - cmdIn->bytesPerBurst })
+		scl::Stream cmd = move(cmdIn)
+			| scl::strm::attach(LastAddress{ cmdIn->endAddress - cmdIn->bytesPerBurst })
 			| scl::strm::regDownstream();
 
 		RvStream<AxiAddress> out;
@@ -69,7 +70,7 @@ namespace gtry::scl
 		ready(cmd) = '0';
 		IF(state.combinatorial() == TRANSFER)
 		{
-			IF(transfer(out) & address == cmd.template get<LastAddress>().addr)
+			IF(transfer(out) & address == get<LastAddress>(cmd).addr)
 			{
 				ready(cmd) = '1';
 				state = IDLE;
@@ -88,7 +89,7 @@ namespace gtry::scl
 
 	RvPacketStream<BVec> axiToStream(RvPacketStream<AxiReadData>&& dataStream)
 	{
-		return dataStream.transform(&AxiReadData::data);
+		return transform(move(dataStream), &AxiReadData::data);
 	}
 
 	RvPacketStream<BVec> axiToStream(RvStream<AxiToStreamCmd>&& cmd, Axi4& axi)
@@ -107,13 +108,13 @@ namespace gtry::scl
 	{
 		scl::Counter beatCtr{ beatsPerBurst };
 		HCL_DESIGNCHECK_HINT(in->width() == out->data.width(), "the data stream and axi data widths do not match");
-		out <<= in.transform([&](const BVec& data) {
+		out <<= transform(move(in), [&](const BVec& data) {
 			return AxiWriteData{
 				.data = data,
 				.strb = BVec{out->strb.width().mask()},
 				.user = ConstBVec(out->user.width()),
 			};
-		}).add(Eop{ beatCtr.isLast() });
+		}) | attach(Eop{ beatCtr.isLast() });
 
 		IF(transfer(out))
 			beatCtr.inc();
@@ -144,7 +145,7 @@ namespace gtry::scl
 		if (dataFifoDepth > 0)
 			mid = strm::regDownstream(move(mid));
 
-		scl::axiFromStream(move(storeCmd), mid.template remove<scl::Eop>(), axi);
+		scl::axiFromStream(move(storeCmd), remove<scl::Eop>(move(mid)), axi);
 	}
 
 	AxiTransferReport axiTransferAuditor(const Axi4& streamToSniff, BitWidth bitsPerBurst, BitWidth counterW)

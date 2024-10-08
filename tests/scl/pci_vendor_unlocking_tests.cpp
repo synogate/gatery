@@ -91,7 +91,7 @@ BOOST_FIXTURE_TEST_CASE(ptile_rx_vendor_unlocking_only_read_requests, BoostUnitT
 
 	BVec ptileHeader = 128_b;
 	pinIn(ptileHeader, "inputHeader" );
-	in.template get<PTileHeader>().header = swapEndian(ptileHeader);
+	get<PTileHeader>(in).header = swapEndian(ptileHeader);
 	
 	TlpPacketStream<EmptyBits, PTileBarRange> out = ptileRxVendorUnlocking(move(in));
 	pinOut(out, "out");
@@ -160,7 +160,7 @@ BOOST_FIXTURE_TEST_CASE(ptile_rx_vendor_unlocking_only_write_requests, BoostUnit
 
 	BVec ptileHeader = 128_b;
 	pinIn(ptileHeader, "inputHeader" );
-	in.template get<PTileHeader>().header = swapEndian(ptileHeader);
+	get<PTileHeader>(in).header = swapEndian(ptileHeader);
 
 	TlpPacketStream<EmptyBits, PTileBarRange> out = ptileRxVendorUnlocking(move(in));
 	pinOut(out, "out");
@@ -263,17 +263,17 @@ BOOST_FIXTURE_TEST_CASE(ptile_hail_mary_completer, BoostUnitTestSimulationFixtur
 
 	BVec intelHeader = 128_b;
 	pinIn(intelHeader, "intel_header", { .simulationOnlyPin = true });
-	rxSim.get<PTileHeader>() = simOverride(rxSim.get<PTileHeader>(), PTileHeader{ swapEndian(intelHeader) });
+	get<PTileHeader>(rxSim) = simOverride(get<PTileHeader>(rxSim), PTileHeader{ swapEndian(intelHeader) });
 
 	auto rxUnlocked = ptileRxVendorUnlocking(simOverrideDownstream(ptileInstance.rx(), move(rxSim)) | strm::regDownstream())
-		.template remove<PTileBarRange>()
-		.add(BarInfo{ .id = ConstBVec(0, 3_b), .logByteAperture = ConstUInt(20, 6_b)});//log byte aperture should be set to ip value
+		| strm::remove<PTileBarRange>()
+		| strm::attach(BarInfo{ .id = ConstBVec(0, 3_b), .logByteAperture = ConstUInt(20, 6_b)});//log byte aperture should be set to ip value
 	HCL_NAMED(rxUnlocked);
 	complInt.request <<= move(rxUnlocked);
 
 	auto [txLocked, txSim] = simOverrideUpstream(ptileTxVendorUnlocking(move(complInt.completion)));
 	HCL_NAMED(txLocked);
-	ptileInstance.tx(move(txLocked).template remove<EmptyBits>());
+	ptileInstance.tx(move(txLocked) | strm::remove<EmptyBits>());
 	pinOut(txSim, "txSim", { .simulationOnlyPin = true });
 
 
@@ -369,7 +369,7 @@ BOOST_FIXTURE_TEST_CASE(ptile_tx_vendor_unlocking_completion_only, BoostUnitTest
 	scl::strm::RvPacketStream<BVec, EmptyBits, scl::Error, PTileHeader, PTilePrefix> out = ptileTxVendorUnlocking(move(in));
 	pinOut(out, "out");
 
-	BVec header = swapEndian(out.template get<PTileHeader>().header);
+	BVec header = swapEndian(get<PTileHeader>(out).header);
 	pinOut(header, "header");
 
 	addSimulationProcess([&, this]()->SimProcess { return strm::readyDriverRNG(out, clk, 50); });

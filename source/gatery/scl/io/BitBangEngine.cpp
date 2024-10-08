@@ -33,7 +33,7 @@ RvStream<BVec> BitBangEngine::generate(RvStream<BVec> command, size_t numIo)
 	hasSerialEngine |= m_io.size() > m_ioMosiIndex;
 	hasSerialEngine |= m_io.size() > m_ioMisoIndex;
 
-	RvStream<BVec> out = strm::createVStream<BVec>(8_b, '0').add(Ready{});
+	RvStream<BVec> out = strm::createVStream<BVec>(8_b, '0') | scl::strm::attach(Ready{});
 
 	enum class CmdState {
 		idle,

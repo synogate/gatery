@@ -41,7 +41,7 @@ namespace gtry::scl::pci
 		StreamDemux<TlpPacketStream<EmptyBits, BarInfo>> rxDemux(move(rx), zext(isCompletion));
 		completerRequest <<= rxDemux.out(0);
 		HCL_NAMED(completerRequest);
-		requesterCompletion <<= rxDemux.out(1).template remove<BarInfo>();
+		requesterCompletion <<= (rxDemux.out(1) | strm::remove<BarInfo>());
 		HCL_NAMED(requesterCompletion);
 	}
 

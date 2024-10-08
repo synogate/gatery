@@ -89,18 +89,21 @@ namespace gtry::scl::strm
 	*/
 	template<PacketStreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
 	auto widthExtend(StreamT&& source, const BitWidth& width);
+	inline auto widthExtend(BitWidth width) { return [=](auto&& source) { return ::gtry::scl::strm::widthExtend(std::forward<decltype(source)>(source), width); }; }
 
 	/**
 	* @brief reduces the width of a packet stream and takes care of all the metaData signals. Limited to reductions by integer multiples of the original source width
 	*/
 	template<PacketStreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
 	auto widthReduce(StreamT&& source, const BitWidth& width);
+	inline auto widthReduce(BitWidth width) { return [=](auto&& source) { return ::gtry::scl::strm::widthReduce(std::forward<decltype(source)>(source), width); }; }
 
 	/**
 	 * @brief generic version of widthReduce and widthExtend that will choose the right circuit accordingly
 	*/
 	template<PacketStreamSignal StreamT> requires std::is_base_of_v<BaseBitVector, typename StreamT::Payload>
 	StreamT matchWidth(StreamT&& in, BitWidth desiredWidth);
+	inline auto matchWidth(BitWidth width) { return [=](auto&& source) { return ::gtry::scl::strm::matchWidth(std::forward<decltype(source)>(source), width); }; }
 
 	/**
 	* @brief append the tail stream to the head stream, as long as the tail is immediately available
@@ -218,7 +221,7 @@ namespace gtry::scl::strm
 	{
 		auto scope = Area{ "scl_addEopDeferred" }.enter();
 
-		auto in = source.add(scl::Eop{ '0' });
+		auto in = attach(move(source), scl::Eop{ '0' });
 		HCL_NAMED(in);
 
 		Bit insertState;
@@ -265,8 +268,7 @@ namespace gtry::scl::strm
 		beatCounter = reg(beatCounter, 0);
 
 		HCL_NAMED(beatCounter);
-		auto out = source.add(Eop{ end }).add(Sop{ start });
-		return out;
+		return move(source) | attach(Eop{ end }) | attach(Sop{ start });
 	}
 
 	namespace internal
@@ -275,9 +277,9 @@ namespace gtry::scl::strm
 		auto addReadyAndFailOnBackpressure(const Stream<Payload, Meta...>& source)
 		{
 			Area ent{ "scl_addReadyAndFailOnBackpressure", true };
-			Stream ret = source
-				.add(Ready{})
-				.add(Error{ error(source) });
+			Stream ret = move(source)
+				| attach(Ready{})
+				| attach(Error{ error(source) });
 
 			using Ret = decltype(ret);
 
@@ -321,10 +323,10 @@ namespace gtry::scl::strm
 		HCL_NAMED(shift);
 
 		Stream out = in
-			.template remove<scl::Empty>()
-			.add(Eop{eop(in)})
-			.add(EmptyBits{ emptyBits(in) });
-		UInt& emptyBits = out.template get<EmptyBits>().emptyBits;
+			| remove<Empty>()
+			| attach(Eop{eop(in)})
+			| attach(EmptyBits{ emptyBits(in) });
+		UInt& emptyBits = get<EmptyBits>(out).emptyBits;
 
 		Bit delayedEop;			HCL_NAMED(delayedEop);
 		Bit shouldDelayEop = valid(in) & eop(in) & zext(emptyBits) < zext(shift);
@@ -352,9 +354,11 @@ namespace gtry::scl::strm
 	template<BaseSignal Payload, Signal... Meta>
 	auto streamShiftLeftBytes(Stream<Payload, Meta...>& in, UInt shift, Bit reset)
 	{
-		auto outBits = streamShiftLeft(in, cat(shift, "3b0"), reset);
+		Stream outBits = streamShiftLeft(in, cat(shift, "3b0"), reset);
 		UInt outEmptyBits = emptyBits(outBits);
-		return outBits.template remove<EmptyBits>().template add<Empty>({outEmptyBits.upper(-3_b)});	
+		return outBits | 
+			remove<EmptyBits>() |
+			attach<Empty>({outEmptyBits.upper(-3_b)});	
 	}
 
 
@@ -380,7 +384,7 @@ namespace gtry::scl::strm
 		if constexpr (In::template has<scl::EmptyBits>())
 		{
 			IF(eop(in))
-				len = in->width().bits() - zext(in.template get<scl::EmptyBits>().emptyBits);
+				len = in->width().bits() - zext(get<scl::EmptyBits>(in).emptyBits);
 		}
 		else if constexpr (requires { empty(in); })
 		{
@@ -882,13 +886,13 @@ namespace gtry::scl::strm
 		{
 			HCL_DESIGNCHECK_HINT(std::popcount(inStream->width().bits()) == 1, "only for streams with powers of 2 data bus widths");
 
-			scl::EmptyBits ret = { emptyBits(inStreamPrevious) + zext(inStreamPrevious.template get<ShiftRightSteadyShift>().shift) };
+			scl::EmptyBits ret = { emptyBits(inStreamPrevious) + zext(get<ShiftRightSteadyShift>(inStreamPrevious).shift) };
 
 			IF(valid(inStream) & eop(inStream) & param.mustAnticipateEnd)
-				ret = { emptyBits(inStream) + zext(inStream.template get<ShiftRightSteadyShift>().shift) };
+				ret = { emptyBits(inStream) + zext(get<ShiftRightSteadyShift>(inStream).shift) };
 
 			IF(param.state == ShiftRightState::transferPrevious)
-				ret = { emptyBits(inStreamPrevious) + zext(inStreamPrevious.template get<ShiftRightSteadyShift>().shift) };
+				ret = { emptyBits(inStreamPrevious) + zext(get<ShiftRightSteadyShift>(inStreamPrevious).shift) };
 
 			return ret;
 		}
@@ -897,14 +901,14 @@ namespace gtry::scl::strm
 		T shiftRightMeta(const T& in, const StreamSignal auto& inStream, const StreamSignal auto& inStreamPrevious, const ShiftRightMetaParams& param)
 		{
 			T doubleVec = (T)cat(in, *inStreamPrevious);
-			T ret = doubleVec(inStreamPrevious.template get<ShiftRightSteadyShift>().shift, in.width());
+			T ret = doubleVec(get<ShiftRightSteadyShift>(inStreamPrevious).shift, in.width());
 			return ret;
 		}
 
 		template<Signal SigT>
 		SigT shiftRightMeta(const SigT& in, const auto& inStream, const auto& inStreamPrevious, const ShiftRightMetaParams& param)
 		{
-			SigT ret = inStreamPrevious.template get<SigT>();
+			SigT ret = get<SigT>(inStreamPrevious);
 			return ret;
 		}
 	}
@@ -916,13 +920,13 @@ namespace gtry::scl::strm
 		auto scope = Area{ "scl_streamShiftRight" }.enter();
 
 		UInt steadyShift = capture(shift, valid(source) & sop(source));
-		StreamBroadcaster sourceCaster(move(source).add(ShiftRightSteadyShift{ steadyShift }));
+		StreamBroadcaster sourceCaster(move(source) | attach(ShiftRightSteadyShift{ steadyShift }));
 
 		scl::Stream currentSource = sourceCaster.bcastTo() | strm::eraseBeat(0, 1);
 		scl::Stream previousSource = sourceCaster.bcastTo() | strm::regReady() | strm::delay(1);
 
 		UInt fullBits = capture(currentSource->width().bits() - zext(emptyBits(currentSource)), valid(currentSource) & eop(currentSource)); HCL_NAMED(fullBits);
-		Bit mustAnticipateEnd = zext(currentSource.template get<ShiftRightSteadyShift>().shift) >= fullBits; HCL_NAMED(mustAnticipateEnd);
+		Bit mustAnticipateEnd = zext(get<ShiftRightSteadyShift>(currentSource).shift) >= fullBits; HCL_NAMED(mustAnticipateEnd);
 
 		Reg<Enum<ShiftRightState>> state{ ShiftRightState::normalOp };
 		state.setName("state");
@@ -961,7 +965,7 @@ namespace gtry::scl::strm
 		};
 
 		HCL_NAMED(ret);
-		return ret.template remove<ShiftRightSteadyShift>();
+		return remove<ShiftRightSteadyShift>(move(ret));
 	}
 
 	namespace internal
@@ -1195,10 +1199,10 @@ namespace gtry::scl::strm
 	template<scl::StreamSignal StreamT> requires (std::remove_cvref_t<StreamT>::template has<Empty>())
 	auto streamDropTailBytes(StreamT&& in, const UInt& byteCutoff, BitWidth maxPacketW) {
 		UInt inEmptyBytes = empty(in);
-		auto inBits = in.template remove<Empty>().template add<EmptyBits>({cat(inEmptyBytes, "3b0")});
+		auto inBits = move(in) | remove<Empty>() | attach(EmptyBits{cat(inEmptyBytes, "3b0")});
 		auto outBits = streamDropTail(move(inBits), cat(byteCutoff, "3b0"), maxPacketW);
 		UInt outEmptyBits = emptyBits(outBits);
-		return outBits.template remove<EmptyBits>().template add<Empty>({outEmptyBits.upper(-3_b)});
+		return move(outBits) | remove<EmptyBits>() | attach(Empty{ outEmptyBits.upper(-3_b) });
 	}
 	extern template auto streamDropTailBytes(RvPacketStream<BVec, Empty> &&in, const UInt& byteCutoff, BitWidth maxPacketW);
 
