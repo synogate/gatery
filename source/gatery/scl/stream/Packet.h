@@ -89,18 +89,21 @@ namespace gtry::scl::strm
 	*/
 	template<PacketStreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
 	auto widthExtend(StreamT&& source, const BitWidth& width);
+	inline auto widthExtend(BitWidth width) { return [=](auto&& source) { return ::gtry::scl::strm::widthExtend(std::forward<decltype(source)>(source), width); }; }
 
 	/**
 	* @brief reduces the width of a packet stream and takes care of all the metaData signals. Limited to reductions by integer multiples of the original source width
 	*/
 	template<PacketStreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
 	auto widthReduce(StreamT&& source, const BitWidth& width);
+	inline auto widthReduce(BitWidth width) { return [=](auto&& source) { return ::gtry::scl::strm::widthReduce(std::forward<decltype(source)>(source), width); }; }
 
 	/**
 	 * @brief generic version of widthReduce and widthExtend that will choose the right circuit accordingly
 	*/
 	template<PacketStreamSignal StreamT> requires std::is_base_of_v<BaseBitVector, typename StreamT::Payload>
 	StreamT matchWidth(StreamT&& in, BitWidth desiredWidth);
+	inline auto matchWidth(BitWidth width) { return [=](auto&& source) { return ::gtry::scl::strm::matchWidth(std::forward<decltype(source)>(source), width); }; }
 
 	/**
 	* @brief append the tail stream to the head stream, as long as the tail is immediately available
@@ -351,9 +354,11 @@ namespace gtry::scl::strm
 	template<BaseSignal Payload, Signal... Meta>
 	auto streamShiftLeftBytes(Stream<Payload, Meta...>& in, UInt shift, Bit reset)
 	{
-		auto outBits = streamShiftLeft(in, cat(shift, "3b0"), reset);
+		Stream outBits = streamShiftLeft(in, cat(shift, "3b0"), reset);
 		UInt outEmptyBits = emptyBits(outBits);
-		return outBits.template remove<EmptyBits>().template add<Empty>({outEmptyBits.upper(-3_b)});	
+		return outBits | 
+			remove<EmptyBits>() |
+			attach<Empty>({outEmptyBits.upper(-3_b)});	
 	}
 
 

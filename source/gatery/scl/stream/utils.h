@@ -225,8 +225,8 @@ namespace gtry::scl::strm
 	* @param addr the address stream to look up in memory
 	* @param memory - self explanatory
 	*/
-	template<Signal T, Signal ... Meta, Signal Tout>
-	auto lookup(Stream<T, Meta...>&& addr, Memory<Tout>& memory);
+	template<StreamSignal StreamT, Signal Tout>
+	auto lookup(StreamT&& addr, Memory<Tout>& memory);
 
 	template<Signal Tout>
 	inline auto lookup(Memory<Tout>& memory)
@@ -477,10 +477,6 @@ namespace gtry::scl::strm
 			for (size_t i = 0; i < cycles - 1; i++)
 				ret = regDownstreamBlocking(move(ret), settings);
 			ret = regDownstream(move(ret), settings);
-		}
-
-		if(minCycles > 0 ) {
-			ret = regDownstream(move(ret));
 		}
 		return ret;
 	}
@@ -766,19 +762,12 @@ namespace gtry::scl::strm
 		return out;
 	}
 
-	template<Signal T, Signal ... Meta, Signal Tout>
-	auto lookup(Stream<T, Meta...>&& addr, Memory<Tout>& memory) 
+	template<StreamSignal StreamT, Signal Tout>
+	auto lookup(StreamT&& addr, Memory<Tout>& memory) 
 	{
-		auto out = addr.transform([&](const UInt& address) {
-			return memory[address].read();
-		});
-		if (memory.readLatencyHint())
-		{
-			for (size_t i = 0; i < memory.readLatencyHint() - 1; ++i)
-				out <<= scl::strm::regDownstreamBlocking(move(out), { .allowRetimingBackward = true });
-			return strm::regDownstream(move(out),{ .allowRetimingBackward = true });
-		}
-		return out;
+		return std::forward<StreamT>(addr) | 
+			transform([&](const auto& address) { return memory[address].read(); }) |
+			delay(memory.readLatencyHint(), { .allowRetimingBackward = true });
 	}
 
 	template<StreamSignal StreamT>

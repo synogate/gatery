@@ -62,6 +62,7 @@ namespace gtry::scl
 		}
 
 		StreamArbiter& attach(T&& stream, uint32_t sortKey = 1u << 31) { attach(stream, sortKey); return *this; }
+		auto attach(uint32_t sortKey = 1u << 31) { return [this, sortKey](auto&& source) { this->attach(std::forward<decltype(source)>(source), sortKey); }; }
 
 		StreamArbiter& name(std::string name) { m_instName = name; return *this; }
 

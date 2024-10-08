@@ -71,7 +71,7 @@ namespace gtry::scl::strm
 	auto creditStreamToVStream(T&& in, Bit incrementCredit)
 	{
 		*get<Credit>(in).increment = incrementCredit;
-		return in.template remove<Credit>();
+		return remove<Credit>(in);
 	}
 
 	inline auto creditStreamToVStream(Bit incrementCredit)
