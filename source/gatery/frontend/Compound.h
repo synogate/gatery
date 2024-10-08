@@ -564,6 +564,21 @@ namespace gtry
 		reccurseCompoundMembers(compound, compound, v, prefix);
 	}
 
+	template<Signal T>
+	T name(T&& signal, std::string_view prefix)
+	{
+		T ret = std::forward<T>(signal);
+		setName(ret, prefix);
+		return ret;
+	}
+
+	inline auto name(std::string_view prefix)
+	{
+		return [&](auto&& in) {
+			return name(std::forward<decltype(in)>(in), prefix);
+		};
+	}
+
 	namespace internal
 	{
 
