@@ -1,10 +1,10 @@
-
 # Unix-style newlines with a newline ending every file
 [*]
 end_of_line = lf
 insert_final_newline = true
 
-[{*.{cpp,h,txt}]
+[{*.cpp,*.h,*.txt}]
+guidelines = 120 2px dotted red #, 80 1px dotted green
 charset = utf-8
 indent_style = tab
 indent_size = 4
