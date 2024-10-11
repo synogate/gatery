@@ -294,17 +294,17 @@ bool SigHandle::operator==(char v) const
 	SimulationContext::current()->getSignal(*this, state);
 	HCL_ASSERT(state.size() == 1);
 
-	if (v == 'x' || v == 'X') {
+	if (v == 'x' || v == 'X')
 		return !state.get(sim::DefaultConfig::DEFINED);
-	} else {
-		if (!state.get(sim::DefaultConfig::DEFINED)) 
-			return false;
+	if (!state.get(sim::DefaultConfig::DEFINED)) 
+		return false;
+
+	HCL_DESIGNCHECK_HINT(v == '0' || v == '1', "Only '0' and '1' are valid values for comparison with a bit signal!")
 			
-		if (v == '1')
-			return state.get(sim::DefaultConfig::VALUE) == true;
-		else
-			return state.get(sim::DefaultConfig::VALUE) == false;
-	}
+	if (v == '1')
+		return state.get(sim::DefaultConfig::VALUE) == true;
+	else
+		return state.get(sim::DefaultConfig::VALUE) == false;
 }
 
 bool SigHandle::operator==(std::span<const std::byte> rhs) const
