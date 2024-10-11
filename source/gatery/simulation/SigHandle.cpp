@@ -295,7 +295,7 @@ bool SigHandle::operator==(char v) const
 	HCL_ASSERT(state.size() == 1);
 
 	if (v == 'x' || v == 'X') {
-		return state.get(sim::DefaultConfig::DEFINED);
+		return !state.get(sim::DefaultConfig::DEFINED);
 	} else {
 		if (!state.get(sim::DefaultConfig::DEFINED)) 
 			return false;

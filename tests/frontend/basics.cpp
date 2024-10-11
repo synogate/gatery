@@ -1957,3 +1957,39 @@ BOOST_FIXTURE_TEST_CASE(ZeroBitDisconnect, gtry::BoostUnitTestSimulationFixture)
 	runTest({ 1,1 });
 }
 
+BOOST_FIXTURE_TEST_CASE(BitSimuHandleComparison, gtry::BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+
+	Bit bX = 'x', b1 = '1', b0 = '0';
+	pinOut(bX, "bX");
+	pinOut(b1, "b1");
+	pinOut(b0, "b0");
+
+	addSimulationProcess([=, this]()->SimProcess {
+		BOOST_TEST(simu(bX) == 'x');
+		BOOST_TEST(simu(bX) == 'X');
+		BOOST_TEST(simu(bX) != '1');
+		BOOST_TEST(simu(bX) != '0');
+
+		BOOST_TEST(simu(b1) != 'x');
+		BOOST_TEST(simu(b1) != 'X');
+		BOOST_TEST(simu(b1) == '1');
+		BOOST_TEST(simu(b1) != '0');
+
+		BOOST_TEST(simu(b0) != 'x');
+		BOOST_TEST(simu(b0) != 'X');
+		BOOST_TEST(simu(b0) != '1');
+		BOOST_TEST(simu(b0) == '0');
+
+		stopTest();
+		co_return;
+	});
+
+	design.postprocess();
+	runTest({ 1,1 });
+}
+
