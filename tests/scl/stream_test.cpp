@@ -2904,3 +2904,293 @@ BOOST_FIXTURE_TEST_CASE(sequencer_fill_test, BoostUnitTestSimulationFixture)
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
+
+BOOST_FIXTURE_TEST_CASE(stream_zipmerge_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 100'000'000, .memoryResetType = ClockConfig::ResetType::NONE });
+	ClockScope clkScp(clk);
+	using namespace gtry::scl;
+
+	RvStream<BVec, Sop, Empty, strm::Credit> in1{ 8_b }; 
+	empty(in1) = 8_b;
+	get<strm::Credit>(in1) = { .initialCredit = 1, .maxCredit = 100 };
+	pinIn(in1, "in1");
+
+	RvStream<BVec, Empty, Eop, strm::Credit> in2{ 8_b }; 
+	empty(in2) = 8_b;
+	get<strm::Credit>(in2) = { .initialCredit = 2, .maxCredit = 10 };
+	pinIn(in2, "in2");
+
+	RvStream<BVec, Sop, Empty, strm::Credit, Eop> out = strm::join(
+		move(in1), move(in2),
+		[](auto& a, auto& b) { return a ^ b; },
+		strm::Operators<strm::JoinBeat, strm::MergeTakeFirst>{}
+	);
+	pinOut(out, "out");
+
+	addSimulationProcess([&, this]()->SimProcess {
+		simu(*in1) = "x5A";
+		simu(valid(in1)) = '0';
+		simu(sop(in1)) = '0';
+		simu(empty(in1)) = 1;
+
+		simu(*in2) = "xA5";
+		simu(valid(in2)) = '0';
+		simu(eop(in2)) = '1';
+		simu(empty(in2)) = 2;
+
+		simu(*get<strm::Credit>(out).increment) = '0';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(*get<strm::Credit>(in1).increment) == '0');
+		BOOST_TEST(simu(*get<strm::Credit>(in2).increment) == '0');
+		BOOST_TEST(simu(sop(out)) == '0');
+		BOOST_TEST(simu(eop(out)) == '1');
+		BOOST_TEST(simu(empty(out)) == 1);
+
+		simu(ready(out)) = '0';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in1)) == '0');
+		BOOST_TEST(simu(ready(in2)) == '0');
+		BOOST_TEST(simu(valid(out)) == '0');
+
+		simu(ready(out)) = '1';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in1)) == '0');
+		BOOST_TEST(simu(ready(in2)) == '0');
+		BOOST_TEST(simu(valid(out)) == '0');
+
+		simu(valid(in1)) = '1';
+		simu(valid(in2)) = '0';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in1)) == '0');
+		BOOST_TEST(simu(ready(in2)) == '1');
+		BOOST_TEST(simu(valid(out)) == '0');
+
+		simu(valid(in1)) = '0';
+		simu(valid(in2)) = '1';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in1)) == '1');
+		BOOST_TEST(simu(ready(in2)) == '0');
+		BOOST_TEST(simu(valid(out)) == '0');
+
+		simu(valid(in1)) = '1';
+		simu(valid(in2)) = '1';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in1)) == '1');
+		BOOST_TEST(simu(ready(in2)) == '1');
+		BOOST_TEST(simu(valid(out)) == '1');
+
+		simu(ready(out)) = '0';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in1)) == '0');
+		BOOST_TEST(simu(ready(in2)) == '0');
+		BOOST_TEST(simu(valid(out)) == '1');
+
+		simu(*get<strm::Credit>(out).increment) = '1';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(*get<strm::Credit>(in1).increment) == '1');
+		BOOST_TEST(simu(*get<strm::Credit>(in2).increment) == '1');
+
+		stopTest();
+		co_return;
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_join_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 100'000'000, .memoryResetType = ClockConfig::ResetType::NONE });
+	ClockScope clkScp(clk);
+	using namespace gtry::scl;
+
+	RvStream<BVec> in1{ 8_b };
+	pinIn(in1, "in1");
+
+	RvStream<BVec> in2{ 8_b };
+	pinIn(in2, "in2");
+
+	RvStream<std::tuple<BVec, BVec>> out = move(in1) | strm::join(move(in2));
+	pinOut(out, "out");
+
+	addSimulationProcess([&, this]()->SimProcess {
+		simu(*in1) = "x5A";
+		simu(valid(in1)) = '0';
+		simu(*in2) = "xA5";
+		simu(valid(in2)) = '0';
+
+		co_await OnClk(clk);
+		BOOST_TEST(simu(get<0>(*out)) == 0x5A);
+		BOOST_TEST(simu(get<1>(*out)) == 0xA5);
+
+		simu(ready(out)) = '0';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in1)) == '0');
+		BOOST_TEST(simu(ready(in2)) == '0');
+		BOOST_TEST(simu(valid(out)) == '0');
+
+		simu(ready(out)) = '1';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in1)) == '0');
+		BOOST_TEST(simu(ready(in2)) == '0');
+		BOOST_TEST(simu(valid(out)) == '0');
+
+		simu(valid(in1)) = '1';
+		simu(valid(in2)) = '0';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in1)) == '0');
+		BOOST_TEST(simu(ready(in2)) == '1');
+		BOOST_TEST(simu(valid(out)) == '0');
+
+		simu(valid(in1)) = '0';
+		simu(valid(in2)) = '1';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in1)) == '1');
+		BOOST_TEST(simu(ready(in2)) == '0');
+		BOOST_TEST(simu(valid(out)) == '0');
+
+		simu(valid(in1)) = '1';
+		simu(valid(in2)) = '1';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in1)) == '1');
+		BOOST_TEST(simu(ready(in2)) == '1');
+		BOOST_TEST(simu(valid(out)) == '1');
+
+		simu(ready(out)) = '0';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in1)) == '0');
+		BOOST_TEST(simu(ready(in2)) == '0');
+		BOOST_TEST(simu(valid(out)) == '1');
+
+		stopTest();
+		co_return;
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_join_left_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 100'000'000, .memoryResetType = ClockConfig::ResetType::NONE });
+	ClockScope clkScp(clk);
+	using namespace gtry::scl;
+
+	RvStream<BVec> in1{ 8_b };
+	pinIn(in1, "in1");
+
+	VStream<BVec> in2{ 8_b };
+	pinIn(in2, "in2");
+
+	RvStream<std::tuple<BVec, BVec>> out = strm::join(
+		move(in1), move(in2)
+	);
+	pinOut(out, "out");
+
+	addSimulationProcess([&, this]()->SimProcess {
+		simu(valid(in1)) = '0';
+		simu(valid(in2)) = '0';
+		simu(ready(out)) = '0';
+
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in1)) == '0');
+		BOOST_TEST(simu(valid(out)) == '0');
+
+		simu(ready(out)) = '1';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in1)) == '0');
+		BOOST_TEST(simu(valid(out)) == '0');
+
+		simu(valid(in1)) = '1';
+		simu(valid(in2)) = '0';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in1)) == '0');
+		BOOST_TEST(simu(valid(out)) == '0');
+
+		simu(valid(in1)) = '0';
+		simu(valid(in2)) = '1';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in1)) == '1');
+		BOOST_TEST(simu(valid(out)) == '0');
+
+		simu(valid(in1)) = '1';
+		simu(valid(in2)) = '1';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in1)) == '1');
+		BOOST_TEST(simu(valid(out)) == '1');
+
+		simu(ready(out)) = '0';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in1)) == '0');
+		BOOST_TEST(simu(valid(out)) == '1');
+
+		stopTest();
+		co_return;
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(stream_join_right_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 100'000'000, .memoryResetType = ClockConfig::ResetType::NONE });
+	ClockScope clkScp(clk);
+	using namespace gtry::scl;
+
+	VStream<BVec> in1{ 8_b };
+	pinIn(in1, "in1");
+
+	RvStream<BVec> in2{ 8_b };
+	pinIn(in2, "in2");
+
+	RvStream<std::tuple<BVec, BVec>> out = strm::join(
+		move(in1), move(in2)
+	) | strm::reduceTo<RvStream<std::tuple<BVec, BVec>>>();
+	pinOut(out, "out");
+
+	addSimulationProcess([&, this]()->SimProcess {
+		simu(valid(in1)) = '0';
+		simu(valid(in2)) = '0';
+		simu(ready(out)) = '0';
+
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in2)) == '0');
+		BOOST_TEST(simu(valid(out)) == '0');
+
+		simu(ready(out)) = '1';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in2)) == '0');
+		BOOST_TEST(simu(valid(out)) == '0');
+
+		simu(valid(in1)) = '1';
+		simu(valid(in2)) = '0';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in2)) == '1');
+		BOOST_TEST(simu(valid(out)) == '0');
+
+		simu(valid(in1)) = '0';
+		simu(valid(in2)) = '1';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in2)) == '0');
+		BOOST_TEST(simu(valid(out)) == '0');
+
+		simu(valid(in1)) = '1';
+		simu(valid(in2)) = '1';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in2)) == '1');
+		BOOST_TEST(simu(valid(out)) == '1');
+
+		simu(ready(out)) = '0';
+		co_await OnClk(clk);
+		BOOST_TEST(simu(ready(in2)) == '0');
+		BOOST_TEST(simu(valid(out)) == '1');
+
+		stopTest();
+		co_return;
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
