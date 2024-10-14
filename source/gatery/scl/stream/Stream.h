@@ -139,8 +139,7 @@ namespace gtry::scl::strm
 	auto removeFlowControl(StreamT&& stream);
 	auto removeFlowControl();
 
-	template<Signal T, StreamSignal StreamT> constexpr T& get(StreamT&& stream);
-	template<Signal T, StreamSignal StreamT> constexpr const T& get(const StreamT& stream);
+	template<Signal T, StreamSignal StreamT> constexpr auto&& get(StreamT&& stream);
 	template<Signal T> auto get();
 
 	/**
@@ -185,15 +184,9 @@ namespace gtry::scl::strm
 	}
 
 	template<Signal T, StreamSignal StreamT>
-	constexpr T& get(StreamT&& stream)
+	constexpr auto&& get(StreamT&& stream)
 	{
-		return std::get<T>(stream._sig);
-	}
-
-	template<Signal T, StreamSignal StreamT>
-	constexpr const T& get(const StreamT& stream)
-	{
-		return std::get<T>(stream._sig);
+		return std::get<T>(std::forward<StreamT>(stream)._sig);
 	}
 
 	template<Signal T> auto get()

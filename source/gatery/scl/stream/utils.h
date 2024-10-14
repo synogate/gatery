@@ -369,6 +369,45 @@ namespace gtry::scl::strm
 			return move(outStream);
 		};
 	}
+
+	/**
+	 * @brief Merge payload and all meta signals of two streams into one. There is no predefined semantics or default behavior for how to merge the signals. See join for an example.
+	 * @param payloadOp Used to merge the payload of the two streams.
+	 * @param metaBiOp Used to merge two meta signals. In case both streams have the same meta signal.
+	 * @param metaUnOp Used to transform any meta signal that exists in only one of the two streams.
+	 */
+	template<StreamSignal S1, StreamSignal S2, typename PayloadOp, typename MetaBiOp, typename MetaUnOp>
+	auto merge(S1&& s1, S2&& s2, PayloadOp&& payloadOp, MetaBiOp&& metaBiOp, MetaUnOp&& metaUnOp);
+
+	template<StreamSignal S2, typename PayloadOp, typename MetaBiOp, typename MetaUnOp>
+	auto merge(S2&& s2, PayloadOp&& payloadOp, MetaBiOp&& metaBiOp, MetaUnOp&& metaUnOp)
+	{
+		return [&](auto&& s1) { return merge(std::forward<decltype(s1)>(s1), std::forward<decltype(s2)>(s2), move(payloadOp), move(metaBiOp), move(metaUnOp)); };
+	};
+
+	template<typename ...TOperatorTypes>
+	struct Operators : TOperatorTypes... { using TOperatorTypes::operator ()...; };
+
+	namespace internal
+	{
+		struct MakeTuple;
+	}
+	struct JoinBeat;
+	struct MergeTakeFirst;
+
+	/**
+	 * @brief Used to synchronize two streams using back pressure or credit based flow control. It will not fail on streams that do not have flow control.
+	 * @param joinOp Used to merge the payload of the two streams.
+	 * @param metaJoinOp Used to merge meta signals of the two streams. The default JoinBeat takes care of ready, valid and credit signals.
+	 */
+	template<typename JoinOp = internal::MakeTuple, typename MetaJoinOp = JoinBeat, StreamSignal S1, StreamSignal S2> requires(!StreamSignal<JoinOp> and !StreamSignal<MetaJoinOp>)
+	auto join(S1&& s1, S2&& s2, JoinOp&& joinOp = JoinOp{}, MetaJoinOp&& metaJoinOp = MetaJoinOp{});
+
+	template<typename JoinOp = internal::MakeTuple, typename MetaJoinOp = JoinBeat, StreamSignal S2>  requires(!StreamSignal<JoinOp> and !StreamSignal<MetaJoinOp>)
+	auto join(S2&& s2, JoinOp&& joinOp = JoinOp{}, MetaJoinOp&& metaJoinOp = MetaJoinOp{})
+	{
+		return [&](auto&& s1) { return join(std::forward<decltype(s1)>(s1), std::forward<decltype(s2)>(s2), move(joinOp), move(metaJoinOp)); };
+	};
 }
 
 namespace gtry::scl::strm
@@ -923,4 +962,157 @@ namespace gtry::scl::strm
 	{
 		return arbitrateWithPolicy(ArbiterPolicyLowest{}, move(in1), move(inX)...);
 	}
+
+	namespace internal
+	{
+		template<typename Tuple, typename Result = std::tuple<>>
+		struct remove_duplicates;
+
+		template<typename Result>
+		struct remove_duplicates<std::tuple<>, Result>
+		{
+			using type = Result;
+		};
+
+		template<typename T, typename... Ts, typename... Rs>
+		struct remove_duplicates<std::tuple<T, Ts...>, std::tuple<Rs...>>
+		{
+			using type = std::conditional_t<
+				std::disjunction_v<std::is_same<T, Rs>...>,
+				typename remove_duplicates<std::tuple<Ts...>, std::tuple<Rs...>>::type,
+				typename remove_duplicates<std::tuple<Ts...>, std::tuple<Rs..., T>>::type
+			>;
+		};
+
+		struct MakeTuple
+		{
+			template<typename ...T>
+			auto operator()(T&&... t) const
+			{
+				return std::tuple(std::forward<T>(t)...);
+			};
+		};
+	}
+
+	struct MergeEmpty {};
+
+	template<StreamSignal S1, StreamSignal S2, typename PayloadOp, typename MetaBiOp, typename MetaUnOp>
+	auto merge(S1&& s1, S2&& s2, PayloadOp&& payloadOp, MetaBiOp&& metaBiOp, MetaUnOp&& metaUnOp)
+	{
+		using NewMeta = internal::remove_duplicates<decltype(s2._sig), decltype(s1._sig)>::type;
+
+		auto metaJoin = [&](const auto& typeRef) {
+			using MetaT = std::remove_cvref_t<decltype(typeRef)>;
+			if constexpr (std::remove_cvref_t<S1>::template has<MetaT>() and std::remove_cvref_t<S2>::template has<MetaT>())
+				return metaBiOp(
+					get<std::remove_cvref_t<decltype(typeRef)>>(std::forward<S1>(s1)),
+					get<std::remove_cvref_t<decltype(typeRef)>>(std::forward<S2>(s2)),
+					std::forward<S1>(s1),
+					std::forward<S2>(s2)
+				);
+			else if constexpr (std::remove_cvref_t<S1>::template has<MetaT>())
+				return metaUnOp(
+					get<std::remove_cvref_t<decltype(typeRef)>>(std::forward<S1>(s1)),
+					MergeEmpty{},
+					std::forward<S1>(s1),
+					std::forward<S2>(s2)
+				);
+			else
+				return metaUnOp(
+					MergeEmpty{},
+					get<std::remove_cvref_t<decltype(typeRef)>>(std::forward<S2>(s2)),
+					std::forward<S1>(s1),
+					std::forward<S2>(s2)
+				);
+			};
+
+		return Stream{
+			payloadOp(
+				*std::forward<S1>(s1),
+				*std::forward<S2>(s2),
+				std::forward<S1>(s1),
+				std::forward<S2>(s2)
+			),
+			std::apply([&](const auto&... sigs) {
+				return std::tuple(metaJoin(sigs)...);
+			}, NewMeta{})
+		};
+	}
+
+	struct JoinBeat
+	{
+		template<typename T> requires(std::is_same_v<T, Valid>)
+			T operator ()(T&& a, T&& b, auto&&, auto&&) const
+		{
+			return { a.valid & b.valid };
+		}
+
+		Ready operator ()(Ready&& a, Ready&& b, StreamSignal auto&& sa, StreamSignal auto&& sb) const
+		{
+			Ready ret;
+			*a.ready = *ret.ready & valid(sb);
+			*b.ready = *ret.ready & valid(sa);
+			return ret;
+		}
+
+		Ready operator ()(Ready&& a, MergeEmpty&&, const StreamSignal auto& sa, const StreamSignal auto& sb) const
+		{
+			Ready ret;
+			*a.ready = *ret.ready & valid(sb);
+			return ret;
+		}
+
+		Ready operator ()(MergeEmpty&&, Ready&& b, const StreamSignal auto& sa, const StreamSignal auto& sb) const
+		{
+			Ready ret;
+			*b.ready = *ret.ready & valid(sa);
+			return ret;
+		}
+
+		Credit operator ()(Credit&& a, Credit&& b, auto&&, auto&&) const
+		{
+			Credit ret{
+				.initialCredit = std::min(a.initialCredit, b.initialCredit),
+				.maxCredit = std::max(a.maxCredit, b.maxCredit)
+			};
+			*a.increment = *ret.increment;
+			*b.increment = *ret.increment;
+			return ret;
+		}
+	};
+
+	struct MergeTakeFirst
+	{
+		template<typename T>
+		T operator ()(T&& a, const T&, auto&&, auto&&) const
+		{
+			return std::forward<decltype(a)>(a);
+		}
+
+		auto operator ()(auto&& a, MergeEmpty&&, const auto&, const auto&) const
+		{
+			return std::forward<decltype(a)>(a);
+		}
+
+		auto operator ()(MergeEmpty&&, auto&& b, const auto&, const auto&) const
+		{
+			return std::forward<decltype(b)>(b);
+		}
+	};
+
+
+	template<typename JoinOp, typename MetaJoinOp, StreamSignal S1, StreamSignal S2> requires(!StreamSignal<JoinOp> and !StreamSignal<MetaJoinOp>)
+	auto join(S1&& s1, S2&& s2, JoinOp&& joinOp, MetaJoinOp&& metaJoinOp)
+	{
+		return merge(
+			std::forward<S1>(s1),
+			std::forward<S2>(s2),
+			[&](auto&& a, auto&& b, const auto&, const auto&) {
+				return joinOp(std::forward<decltype(a)>(a), std::forward<decltype(b)>(b));
+			},
+			metaJoinOp,
+			metaJoinOp
+		);
+	}
+
 }
