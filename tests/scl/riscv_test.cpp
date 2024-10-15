@@ -1703,8 +1703,6 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle, BoostUnitTestSimulationFixture)
 	rv.execute();
 	rv.mem(avmm);
 
-	std::random_device rng;
-	
 	Memory<UInt> dmem(1024, 32_b);
 	std::vector<unsigned char> dmemData(4096, 0);
 	dmemData[0] = 15; // (rng() & 0x3F) + 1;

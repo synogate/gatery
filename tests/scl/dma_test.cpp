@@ -216,6 +216,7 @@ struct dma_pcieHost_to_axi_slave_with_driver : public BoostUnitTestSimulationFix
 
 				hostMemory = &host.simuHostMemory();
 				axiMemory = &gtry::getSimData<hlim::MemoryStorageSparse>("axiMemory");
+				co_return 0;
 			});
 
 			driverCode(*driverInterface, *hostMemory, *axiMemory);

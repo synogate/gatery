@@ -80,7 +80,7 @@ BOOST_FIXTURE_TEST_CASE(fifoLutram, TestWithCycloneDevice<gtry::IntelQuartusTest
 	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsForMemory.inclChildren == 10.0);
 	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").M20Ks == 0);
 	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsNeeded.inclChildren < 20.0);
-	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").dedicatedLogicRegisters.inclChildren < 20.0);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").dedicatedLogicRegisters.inclChildren < 20);
 }
 
 BOOST_FIXTURE_TEST_CASE(fifoLutramSingleCycle, TestWithCycloneDevice<gtry::IntelQuartusTestFixture>)
@@ -111,7 +111,7 @@ BOOST_FIXTURE_TEST_CASE(fifoLutramSingleCycle, TestWithCycloneDevice<gtry::Intel
 	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsForMemory.inclChildren == 10.0);
 	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").M20Ks == 0);
 	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsNeeded.inclChildren < 20.0);
-	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").dedicatedLogicRegisters.inclChildren < 25.0);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").dedicatedLogicRegisters.inclChildren < 25);
 
 }
 
@@ -139,7 +139,7 @@ BOOST_FIXTURE_TEST_CASE(fifoLutramFallthrough, TestWithCycloneDevice<gtry::Intel
 	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsForMemory.inclChildren == 10.0);
 	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").M20Ks == 0);
 	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsNeeded.inclChildren < 25.0);
-	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").dedicatedLogicRegisters.inclChildren < 25.0);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").dedicatedLogicRegisters.inclChildren < 25);
 }
 
 BOOST_FIXTURE_TEST_CASE(fifoBRam, TestWithCycloneDevice<gtry::IntelQuartusTestFixture>)
@@ -169,7 +169,7 @@ BOOST_FIXTURE_TEST_CASE(fifoBRam, TestWithCycloneDevice<gtry::IntelQuartusTestFi
 	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsForMemory.inclChildren == 0.0);
 	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").M20Ks == (8*4 + 20-1) / 20);
 	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsNeeded.inclChildren < 25.0);
-	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").dedicatedLogicRegisters.inclChildren < 30.0);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").dedicatedLogicRegisters.inclChildren < 30);
 }
 
 BOOST_FIXTURE_TEST_CASE(fifoBRamFallthrough, TestWithCycloneDevice<gtry::IntelQuartusTestFixture>)
@@ -200,7 +200,7 @@ BOOST_FIXTURE_TEST_CASE(fifoBRamFallthrough, TestWithCycloneDevice<gtry::IntelQu
 	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsForMemory.inclChildren == 0.0);
 	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").M20Ks == (8*4 + 20-1) / 20);
 	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsNeeded.inclChildren < 30.0);
-	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").dedicatedLogicRegisters.inclChildren < 40.0);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").dedicatedLogicRegisters.inclChildren < 40);
 }
 
 BOOST_FIXTURE_TEST_CASE(fifoBRamLarge, TestWithCycloneDevice<gtry::IntelQuartusTestFixture>)
@@ -231,7 +231,7 @@ BOOST_FIXTURE_TEST_CASE(fifoBRamLarge, TestWithCycloneDevice<gtry::IntelQuartusT
 	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsForMemory.inclChildren == 0.0);
 	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").M20Ks == (256 + 20-1) / 20);
 	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").ALMsNeeded.inclChildren < 25.0);
-	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").dedicatedLogicRegisters.inclChildren < 25.0);
+	BOOST_TEST(getFitterResourceUtilization("scl_fifo0").dedicatedLogicRegisters.inclChildren < 25);
 }
 
 

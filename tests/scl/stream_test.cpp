@@ -2924,7 +2924,7 @@ BOOST_FIXTURE_TEST_CASE(stream_zipmerge_test, BoostUnitTestSimulationFixture)
 	RvStream<BVec, Sop, Empty, strm::Credit, Eop> out = strm::join(
 		move(in1), move(in2),
 		[](auto& a, auto& b) { return a ^ b; },
-		strm::Operators<strm::JoinBeat, strm::MergeTakeFirst>{}
+		strm::MergeTakeFirst{}
 	);
 	pinOut(out, "out");
 
@@ -3011,7 +3011,7 @@ BOOST_FIXTURE_TEST_CASE(stream_join_test, BoostUnitTestSimulationFixture)
 	RvStream<BVec> in2{ 8_b };
 	pinIn(in2, "in2");
 
-	RvStream<std::tuple<BVec, BVec>> out = move(in1) | strm::join(move(in2));
+	RvStream<std::pair<BVec, BVec>> out = move(in1) | strm::join(move(in2));
 	pinOut(out, "out");
 
 	addSimulationProcess([&, this]()->SimProcess {
@@ -3083,7 +3083,7 @@ BOOST_FIXTURE_TEST_CASE(stream_join_left_test, BoostUnitTestSimulationFixture)
 	VStream<BVec> in2{ 8_b };
 	pinIn(in2, "in2");
 
-	RvStream<std::tuple<BVec, BVec>> out = strm::join(
+	RvStream<std::pair<BVec, BVec>> out = strm::join(
 		move(in1), move(in2)
 	);
 	pinOut(out, "out");
@@ -3145,9 +3145,9 @@ BOOST_FIXTURE_TEST_CASE(stream_join_right_test, BoostUnitTestSimulationFixture)
 	RvStream<BVec> in2{ 8_b };
 	pinIn(in2, "in2");
 
-	RvStream<std::tuple<BVec, BVec>> out = strm::join(
+	RvStream<std::pair<BVec, BVec>> out = strm::join(
 		move(in1), move(in2)
-	) | strm::reduceTo<RvStream<std::tuple<BVec, BVec>>>();
+	) | strm::reduceTo<RvStream<std::pair<BVec, BVec>>>();
 	pinOut(out, "out");
 
 	addSimulationProcess([&, this]()->SimProcess {

@@ -390,20 +390,21 @@ namespace gtry::scl::strm
 
 	namespace internal
 	{
-		struct MakeTuple;
+		struct MakePair;
 	}
 	struct JoinBeat;
+	struct JoinNothing;
 	struct MergeTakeFirst;
 
 	/**
 	 * @brief Used to synchronize two streams using back pressure or credit based flow control. It will not fail on streams that do not have flow control.
-	 * @param joinOp Used to merge the payload of the two streams.
-	 * @param metaJoinOp Used to merge meta signals of the two streams. The default JoinBeat takes care of ready, valid and credit signals.
+	 * @param joinOp Used to merge the payload of the two streams. The default is std::pair.
+	 * @param metaJoinOp Used resolve conflicts of unhandled meta signals that appear in both streams.
 	 */
-	template<typename JoinOp = internal::MakeTuple, typename MetaJoinOp = JoinBeat, StreamSignal S1, StreamSignal S2> requires(!StreamSignal<JoinOp> and !StreamSignal<MetaJoinOp>)
+	template<typename JoinOp = internal::MakePair, typename MetaJoinOp = JoinNothing, StreamSignal S1, StreamSignal S2> requires(!StreamSignal<JoinOp> and !StreamSignal<MetaJoinOp>)
 	auto join(S1&& s1, S2&& s2, JoinOp&& joinOp = JoinOp{}, MetaJoinOp&& metaJoinOp = MetaJoinOp{});
 
-	template<typename JoinOp = internal::MakeTuple, typename MetaJoinOp = JoinBeat, StreamSignal S2>  requires(!StreamSignal<JoinOp> and !StreamSignal<MetaJoinOp>)
+	template<typename JoinOp = internal::MakePair, typename MetaJoinOp = JoinNothing, StreamSignal S2>  requires(!StreamSignal<JoinOp> and !StreamSignal<MetaJoinOp>)
 	auto join(S2&& s2, JoinOp&& joinOp = JoinOp{}, MetaJoinOp&& metaJoinOp = MetaJoinOp{})
 	{
 		return [&](auto&& s1) { return join(std::forward<decltype(s1)>(s1), std::forward<decltype(s2)>(s2), move(joinOp), move(metaJoinOp)); };
@@ -984,12 +985,12 @@ namespace gtry::scl::strm
 			>;
 		};
 
-		struct MakeTuple
+		struct MakePair
 		{
 			template<typename ...T>
 			auto operator()(T&&... t) const
 			{
-				return std::tuple(std::forward<T>(t)...);
+				return std::pair(std::forward<T>(t)...);
 			};
 		};
 	}
@@ -1042,7 +1043,7 @@ namespace gtry::scl::strm
 	struct JoinBeat
 	{
 		template<typename T> requires(std::is_same_v<T, Valid>)
-			T operator ()(T&& a, T&& b, auto&&, auto&&) const
+		T operator ()(T&& a, T&& b, auto&&, auto&&) const
 		{
 			return { a.valid & b.valid };
 		}
@@ -1100,6 +1101,10 @@ namespace gtry::scl::strm
 		}
 	};
 
+	struct JoinNothing
+	{
+		bool operator ()() const = delete;
+	};
 
 	template<typename JoinOp, typename MetaJoinOp, StreamSignal S1, StreamSignal S2> requires(!StreamSignal<JoinOp> and !StreamSignal<MetaJoinOp>)
 	auto join(S1&& s1, S2&& s2, JoinOp&& joinOp, MetaJoinOp&& metaJoinOp)
@@ -1110,9 +1115,8 @@ namespace gtry::scl::strm
 			[&](auto&& a, auto&& b, const auto&, const auto&) {
 				return joinOp(std::forward<decltype(a)>(a), std::forward<decltype(b)>(b));
 			},
-			metaJoinOp,
-			metaJoinOp
+			Operators<JoinBeat, MetaJoinOp>{},
+			Operators<JoinBeat, MergeTakeFirst>{}
 		);
 	}
-
 }
