@@ -56,7 +56,7 @@ void Node_Attributes::disconnectInput()
 
 bool Node_Attributes::canBeRetimedOver() const
 {
-	return m_attributes.preventRetimingOver();
+	return !m_attributes.preventRetimingOver();
 }
 
 
