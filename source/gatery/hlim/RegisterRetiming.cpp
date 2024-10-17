@@ -297,7 +297,7 @@ struct AddTraceAndWarnOfLatches
 	TraceableOpenList &openList;
 	BaseNode *node;
 	Conjunction &enableCondition;
-	const Subnet &enableConditionArea;
+	const Subnet *enableConditionArea = nullptr;
 };
 
 dbg::LogMessage &operator<<(dbg::LogMessage &msg, const Conjunction &conjunction)
@@ -322,16 +322,20 @@ dbg::LogMessage &operator<<(dbg::LogMessage &msg, const AddTraceAndWarnOfLatches
 {
 	Subnet subnet = trc.openList.traceBack(trc.node);
 
+	bool enableConditionRelevant = false;
 	for (auto n : subnet) {
 		if (auto *sig = dynamic_cast<Node_Signal*>(n)) {
 			if (n->getName() == "gtry_retiming_latch") {
 				msg 
 					<< "The signal passes through a register-turned-latch from a previous retiming run: " << sig
 					<< ". This is usually an indicator that the retiming was attempted with the wrong enable condition, derived from"
-					" encountering incompatible enable conditions. The enable condition is: " << trc.enableCondition << ". It was derived from " << trc.enableConditionArea << ". ";
+					" encountering incompatible enable conditions. The enable condition is: " << trc.enableCondition << ". ";
+				enableConditionRelevant = true;
 			}
 		}
 	}
+	if (trc.enableConditionArea && enableConditionRelevant)
+		msg << "The enable condition was derived from " << *trc.enableConditionArea << ". ";
 	
 	subnet.dilate(true, true);
 
@@ -382,7 +386,7 @@ std::optional<ForwardRetimingPlan> determineAreaToBeRetimedForward(Circuit &circ
 						<< dbg::LogMessage::Anchor{ output.node->getGroup() }
 						<< "An error occured attempting to retime forward to output " << output
 						<< ": The fanning-in signals leave the specified operation area through node " << nodePort.node << " without passing a register that can be retimed forward."
-						 << AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition, enableConditionArea });
+						 << AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition, &enableConditionArea });
 
 			HCL_DESIGNCHECK_HINT(false, "A retiming error occured, check the log for details: " + dbg::howToReachLog());
 		}
@@ -400,7 +404,7 @@ std::optional<ForwardRetimingPlan> determineAreaToBeRetimedForward(Circuit &circ
 						<< dbg::LogMessage::Anchor{ output.node->getGroup() }
 						<< "An error occured attempting to retime forward to output " << output
 						<< ": The fanning-in signals are driven by a node to which references are still being held " << nodePort.node
-						<< ". " << AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition, enableConditionArea });
+						<< ". " << AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition, &enableConditionArea });
 
 			HCL_DESIGNCHECK_HINT(false, "A retiming error occured, check the log for details: " + dbg::howToReachLog());
 		}			
@@ -422,7 +426,7 @@ std::optional<ForwardRetimingPlan> determineAreaToBeRetimedForward(Circuit &circ
 									<< "An error occured attempting to retime forward to output " << output
 									<< ": The fanning-in signals are driven by different clocks. Clocks differ between nodes " << clockGivingNode
 									<< " and " << nodePort.node
-									<< ". " << AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition, enableConditionArea });
+									<< ". " << AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition, &enableConditionArea });
 
 						HCL_DESIGNCHECK_HINT(false, "A retiming error occured, check the log for details: " + dbg::howToReachLog());
 					}
@@ -441,7 +445,7 @@ std::optional<ForwardRetimingPlan> determineAreaToBeRetimedForward(Circuit &circ
 						<< dbg::LogMessage::Anchor{ output.node->getGroup() }
 						<< "An error occured attempting to retime forward to output " << output
 						<< ": The fanning-in signals are driven by a node with side effects " << nodePort.node
-						<< " which can not be retimed. " << AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition, enableConditionArea });
+						<< " which can not be retimed. " << AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition, &enableConditionArea });
 
 			HCL_DESIGNCHECK_HINT(false, "A retiming error occured, check the log for details: " + dbg::howToReachLog());
 		}		
@@ -469,7 +473,7 @@ std::optional<ForwardRetimingPlan> determineAreaToBeRetimedForward(Circuit &circ
 								<< " with an enable signal that is incompatible with the inferred register enable signal of the retiming operation. "
 								<< "The retiming enable is " << enableCondition << " derived from " << enableConditionArea
 								<< ". The spawner's enable is " << spawnerEnable << " derived from " << spawnerEnableArea << ". "
-								<< AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition, enableConditionArea });
+								<< AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition, &enableConditionArea });
 
 					HCL_DESIGNCHECK_HINT(false, "A retiming error occured, check the log for details: " + dbg::howToReachLog());
 				}
@@ -496,7 +500,7 @@ std::optional<ForwardRetimingPlan> determineAreaToBeRetimedForward(Circuit &circ
 								<< " with an enable signal that is incompatible with the inferred register enable signal of the retiming operation. "  
 								<< "The retiming enable is " << enableCondition << " derived from " << enableConditionArea
 								<< ". The register's enable is " << regEnable << " derived from " << regEnableArea << ". "
-								<< AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition, enableConditionArea });
+								<< AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition, &enableConditionArea });
 
 					HCL_DESIGNCHECK_HINT(false, "A retiming error occured, check the log for details: " + dbg::howToReachLog());				
 				}
@@ -556,7 +560,7 @@ std::optional<ForwardRetimingPlan> determineAreaToBeRetimedForward(Circuit &circ
 								<< " with an enable signal that is incompatible with the inferred register enable signal of the retiming operation. "
 								<< "The retiming enable is " << enableCondition << " derived from " << enableConditionArea
 								<< ". The negative register's enable is " << regEnable << " derived from " << regEnableArea << ". "
-								<< AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition, enableConditionArea });
+								<< AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition, &enableConditionArea });
 
 					HCL_DESIGNCHECK_HINT(false, "A retiming error occured, check the log for details: " + dbg::howToReachLog());
 				}
@@ -607,7 +611,7 @@ std::optional<ForwardRetimingPlan> determineAreaToBeRetimedForward(Circuit &circ
 								<< " with an enable signal that is incompatible with the inferred register enable signal of the retiming operation. "
 								<< "The retiming enable is " << enableCondition << " derived from " << enableConditionArea
 								<< ". The port's enable is " << portEnable << " derived from " << portEnableArea << ". "
-								<< AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition, enableConditionArea });
+								<< AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition, &enableConditionArea });
 
 					HCL_DESIGNCHECK_HINT(false, "A retiming error occured, check the log for details: " + dbg::howToReachLog());				
 				}
@@ -653,7 +657,7 @@ std::optional<ForwardRetimingPlan> determineAreaToBeRetimedForward(Circuit &circ
 										<< " with an enable signal that is incompatible with the inferred register enable signal of the retiming operation. "
 										<< "The retiming enable is " << enableCondition << " derived from " << enableConditionArea
 										<< ". The node's enable is " << enable << " derived from " << enableArea << ". "
-										<< AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition, enableConditionArea });
+										<< AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition, &enableConditionArea });
 
 							HCL_DESIGNCHECK_HINT(false, "A retiming error occured, check the log for details: " + dbg::howToReachLog());
 						}
@@ -1254,9 +1258,9 @@ std::optional<BackwardRetimingPlan> determineAreaToBeRetimedBackward(Circuit &ci
 	BaseNode *clockGivingNode = nullptr;
 	Clock *clock = nullptr;
 
-	std::vector<NodePort> openList;
+	TraceableOpenList openList;
 	for (auto np : output.node->getDirectlyDriven(output.port))
-		openList.push_back(np);
+		openList.insert(np, output.node);
 
 
 #ifdef DEBUG_OUTPUT
@@ -1296,9 +1300,8 @@ std::optional<BackwardRetimingPlan> determineAreaToBeRetimedBackward(Circuit &ci
 #endif
 
 	while (!openList.empty()) {
-		auto nodePort = openList.back();
+		auto nodePort = openList.pop();
 		auto *node = nodePort.node;
-		openList.pop_back();
 		// Continue if the node was already encountered.
 		if (retimingPlan.areaToBeRetimed.contains(node)) continue;
 
@@ -1309,42 +1312,33 @@ std::optional<BackwardRetimingPlan> determineAreaToBeRetimedBackward(Circuit &ci
 		if (!area.contains(node)) {
 			if (!failureIsError) return {};
 
-#ifdef DEBUG_OUTPUT
-	writeSubnet();
-#endif
+			dbg::log(dbg::LogMessage{} 
+						<< dbg::LogMessage::LOG_ERROR
+						<< dbg::LogMessage::LOG_POSTPROCESSING
+						<< dbg::LogMessage::Anchor{ output.node->getGroup() }
+						<< "An error occured attempting to retime backward to output " << output
+						<< ": The fanning-out signals leave the specified operation area through node " << node 
+						<< " without passing a register that can be retimed backward.\n"
+						<< AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition });
 
-			std::stringstream error;
-			error 
-				<< "An error occured attempting to retime backward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
-				<< "Node from:\n" << output.node->getStackTrace() << "\n";
+			HCL_DESIGNCHECK_HINT(false, "A retiming error occured, check the log for details: " + dbg::howToReachLog());			
 
-			error 
-				<< "The fanning-out signals leave the specified operation area through node " << node->getName() << " (" << node->getTypeName() 
-				<< ") without passing a register that can be retimed backward. Note that registers with enable signals can't be retimed yet.\n"
-				<< "First node outside the operation area from:\n" << node->getStackTrace() << "\n";
-
-			HCL_ASSERT_HINT(false, error.str());
 		}
 
 		// We may not want to retime nodes to which references are still being held
 		if (node->hasRef() && !ignoreRefs) {
 			if (!failureIsError) return {};
 
-#ifdef DEBUG_OUTPUT
-	writeSubnet();
-#endif
+			dbg::log(dbg::LogMessage{} 
+						<< dbg::LogMessage::LOG_ERROR
+						<< dbg::LogMessage::LOG_POSTPROCESSING
+						<< dbg::LogMessage::Anchor{ output.node->getGroup() }
+						<< "An error occured attempting to retime backward to output " << output
+						<< ": The fanning-out signals are driving a node to which references are still being held " << node 
+						<< " without passing a register that can be retimed backward.\n"
+						<< AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition });
 
-			std::stringstream error;
-
-			error 
-				<< "An error occured attempting to retime backward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
-				<< "Node from:\n" << output.node->getStackTrace() << "\n";
-
-			error 
-				<< "The fanning-out signals are driving a node to which references are still being held " << node->getName() << " (" << node->getTypeName() << ", id " << node->getId() << ").\n"
-				<< "Node with references from:\n" << node->getStackTrace() << "\n";
-
-			HCL_ASSERT_HINT(false, error.str());
+			HCL_DESIGNCHECK_HINT(false, "A retiming error occured, check the log for details: " + dbg::howToReachLog());			
 		}			
 
 		// Check that everything is using the same clock.
@@ -1357,22 +1351,17 @@ std::optional<BackwardRetimingPlan> determineAreaToBeRetimedBackward(Circuit &ci
 					if (clock != c) {
 						if (!failureIsError) return {};
 
-#ifdef DEBUG_OUTPUT
-	writeSubnet();
-#endif
 
-						std::stringstream error;
+						dbg::log(dbg::LogMessage{} 
+									<< dbg::LogMessage::LOG_ERROR
+									<< dbg::LogMessage::LOG_POSTPROCESSING
+									<< dbg::LogMessage::Anchor{ output.node->getGroup() }
+									<< "An error occured attempting to retime backward to output " << output
+									<< ": The fanning-out signals are driven by different clocks. Clocks differ between nodes " << clockGivingNode
+									<< " and " << node
+									<< ". " << AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition });
 
-						error 
-							<< "An error occured attempting to retime backward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
-							<< "Node from:\n" << output.node->getStackTrace() << "\n";
-
-						error 
-							<< "The fanning-out signals are driven by different clocks. Clocks differ between nodes " << clockGivingNode->getName() << " (" << clockGivingNode->getTypeName() << ") and  " << node->getName() << " (" << node->getTypeName() << ").\n"
-							<< "First node from:\n" << clockGivingNode->getStackTrace() << "\n"
-							<< "Second node from:\n" << node->getStackTrace() << "\n";
-
-						HCL_ASSERT_HINT(false, error.str());
+						HCL_DESIGNCHECK_HINT(false, "A retiming error occured, check the log for details: " + dbg::howToReachLog());
 					}
 				}
 			}
@@ -1382,21 +1371,16 @@ std::optional<BackwardRetimingPlan> determineAreaToBeRetimedBackward(Circuit &ci
 		if (!node->canBeRetimedOver()) {
 			if (!failureIsError) return {};
 
-#ifdef DEBUG_OUTPUT
-	writeSubnet();
-#endif
+			dbg::log(dbg::LogMessage{} 
+						<< dbg::LogMessage::LOG_ERROR
+						<< dbg::LogMessage::LOG_POSTPROCESSING
+						<< dbg::LogMessage::Anchor{ output.node->getGroup() }
+						<< "An error occured attempting to retime backward to output " << output
+						<< ": The fanning-out signals are driving a node with " << node
+						<< " which can not be retimed.\n"
+						<< AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition });
 
-			std::stringstream error;
-
-			error 
-				<< "An error occured attempting to retime backward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
-				<< "Node from:\n" << output.node->getStackTrace() << "\n";
-
-			error 
-				<< "The fanning-out signals are driving a node with " << node->getName() << " (" << node->getTypeName() << ") which can not be retimed.\n"
-				<< "Node from:\n" << node->getStackTrace() << "\n";
-
-			HCL_ASSERT_HINT(false, error.str());
+			HCL_DESIGNCHECK_HINT(false, "A retiming error occured, check the log for details: " + dbg::howToReachLog());
 		}		
 
 		// Everything seems good with this node, so proceeed
@@ -1405,49 +1389,43 @@ std::optional<BackwardRetimingPlan> determineAreaToBeRetimedBackward(Circuit &ci
 
 			if (nodePort.port != (size_t)Node_Register::DATA) {
 				if (!failureIsError) return {};
-#ifdef DEBUG_OUTPUT
-writeSubnet();
-#endif
-				std::stringstream error;
 
-				error 
-					<< "An error occured attempting to retime backward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
-					<< "Node from:\n" << output.node->getStackTrace() << "\n";
+				dbg::log(dbg::LogMessage{} 
+							<< dbg::LogMessage::LOG_ERROR
+							<< dbg::LogMessage::LOG_POSTPROCESSING
+							<< dbg::LogMessage::Anchor{ output.node->getGroup() }
+							<< "An error occured attempting to retime backward to output " << output
+							<< ": The fanning-out signals are driving a non-data port of a register. Register:" << node
+							<< AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition });
 
-				error 
-					<< "The fanning-out signals are driving a non-data port of a register.\n	Register: " << node->getName() << " (" << node->getTypeName() << ", id " << node->getId() << ").\n"
-					<< "	From:\n" << node->getStackTrace() << "\n";
-
-				HCL_ASSERT_HINT(false, error.str());
+				HCL_DESIGNCHECK_HINT(false, "A retiming error occured, check the log for details: " + dbg::howToReachLog());
 			}
 
 			if (retimingPlan.registersToBeRemoved.contains(reg)) continue;
 
 			Conjunction regEnable;
+			Subnet regEnableArea;
 
 			// We do need to check for enable condition compatibility
 			if (reg->getDriver(Node_Register::ENABLE).node != nullptr)
-				regEnable.parseInput({.node = reg, .port = Node_Register::ENABLE});
+				regEnable.parseInput({.node = reg, .port = Node_Register::ENABLE}, &regEnableArea);
 
 
 			if (!enableCondition.isSubsetOf(regEnable)) {
 				if (!failureIsError) return {};
 
-#ifdef DEBUG_OUTPUT
-writeSubnet();
-#endif
-				std::stringstream error;
+				dbg::log(dbg::LogMessage{} 
+							<< dbg::LogMessage::LOG_ERROR
+							<< dbg::LogMessage::LOG_POSTPROCESSING
+							<< dbg::LogMessage::Anchor{ output.node->getGroup() }
+							<< "An error occured attempting to retime backward to output " << output
+							<< ": The fanning-out signals are driving a register " << nodePort.node
+							<< " with an enable signal that is incompatible with the inferred register enable signal of the retiming operation.\n"
+							<< "The retiming enable is " << enableCondition
+							<< ". The registers's enable is " << regEnable << " derived from " << regEnableArea << ". "
+							<< AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition });
 
-				error 
-					<< "An error occured attempting to retime backward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
-					<< "Node from:\n" << output.node->getStackTrace() << "\n";
-
-				error 
-					<< "The fanning-out signals are driving a register " << nodePort.node->getName() << " (" << nodePort.node->getTypeName() << ", id " << nodePort.node->getId()
-					<< ") with an enable signal that is incompatible with the inferred register enable signal of the retiming operation.\n"
-					<< "Register from:\n" << nodePort.node->getStackTrace() << "\n";
-
-				HCL_ASSERT_HINT(false, error.str());
+				HCL_DESIGNCHECK_HINT(false, "A retiming error occured, check the log for details: " + dbg::howToReachLog());
 			}
 
 
@@ -1458,7 +1436,7 @@ writeSubnet();
 				retimingPlan.areaToBeRetimed.add(node);
 				for (size_t i : utils::Range(node->getNumOutputPorts()))
 					for (auto np : node->getDirectlyDriven(i))
-						openList.push_back(np);
+						openList.insert(np, node);
 
 				backwardPlanningHandleEnablePort(
 					{.node = reg, .port = Node_Register::ENABLE},
@@ -1485,33 +1463,32 @@ writeSubnet();
 			for (size_t i : utils::Range(node->getNumOutputPorts()))
 				if (node->getOutputConnectionType(i).type != ConnectionType::DEPENDENCY)
 					for (auto np : node->getDirectlyDriven(i))
-						openList.push_back(np);
+						openList.insert(np, node);
 
  			if (auto *memPort = dynamic_cast<Node_MemPort*>(node)) { // If it is a memory port		 	
 
 				// We do need to check for enable condition compatibility
 				Conjunction portEnable;
+				Subnet portEnableArea;
 				if (memPort->getDriver((size_t)Node_MemPort::Inputs::wrEnable).node != nullptr)
-					portEnable.parseInput({.node = memPort, .port = (size_t)Node_MemPort::Inputs::wrEnable});
+					portEnable.parseInput({.node = memPort, .port = (size_t)Node_MemPort::Inputs::wrEnable}, &portEnableArea);
 
 				if (!enableCondition.isSubsetOf(portEnable)) {
 					if (!failureIsError) return {};
 
-		#ifdef DEBUG_OUTPUT
-			writeSubnet();
-		#endif
-					std::stringstream error;
 
-					error 
-						<< "An error occurred attempting to retime forward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
-						<< "Node from:\n" << output.node->getStackTrace() << "\n";
+					dbg::log(dbg::LogMessage{} 
+								<< dbg::LogMessage::LOG_ERROR
+								<< dbg::LogMessage::LOG_POSTPROCESSING
+								<< dbg::LogMessage::Anchor{ output.node->getGroup() }
+								<< "An error occured attempting to retime backward to output " << output
+								<< ": The retiming area contains a memory write port " << nodePort.node
+								<< " with an enable signal that is incompatible with the inferred register enable signal of the retiming operation.\n"
+								<< "The retiming enable is " << enableCondition
+								<< ". The registers's enable is " << portEnable << " derived from " << portEnableArea << ". "
+								<< AddTraceAndWarnOfLatches{ openList, nodePort.node, enableCondition });
 
-					error 
-						<< "The retiming area contains a memory write port " << nodePort.node->getName() << " (" << nodePort.node->getTypeName() << ", id " << nodePort.node->getId()
-						<< ") with an enable signal that is incompatible with the inferred register enable signal of the retiming operation.\n"
-						<< "Memory write port from:\n" << nodePort.node->getStackTrace() << "\n";
-
-					HCL_ASSERT_HINT(false, error.str());					
+					HCL_DESIGNCHECK_HINT(false, "A retiming error occured, check the log for details: " + dbg::howToReachLog());				
 				}
 
 				auto *group = memPort->getGroup();
@@ -1538,7 +1515,7 @@ writeSubnet();
 					for (auto np : memory->getPorts()) {
 						auto *otherMemPort = dynamic_cast<Node_MemPort*>(np.node);
 						if (otherMemPort->isWritePort())
-							openList.push_back(np);
+							openList.insert(np, memPort);
 					}
 
 				} else {
@@ -1547,7 +1524,7 @@ writeSubnet();
 				
 					// add all memory ports to open list
 					for (auto np : memory->getPorts()) 
-						openList.push_back(np);
+						openList.insert(np, memPort);
 				}
 			 }
 		}
@@ -1557,21 +1534,16 @@ writeSubnet();
 		if (retimingPlan.areaToBeRetimed.contains(term.first.node)) {
 			if (!failureIsError) return {};
 
-#ifdef DEBUG_OUTPUT
-writeSubnet();
-#endif
-			std::stringstream error;
+			dbg::log(dbg::LogMessage{} 
+						<< dbg::LogMessage::LOG_ERROR
+						<< dbg::LogMessage::LOG_POSTPROCESSING
+						<< dbg::LogMessage::Anchor{ output.node->getGroup() }
+						<< "An error occured attempting to retime backward to output " << output
+						<< ": The fanning-out signals are driving register with enable signals that are driven from within the area that is to be retimed. "
+						<< "The enable condition " << enableCondition << " contains the term " << term.first.node
+						<< AddTraceAndWarnOfLatches{ openList, term.first.node, enableCondition });
 
-			error 
-				<< "An error occured attempting to retime backward to output " << output.port << " of node " << output.node->getName() << " (" << output.node->getTypeName() << ", id " << output.node->getId() << "):\n"
-				<< "Node from:\n" << output.node->getStackTrace() << "\n";
-
-			error 
-				<< "The fanning-out signals are driving register with enable signals that are driven from within the area that is to be retimed.\n"
-				<< "	Node: " << term.first.node->getName() << " (" << term.first.node->getTypeName() << ", id " << term.first.node->getId() << ").\n"
-				<< "	From:\n" << term.first.node->getStackTrace() << "\n";
-
-			HCL_ASSERT_HINT(false, error.str());
+			HCL_DESIGNCHECK_HINT(false, "A retiming error occured, check the log for details: " + dbg::howToReachLog());
 		}
 	}
 
