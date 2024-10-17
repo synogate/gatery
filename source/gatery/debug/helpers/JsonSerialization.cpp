@@ -59,6 +59,19 @@ void serializeSubnet(std::ostream &json, const hlim::ConstSubnet &subnet)
 }
 
 
+void escapeJsonString(std::ostream &json, std::string_view msg)
+{
+	json << '"';
+	for (auto c : msg)
+		switch (c) {
+			case '"': json << "\\\""; break;
+			case '\n': json << "\\n"; break;
+			default:
+				json << c;
+		}
+	json << '"';
+}
+
 void serializeLogMessage(std::ostream &json, const LogMessage &msg)
 {
 	json 
@@ -72,11 +85,15 @@ void serializeLogMessage(std::ostream &json, const LogMessage &msg)
 		if (!firstPart) json << ",\n";
 		firstPart = false;
 		
-		if (std::holds_alternative<const char*>(part))
-			json << "{\"type\": \"string\", \"data\": \"" << std::get<const char*>(part) << "\"}\n";
-		else if (std::holds_alternative<std::string>(part))
-			json << "{\"type\": \"string\", \"data\": \"" << std::get<std::string>(part) << "\"}\n";
-		else if (std::holds_alternative<const hlim::BaseNode*>(part))
+		if (std::holds_alternative<const char*>(part)) {
+			json << "{\"type\": \"string\", \"data\": ";
+			escapeJsonString(json, std::get<const char*>(part));
+			json << "}\n";
+		} else if (std::holds_alternative<std::string>(part)) {
+			json << "{\"type\": \"string\", \"data\": ";
+			escapeJsonString(json, std::get<std::string>(part));
+			json << "}\n";
+		} else if (std::holds_alternative<const hlim::BaseNode*>(part))
 			json << "{\"type\": \"node\", \"id\": " << std::get<const hlim::BaseNode*>(part)->getId() << "}\n";
 		else if (std::holds_alternative<const hlim::NodeGroup*>(part))
 			json << "{\"type\": \"group\", \"id\": " << std::get<const hlim::NodeGroup*>(part)->getId() << "}\n";
