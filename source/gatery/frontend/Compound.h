@@ -572,9 +572,9 @@ namespace gtry
 		return ret;
 	}
 
-	inline auto name(std::string_view prefix)
+	inline auto name(std::string prefix)
 	{
-		return [&](auto&& in) {
+		return [=](auto&& in) {
 			return name(std::forward<decltype(in)>(in), prefix);
 		};
 	}
