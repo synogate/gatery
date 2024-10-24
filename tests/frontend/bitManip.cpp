@@ -41,3 +41,36 @@ BOOST_AUTO_TEST_CASE(CheckEndianFlip)
 	BOOST_TEST(flipEndian((std::int64_t) 0x123456789ABCDEF0) == 0xF0DEBC9A78563412);
 }
 
+BOOST_AUTO_TEST_CASE(CheckIterateUndefinedValues)
+{
+	using namespace gtry::utils;
+
+	for (auto i : allPossibleUndefinedValues(0, ~3ull)) {
+		BOOST_CHECK((i >= 0) && (i <= 3));
+	}
+
+
+	auto endIter = UndefinedValueIterator(0,0,0).end();
+	{
+		auto iter = allPossibleUndefinedValues(0b00100, 0b11101101, 0b11111111).begin();
+		
+				BOOST_CHECK((iter != endIter)); BOOST_TEST(*iter == 0b00100);
+		++iter; BOOST_CHECK((iter != endIter)); BOOST_TEST(*iter == 0b00110);
+		++iter; BOOST_CHECK((iter != endIter)); BOOST_TEST(*iter == 0b10100);
+		++iter; BOOST_CHECK((iter != endIter)); BOOST_TEST(*iter == 0b10110);
+		++iter; BOOST_CHECK((iter == endIter));
+	}
+	{
+		auto iter = allPossibleUndefinedValues(0b00100, 0b11101100, 0b11111111).begin();
+		
+				BOOST_CHECK((iter != endIter)); BOOST_TEST(*iter == 0b00100);
+		++iter; BOOST_CHECK((iter != endIter)); BOOST_TEST(*iter == 0b00101);
+		++iter; BOOST_CHECK((iter != endIter)); BOOST_TEST(*iter == 0b00110);
+		++iter; BOOST_CHECK((iter != endIter)); BOOST_TEST(*iter == 0b00111);
+		++iter; BOOST_CHECK((iter != endIter)); BOOST_TEST(*iter == 0b10100);
+		++iter; BOOST_CHECK((iter != endIter)); BOOST_TEST(*iter == 0b10101);
+		++iter; BOOST_CHECK((iter != endIter)); BOOST_TEST(*iter == 0b10110);
+		++iter; BOOST_CHECK((iter != endIter)); BOOST_TEST(*iter == 0b10111);
+		++iter; BOOST_CHECK((iter == endIter));
+	}
+}

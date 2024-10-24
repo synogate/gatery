@@ -89,15 +89,40 @@ void Node_Multiplexer::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, s
 	}
 
 	std::uint64_t selector = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[0], selectorType.width);
+	std::uint64_t selectorDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[0], selectorType.width);
+	
+	if (utils::isMaskSet(selectorDefined, 0, selectorType.width)) {
+		// Shortcut for fully defined selector: Choose the input and copy it
 
-	if (selector >= getNumInputPorts()-1) {
-		state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width);
-		return;
+		if (selector >= getNumInputPorts()-1) {
+			state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width);
+			return;
+		}
+		if (inputOffsets[1+selector] != ~0ull)
+			state.copyRange(outputOffsets[0], state, inputOffsets[1+selector], getOutputConnectionType(0).width);
+		else
+			state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width);
+
+	} else {
+		// Slow path for partially defined selector: Iterate over all possible inputs and merge their values.
+
+		bool first = true;
+		for (auto index : utils::allPossibleUndefinedValues(selector, selectorDefined, utils::bitMaskRange<std::uint64_t>(0, selectorType.width))) {
+
+			if (index >= getNumInputPorts()-1) {
+				state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width);
+				return;
+			}
+
+			if (first) {
+				state.copyRange(outputOffsets[0], state, inputOffsets[1+index], getOutputConnectionType(0).width);
+				first = false;
+			} else {
+				sim::mergeUndefinedSelection(state, outputOffsets[0], state, inputOffsets[1+index], getOutputConnectionType(0).width);
+			}
+		}
+		HCL_ASSERT(first == false);
 	}
-	if (inputOffsets[1+selector] != ~0ull)
-		state.copyRange(outputOffsets[0], state, inputOffsets[1+selector], getOutputConnectionType(0).width);
-	else
-		state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[0], getOutputConnectionType(0).width);
 }
 
 

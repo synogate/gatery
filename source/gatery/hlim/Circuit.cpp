@@ -1843,46 +1843,6 @@ void MinimalPostprocessing::run(Circuit& circuit) const
 
 
 
-Node_Signal *Circuit::appendSignal(NodePort &nodePort)
-{
-	Node_Signal *sig = createNode<Node_Signal>();
-	sig->recordStackTrace();
-	if (nodePort.node != nullptr) {
-		sig->connectInput(nodePort);
-		sig->moveToGroup(nodePort.node->getGroup());
-	}
-	nodePort = {.node=sig, .port=0ull};
-	return sig;
-}
-
-Node_Signal *Circuit::appendSignal(RefCtdNodePort &nodePort)
-{
-	Node_Signal *sig = createNode<Node_Signal>();
-	sig->recordStackTrace();
-	if (nodePort.node != nullptr) {
-		sig->connectInput(nodePort);
-		sig->moveToGroup(nodePort.node->getGroup());
-	}
-	nodePort = {.node=sig, .port=0ull};
-	return sig;
-}
-
-Node_Attributes *Circuit::getCreateAttribNode(NodePort &nodePort)
-{
-	if (auto *attrib = dynamic_cast<Node_Attributes*>(nodePort.node))
-		return attrib;
-
-	
-	auto *attribNode = createNode<Node_Attributes>();
-	attribNode->connectInput(nodePort);
-	attribNode->recordStackTrace();
-	attribNode->moveToGroup(nodePort.node->getGroup());
-
-	nodePort = { .node = attribNode, .port = 0ull };
-
-	return attribNode;
-}
-
 std::uint64_t Circuit::allocateRevisitColor(utils::RestrictTo<RevisitCheck>)
 {
 	HCL_ASSERT(!m_revisitColorInUse);

@@ -25,6 +25,7 @@
 #include <gatery/hlim/Attributes.h>
 #include <gatery/hlim/supportNodes/Node_PathAttributes.h>
 #include <gatery/hlim/supportNodes/Node_Attributes.h>
+#include <gatery/hlim/ConstructionHelper.h>
 
 #include <gatery/export/vhdl/VHDLExport.h>
 #include <gatery/export/vhdl/Entity.h>
@@ -54,7 +55,7 @@ void XilinxVivado::prepareCircuit(hlim::Circuit &circuit)
 			// Keep start and end driver of all paths
 			for (unsigned i = 0; i < 2; i++) {
 				auto driver = pa->getNonSignalDriver(i);
-				auto *attrib = circuit.getCreateAttribNode(driver);
+				auto *attrib = hlim::ConstructionHelper(circuit).getCreateAttribNode(driver);
 				attrib->getAttribs().allowFusing = false;
 			}
 

@@ -37,6 +37,7 @@
 #include "../GraphExploration.h"
 #include "../RegisterRetiming.h"
 #include "../GraphTools.h"
+#include "../ConstructionHelper.h"
 
 #include "../../simulation/SimulationContext.h"
 
@@ -265,6 +266,8 @@ void MemoryGroup::convertToReadBeforeWrite(Circuit &circuit)
 			if (prevPort->isWritePort()) {
 				auto *wp = prevPort;
 				lazyCreateFixupNodeGroup();
+				ConstructionHelper c(circuit);
+				c.constructInGroup(*m_fixupNodeGroup);
 
 				auto *addrCompNode = circuit.createNode<Node_Compare>(Node_Compare::EQ);
 				addrCompNode->recordStackTrace();
@@ -274,7 +277,7 @@ void MemoryGroup::convertToReadBeforeWrite(Circuit &circuit)
 				addrCompNode->connectInput(1, wp->getDriver((size_t)Node_MemPort::Inputs::address));
 
 				NodePort conflict = {.node = addrCompNode, .port = 0ull};
-				circuit.appendSignal(conflict)->setName("conflict");
+				c.appendSignal(conflict)->setName("conflict");
 
 				if (rp.node->getDriver((size_t)Node_MemPort::Inputs::enable).node != nullptr) {
 					auto *logicAnd = circuit.createNode<Node_Logic>(Node_Logic::AND);
@@ -283,7 +286,7 @@ void MemoryGroup::convertToReadBeforeWrite(Circuit &circuit)
 					logicAnd->connectInput(0, conflict);
 					logicAnd->connectInput(1, rp.node->getDriver((size_t)Node_MemPort::Inputs::enable));
 					conflict = {.node = logicAnd, .port = 0ull};
-					circuit.appendSignal(conflict)->setName("conflict_and_rdEn");
+					c.appendSignal(conflict)->setName("conflict_and_rdEn");
 				}
 
 				HCL_ASSERT(wp->getDriver((size_t)Node_MemPort::Inputs::enable).node == nullptr || wp->getNonSignalDriver((size_t)Node_MemPort::Inputs::enable) == wp->getNonSignalDriver((size_t)Node_MemPort::Inputs::wrEnable));
@@ -294,7 +297,7 @@ void MemoryGroup::convertToReadBeforeWrite(Circuit &circuit)
 					logicAnd->connectInput(0, conflict);
 					logicAnd->connectInput(1, wp->getDriver((size_t)Node_MemPort::Inputs::wrEnable));
 					conflict = {.node = logicAnd, .port = 0ull};
-					circuit.appendSignal(conflict)->setName("conflict_and_wrEn");
+					c.appendSignal(conflict)->setName("conflict_and_wrEn");
 				}
 
 				NodePort wrData = wp->getDriver((size_t)Node_MemPort::Inputs::wrData);
@@ -318,7 +321,7 @@ void MemoryGroup::convertToReadBeforeWrite(Circuit &circuit)
 
 				NodePort muxOut = {.node = muxNode, .port=0ull};
 
-				circuit.appendSignal(muxOut)->setName("conflict_bypass_mux");
+				c.appendSignal(muxOut)->setName("conflict_bypass_mux");
 
 				// Rewire all original consumers to the mux output
 				for (auto np : consumers)
@@ -361,49 +364,34 @@ void MemoryGroup::resolveWriteOrder(Circuit &circuit)
 				// wp2 is supposed to happen before wp1. Write conflict detection logic and disable wp2 if a conflict happens
 		 
 				lazyCreateFixupNodeGroup();
+				ConstructionHelper c(circuit);
+				c.constructInGroup(*m_fixupNodeGroup);
 
-
-				auto *addrCompNode = circuit.createNode<Node_Compare>(Node_Compare::NEQ);
-				addrCompNode->recordStackTrace();
-				addrCompNode->moveToGroup(m_fixupNodeGroup);
-				addrCompNode->setComment("We can enable the former write if the write adresses differ.");
-				addrCompNode->connectInput(0, wp1.node->getDriver((size_t)Node_MemPort::Inputs::address));
-				addrCompNode->connectInput(1, wp2->getDriver((size_t)Node_MemPort::Inputs::address));
+				auto *addrDiffer = c.cneq(wp1.node->getDriver((size_t)Node_MemPort::Inputs::address), wp2->getDriver((size_t)Node_MemPort::Inputs::address));
+				addrDiffer->setComment("We can enable the former write if the write adresses differ.");
 
 				// Enable write if addresses differ
-				NodePort newWrEn2 = {.node = addrCompNode, .port = 0ull};
-				circuit.appendSignal(newWrEn2)->setName("newWrEn");
+				NodePort newWrEn2 = {.node = addrDiffer, .port = 0ull};
+				c.appendSignal(newWrEn2)->setName("newWrEn");
 
 				// Alternatively, enable write if wp1 does not write (no connection on enable means yes)
 				HCL_ASSERT(wp1.node->getDriver((size_t)Node_MemPort::Inputs::enable).node == nullptr || wp1.node->getNonSignalDriver((size_t)Node_MemPort::Inputs::enable) == wp1.node->getNonSignalDriver((size_t)Node_MemPort::Inputs::wrEnable));
 				if (wp1.node->getDriver((size_t)Node_MemPort::Inputs::wrEnable).node != nullptr) {
 
-					auto *logicNot = circuit.createNode<Node_Logic>(Node_Logic::NOT);
-					logicNot->moveToGroup(m_fixupNodeGroup);
-					logicNot->recordStackTrace();
-					logicNot->connectInput(0, wp1.node->getDriver((size_t)Node_MemPort::Inputs::wrEnable));
-
-					auto *logicOr = circuit.createNode<Node_Logic>(Node_Logic::OR);
-					logicOr->moveToGroup(m_fixupNodeGroup);
+					auto *logicOr = c.lor(newWrEn2, { .node = c.lnot(wp1.node->getDriver((size_t)Node_MemPort::Inputs::wrEnable)), .port = 0ull });
 					logicOr->setComment("We can also enable the former write if the latter write is disabled.");
-					logicOr->recordStackTrace();
-					logicOr->connectInput(0, newWrEn2);
-					logicOr->connectInput(1, {.node = logicNot, .port = 0ull});
+
 					newWrEn2 = {.node = logicOr, .port = 0ull};
-					circuit.appendSignal(newWrEn2)->setName("newWrEn");
+					c.appendSignal(newWrEn2)->setName("newWrEn");
 				}
 
 				// But only enable write if wp2 actually wants to write (no connection on enable means yes)
 				HCL_ASSERT(wp2->getDriver((size_t)Node_MemPort::Inputs::enable).node == nullptr || wp2->getNonSignalDriver((size_t)Node_MemPort::Inputs::enable) == wp2->getNonSignalDriver((size_t)Node_MemPort::Inputs::wrEnable));
 				if (wp2->getDriver((size_t)Node_MemPort::Inputs::wrEnable).node != nullptr) {
-					auto *logicAnd = circuit.createNode<Node_Logic>(Node_Logic::AND);
-					logicAnd->moveToGroup(m_fixupNodeGroup);
+					auto *logicAnd = c.land(newWrEn2, wp2->getDriver((size_t)Node_MemPort::Inputs::wrEnable));
 					logicAnd->setComment("But we can only enable the former write if the former write actually wants to write.");
-					logicAnd->recordStackTrace();
-					logicAnd->connectInput(0, newWrEn2);
-					logicAnd->connectInput(1, wp2->getDriver((size_t)Node_MemPort::Inputs::wrEnable));
 					newWrEn2 = {.node = logicAnd, .port = 0ull};
-					circuit.appendSignal(newWrEn2)->setName("newWrEn");
+					c.appendSignal(newWrEn2)->setName("newWrEn");
 				}
 
 
@@ -434,6 +422,9 @@ void MemoryGroup::ensureNotEnabledFirstCycles(Circuit &circuit, NodeGroup *ng, N
 			n->moveToGroup(ng);
 		nodesToMove.clear();
 	};
+
+	ConstructionHelper c(circuit);
+	c.constructInGroup(*ng);
 
 
 	// Ensure enable is low in first cycles
@@ -496,14 +487,7 @@ void MemoryGroup::ensureNotEnabledFirstCycles(Circuit &circuit, NodeGroup *ng, N
 				}
 			}
 
-			sim::DefaultBitVectorState state;
-			state.resize(1);
-			state.set(sim::DefaultConfig::DEFINED, 0);
-			state.set(sim::DefaultConfig::VALUE, 0, false);
-			auto *constZero = circuit.createNode<Node_Constant>(state, ConnectionType::BOOL);
-			constZero->recordStackTrace();
-			constZero->moveToGroup(ng);
-			enableReg->connectInput(Node_Register::RESET_VALUE, {.node = constZero, .port = 0ull});
+			enableReg->connectInput(Node_Register::RESET_VALUE, p0(c.constBoolean(false)));
 
 			input = {.node = enableReg, .port = 0ull};
 			unhandledCycles--;
@@ -524,30 +508,14 @@ void MemoryGroup::ensureNotEnabledFirstCycles(Circuit &circuit, NodeGroup *ng, N
 		if (unhandledCycles == 1) {
 
 			// Build single register with reset 0 and input 1 
-			sim::DefaultBitVectorState state;
-			state.resize(1);
-			state.set(sim::DefaultConfig::DEFINED, 0);
-			state.set(sim::DefaultConfig::VALUE, 0, false);
-			auto *constZero = circuit.createNode<Node_Constant>(state, ConnectionType::BOOL);
-			constZero->recordStackTrace();
-			constZero->moveToGroup(ng);
-
-			state.set(sim::DefaultConfig::VALUE, 0, true);
-			auto *constOne = circuit.createNode<Node_Constant>(state, ConnectionType::BOOL);
-			constOne->recordStackTrace();
-			constOne->moveToGroup(ng);
-
-			auto *reg = circuit.createNode<Node_Register>();
-			reg->recordStackTrace();
-			reg->moveToGroup(ng);
+			auto *reg = c.reg(
+					*writePort->getClocks()[0], 
+					p0(c.constBoolean(true)),
+					p0(c.constBoolean(false)));
 			reg->setComment("Register that generates a zero after reset and a one on all later cycles");
-			reg->setClock(writePort->getClocks()[0]);
-
-			reg->connectInput(Node_Register::Input::RESET_VALUE, {.node = constZero, .port = 0ull});
-			reg->connectInput(Node_Register::Input::DATA, {.node = constOne, .port = 0ull});
 			reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD).insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
 
-			newEnable = {.node = reg, .port = 0ull};
+			newEnable = p0(reg);
 		} else {
 			size_t counterWidth = utils::Log2C(unhandledCycles)+1;
 
@@ -556,42 +524,16 @@ void MemoryGroup::ensureNotEnabledFirstCycles(Circuit &circuit, NodeGroup *ng, N
 				Subtract from it and use the MSB as the indicator that zero was reached, which is the output but also, when negated, the enable to the register.
 			*/
 
-
-
-			auto *reg = circuit.createNode<Node_Register>();
-			reg->moveToGroup(ng);
-			reg->recordStackTrace();
-			reg->setClock(writePort->getClocks()[0]);
+			auto *reg = c.reg(*writePort->getClocks()[0],
+					{},
+					p0(c.constBVec(unhandledCycles-1, counterWidth)));
 			reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD).insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
 
-			sim::DefaultBitVectorState state;
-			state.resize(counterWidth);
-			state.setRange(sim::DefaultConfig::DEFINED, 0, counterWidth);
-			state.insertNonStraddling(sim::DefaultConfig::VALUE, 0, counterWidth, unhandledCycles-1);
 
-			auto *resetConst = circuit.createNode<Node_Constant>(state, ConnectionType::BITVEC);
-			resetConst->moveToGroup(ng);
-			resetConst->recordStackTrace();
-			reg->connectInput(Node_Register::RESET_VALUE, {.node = resetConst, .port = 0ull});
+			NodePort counter = p0(reg);
+			c.appendSignal(counter)->setName("delayedWrEnableCounter");
 
-
-			NodePort counter = {.node = reg, .port = 0ull};
-			circuit.appendSignal(counter)->setName("delayedWrEnableCounter");
-
-
-			// build a one
-			state.insertNonStraddling(sim::DefaultConfig::VALUE, 0, counterWidth, 1);
-			auto *constOne = circuit.createNode<Node_Constant>(state, ConnectionType::BITVEC);
-			constOne->moveToGroup(ng);
-			constOne->recordStackTrace();
-
-			auto *subNode = circuit.createNode<Node_Arithmetic>(Node_Arithmetic::SUB);
-			subNode->moveToGroup(ng);
-			subNode->recordStackTrace();
-			subNode->connectInput(0, counter);
-			subNode->connectInput(1, {.node = constOne, .port = 0ull});
-
-			reg->connectInput(Node_Register::DATA, {.node = subNode, .port = 0ull});
+			reg->connectInput(Node_Register::DATA, p0(c.asub(counter, p0(c.constBVec(1, counterWidth)))));
 
 
 			auto *rewireNode = circuit.createNode<Node_Rewire>(1);
@@ -601,14 +543,10 @@ void MemoryGroup::ensureNotEnabledFirstCycles(Circuit &circuit, NodeGroup *ng, N
 			rewireNode->setExtract(counterWidth-1, 1);
 			rewireNode->changeOutputType({.type = ConnectionType::BOOL, .width = 1});
 
-			NodePort counterExpired = {.node = rewireNode, .port = 0ull};
-			circuit.appendSignal(counterExpired)->setName("delayedWrEnableCounterExpired");
+			NodePort counterExpired = p0(rewireNode);
+			c.appendSignal(counterExpired)->setName("delayedWrEnableCounterExpired");
 
-			auto *logicNot = circuit.createNode<Node_Logic>(Node_Logic::NOT);
-			logicNot->moveToGroup(ng);
-			logicNot->recordStackTrace();
-			logicNot->connectInput(0, counterExpired);
-			reg->connectInput(Node_Register::ENABLE, {.node = logicNot, .port = 0ull});
+			reg->connectInput(Node_Register::ENABLE, p0(c.lnot(counterExpired)));
 
 			newEnable = counterExpired;
 		}
@@ -617,13 +555,7 @@ void MemoryGroup::ensureNotEnabledFirstCycles(Circuit &circuit, NodeGroup *ng, N
 		if (driver.node != nullptr) {
 
 			// AND to existing enable input
-			auto *logicAnd = circuit.createNode<Node_Logic>(Node_Logic::AND);
-			logicAnd->moveToGroup(ng);
-			logicAnd->recordStackTrace();
-			logicAnd->connectInput(0, newEnable);
-			logicAnd->connectInput(1, driver);
-
-			newEnable = {.node = logicAnd, .port = 0ull};
+			newEnable = p0(c.land(newEnable, driver));
 		}
 
 		input.node->rewireInput(input.port, newEnable);
@@ -1013,44 +945,24 @@ Node_MemPort *MemoryGroup::findSuitableResetWritePort()
 
 NodePort MemoryGroup::buildResetAddrCounter(Circuit &circuit, size_t width, Clock *resetClock)
 {
-	sim::DefaultBitVectorState state;
-	state.resize(width);
-	state.setRange(sim::DefaultConfig::DEFINED, 0, width);
-	state.clearRange(sim::DefaultConfig::VALUE, 0, width);
+	lazyCreateFixupNodeGroup();
 
-	auto *resetConst = circuit.createNode<Node_Constant>(state, ConnectionType::BITVEC);
-	resetConst->moveToGroup(m_fixupNodeGroup);
-	resetConst->recordStackTrace();
+	ConstructionHelper c(circuit);
+	c.constructInGroup(*m_fixupNodeGroup);
 
 	if (width == 0)
-		return { .node = resetConst, .port = 0ull };
+		return p0(c.constBVec(0, width));
 
-	auto *reg = circuit.createNode<Node_Register>();
-	reg->moveToGroup(m_fixupNodeGroup);
-	reg->recordStackTrace();
-	reg->setClock(resetClock);
+
+	auto *reg = c.reg(*resetClock, 
+						{},
+						p0(c.constBVec(0, width)));
 	reg->getFlags().insert(Node_Register::Flags::ALLOW_RETIMING_BACKWARD).insert(Node_Register::Flags::ALLOW_RETIMING_FORWARD);
-	reg->connectInput(Node_Register::RESET_VALUE, {.node = resetConst, .port = 0ull});
 
-
-	// build a one
-	state.setRange(sim::DefaultConfig::VALUE, 0, 1);
-	auto *constOne = circuit.createNode<Node_Constant>(state, ConnectionType::BITVEC);
-	constOne->moveToGroup(m_fixupNodeGroup);
-	constOne->recordStackTrace();
-
-
-	auto *addNode = circuit.createNode<Node_Arithmetic>(Node_Arithmetic::ADD);
-	addNode->moveToGroup(m_fixupNodeGroup);
-	addNode->recordStackTrace();
-	addNode->connectInput(1, {.node = constOne, .port = 0ull});
-
-	reg->connectInput(Node_Register::DATA, {.node = addNode, .port = 0ull});
-
-	NodePort counter = {.node = reg, .port = 0ull};
+	NodePort counter = p0(reg);
 	giveName(circuit, counter, "reset_addr_counter");
 
-	addNode->connectInput(0, counter);
+	reg->connectInput(Node_Register::DATA, p0(c.aadd(counter, p0(c.constBVec(1, width)))));
 
 	return counter;
 }
@@ -1280,9 +1192,11 @@ void MemoryGroup::bypassSignalNodes()
 void MemoryGroup::giveName(Circuit &circuit, NodePort &nodePort, std::string name)
 {
 	lazyCreateFixupNodeGroup();
-	auto *sig = circuit.appendSignal(nodePort);
+	ConstructionHelper c(circuit);
+	c.constructInGroup(*m_fixupNodeGroup);
+
+	auto *sig = c.appendSignal(nodePort);
 	sig->setName(std::move(name));
-	sig->moveToGroup(m_fixupNodeGroup);
 }
 
 void MemoryGroup::emulateResetOfOutputRegisters(Circuit &circuit)
@@ -1302,52 +1216,25 @@ void MemoryGroup::emulateResetOfFirstReadPortOutputRegister(Circuit &circuit, Me
 
 	lazyCreateFixupNodeGroup();
 
+	ConstructionHelper c(circuit);
+	c.constructInGroup(*m_fixupNodeGroup);
+
 	auto *clockDomain = reg->getClocks()[0];
-	
-	auto *resetPin = circuit.createNode<Node_ClkRst2Signal>();
-	resetPin->moveToGroup(m_fixupNodeGroup);
-	resetPin->recordStackTrace();
-	resetPin->setClock(clockDomain);
 
-	bool resetHighActive = clockDomain->getRegAttribs().resetActive == RegisterAttributes::Active::HIGH;
+	auto inReset = c.isInReset(*clockDomain);
 
-	sim::DefaultBitVectorState state;
-	state.resize(1);
-	state.setRange(sim::DefaultConfig::DEFINED, 1, 1);
-	state.clearRange(sim::DefaultConfig::VALUE, resetHighActive?1:0, 1);
-
-	auto *resetConst = circuit.createNode<Node_Constant>(state, ConnectionType::BOOL);
-	resetConst->moveToGroup(m_fixupNodeGroup);
-	resetConst->recordStackTrace();
-
-
-	auto *regReset = circuit.createNode<Node_Register>();
-	regReset->recordStackTrace();
-	regReset->setClock(clockDomain);
-	regReset->connectInput(Node_Register::DATA, {.node = resetPin, .port = 0 });
-	regReset->connectInput(Node_Register::RESET_VALUE, {.node = resetConst, .port = 0 });
+	auto *regReset = c.reg(*clockDomain, inReset, p0(c.constBoolean(true)));
 	regReset->connectInput(Node_Register::ENABLE, reg->getDriver(Node_Register::ENABLE));
-	regReset->moveToGroup(m_fixupNodeGroup);
 	regReset->setComment("This register was created to create a delayed reset for use in emulating the reset of a memory output register.");
 
 
 	auto driven = reg->getDirectlyDriven(0);
 
-	auto *muxNode = circuit.createNode<Node_Multiplexer>(2);
-	muxNode->recordStackTrace();
-	muxNode->moveToGroup(m_fixupNodeGroup);
-	muxNode->connectSelector({ .node = regReset, .port = 0 });
-	if (resetHighActive) {
-		muxNode->connectInput(0, { .node = reg, .port =  0ull });
-		muxNode->connectInput(1, reg->getDriver(Node_Register::RESET_VALUE));
-	} else {
-		muxNode->connectInput(0, reg->getDriver(Node_Register::RESET_VALUE));
-		muxNode->connectInput(1, { .node = reg, .port =  0ull });
-	}
+	auto *muxNode = c.mux(p0(regReset), p0(reg), reg->getDriver(Node_Register::RESET_VALUE) );
 	muxNode->setComment("Emulate the reset of a memory output register.");
 
 	for (auto d : driven)
-		d.node->rewireInput(d.port, { .node = muxNode, .port = 0 });
+		d.node->rewireInput(d.port, p0(muxNode));
 
 	reg->disconnectInput(Node_Register::RESET_VALUE);
 }

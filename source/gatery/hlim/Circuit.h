@@ -185,11 +185,6 @@ namespace gtry::hlim {
 		void optimizeSubnet(Subnet& subnet);
 		void postprocess(const PostProcessor& postProcessor);
 
-		Node_Signal* appendSignal(NodePort& nodePort);
-		Node_Signal* appendSignal(RefCtdNodePort& nodePort);
-
-		Node_Attributes* getCreateAttribNode(NodePort& nodePort);
-
 		void addSimulationProcess(std::function<sim::SimulationFunction<void>()> simProc) { m_simulationProcesses.push_back(std::move(simProc)); }
 		inline const std::vector<std::function<sim::SimulationFunction<void>()>>& getSimulationProcesses() const { return m_simulationProcesses; }
 

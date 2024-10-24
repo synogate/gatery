@@ -129,6 +129,7 @@ namespace gtry
 
 
 	using MemType = hlim::Node_Memory::MemType;
+	using UndefinedReadAddrBehavior = hlim::Node_Memory::UndefinedReadAddrBehavior;
 
 	class BaseMemory {
 		public:
@@ -156,6 +157,8 @@ namespace gtry
 			BitWidth addressWidth() const;
 			std::size_t numWords() const;
 
+			inline UndefinedReadAddrBehavior undefinedReadAddrBehavior() const { return m_memoryNode->undefinedReadAddrBehavior(); }
+			inline void undefinedReadAddrBehavior(UndefinedReadAddrBehavior behavior) { m_memoryNode->undefinedReadAddrBehavior(behavior); }
 		protected:
 			hlim::NodePtr<hlim::Node_Memory> m_memoryNode;
 			uint64_t m_numWords = 0;

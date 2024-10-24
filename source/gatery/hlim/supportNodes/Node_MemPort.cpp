@@ -197,44 +197,83 @@ void Node_MemPort::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
 			std::uint64_t addressValue   = state.extractNonStraddling(sim::DefaultConfig::VALUE, inputOffsets[(size_t)Inputs::address], addrType.width);
 			std::uint64_t addressDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, inputOffsets[(size_t)Inputs::address], addrType.width);
 
-			if (!utils::isMaskSet(addressDefined, 0, addrType.width)) {
-				state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[(size_t)Outputs::rdData], getBitWidth());
+			auto memSize = getMemory()->getSize();
+			HCL_ASSERT(memSize % getBitWidth() == 0);
+
+			const auto outOffset = outputOffsets[(size_t)Outputs::rdData];
+			const auto intOffset = internalOffsets[(size_t)RefInternal::memory];
+			const auto outSize = getBitWidth();
+
+			bool readAddressFullyDefined = utils::isMaskSet(addressDefined, 0, addrType.width);
+			if (!readAddressFullyDefined) {
+				if (getMemory()->undefinedReadAddrBehavior() == Node_Memory::UndefinedReadAddrBehavior::EXACT) {
+					bool first = true;
+					for (auto addr : utils::allPossibleUndefinedValues(addressValue, addressDefined, utils::bitMaskRange<std::uint64_t>(0, addrType.width))) {
+
+						auto index = addr * getBitWidth();
+						if (index >= memSize) {
+							state.clearRange(sim::DefaultConfig::DEFINED, outOffset, outSize);
+							break;
+						}
+
+						if (first) {
+							state.copyRange(outOffset, state, intOffset + index, outSize);
+							first = false;
+						} else {
+							sim::mergeUndefinedSelection(state, outOffset, state, intOffset + index, outSize);
+
+							// We can take a shortcut here: Merging only ever increases the undefinedness, so as soon as it is fully undefined we can stop looking at more memory addresses.
+							if (!sim::anyDefined(state, outOffset, outSize))
+								break;
+						}
+					}
+					HCL_ASSERT(first == false);
+				} else {
+					state.clearRange(sim::DefaultConfig::DEFINED, outOffset, outSize);
+				}
 			} else {
 				// Fetch value from memory
-				auto memSize = getMemory()->getSize();
-				HCL_ASSERT(memSize % getBitWidth() == 0);
 				auto index = addressValue * getBitWidth();
 				if (index >= memSize) {
-					state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[(size_t)Outputs::rdData], getBitWidth());
+					state.clearRange(sim::DefaultConfig::DEFINED, outOffset, outSize);
 				} else {
-					state.copyRange(outputOffsets[(size_t)Outputs::rdData], state, internalOffsets[(size_t)RefInternal::memory] + index, getBitWidth());
+					state.copyRange(outOffset, state, intOffset + index, outSize);
+				}
+			}
 
-					// Check for overrides. Check in order of write ports (they are added last to first).
-					// Potentially overwrite what we just read.
-					for (size_t i = prevWPs.size()-1; i < prevWPs.size(); i--) {
-						// Same order as in  Node_MemPort::getReferencedInternalStateSizes()
-						size_t addrOffset = (size_t)RefInternal::prevWritePorts+i*3+0;
-						size_t wrDataOffset = (size_t)RefInternal::prevWritePorts+i*3+1;
-						size_t wrEnableOffset = (size_t)RefInternal::prevWritePorts+i*3+2;
+			// Check for overrides. Check in order of write ports (they are added last to first).
+			// Potentially overwrite what we just read.
+			for (size_t i = prevWPs.size()-1; i < prevWPs.size(); i--) {
+				// Same order as in  Node_MemPort::getReferencedInternalStateSizes()
+				size_t addrOffset = (size_t)RefInternal::prevWritePorts+i*3+0;
+				size_t wrDataOffset = (size_t)RefInternal::prevWritePorts+i*3+1;
+				size_t wrEnableOffset = (size_t)RefInternal::prevWritePorts+i*3+2;
 
-						const auto &wrAddrType = prevWPs[i]->getDriverConnType((size_t)Inputs::address);
-						HCL_ASSERT_HINT(prevWPs[i]->getBitWidth() == getBitWidth(), "Mixed width memory ports not yet supported in simulation!");
+				const auto &wrAddrType = prevWPs[i]->getDriverConnType((size_t)Inputs::address);
+				HCL_ASSERT_HINT(prevWPs[i]->getBitWidth() == getBitWidth(), "Mixed width memory ports not yet supported in simulation!");
 
-						std::uint64_t wrAddressValue   = state.extractNonStraddling(sim::DefaultConfig::VALUE, internalOffsets[addrOffset], wrAddrType.width);
-						std::uint64_t wrAddressDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, internalOffsets[addrOffset], wrAddrType.width);
+				std::uint64_t wrAddressValue   = state.extractNonStraddling(sim::DefaultConfig::VALUE, internalOffsets[addrOffset], wrAddrType.width);
+				std::uint64_t wrAddressDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, internalOffsets[addrOffset], wrAddrType.width);
 
-						bool isWriting = state.get(sim::DefaultConfig::VALUE, internalOffsets[wrEnableOffset]);
+				bool writeAddressFullyDefined = utils::isMaskSet(wrAddressDefined, 0, wrAddrType.width);
 
-						if (isWriting) {
-							// It's writing something (though write enable might be undefined in which case the stored write data is undefined).
-							if (!utils::isMaskSet(wrAddressDefined, 0, wrAddrType.width)) {
-								// It's nuking the memory, but since we are dependent, we get a preview.
-								state.clearRange(sim::DefaultConfig::DEFINED, outputOffsets[(size_t)Outputs::rdData], getBitWidth());
-							} else if (wrAddressValue == addressValue) {
-								// actual collision, forward to-be-written data
-								state.copyRange(outputOffsets[(size_t)Outputs::rdData], state, internalOffsets[wrDataOffset], getBitWidth());
-							}
-						}
+				auto commonDefinedness = wrAddressDefined & addressDefined;
+				bool addressesCanCollide = (wrAddressValue & commonDefinedness) == (addressValue & commonDefinedness);
+				bool addressesWillCollide = addressesCanCollide && writeAddressFullyDefined && readAddressFullyDefined;
+
+				bool isWriting = state.get(sim::DefaultConfig::VALUE, internalOffsets[wrEnableOffset]);
+
+				if (isWriting) {
+					// It's writing something (though write enable might be undefined in which case the stored write data is undefined).
+					if (!writeAddressFullyDefined) {
+						// It's nuking the memory, but since we are dependent, we get a preview.
+						state.clearRange(sim::DefaultConfig::DEFINED, outOffset, outSize);
+					} else if (addressesCanCollide) {
+						// actual collision, forward to-be-written data
+						if (addressesWillCollide)
+							state.copyRange(outOffset, state, internalOffsets[wrDataOffset], outSize);
+						else
+							mergeUndefinedSelection(state, outOffset, state, internalOffsets[wrDataOffset], outSize);
 					}
 				}
 			}

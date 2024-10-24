@@ -43,6 +43,8 @@ struct NodePort {
 	auto operator <=> (const NodePort&) const = default;
 };
 
+inline NodePort p0(BaseNode *node) { return {.node = node, .port = 0ull}; }
+
 struct RefCtdNodePort {
 	NodePtr<BaseNode> node;
 	size_t port = INV_PORT;

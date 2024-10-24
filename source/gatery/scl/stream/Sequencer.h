@@ -58,6 +58,10 @@ namespace gtry::scl::strm
 		// we synchronize through memory content, so we dont need to add latency to the write port during retiming
 		reorderBuffer.allowArbitraryPortRetiming();
 
+		// During reset the output must held at zero since get<Validity>(memoryElement).validity affects valid signals. 
+		// Since the read address is undefined in this case, we need to do exact evaluation to read the zeros in the memory.
+		reorderBuffer.undefinedReadAddrBehavior(UndefinedReadAddrBehavior::EXACT);
+
 		//output logic
 		Counter orderCtr(txid(input).width() + 1_b); //add an extra bit to signal current validity
 		UInt currentTxid = orderCtr.value().lower(-1_b);

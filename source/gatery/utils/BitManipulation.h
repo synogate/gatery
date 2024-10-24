@@ -298,5 +298,41 @@ inline std::int32_t flipEndian(std::int32_t v) { return (std::int32_t) flipEndia
 inline std::uint64_t flipEndian(std::uint64_t v) { return (std::uint64_t)flipEndian((std::uint32_t)v) << 32 | flipEndian((std::uint32_t)(v >> 32)); }
 inline std::int64_t flipEndian(std::int64_t v) { return (std::int64_t) flipEndian((std::uint64_t)v); }
 
+
+class UndefinedValueIterator {
+	public:
+		UndefinedValueIterator(std::uint64_t value, std::uint64_t defined, std::uint64_t maximum) : value(value), defined(defined), maximum(maximum) { }
+
+		class iterator {
+			public:
+				iterator(std::uint64_t value, std::uint64_t defined, std::uint64_t maximum);
+				iterator();
+
+				inline bool operator==(const iterator &rhs) const { return isEndIterator == rhs.isEndIterator; }
+				void operator++();
+				inline std::uint64_t operator*() const { return value; }
+			protected:
+				bool isEndIterator;
+				std::uint64_t value;
+				std::uint64_t defined;
+				std::uint64_t maximum;
+		};
+
+		inline iterator begin() const { return iterator(value, defined, maximum); }
+		inline iterator end() const { return iterator(); }
+	protected:
+		std::uint64_t value;
+		std::uint64_t defined;
+		std::uint64_t maximum;
+};
+
+/**
+ * @brief Allows iterating over all values that are compatible with the given potentially partially undefined number.
+ * @details For example, for the 4-bit number '1x0x' (represented as value=0b1000, defined=0b1010, maximum = 0b1111),
+ * the possible undefined values are '1000', '1001', '1100', and '1101'.
+ * The function returns an iterable object that can be used in for-each statements.
+ */
+inline UndefinedValueIterator allPossibleUndefinedValues(std::uint64_t value, std::uint64_t defined, std::uint64_t maximum = ~0ull) { return UndefinedValueIterator(value, defined, maximum); }
+
 }
 	

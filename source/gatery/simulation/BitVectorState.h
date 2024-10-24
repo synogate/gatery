@@ -326,6 +326,27 @@ bool canBeReplacedWith(const BitVectorState<Config> &vecA, const BitVectorState<
 	return true;
 }
 
+
+/// @brief Accumulate potential options of a value between which an undefined selection happens.
+/// @details This means only bits that are defined and of equal value in all sources are defined in the result.
+/// This implementation is meant to start with a copy of the first option and then iteratively accumulate the other options into that copy.
+template<typename Config>
+void mergeUndefinedSelection(BitVectorState<Config> &dst, size_t startDst, const BitVectorState<Config> &src, size_t startSrc, size_t size) {
+
+	/// @todo: optimize
+
+	for (size_t i = 0; i < size; i++) {
+		bool aDef = dst.get(Config::DEFINED, startDst+i);
+		// If the destination is undefined it stays undefined
+		if (aDef) {
+			bool bDef = src.get(Config::DEFINED, startSrc+i);
+			// Otherwise the destination becomes undefined if the src is undefined or the values differ.
+			if (!bDef || dst.get(Config::VALUE, startDst+i) != src.get(Config::VALUE, startSrc+i))
+				dst.set(Config::DEFINED, startDst+i, false);
+		}
+	}
+}
+
 /**
  * @brief Converts an entire defaultBitVector to a boost::multiprecision::number
  * @param vec BitVectorState to extract the bits from

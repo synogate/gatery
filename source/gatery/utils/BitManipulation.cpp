@@ -17,3 +17,41 @@
 \*/
 #include "gatery/pch.h"
 #include "BitManipulation.h"
+
+namespace gtry::utils 
+{
+	UndefinedValueIterator::iterator::iterator(std::uint64_t value, std::uint64_t defined, std::uint64_t maximum)
+	{
+		isEndIterator = false;
+		this->defined = defined;
+		this->maximum = maximum;
+		this->value = value & defined;
+	}
+	
+	UndefinedValueIterator::iterator::iterator()
+	{
+		isEndIterator = true;
+	}
+
+	void UndefinedValueIterator::iterator::operator++() {
+
+		if (value == maximum) {
+			isEndIterator = true;
+			return;
+		}
+		auto definedValue = value & defined;
+		auto undefinedValue = value & ~defined;
+		undefinedValue++;
+
+		std::uint64_t overflow;
+		while ((overflow = undefinedValue & defined) != 0) {
+			auto newUndefinedValue = undefinedValue + overflow;
+			if (newUndefinedValue <= undefinedValue || (definedValue | newUndefinedValue) > maximum) {
+				isEndIterator = true;
+				return;
+			}
+			undefinedValue = newUndefinedValue;
+		}
+		value = definedValue | undefinedValue;
+	}
+}

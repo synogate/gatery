@@ -19,8 +19,6 @@
 #include "IOBUF.h"
 
 #include <gatery/hlim/coreNodes/Node_Register.h>
-#include <gatery/hlim/coreNodes/Node_Clk2Signal.h>
-#include <gatery/hlim/coreNodes/Node_ClkRst2Signal.h>
 #include <gatery/hlim/NodeGroup.h>
 
 #include <gatery/scl/io/ddr.h>

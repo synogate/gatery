@@ -64,6 +64,11 @@ class Node_Memory : public Node<Node_Memory>
 			EXTERNAL,
 		};
 
+		enum class UndefinedReadAddrBehavior {
+			UNDEFINED,  ///< Always read undefined. Faster, but pessimistic.
+			EXACT	 	///< Correctly compute the output based on memory content. Potentially much slower.
+		};
+
 		enum class Internal {
 			data,
 			count
@@ -125,6 +130,9 @@ class Node_Memory : public Node<Node_Memory>
 		inline MemoryAttributes &getAttribs() { return m_attributes; }
 		inline const MemoryAttributes &getAttribs() const { return m_attributes; }		
 		inline size_t getInitializationDataWidth() const { return m_initializationDataWidth; }
+
+		UndefinedReadAddrBehavior undefinedReadAddrBehavior() const { return m_undefinedReadAddrBehavior; }
+		void undefinedReadAddrBehavior(UndefinedReadAddrBehavior behavior) { m_undefinedReadAddrBehavior = behavior; }
 	protected:
 		sim::DefaultBitVectorState m_powerOnState;
 
@@ -132,6 +140,7 @@ class Node_Memory : public Node<Node_Memory>
 		MemoryAttributes m_attributes;
 		size_t m_initializationDataWidth = 0ul;
 		size_t m_requiredReadLatency = 0;
+		UndefinedReadAddrBehavior m_undefinedReadAddrBehavior = UndefinedReadAddrBehavior::UNDEFINED;
 };
 
 }

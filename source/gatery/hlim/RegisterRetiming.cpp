@@ -49,6 +49,7 @@
 #include "../simulation/ReferenceSimulator.h"
 
 #include "postprocessing/MemoryDetector.h"
+#include "ConstructionHelper.h"
 
 
 #include "../export/DotExport.h"
@@ -685,8 +686,11 @@ std::optional<ForwardRetimingPlan> determineAreaToBeRetimedForward(Circuit &circ
 NodePort buildHoldingCircuit(NodePort driver, NodePort enable, NodePort resetValue, Clock *clock, NodeGroup &group, Subnet &area)
 {
 	Circuit &circuit = group.getCircuit();
+	ConstructionHelper c(circuit);
+	c.constructInGroup(group);	
+	c.newNodesToSubnet(area);	
 
-	auto *sig1 = circuit.appendSignal(enable);
+	auto *sig1 = c.appendSignal(enable);
 	sig1->setName("latch_passthrough");
 	area.add(sig1);
 
@@ -710,13 +714,12 @@ NodePort buildHoldingCircuit(NodePort driver, NodePort enable, NodePort resetVal
 
 	NodePort output = {.node = mux, .port = 0ull};
 
-	auto *sig2 = circuit.appendSignal(output);
+	auto *sig2 = c.appendSignal(output);
 	// This signal node, recognized by name, is also used later on (if encountered) to trigger diagnostics messages about this whole trick only working once.
 	sig2->setName("gtry_retiming_latch");
 	sig2->setComment("A register with an enable signal was forward retimed with an enable condition that is"
 					 " not fully equal. The \"residual\" enable condition must be handled by a holding circuit"
 					 " that is a combinatorical pass-through but can \"latch\" that signal for when the enable is deasserted.");
-	area.add(sig2);
 
 	return output;
 }
@@ -2435,9 +2438,10 @@ Node_Memory *ReadModifyWriteHazardLogicBuilder::buildWritePortRingBuffer(NodePor
 
 void ReadModifyWriteHazardLogicBuilder::giveName(NodePort &nodePort, std::string name)
 {
-	auto *sig = m_circuit.appendSignal(nodePort);
+	ConstructionHelper c(m_circuit);
+	c.constructInGroup(*m_newNodesNodeGroup);
+	auto *sig = c.appendSignal(nodePort);
 	sig->setName(std::move(name));
-	sig->moveToGroup(m_newNodesNodeGroup);
 }
 
 
