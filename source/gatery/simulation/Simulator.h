@@ -38,12 +38,15 @@
 #include <set>
 #include <vector>
 #include <any>
+#include <typeindex>
+#include <thread>
 
 #include "../compat/CoroutineWrapper.h"
 
 namespace gtry::hlim {
 	class Node_Pin;
 	class Node_Register;
+	class Circuit;
 }
 
 namespace gtry::sim {
@@ -55,6 +58,80 @@ class WaitClock;
 class WaitChange;
 class WaitStable;
 
+
+
+class SimulatorPerformanceCounters
+{
+	public:
+		struct Counter {
+			size_t count = 0;
+			std::atomic<size_t> active = {0};
+		};
+
+		using ByNodeGroup = std::map<const hlim::NodeGroup*, Counter>;
+		using ByNodeType = std::map<std::type_index, Counter>;
+
+		void reset(const hlim::Circuit &circuit);
+
+		class NodeHandle {
+			public:
+				NodeHandle(SimulatorPerformanceCounters &tracker, const hlim::BaseNode *node);
+				~NodeHandle();
+			private:
+				ByNodeGroup::iterator m_groupIt;
+				ByNodeType::iterator m_typeIt;
+		};
+
+		NodeHandle processNode(const hlim::BaseNode *node) { return  NodeHandle(*this, node); }
+
+
+		enum class Other {
+			COMPILATION,
+			SIMULATION_PROCESS,
+			EVENT_CALLBACKS,
+		};
+		using ByOther = std::array<Counter, magic_enum::enum_count<Other>()>;
+
+		class OtherHandle {
+			public:
+				OtherHandle(SimulatorPerformanceCounters &tracker, Other other);
+				~OtherHandle();
+			private:
+				ByOther::iterator m_it;
+		};
+
+		OtherHandle processOther(Other other) { return OtherHandle(*this, other); }
+
+
+		void tick();
+
+		inline const ByNodeGroup &getByGroup() const { return m_byNodeGroup; }
+		inline const ByNodeType &getByType() const { return m_byNodeType; }
+		inline const ByOther &getByOther() const { return m_byOther; }
+		inline const auto &getTypeNameMap() const { return m_typeNameMap; }
+	protected:
+		friend class Handle;
+		ByNodeGroup m_byNodeGroup;
+		ByNodeType m_byNodeType;
+		ByOther m_byOther;
+		std::map<std::type_index, const char*> m_typeNameMap;
+};
+
+
+
+struct PerformanceCounterOptions {
+	bool samplePerformanceCounters = false;
+	float performanceCounterSamplingFrequency = 1000.0f;
+	bool logPerformanceCounters = false;
+	float performanceCounterLoggingFrequency = 2.0f;
+};
+
+struct CompileOptions {
+	bool ignoreSimulationProcesses = false;
+	PerformanceCounterOptions perf = {};
+};
+
+
 /**
  * @brief Interface for all logic simulators
  * 
@@ -63,10 +140,11 @@ class Simulator
 {
 	public:
 		Simulator();
-		virtual ~Simulator() = default;
+		virtual ~Simulator();
 
 		/// Adds a simulator callback hook to inform waveform recorders and test bench exporters about simulation events.
 		void addCallbacks(SimulatorCallbacks *simCallbacks) { m_callbackDispatcher.m_callbacks.push_back(simCallbacks); }
+
 
 		/**
 		 * @brief Prepares the simulator for the simulation of the given circuit.
@@ -75,7 +153,7 @@ class Simulator
 		 * @param outputs Unless left empty, confines simulation to that part of the circuit that has an influence on the given outputs.
 		 * @param ignoreSimulationProcesses Wether or not to bring in simulation processes that were stored in the circuit itself.
 		 */
-		virtual void compileProgram(const hlim::Circuit &circuit, const utils::StableSet<hlim::NodePort> &outputs = {}, bool ignoreSimulationProcesses = false) = 0;
+		virtual void compileProgram(const hlim::Circuit &circuit, const utils::StableSet<hlim::NodePort> &outputs = {}, const CompileOptions &options = {}) = 0;
 
 		/** 
 			@name Simulator control
@@ -224,6 +302,16 @@ class Simulator
 		std::mutex m_mutex;
 
 		virtual void startCoroutine(SimulationFunction<void> coroutine) = 0;
+
+
+		SimulatorPerformanceCounters m_performanceCounters;
+		std::atomic<bool> m_doRunPerformanceCounterThread = false;
+		std::thread m_performanceCounterThread;
+		void startPerformanceCounterThread(const PerformanceCounterOptions &options);
+		void stopPerformanceCounterThread();
+
+		std::atomic<bool> m_performanceCountersNeedWriteback = false;
+		void checkWritebackPerformanceCounters();
 };
 
 

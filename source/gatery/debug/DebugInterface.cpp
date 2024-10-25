@@ -101,5 +101,9 @@ std::string howToReachLog()
 	return DebugInterface::instance->howToReachLog();
 }
 
+void updateSimulationPerformanceTrace(const sim::SimulatorPerformanceCounters &counters)
+{
+	return DebugInterface::instance->updateSimulationPerformanceTrace(counters);
+}
 
 }

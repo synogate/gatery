@@ -33,6 +33,11 @@ namespace hlim {
 	class Circuit;
 }
 
+namespace sim {
+	class SimulatorPerformanceCounters;
+}
+
+
 /**
  * @addtogroup gtry_frontend_logging
  * @{
@@ -162,6 +167,8 @@ class DebugInterface
 		virtual size_t createAreaVisualization(unsigned width, unsigned height) { return 0; }
 		virtual void updateAreaVisualization(size_t id, const std::string content) { }
 
+		virtual void updateSimulationPerformanceTrace(const sim::SimulatorPerformanceCounters &counters) { }
+
 	protected:
 		State m_state = State::DESIGN;
 };
@@ -180,6 +187,8 @@ void changeState(State state, hlim::Circuit* circuit);
 
 size_t createAreaVisualization(unsigned width, unsigned height);
 void updateAreaVisualization(size_t id, const std::string content);
+
+void updateSimulationPerformanceTrace(const sim::SimulatorPerformanceCounters &counters);
 
 /// Log a message to whatever backend has been initialized.
 void log(const LogMessage &msg);

@@ -59,6 +59,9 @@ namespace gtry::sim {
 
 		std::vector<std::string> m_warnings;
 		std::vector<std::string> m_errors;
+
+		bool m_traceSimulationPerformance = false;
+
 };
 
 

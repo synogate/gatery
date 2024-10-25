@@ -1635,7 +1635,7 @@ bool retimeBackwardtoOutput(Circuit &circuit, Subnet &area, const utils::StableS
 	/// @todo Clone and optimize to prevent issues with loops
 	sim::SimulatorCallbacks ignoreCallbacks;
 	sim::ReferenceSimulator simulator(false);
-	simulator.compileProgram(circuit, {outputsLeavingRetimingArea}, true);
+	simulator.compileProgram(circuit, {outputsLeavingRetimingArea}, { .ignoreSimulationProcesses = true });
 	simulator.powerOn();
 
 	utils::UnstableMap<std::tuple<Clock*, NodeGroup*, NodePort>, NodePort> delayedResetSignals;

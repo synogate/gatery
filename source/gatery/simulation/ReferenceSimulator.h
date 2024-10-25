@@ -81,8 +81,8 @@ struct MappedNode {
 class ExecutionBlock
 {
 	public:
-		void evaluate(SimulatorCallbacks &simCallbacks, DataState &state) const;
-		void commitState(SimulatorCallbacks &simCallbacks, DataState &state) const;
+		void evaluate(SimulatorCallbacks &simCallbacks, DataState &state, SimulatorPerformanceCounters &performanceCounters) const;
+		void commitState(SimulatorCallbacks &simCallbacks, DataState &state, SimulatorPerformanceCounters &performanceCounters) const;
 
 		void addStep(MappedNode mappedNode);
 	protected:
@@ -96,9 +96,9 @@ class ClockedNode
 	public:
 		ClockedNode(MappedNode mappedNode, size_t clockPort);
 
-		void clockValueChanged(SimulatorCallbacks &simCallbacks, DataState &state, bool clockValue, bool clockDefined) const;
-		void advance(SimulatorCallbacks &simCallbacks, DataState &state) const;
-		void changeReset(SimulatorCallbacks &simCallbacks, DataState &state, bool resetHigh) const;
+		void clockValueChanged(SimulatorCallbacks &simCallbacks, DataState &state, bool clockValue, bool clockDefined, SimulatorPerformanceCounters &performanceCounters) const;
+		void advance(SimulatorCallbacks &simCallbacks, DataState &state, SimulatorPerformanceCounters &performanceCounters) const;
+		void changeReset(SimulatorCallbacks &simCallbacks, DataState &state, bool resetHigh, SimulatorPerformanceCounters &performanceCounters) const;
 	protected:
 		MappedNode m_mappedNode;
 		size_t m_clockPort;
@@ -141,7 +141,7 @@ struct ClockPin
 
 struct Program
 {
-	void compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &nodes);
+	void compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &nodes, SimulatorPerformanceCounters &performanceCounters);
 
 	size_t m_fullStateWidth = 0;
 
@@ -230,7 +230,7 @@ class ReferenceSimulator : public Simulator
 	public:
 		ReferenceSimulator(bool enableConsoleOutput = true);
 		virtual ~ReferenceSimulator();
-		virtual void compileProgram(const hlim::Circuit &circuit, const utils::StableSet<hlim::NodePort> &outputs = {}, bool ignoreSimulationProcesses = false) override;
+		virtual void compileProgram(const hlim::Circuit &circuit, const utils::StableSet<hlim::NodePort> &outputs = {}, const CompileOptions &options = {}) override;
 		void compileStaticEvaluation(const hlim::Circuit& circuit, const utils::StableSet<hlim::NodePort>& outputs);
 
 
@@ -267,6 +267,7 @@ class ReferenceSimulator : public Simulator
 		virtual std::any& registerAuxData(std::string_view key, std::any data) override;
 		virtual std::any& getAuxData(std::string_view key) override;
 	protected:
+		CompileOptions m_options;
 		Program m_program;
 		DataState m_dataState;
 		std::vector<std::uint64_t> m_simVizStates;
@@ -297,7 +298,6 @@ class ReferenceSimulator : public Simulator
 			std::uint64_t totalRuntimeUs = 0;
 			std::uint64_t numReEvals = 0;
 			size_t totalRuntimeNumEvents = 0;
-
 			size_t thisEventNumReEvals = 0;
 		};
 

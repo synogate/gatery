@@ -50,6 +50,8 @@ UnitTestSimulationFixture::UnitTestSimulationFixture()
 				gtry::dbg::logWebsocks(1337);
 			} else
 				throw std::runtime_error("Invalid command line argument after --report");
+		} else if (arg == "--perf") {
+			m_traceSimulationPerformance = true;
 		}
 	}
 	gtry::dbg::awaitDebugger();
@@ -114,7 +116,10 @@ bool UnitTestSimulationFixture::runHitsTimeout(const hlim::ClockRational &timeou
 {
 	prepRun();
 	m_stopTestCalled = false;
-	m_simulator->compileProgram(design.getCircuit());
+	m_simulator->compileProgram(design.getCircuit(), {}, { .perf = {
+					.samplePerformanceCounters = m_traceSimulationPerformance, 
+					.logPerformanceCounters = m_traceSimulationPerformance,
+	}});
 	m_simulator->powerOn();
 	m_simulator->advance(timeoutSeconds);
 	m_simulator->commitState();

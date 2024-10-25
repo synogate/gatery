@@ -40,6 +40,8 @@ namespace gtry::dbg {
 			virtual void changeState(State state, hlim::Circuit* circuit) override;
 
 			virtual std::string howToReachLog() override;
+
+			virtual void updateSimulationPerformanceTrace(const sim::SimulatorPerformanceCounters &counters) override;
 		protected:
 			std::filesystem::path m_outputDir;
 

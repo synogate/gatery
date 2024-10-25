@@ -54,11 +54,13 @@
 namespace gtry::sim {
 
 
-void ExecutionBlock::evaluate(SimulatorCallbacks &simCallbacks, DataState &state) const
+void ExecutionBlock::evaluate(SimulatorCallbacks &simCallbacks, DataState &state, SimulatorPerformanceCounters &performanceCounters) const
 {
 #if 1
-	for (const auto &step : m_steps)
+	for (const auto &step : m_steps) {
+		auto perfHandle = performanceCounters.processNode(step.node);
 		step.node->simulateEvaluate(simCallbacks, state.signalState, step.internal.data(), step.inputs.data(), step.outputs.data());
+	}
 #else
 	for (auto i : utils::Range(m_steps.size())) {
 		if (i+3 < m_steps.size()) {
@@ -73,10 +75,12 @@ void ExecutionBlock::evaluate(SimulatorCallbacks &simCallbacks, DataState &state
 #endif
 }
 
-void ExecutionBlock::commitState(SimulatorCallbacks &simCallbacks, DataState &state) const
+void ExecutionBlock::commitState(SimulatorCallbacks &simCallbacks, DataState &state, SimulatorPerformanceCounters &performanceCounters) const
 {
-	for (const auto &step : m_steps)
+	for (const auto &step : m_steps) {
+		auto perfHandle = performanceCounters.processNode(step.node);
 		step.node->simulateCommit(simCallbacks, state.signalState, step.internal.data(), step.inputs.data());
+	}
 }
 
 void ExecutionBlock::addStep(MappedNode mappedNode)
@@ -88,18 +92,21 @@ ClockedNode::ClockedNode(MappedNode mappedNode, size_t clockPort) : m_mappedNode
 {
 }
 
-void ClockedNode::clockValueChanged(SimulatorCallbacks &simCallbacks, DataState &state, bool clockValue, bool clockDefined) const
+void ClockedNode::clockValueChanged(SimulatorCallbacks &simCallbacks, DataState &state, bool clockValue, bool clockDefined, SimulatorPerformanceCounters &performanceCounters) const
 {
+	auto perfHandle = performanceCounters.processNode(m_mappedNode.node);
 	m_mappedNode.node->simulateClockChange(simCallbacks, state.signalState, m_mappedNode.internal.data(), m_mappedNode.outputs.data(), m_clockPort, clockValue, clockDefined);
 }
 
-void ClockedNode::advance(SimulatorCallbacks &simCallbacks, DataState &state) const
+void ClockedNode::advance(SimulatorCallbacks &simCallbacks, DataState &state, SimulatorPerformanceCounters &performanceCounters) const
 {
+	auto perfHandle = performanceCounters.processNode(m_mappedNode.node);
 	m_mappedNode.node->simulateAdvance(simCallbacks, state.signalState, m_mappedNode.internal.data(), m_mappedNode.outputs.data(), m_clockPort);
 }
 
-void ClockedNode::changeReset(SimulatorCallbacks &simCallbacks, DataState &state, bool resetHigh) const
+void ClockedNode::changeReset(SimulatorCallbacks &simCallbacks, DataState &state, bool resetHigh, SimulatorPerformanceCounters &performanceCounters) const
 {
+	auto perfHandle = performanceCounters.processNode(m_mappedNode.node);
 	m_mappedNode.node->simulateResetChange(simCallbacks, state.signalState, m_mappedNode.internal.data(), m_mappedNode.outputs.data(), m_clockPort, resetHigh);
 }
 
@@ -137,8 +144,10 @@ void Program::allocateClocks(const hlim::Circuit &circuit, const hlim::Subnet &n
 	}
 }
 
-void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &nodes)
+void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &nodes, SimulatorPerformanceCounters &performanceCounters)
 {
+	auto perfHandle = performanceCounters.processOther(SimulatorPerformanceCounters::Other::COMPILATION);
+
 	allocateSignals(circuit, nodes);
 	allocateClocks(circuit, nodes);
 
@@ -539,10 +548,14 @@ void ReferenceSimulator::destroyPendingEvents()
 	m_simulationIsShuttingDown = false;
 }
 
-void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit, const utils::StableSet<hlim::NodePort> &outputs, bool ignoreSimulationProcesses)
+void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit, const utils::StableSet<hlim::NodePort> &outputs, const CompileOptions &options)
 {
+	stopPerformanceCounterThread();
+	m_performanceCounters.reset(circuit);
+	startPerformanceCounterThread(options.perf);
+	m_options = options;
 
-	if (!ignoreSimulationProcesses) {
+	if (!options.ignoreSimulationProcesses) {
 		for (const auto &simProc : circuit.getSimulationProcesses())
 			addSimulationProcess(simProc);
 
@@ -552,12 +565,15 @@ void ReferenceSimulator::compileProgram(const hlim::Circuit &circuit, const util
 
 	auto nodes = hlim::Subnet::allForSimulation(const_cast<hlim::Circuit&>(circuit), outputs);
 
-	m_program.compileProgram(circuit, nodes);
+	m_program.compileProgram(circuit, nodes, m_performanceCounters);
 }
 
 
 void ReferenceSimulator::compileStaticEvaluation(const hlim::Circuit& circuit, const utils::StableSet<hlim::NodePort>& outputs)
 {
+	stopPerformanceCounterThread();
+	m_performanceCounters.reset(circuit);
+
 	hlim::Subnet nodeSet;
 	{
 		std::vector<hlim::BaseNode*> stack;
@@ -583,7 +599,7 @@ void ReferenceSimulator::compileStaticEvaluation(const hlim::Circuit& circuit, c
 			}
 		}
 	}
-	m_program.compileProgram(circuit, nodeSet);
+	m_program.compileProgram(circuit, nodeSet, m_performanceCounters);
 }
 
 
@@ -599,12 +615,16 @@ void ReferenceSimulator::powerOn()
 
 	destroyPendingEvents();
 
-	m_callbackDispatcher.onPowerOn();
+	{
+		auto perfHandle = m_performanceCounters.processOther(SimulatorPerformanceCounters::Other::EVENT_CALLBACKS);
+		m_callbackDispatcher.onPowerOn();
+		m_callbackDispatcher.onNewTick(m_simulationTime);
+	}
 
-	m_callbackDispatcher.onNewTick(m_simulationTime);
-
-	for (const auto &mappedNode : m_program.m_powerOnNodes)
+	for (const auto &mappedNode : m_program.m_powerOnNodes) {
+		auto perfHandle = m_performanceCounters.processNode(mappedNode.node);
 		mappedNode.node->simulatePowerOn(m_callbackDispatcher, m_dataState.signalState, mappedNode.internal.data(), mappedNode.outputs.data());
+	}
 
 	m_dataState.clockState.resize(m_program.m_clockSources.size());
 	for (auto i : utils::Range(m_dataState.clockState.size())) {
@@ -617,7 +637,7 @@ void ReferenceSimulator::powerOn()
 
 		for (auto &dom : clkSource.domains)
 			for (auto &cn : dom->clockedNodes)
-				cn.clockValueChanged(m_callbackDispatcher, m_dataState, cs.high, true);
+				cn.clockValueChanged(m_callbackDispatcher, m_dataState, cs.high, true, m_performanceCounters);
 
 		Event e;
 		e.type = Event::Type::clockPinTrigger;
@@ -641,8 +661,12 @@ void ReferenceSimulator::powerOn()
 
 		for (auto &dom : rstSource.domains)
 			for (auto &cn : dom->clockedNodes)
-				cn.changeReset(m_callbackDispatcher, m_dataState, rs.resetHigh);
-		m_callbackDispatcher.onReset(clock, rs.resetHigh);
+				cn.changeReset(m_callbackDispatcher, m_dataState, rs.resetHigh, m_performanceCounters);
+		
+		{
+			auto perfHandle = m_performanceCounters.processOther(SimulatorPerformanceCounters::Other::EVENT_CALLBACKS);
+			m_callbackDispatcher.onReset(clock, rs.resetHigh);
+		}
 
 
 		// Deactivate reset
@@ -656,8 +680,12 @@ void ReferenceSimulator::powerOn()
 			rs.resetHigh = !rs.resetHigh;
 			for (auto &dom : rstSource.domains)
 				for (auto &cn : dom->clockedNodes)
-					cn.changeReset(m_callbackDispatcher, m_dataState, !rs.resetHigh);
-			m_callbackDispatcher.onReset(clock, !rs.resetHigh);
+					cn.changeReset(m_callbackDispatcher, m_dataState, !rs.resetHigh, m_performanceCounters);
+
+			{
+				auto perfHandle = m_performanceCounters.processOther(SimulatorPerformanceCounters::Other::EVENT_CALLBACKS);
+				m_callbackDispatcher.onReset(clock, !rs.resetHigh);
+			}
 		} else {
 			// Schedule disabling
 			Event e;
@@ -675,11 +703,15 @@ void ReferenceSimulator::powerOn()
 	// reevaluate, to provide fibers with power-on state
 	reevaluate();
 
-	m_callbackDispatcher.onAfterPowerOn();
+	{
+		auto perfHandle = m_performanceCounters.processOther(SimulatorPerformanceCounters::Other::EVENT_CALLBACKS);
+		m_callbackDispatcher.onAfterPowerOn();
+	}
 
 	// Start fibers
 	{
 		RunTimeSimulationContext context(this);
+		auto perfHandle = m_performanceCounters.processOther(SimulatorPerformanceCounters::Other::SIMULATION_PROCESS);
 
 		m_simFibers.clear();
 		m_coroutineHandler.stopAll();
@@ -704,6 +736,7 @@ void ReferenceSimulator::powerOn()
 
 	{
 		RunTimeSimulationContext context(this);
+		auto perfHandle = m_performanceCounters.processOther(SimulatorPerformanceCounters::Other::SIMULATION_PROCESS);
 		for (auto i : utils::Range(m_simViz.size())) {
 			if (m_simViz[i].reset)
 				m_simViz[i].reset(m_simVizStates.data() + m_simVizStateOffsets[i]);
@@ -716,7 +749,7 @@ void ReferenceSimulator::reevaluate()
 	m_performanceStats.thisEventNumReEvals++;
 	/// @todo respect dependencies between blocks (once they are being expressed and made use of)
 	for (auto &block : m_program.m_executionBlocks)
-		block.evaluate(m_callbackDispatcher, m_dataState);
+		block.evaluate(m_callbackDispatcher, m_dataState, m_performanceCounters);
 
 	m_stateNeedsReevaluating = false;
 }
@@ -726,10 +759,11 @@ void ReferenceSimulator::commitState()
 	m_readOnlyMode = true;
 
 	for (auto &block : m_program.m_executionBlocks)
-		block.commitState(m_callbackDispatcher, m_dataState);
+		block.commitState(m_callbackDispatcher, m_dataState, m_performanceCounters);
 
 	{
 		RunTimeSimulationContext context(this);
+		auto perfHandle = m_performanceCounters.processOther(SimulatorPerformanceCounters::Other::SIMULATION_PROCESS);
 
 		std::vector<std::coroutine_handle<>> processesAwaitingCommit;
 		std::swap(m_processesAwaitingCommit, processesAwaitingCommit);
@@ -739,7 +773,10 @@ void ReferenceSimulator::commitState()
 		}
 	}
 
-	m_callbackDispatcher.onCommitState();
+	{
+		auto perfHandle = m_performanceCounters.processOther(SimulatorPerformanceCounters::Other::EVENT_CALLBACKS);
+		m_callbackDispatcher.onCommitState();
+	}
 
 	m_readOnlyMode = false;
 }
@@ -815,7 +852,7 @@ void ReferenceSimulator::advanceMicroTick()
 				for (auto domain : clkPin.domains) {
 
 					for (auto &cn : domain->clockedNodes)
-						cn.clockValueChanged(m_callbackDispatcher, m_dataState, clkEvent.risingEdge, true);
+						cn.clockValueChanged(m_callbackDispatcher, m_dataState, clkEvent.risingEdge, true, m_performanceCounters);
 
 					auto trigType = domain->clock->getTriggerEvent();
 
@@ -827,12 +864,15 @@ void ReferenceSimulator::advanceMicroTick()
 							//triggeredExecutionBlocks.insert(id);
 
 						for (auto &cn : domain->clockedNodes)
-							cn.advance(m_callbackDispatcher, m_dataState);
+							cn.advance(m_callbackDispatcher, m_dataState, m_performanceCounters);
 					}
 				}
 
 				// Trigger callback
-				m_callbackDispatcher.onClock(clkPin.pin, clkEvent.risingEdge);
+				{
+					auto perfHandle = m_performanceCounters.processOther(SimulatorPerformanceCounters::Other::EVENT_CALLBACKS);
+					m_callbackDispatcher.onClock(clkPin.pin, clkEvent.risingEdge);
+				}
 			} break;
 			case Event::Type::resetValueChange:{
 				const auto &rstEvent = event.evt<Event::ResetValueChangeEvt>();
@@ -845,13 +885,17 @@ void ReferenceSimulator::advanceMicroTick()
 					//	triggeredExecutionBlocks.insert(id);
 
 					for (auto &cn : dom->clockedNodes)
-						cn.changeReset(m_callbackDispatcher, m_dataState, rstEvent.newResetHigh);
+						cn.changeReset(m_callbackDispatcher, m_dataState, rstEvent.newResetHigh, m_performanceCounters);
 				}
 
-				m_callbackDispatcher.onReset(rstSrc.pin, rstEvent.newResetHigh);
+				{
+					auto perfHandle = m_performanceCounters.processOther(SimulatorPerformanceCounters::Other::EVENT_CALLBACKS);
+					m_callbackDispatcher.onReset(rstSrc.pin, rstEvent.newResetHigh);
+				}
 			} break;
 			case Event::Type::simProcResume: {
 				RunTimeSimulationContext context(this);
+				auto perfHandle = m_performanceCounters.processOther(SimulatorPerformanceCounters::Other::SIMULATION_PROCESS);
 
 				m_coroutineHandler.readyToResume(event.evt<Event::SimProcResumeEvt>().handle);
 				m_coroutineHandler.run();
@@ -896,7 +940,10 @@ void ReferenceSimulator::handleCurrentTimeStep()
 			m_timingPhase = phase;
 			m_microTick = 0;
 
-			m_callbackDispatcher.onNewPhase(phase);
+			{
+				auto perfHandle = m_performanceCounters.processOther(SimulatorPerformanceCounters::Other::EVENT_CALLBACKS);
+				m_callbackDispatcher.onNewPhase(phase);
+			}
 
 			// Handle everything belonging to the timing phase, i.e. all micro ticks
 			while (!m_nextEvents.empty() && 
@@ -913,7 +960,10 @@ void ReferenceSimulator::handleCurrentTimeStep()
 
 				checkSignalWatches();
 
-				m_callbackDispatcher.onAfterMicroTick(m_microTick);
+				{
+					auto perfHandle = m_performanceCounters.processOther(SimulatorPerformanceCounters::Other::EVENT_CALLBACKS);
+					m_callbackDispatcher.onAfterMicroTick(m_microTick);
+				}
 				m_microTick++;
 			}
 		}
@@ -933,12 +983,16 @@ void ReferenceSimulator::advanceEvent()
 
 	m_simulationTime = m_nextEvents.top().timeOfEvent;
 	m_microTick = 0;
-	m_callbackDispatcher.onNewTick(m_simulationTime);
+	{
+		auto perfHandle = m_performanceCounters.processOther(SimulatorPerformanceCounters::Other::EVENT_CALLBACKS);
+		m_callbackDispatcher.onNewTick(m_simulationTime);
+	}
 
 	handleCurrentTimeStep();
 
 	{
 		RunTimeSimulationContext context(this);
+		auto perfHandle = m_performanceCounters.processOther(SimulatorPerformanceCounters::Other::SIMULATION_PROCESS);
 		for (auto i : utils::Range(m_simViz.size())) {
 			if (m_simViz[i].capture)
 				m_simViz[i].capture(m_simVizStates.data() + m_simVizStateOffsets[i]);
@@ -949,6 +1003,7 @@ void ReferenceSimulator::advanceEvent()
 	if (m_performanceStats.totalRuntimeNumEvents % 10000 == 0) {
 		{
 			RunTimeSimulationContext context(this);
+			auto perfHandle = m_performanceCounters.processOther(SimulatorPerformanceCounters::Other::SIMULATION_PROCESS);
 			for (auto i : utils::Range(m_simViz.size())) {
 				if (m_simViz[i].render)
 					m_simViz[i].render(m_simVizStates.data() + m_simVizStateOffsets[i]);
@@ -974,6 +1029,8 @@ void ReferenceSimulator::advanceEvent()
 			<< std::flush;
 	}
 */
+
+	checkWritebackPerformanceCounters();
 }
 
 void ReferenceSimulator::advance(hlim::ClockRational seconds)
@@ -995,7 +1052,6 @@ void ReferenceSimulator::advance(hlim::ClockRational seconds)
 	}
 }
 
-
 void ReferenceSimulator::simProcSetInputPin(hlim::Node_Pin *pin, const ExtendedBitVectorState &state)
 {
 	HCL_DESIGNCHECK_HINT(!m_readOnlyMode, "Can not change simulation states after waiting for WaitStable");
@@ -1004,6 +1060,7 @@ void ReferenceSimulator::simProcSetInputPin(hlim::Node_Pin *pin, const ExtendedB
 	HCL_ASSERT(it != m_program.m_stateMapping.nodeToInternalOffset.end());
 	if (pin->setState(m_dataState.signalState, it->second.data(), state)) {
 		m_stateNeedsReevaluating = true; // Only mark state as dirty if the value of the pin was actually changed.
+		auto perfHandle = m_performanceCounters.processOther(SimulatorPerformanceCounters::Other::EVENT_CALLBACKS);
 		m_callbackDispatcher.onSimProcOutputOverridden({.node=pin, .port=0}, state);
 	}
 }
@@ -1016,6 +1073,7 @@ void ReferenceSimulator::simProcOverrideRegisterOutput(hlim::Node_Register *reg,
 	HCL_ASSERT(it != m_program.m_stateMapping.outputToOffset.end());
 	if (reg->overrideOutput(m_dataState.signalState, it->second, state)) {
 		m_stateNeedsReevaluating = true; // Only mark state as dirty if the value of the pin was actually changed.
+		auto perfHandle = m_performanceCounters.processOther(SimulatorPerformanceCounters::Other::EVENT_CALLBACKS);
 		m_callbackDispatcher.onSimProcOutputOverridden({.node=reg, .port=0}, convertToExtended(state));
 	}
 }

@@ -49,7 +49,10 @@ void UnitTestSimulationFixture::addSimulationFiber(std::function<void()> simFibe
 
 void UnitTestSimulationFixture::eval(hlim::Circuit &circuit)
 {
-	m_simulator->compileProgram(circuit);
+	m_simulator->compileProgram(circuit, {}, { .perf = {
+					.samplePerformanceCounters = m_traceSimulationPerformance, 
+					.logPerformanceCounters = m_traceSimulationPerformance,
+	}});
 	m_simulator->powerOn();
 	//m_simulator->reevaluate();
 	m_simulator->commitState();
@@ -65,7 +68,10 @@ void UnitTestSimulationFixture::runTicks(hlim::Circuit &circuit, const hlim::Clo
 	m_runLimClock = 0;
 	m_runLimClock = clock;
 
-	m_simulator->compileProgram(circuit);
+	m_simulator->compileProgram(circuit, {}, { .perf = {
+					.samplePerformanceCounters = m_traceSimulationPerformance, 
+					.logPerformanceCounters = m_traceSimulationPerformance,
+	}});
 	m_simulator->powerOn();
 	m_simulator->advance(hlim::ClockRational(numTicks) / clock->absoluteFrequency());
 	m_simulator->commitState();
