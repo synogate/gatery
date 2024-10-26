@@ -240,7 +240,7 @@ namespace gtry::dbg {
 			if (d.second.count == 0) continue;
 
 			size_t idx = getNGItem(d.first);
-			values[idx] = d.second.count;
+			values[idx] = float(d.second.count);
 		}
 
 
@@ -267,7 +267,7 @@ namespace gtry::dbg {
 		for (const auto &d : counters.getByType()) {
 			labels.push_back(counters.getTypeNameMap().find(d.first)->second);
 			parents.push_back(~0ull);
-			values.push_back(d.second.count);
+			values.push_back(float(d.second.count));
 		}
 
 
