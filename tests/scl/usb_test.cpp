@@ -372,6 +372,78 @@ BOOST_FIXTURE_TEST_CASE(usb_loopback_sky130, WindowsDiscoveryLoopbackUsbFixtureS
 	runTest();
 }
 
+class WindowsDiscoveryLoopbackUsbFixtureGateMate : public SingleEndpointUsbFixture
+{
+public:
+	size_t samplingRatio = 4;
+	std::function<void()> configure = []() {};
+	void runTest() {
+		configure();
+		m_useSimuPhy = false;
+		m_pinApplicationInterface = false;
+		m_pinStatusRegister = false;
+		m_maxPacketLength = 64;
+
+		Clock clk12{ ClockConfig{
+			.absoluteFrequency = 12'000'000,
+			.name = "CLK12M",
+			.resetType = hlim::RegisterAttributes::ResetType::NONE
+		} };
+
+		ExternalModule pll{ "CC_PLL" };
+		pll.requiresComponentDeclaration(true);
+		pll.isEntity(false);
+		pll.generic("REF_CLK") = "12.0";
+		pll.generic("OUT_CLK") = "36.0";
+		//pll.generic("PERF_MD") = "LOWPOWER";
+		pll.generic("LOW_JITTER") = 1;
+		pll.generic("CI_FILTER_CONST") = 2;
+		pll.generic("CP_FILTER_CONST") = 4;
+		pll.generic("LOCK_REQ") = 1;
+		pll.clockIn(clk12, "CLK_REF");
+
+		Bit clk0 = pll.out("CLK0");
+		ExternalModule clk0BufG{ "CC_BUFG" };
+		clk0BufG.requiresComponentDeclaration(true);
+		clk0BufG.isEntity(false);
+		clk0BufG.in("I") = clk0;
+
+		Clock clk48 = clk0BufG.clockOut("O", {}, ClockConfig{
+			.absoluteFrequency = 36'000'000,
+			.resetType = hlim::RegisterAttributes::ResetType::NONE,
+			.memoryResetType = hlim::RegisterAttributes::ResetType::NONE
+		});
+		ClockScope clkScp(clk48);
+
+		setupFunction();
+		{
+			scl::TransactionalFifo<scl::usb::Function::StreamData> loopbackFifo{ 256 };
+			m_func->attachRxFifo(loopbackFifo, 1 << 1);
+			m_func->attachTxFifo(loopbackFifo, 1 << 1);
+			loopbackFifo.generate();
+		}
+
+		addSimulationProcess([&]() -> SimProcess {
+			co_await OnClk(clk48);
+			co_await m_controller->testWindowsDeviceDiscovery();
+			stopTest();
+		});
+
+		design.postprocess();
+
+		vhdl::VHDLExport vhdl("synthesis_projects/usb_loopback_gatemate/usb_loopback_gatemate.vhd");
+		vhdl(design.getCircuit());
+
+		//BOOST_TEST(!runHitsTimeout({ 1, 1'000 }));
+	}
+};
+
+BOOST_FIXTURE_TEST_CASE(usb_loopback_gatemate_oversampled, WindowsDiscoveryLoopbackUsbFixtureGateMate, *boost::unit_test::disabled())
+{
+	samplingRatio = 3;
+	runTest();
+}
+
 BOOST_FIXTURE_TEST_CASE(usb_to_uart_cyc1000, SingleEndpointUsbFixture, *boost::unit_test::disabled())
 {
 	m_useSimuPhy = false;

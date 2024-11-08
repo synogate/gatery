@@ -29,6 +29,8 @@ Makefile
 test_export
 
 source/gen/
+
+# Quartus
 /tests/**/db
 /tests/**/incremental_db
 /tests/**/output_files
@@ -36,3 +38,9 @@ source/gen/
 /tests/**/*.mif
 /tests/**/*.qws
 
+# GateMate
+/tests/**/impl
+/tests/**/lut*.txt
+/tests/**/*synth.v
+/tests/**/*synth.log
+!/tests/**/Makefile
