@@ -51,4 +51,5 @@
 
 Pin_in      "CLK12M"        Loc = "IO_SB_A8";
 Pin_inout   "USB_DP"        Loc = "IO_WB_A5";
-Pin_inout   "USB_DN"        Loc = "IO_WB_B5";
+Pin_inout   "USB_DN"        Loc = "IO_WB_A6";
+Pin_out     "USB_EN"        Loc = "IO_WB_B7";

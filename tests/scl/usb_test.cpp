@@ -415,6 +415,13 @@ public:
 		});
 		ClockScope clkScp(clk48);
 
+		{
+			scl::Counter usbRstCtr{ 23_b };
+			IF(!usbRstCtr.isLast())
+				usbRstCtr.inc();
+			pinOut(usbRstCtr.value().msb(), "USB_EN");
+		}
+
 		setupFunction();
 		{
 			scl::TransactionalFifo<scl::usb::Function::StreamData> loopbackFifo{ 256 };
