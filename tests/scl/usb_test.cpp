@@ -382,7 +382,6 @@ public:
 		m_useSimuPhy = false;
 		m_pinApplicationInterface = false;
 		m_pinStatusRegister = false;
-		m_maxPacketLength = 64;
 
 		Clock clk12{ ClockConfig{
 			.absoluteFrequency = 12'000'000,
@@ -394,7 +393,7 @@ public:
 		pll.requiresComponentDeclaration(true);
 		pll.isEntity(false);
 		pll.generic("REF_CLK") = "12.0";
-		pll.generic("OUT_CLK") = "36.0";
+		pll.generic("OUT_CLK") = std::to_string(12.0 * samplingRatio);
 		//pll.generic("PERF_MD") = "LOWPOWER";
 		pll.generic("LOW_JITTER") = 1;
 		pll.generic("CI_FILTER_CONST") = 2;
@@ -409,7 +408,7 @@ public:
 		clk0BufG.in("I") = clk0;
 
 		Clock clk48 = clk0BufG.clockOut("O", {}, ClockConfig{
-			.absoluteFrequency = 36'000'000,
+			.absoluteFrequency = clk12.absoluteFrequency() * samplingRatio,
 			.resetType = hlim::RegisterAttributes::ResetType::NONE,
 			.memoryResetType = hlim::RegisterAttributes::ResetType::NONE
 		});
