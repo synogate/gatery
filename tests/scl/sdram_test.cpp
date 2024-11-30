@@ -27,6 +27,7 @@
 #include <gatery/scl/memory/sdram.h>
 #include <gatery/scl/memory/SdramTimer.h>
 #include <gatery/scl/memory/MemoryTester.h>
+#include <gatery/scl/memory/DramMiniController.h>
 #include <gatery/scl/tilelink/TileLinkMasterModel.h>
 #include <gatery/scl/tilelink/TileLinkValidator.h>
 
@@ -716,5 +717,61 @@ BOOST_FIXTURE_TEST_CASE(sdram_constroller_memory_tester_test, SdramControllerTes
 
 		stopTest();
 	});
+}
+
+#define DDR_CMDP_CKE     0x0001
+#define DDR_CMDP_ODT     0x0002
+#define DDR_CMDP_CSn     0x0004
+#define DDR_CMDP_RASn    0x0008
+#define DDR_CMDP_CASn    0x0010
+#define DDR_CMDP_WEn     0x0020
+#define DDR_CMDP_BA      0x0040  //  3b of BA
+#define DDR_CMDP_A       0x0200  // 14b of A
+
+#define DDR_CMD_LOAD_MODE(REG, OPCODE)          (DDR_CMDP_CKE | (REG * DDR_CMDP_BA) | ((OPCODE) * DDR_CMDP_A))
+#define DDR_CMD_LOAD_MR(burstLogLen, BT, CL, DLLreset, WR, PD)      DDR_CMD_LOAD_MODE(0, burstLogLen | (BT << 3) | (CL << 4) | (DLLreset << 8) | (WR << 9) | (PD << 12))
+#define DDR_CMD_LOAD_EMR(DLL, ODS, R, AL, OCD, DQSn, RDQS, OUT)     DDR_CMD_LOAD_MODE(1, DLL | (ODS << 1) | ((R & 1) << 2) | (AL << 3) | (R >> 1 << 6) | (OCD << 7) | (DQSn << 10) | (RDQS << 11) | (OUT << 12))
+
+#define DDR_CMD_PRECHARGE_ALL                   (DDR_CMDP_CKE | DDR_CMDP_CASn | ((1 << 10) * DDR_CMDP_A))
+
+BOOST_FIXTURE_TEST_CASE(dram_mini_constroller_write_read_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	scl::sdram::PhyInterface phy = scl::sdram::phyGateMateDDR2({ .addrW = 14_b, .dqW = 8_b });
+	scl::sdram::miniControllerSimulation(phy);
+
+	scl::TileLinkMasterModel ctrl;
+	ctrl.initAndDrive("ctrl", scl::sdram::miniController(phy));
+
+	scl::TileLinkMasterModel ram;
+	ram.initAndDrive("ram", scl::sdram::miniControllerMappedMemory(phy));
+
+	addSimulationProcess([&]()->SimProcess
+	{
+		co_await OnClk(clock);
+		
+		co_await ctrl.put(0, 2, DDR_CMD_PRECHARGE_ALL, clock);
+		co_await ctrl.put(0, 2, DDR_CMD_LOAD_MODE(2, 0), clock);
+		co_await ctrl.put(0, 2, DDR_CMD_LOAD_MODE(3, 0), clock);
+		co_await ctrl.put(0, 2, DDR_CMD_LOAD_MODE(1, 0), clock);
+		co_await ctrl.put(0, 2, DDR_CMD_LOAD_MR(0, 0, 0, 1, 0, 0), clock);
+		co_await ctrl.put(0, 2, DDR_CMD_LOAD_MR(2, 0, 3, 0, 1, 0), clock);
+		co_await ctrl.put(0, 2, DDR_CMD_LOAD_EMR(0, 1, 1, 0, 7, 0, 0, 0), clock);
+		co_await ctrl.put(0, 2, DDR_CMD_LOAD_EMR(0, 1, 1, 0, 0, 0, 0, 0), clock);
+
+		co_await ram.put(0, 2, 0xAA55BBDD, clock);
+		auto [data, valid, error] = co_await ram.get(0, 2, clock);
+		BOOST_TEST(!error);
+		BOOST_TEST(data == 0xAA55BBDD);
+		BOOST_TEST(valid == 0xFFFFFFFF);
+
+		co_await OnClk(clock);
+		stopTest();
+	});
+
+	design.postprocess();
+	runTicks(clock.getClk(), 512);
 }
 

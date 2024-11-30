@@ -57,7 +57,7 @@ namespace gtry::scl
 		this->init(prefix, slave.a->address.width(), slave.a->data.width(), slave.a->size.width(), slave.a->source.width());
 		auto& master = (TileLinkUL&) this->getLink();
 
-		master <<= slave;
+		slave <<= master;
 	}
 
 	void TileLinkMasterModel::probability(float valid, float ready, uint32_t seed)
