@@ -112,7 +112,7 @@ namespace gtry::scl::sdram
 		return tl;
 	}
 
-	scl::TileLinkUL miniControllerMappedMemory(PhyInterface& dramIo, BitWidth sourceW)
+	scl::TileLinkUL miniControllerMappedMemory(PhyInterface& dramIo, MiniControllerMMapconfig cfg)
 	{
 		Area ent{ "scl_miniControllerMappedMemory", true };
 
@@ -122,7 +122,7 @@ namespace gtry::scl::sdram
 		scl::TileLinkUL tl = tileLinkInit<TileLinkUL>(
 			dramIo.cmd.a.width() + dramIo.cmd.ba.width() + 10_b,
 			dramIo.cmd.dq.width() * 2,
-			sourceW
+			cfg.sourceW, cfg.sizeW
 		);
 		valid(*tl.d) = '0';
 
@@ -131,11 +131,12 @@ namespace gtry::scl::sdram
 		ready(a) = '0';
 		**tl.d = tileLinkDefaultResponse(*a);
 
-		BitWidth addrWordW{ utils::Log2C(a->data.width().bytes()) };
+		// we always read at least one burst, which is equal to one tile link beat
+		a->address(0, BitWidth{ utils::Log2C(a->data.width().bytes()) }) = 0;
 
 		enum class State
 		{
-			Idle, Cas, Wait, First, Second, Ack, Recovery
+			Idle, Cas, Wait, WriteFirst, WriteSecond, WriteAck, Recovery
 		};
 
 		Reg<Enum<State>> state{ State::Idle };
@@ -179,6 +180,10 @@ namespace gtry::scl::sdram
 			}
 		}
 
+		UInt numCas = transferLengthFromLogSize(a->size, a->mask.width().bits()) | name("numCas");
+		scl::Counter casCounter{ numCas };
+		Bit endOfBurst = (cfg.sizeW ? casCounter.isLast() : Bit{ '1' }) | name("endOfBurst");
+
 		IF(state.current() == State::Cas)
 		{
 			// cas command
@@ -186,46 +191,50 @@ namespace gtry::scl::sdram
 			dramIo.cmd.rasn = '1';
 			dramIo.cmd.casn = '0';
 			dramIo.cmd.wen = a->isGet();
-			dramIo.cmd.a = (BVec)zext(cat('1', a->address(addrWordW.bits(), 10_b - addrWordW), ConstUInt(0, addrWordW)));
+			dramIo.cmd.a = (BVec)zext(cat(
+				endOfBurst, // auto precharge
+				a->address(0, 10_b) ^ zext(cat(casCounter.value(), "2b00")) // column address
+			));
 			dramIo.cmd.ba = (BVec)a->address(10, dramIo.cmd.ba.width());
 			state = State::Wait;
 		}
 
 		IF(state.current() == State::Wait)
 		{
-			state = State::First;
+			state = State::Recovery;
+			IF(a->isPut())
+				state = State::WriteFirst;
+
+			casCounter.inc();
+			IF(!endOfBurst)
+				state = State::Cas;
 		}
 
-		IF(state.current() == State::First)
+		IF(state.current() == State::WriteFirst)
 		{
 			dramIo.dqWriteValid = a->isPut();
 			dramIo.cmd.dq = a->data.part(2, 0);
 			dramIo.cmd.dqm = ~a->mask.part(2, 0);
-
-			IF(a->isPut() | dramIo.dqReadValid)
-				state = State::Second;
+			state = State::WriteSecond;
 		}
 
-		IF(state.current() == State::Second)
+		IF(state.current() == State::WriteSecond)
 		{
 			dramIo.dqWriteValid = a->isPut();
 			dramIo.cmd.dq = a->data.part(2, 1);
 			dramIo.cmd.dqm = ~a->mask.part(2, 1);
-			state = State::Ack;
+			state = State::WriteAck;
 		}
 
-		IF(state.current() == State::Ack)
+		IF(state.current() == State::WriteAck)
 		{
 			valid(*tl.d) = '1';
 			IF(transfer(*tl.d))
-			{
-				ready(a) = '1';
 				state = State::Recovery;
-			}
 		}
 
 		size_t recoveryCyclesRefresh = hlim::ceil(tRFC * ClockScope::getClk().absoluteFrequency());
-		Counter recoveryCounter{ std::max<size_t>(recoveryCyclesRefresh, 4) };
+		Counter recoveryCounter{ std::max<size_t>(recoveryCyclesRefresh, 4) + 4 };
 		IF(state.current() == State::Recovery)
 		{
 			recoveryCounter.inc();
@@ -243,6 +252,20 @@ namespace gtry::scl::sdram
 		HCL_NAMED(readData);
 		(*tl.d)->data = readData;
 
+		{	// read ack is in parallel to state machine to support read bursts
+			Bit readDataSubmitState;
+			readDataSubmitState = flag(dramIo.dqReadValid & state.current() != State::Idle, dramIo.dqReadValid & readDataSubmitState);
+			HCL_NAMED(readDataSubmitState);
+
+			Bit dTransfer;
+			valid(*tl.d) |= flag(dramIo.dqReadValid & readDataSubmitState, dTransfer);
+			dTransfer = transfer(*tl.d);
+		}
+
+		ready(a) = transfer(*tl.d);
+		if (cfg.sizeW)
+			ready(a) &= eop(*tl.d);
+
 		HCL_NAMED(tl);
 		return tl;
 	}
@@ -254,6 +277,25 @@ namespace gtry::scl::sdram
 
 		dramIo.dqReadValid.simulationOverride(valid(outData));
 		dramIo.dqIn.simulationOverride(*outData);
+	}
+
+	PhyInterface phySimulator(PhyGateMateDDR2Config cfg)
+	{
+		PhyInterface phy{
+			.cmd = {
+				.a = cfg.addrW,
+				.ba = 3_b,
+				.dq = cfg.dqW * 2,
+				.dqm = cfg.dqW * 2 / 8,
+			},
+			.dqIn = cfg.dqW * 2,
+		};
+		pinOut(phy, cfg.pinPrefix, PinNodeParameter{ .simulationOnlyPin = true });
+
+		scl::VStream<BVec> outData = moduleSimulation(phy.cmd, Standard::ddr2);
+		phy.dqReadValid = valid(outData);
+		phy.dqIn = *outData;
+		return phy;
 	}
 
 	PhyInterface phyGateMateDDR2(PhyGateMateDDR2Config cfg)

@@ -739,39 +739,90 @@ BOOST_FIXTURE_TEST_CASE(dram_mini_constroller_write_read_test, BoostUnitTestSimu
 	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
-	scl::sdram::PhyInterface phy = scl::sdram::phyGateMateDDR2({ .addrW = 14_b, .dqW = 8_b });
-	scl::sdram::miniControllerSimulation(phy);
+	scl::sdram::PhyInterface phy = scl::sdram::phySimulator({ .addrW = 14_b, .dqW = 8_b });
 
 	scl::TileLinkMasterModel ctrl;
-	ctrl.initAndDrive("ctrl", scl::sdram::miniController(phy));
+	ctrl.initAndDrive("ctrl", scl::sdram::miniController(phy, { .sourceW = 2_b }));
 
 	scl::TileLinkMasterModel ram;
-	ram.initAndDrive("ram", scl::sdram::miniControllerMappedMemory(phy));
+	ram.initAndDrive("ram", scl::sdram::miniControllerMappedMemory(phy, { .sourceW = 1_b }));
 
 	addSimulationProcess([&]()->SimProcess
 	{
 		co_await OnClk(clock);
 		
-		co_await ctrl.put(0, 2, DDR_CMD_PRECHARGE_ALL, clock);
-		co_await ctrl.put(0, 2, DDR_CMD_LOAD_MODE(2, 0), clock);
-		co_await ctrl.put(0, 2, DDR_CMD_LOAD_MODE(3, 0), clock);
-		co_await ctrl.put(0, 2, DDR_CMD_LOAD_MODE(1, 0), clock);
-		co_await ctrl.put(0, 2, DDR_CMD_LOAD_MR(0, 0, 0, 1, 0, 0), clock);
-		co_await ctrl.put(0, 2, DDR_CMD_LOAD_MR(2, 0, 3, 0, 1, 0), clock);
-		co_await ctrl.put(0, 2, DDR_CMD_LOAD_EMR(0, 1, 1, 0, 7, 0, 0, 0), clock);
+		fork(ctrl.put(0, 2, DDR_CMD_PRECHARGE_ALL, clock));
+		fork(ctrl.put(0, 2, DDR_CMD_LOAD_MODE(2, 0), clock));
+		fork(ctrl.put(0, 2, DDR_CMD_LOAD_MODE(3, 0), clock));
+		fork(ctrl.put(0, 2, DDR_CMD_LOAD_MODE(1, 0), clock));
+		fork(ctrl.put(0, 2, DDR_CMD_LOAD_MR(0, 0, 0, 1, 0, 0), clock));
+		fork(ctrl.put(0, 2, DDR_CMD_LOAD_MR(2, 0, 3, 0, 1, 0), clock));
+		fork(ctrl.put(0, 2, DDR_CMD_LOAD_EMR(0, 1, 1, 0, 7, 0, 0, 0), clock));
 		co_await ctrl.put(0, 2, DDR_CMD_LOAD_EMR(0, 1, 1, 0, 0, 0, 0, 0), clock);
 
-		co_await ram.put(0, 2, 0xAA55BBDD, clock);
-		auto [data, valid, error] = co_await ram.get(0, 2, clock);
-		BOOST_TEST(!error);
-		BOOST_TEST(data == 0xAA55BBDD);
-		BOOST_TEST(valid == 0xFFFFFFFF);
+		fork(ram.put(0, 2, 0xAA55BBDD, clock));
+		for(size_t i = 0; i < 3; ++i)
+		{
+			auto [data, valid, error] = co_await ram.get(0, i, clock);
+			BOOST_TEST(!error);
+			BOOST_TEST(data == 0xAA55BBDD);
+			BOOST_TEST(valid == 0xFFFFFFFF);
+		}
 
 		co_await OnClk(clock);
 		stopTest();
 	});
 
 	design.postprocess();
-	runTicks(clock.getClk(), 512);
+	BOOST_TEST(!runHitsTimeout({ 2, 1'000'000 }));
 }
 
+BOOST_FIXTURE_TEST_CASE(dram_mini_constroller_burst_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	scl::sdram::PhyInterface phy = scl::sdram::phySimulator({ .addrW = 14_b, .dqW = 8_b });
+
+	scl::TileLinkMasterModel ctrl;
+	ctrl.initAndDrive("ctrl", scl::sdram::miniController(phy, { .sourceW = 2_b }));
+
+	scl::TileLinkMasterModel ram;
+	ram.initAndDrive("ram", scl::sdram::miniControllerMappedMemory(phy, { .sourceW = 1_b, .sizeW = 3_b }));
+
+	addSimulationProcess([&]()->SimProcess
+		{
+			co_await OnClk(clock);
+
+			fork(ctrl.put(0, 2, DDR_CMD_PRECHARGE_ALL, clock));
+			fork(ctrl.put(0, 2, DDR_CMD_LOAD_MODE(2, 0), clock));
+			fork(ctrl.put(0, 2, DDR_CMD_LOAD_MODE(3, 0), clock));
+			fork(ctrl.put(0, 2, DDR_CMD_LOAD_MODE(1, 0), clock));
+			fork(ctrl.put(0, 2, DDR_CMD_LOAD_MR(0, 0, 0, 1, 0, 0), clock));
+			fork(ctrl.put(0, 2, DDR_CMD_LOAD_MR(2, 0, 3, 0, 1, 0), clock));
+			fork(ctrl.put(0, 2, DDR_CMD_LOAD_EMR(0, 1, 1, 0, 7, 0, 0, 0), clock));
+			co_await ctrl.put(0, 2, DDR_CMD_LOAD_EMR(0, 1, 1, 0, 0, 0, 0, 0), clock);
+
+			fork(ram.put(0, 2, 0xAA55BBDD, clock));
+			for (size_t i = 0; i < 3; ++i)
+			{
+				auto [data, valid, error] = co_await ram.get(0, i, clock);
+				BOOST_TEST(!error);
+				BOOST_TEST(data == 0xAA55BBDD);
+				BOOST_TEST(valid == 0xFFFFFFFF);
+			}
+			fork(ram.put(4, 2, 0x12345678, clock));
+			{
+				auto [data, valid, error] = co_await ram.get(0, 3, clock);
+				BOOST_TEST(!error);
+				BOOST_TEST(data == 0x12345678AA55BBDD);
+				BOOST_TEST(valid == 0xFFFFFFFFFFFFFFFF);
+			}
+
+			co_await OnClk(clock);
+			stopTest();
+		});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 2, 1'000'000 }));
+}

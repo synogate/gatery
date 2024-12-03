@@ -79,6 +79,7 @@ namespace gtry::scl
 		simu(m_link.a->param) = 0;
 		simu(m_link.a->address) = tx.address;
 		simu(m_link.a->size) = tx.logByteSize;
+		HCL_DESIGNCHECK_HINT(tx.logByteSize < m_link.a->size.width().count(), "bus does not support that burst length");
 
 		size_t sourceId;
 		if (tx.source)

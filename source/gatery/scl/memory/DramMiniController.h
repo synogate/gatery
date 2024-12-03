@@ -39,7 +39,14 @@ namespace gtry::scl::sdram
 	};
 
 	scl::TileLinkUL miniController(PhyInterface& dramIo, MiniControllerConfig cfg = {});
-	scl::TileLinkUL miniControllerMappedMemory(PhyInterface& dramIo, BitWidth sourceW = 0_b);
+
+	struct MiniControllerMMapconfig
+	{
+		BitWidth sourceW = 0_b;			//!< source width for the tile link interface
+		std::optional<BitWidth> sizeW;	//!< size width for the tile link interface. burst support is disabled if not set.
+	};
+
+	scl::TileLinkUL miniControllerMappedMemory(PhyInterface& dramIo, MiniControllerMMapconfig cfg = {});
 	void miniControllerSimulation(PhyInterface& dramIo);
 
 	struct PhyGateMateDDR2Config
@@ -49,8 +56,8 @@ namespace gtry::scl::sdram
 		BitWidth dqW;
 	};
 
+	PhyInterface phySimulator(PhyGateMateDDR2Config cfg);
 	PhyInterface phyGateMateDDR2(PhyGateMateDDR2Config cfg);
-
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::sdram::MiniControllerConfig, sourceW);
