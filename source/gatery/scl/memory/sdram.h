@@ -127,7 +127,7 @@ namespace gtry::scl::sdram
 	};
 
 	void checkModuleTiming(const CommandBus& cmd, const Timings& timing);
-	VStream<BVec> moduleSimulation(const CommandBus& cmd, Standard standard = Standard::sdram);
+	VStream<BVec> moduleSimulation(const CommandBus& cmd, Standard standard = Standard::sdram, std::optional<sim::DefaultBitVectorState> powerOnState = {});
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::sdram::Controller::BankState, rowActive, activeRow);

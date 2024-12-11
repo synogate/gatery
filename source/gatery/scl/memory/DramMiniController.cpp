@@ -273,13 +273,13 @@ namespace gtry::scl::sdram
 	void miniControllerSimulation(PhyInterface& dramIo)
 	{
 		scl::VStream<BVec> outData = moduleSimulation(dramIo.cmd, Standard::ddr2);
-		pinOut(*outData, "DRAM_SIMU_DQ");
+		pinOut(*outData, "DRAM_SIMU_DQ", PinNodeParameter{ .simulationOnlyPin = true });
 
 		dramIo.dqReadValid.simulationOverride(valid(outData));
 		dramIo.dqIn.simulationOverride(*outData);
 	}
 
-	PhyInterface phySimulator(PhyGateMateDDR2Config cfg)
+	PhyInterface phySimulator(PhyGateMateDDR2Config cfg, std::optional<sim::DefaultBitVectorState> powerOnState)
 	{
 		PhyInterface phy{
 			.cmd = {
@@ -292,7 +292,7 @@ namespace gtry::scl::sdram
 		};
 		pinOut(phy, cfg.pinPrefix, PinNodeParameter{ .simulationOnlyPin = true });
 
-		scl::VStream<BVec> outData = moduleSimulation(phy.cmd, Standard::ddr2);
+		scl::VStream<BVec> outData = moduleSimulation(phy.cmd, Standard::ddr2, powerOnState);
 		phy.dqReadValid = valid(outData);
 		phy.dqIn = *outData;
 		return phy;
@@ -424,15 +424,19 @@ namespace gtry::scl::sdram
 
 		
 		{	// read timing logic
-			Counter readState{ 8 };
-			IF(!readState.isFirst())
-				readState.inc();
+			Bit readRequest = phy.cmd.cke & !phy.cmd.csn & phy.cmd.rasn & !phy.cmd.casn & phy.cmd.wen | name("readRequest");
 
-			IF(phy.cmd.cke & !phy.cmd.csn & phy.cmd.rasn & !phy.cmd.casn & phy.cmd.wen)
-				readState.inc();
+			UInt readState = 6_b;
+			readState <<= 1;
+			IF(readRequest)
+			{
+				readState[0] = '1';
+				readState[1] = '1';
+			}
+			readState = reg(readState, 0) | name("readState");
 
-			size_t readDelay = 5;
-			phy.dqReadValid = readState.value() == readDelay | readState.value() == readDelay + 1;
+			//size_t readDelay = 5;
+			phy.dqReadValid = readState.msb();
 		}
 		return phy;
 	}

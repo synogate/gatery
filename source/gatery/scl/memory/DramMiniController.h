@@ -56,7 +56,7 @@ namespace gtry::scl::sdram
 		BitWidth dqW;
 	};
 
-	PhyInterface phySimulator(PhyGateMateDDR2Config cfg);
+	PhyInterface phySimulator(PhyGateMateDDR2Config cfg, std::optional<sim::DefaultBitVectorState> powerOnState = {});
 	PhyInterface phyGateMateDDR2(PhyGateMateDDR2Config cfg);
 }
 
