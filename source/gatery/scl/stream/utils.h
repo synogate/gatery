@@ -765,40 +765,35 @@ namespace gtry::scl::strm
 	{
 		Area area("synchronizeStreamReqAck", true);
 		ClockScope csIn{ inClock };
+
+		Bit busy = flag(valid(in), ready(in)) | name("busy");
+
 		auto crossingStream = move(in)
 			| remove<Ready>()
 			| remove<Valid>();
 
-		Bit eventIn;
-		Bit idle = flag(ready(in), eventIn, '1');
-		eventIn = valid(in) & idle;
-		HCL_NAMED(eventIn);	
-
-		Bit outputEnableCondition = synchronizeEvent(eventIn, inClock, outClock);
-		HCL_NAMED(outputEnableCondition);
-
-		crossingStream = reg(crossingStream);
+		ENIF(valid(in))
+			crossingStream = reg(crossingStream) | name("crossingStream_in");
 
 		ClockScope csOut{ outClock };
 
-		crossingStream = allowClockDomainCrossing(crossingStream, inClock, outClock);
-
-		ENIF(outputEnableCondition){
+		Bit dataStable = synchronizeEvent(valid(in) & !busy, inClock, outClock) | name("dataStable");
+		ENIF(dataStable) {
 			Clock dontSimplifyEnableRegClk = outClock.deriveClock({ .synchronizationRegister = true });
-			crossingStream = reg(crossingStream, RegisterSettings{ .clock = dontSimplifyEnableRegClk });
+			crossingStream = allowClockDomainCrossing(crossingStream, inClock, outClock);
+			crossingStream = reg(crossingStream, { .clock = dontSimplifyEnableRegClk }) | name("crossingStream_out");
 		}
 
-		StreamT out = move(crossingStream)
+		scl::Stream out = crossingStream
 			| attach(Ready{})
 			| attach(Valid{})
 			| reduceTo<StreamT>();
 
-		Bit outValid;
-		outValid = flag(outputEnableCondition, outValid & ready(out));
-		valid(out) = outValid;
-
+		Bit outValid; // TODO: outValid is a work around for attach not preserving the loop
+		valid(out) = outValid = flag(dataStable, outValid & ready(out));
 		ready(in) = synchronizeEvent(transfer(out), outClock, inClock);
-
+		HCL_NAMED(out);
+		HCL_NAMED(in);
 		return out;
 	}
 
