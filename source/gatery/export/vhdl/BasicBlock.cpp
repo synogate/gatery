@@ -459,7 +459,7 @@ void BasicBlock::processifyNodes(const std::string &desiredProcessName, hlim::No
 					auto *constReset = dynamic_cast<hlim::Node_Constant*>(reset.node);
 					HCL_DESIGNCHECK_HINT(constReset, "Resets of registers must be constants upon export!");
 
-					m_localSignalDefaultValues[{.node = regNode, .port = 0ull}] = constReset;
+					m_defaultValues[{.node = regNode, .port = 0ull}] = constReset;
 				}
 
 				continue;
