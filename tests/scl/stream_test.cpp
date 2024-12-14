@@ -284,9 +284,8 @@ BOOST_FIXTURE_TEST_CASE(stream_transform, StreamTransferFixture)
 
 	simulateTransferTest(in, out);
 
-	//recordVCD("stream_downstreamReg.vcd");
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 1,1'000'000 }));
 }
 
 BOOST_FIXTURE_TEST_CASE(stream_downstreamReg, StreamTransferFixture)
@@ -301,9 +300,8 @@ BOOST_FIXTURE_TEST_CASE(stream_downstreamReg, StreamTransferFixture)
 
 	simulateTransferTest(in, out);
 
-	//recordVCD("stream_downstreamReg.vcd");
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 1,1'000'000 }));
 }
 BOOST_FIXTURE_TEST_CASE(stream_uptreamReg, StreamTransferFixture)
 {
@@ -317,9 +315,8 @@ BOOST_FIXTURE_TEST_CASE(stream_uptreamReg, StreamTransferFixture)
 
 	simulateTransferTest(in, out);
 
-	//recordVCD("stream_uptreamReg.vcd");
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 1,1'000'000 }));
 }
 BOOST_FIXTURE_TEST_CASE(stream_reg, StreamTransferFixture)
 {
@@ -333,9 +330,8 @@ BOOST_FIXTURE_TEST_CASE(stream_reg, StreamTransferFixture)
 
 	simulateTransferTest(in, out);
 
-	//recordVCD("stream_reg.vcd");
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 1,1'000'000 }));
 }
 BOOST_FIXTURE_TEST_CASE(stream_reg_chaining, StreamTransferFixture)
 {
@@ -349,9 +345,8 @@ BOOST_FIXTURE_TEST_CASE(stream_reg_chaining, StreamTransferFixture)
 
 	simulateTransferTest(in, out);
 
-	//recordVCD("stream_reg_chaining.vcd");
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 1,1'000'000 }));
 }
 
 BOOST_FIXTURE_TEST_CASE(stream_fifo_0, StreamTransferFixture)
@@ -367,9 +362,8 @@ BOOST_FIXTURE_TEST_CASE(stream_fifo_0, StreamTransferFixture)
 	transfers(500);
 	simulateTransferTest(in, out);
 
-	//recordVCD("stream_fifo.vcd");
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 20, 1'000'000 }));
 }
 
 BOOST_FIXTURE_TEST_CASE(stream_fifo_1, StreamTransferFixture)
@@ -385,9 +379,8 @@ BOOST_FIXTURE_TEST_CASE(stream_fifo_1, StreamTransferFixture)
 	transfers(500);
 	simulateTransferTest(in, out);
 
-	//recordVCD("stream_fifo.vcd");
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 20, 1'000'000 }));
 }
 
 BOOST_FIXTURE_TEST_CASE(stream_fifo_2, StreamTransferFixture)
@@ -403,9 +396,8 @@ BOOST_FIXTURE_TEST_CASE(stream_fifo_2, StreamTransferFixture)
 	transfers(500);
 	simulateTransferTest(in, out);
 
-	//recordVCD("stream_fifo.vcd");
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 20, 1'000'000 }));
 }
 
 BOOST_FIXTURE_TEST_CASE(streamArbiter_low1, StreamTransferFixture)
@@ -424,9 +416,8 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_low1, StreamTransferFixture)
 	simulateArbiterTestSource(in);
 	simulateArbiterTestSink(arbiter.out());
 
-	//recordVCD("streamArbiter_low1.vcd");
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 20, 1'000'000 }));
 }
 
 BOOST_FIXTURE_TEST_CASE(streamArbiter_low4, StreamTransferFixture)
@@ -447,9 +438,8 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_low4, StreamTransferFixture)
 	Out(arbiter.out());
 	simulateArbiterTestSink(arbiter.out());
 
-	//recordVCD("streamArbiter_low4.vcd");
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 20, 1'000'000 }));
 }
 
 BOOST_FIXTURE_TEST_CASE(streamArbiter_low4_packet, StreamTransferFixture)
@@ -470,9 +460,8 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_low4_packet, StreamTransferFixture)
 	Out(arbiter.out());
 	simulateArbiterTestSink(arbiter.out());
 
-	//recordVCD("streamArbiter_low4_packet.vcd");
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 20, 1'000'000 }));
 }
 
 BOOST_FIXTURE_TEST_CASE(streamArbiter_rr5, StreamTransferFixture)
@@ -493,9 +482,8 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rr5, StreamTransferFixture)
 	Out(arbiter.out());
 	simulateArbiterTestSink(arbiter.out());
 
-	//recordVCD("streamArbiter_rr5.vcd");
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 20, 1'000'000 }));
 
 	//dbg::vis();
 }
@@ -518,9 +506,8 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_reg_rr5, StreamTransferFixture)
 	Out(arbiter.out());
 	simulateArbiterTestSink(arbiter.out());
 
-	//recordVCD("streamArbiter_reg_rr5.vcd");
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 20, 1'000'000 }));
 }
 
 BOOST_FIXTURE_TEST_CASE(streamArbiter_rrb5, StreamTransferFixture)
@@ -541,9 +528,8 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rrb5, StreamTransferFixture)
 	Out(arbiter.out());
 	simulateArbiterTestSink(arbiter.out());
 
-	//recordVCD("streamArbiter_rrb5.vcd");
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 20, 1'000'000 }));
 }
 
 BOOST_FIXTURE_TEST_CASE(streamArbiter_rrb5_packet, StreamTransferFixture)
@@ -564,9 +550,8 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rrb5_packet, StreamTransferFixture)
 	Out(arbiter.out());
 	simulateArbiterTestSink(arbiter.out());
 
-	//recordVCD("streamArbiter_rrb5_packet.vcd");
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 20, 1'000'000 }));
 }
 
 BOOST_FIXTURE_TEST_CASE(streamArbiter_rrs5_packet, StreamTransferFixture)
@@ -588,6 +573,7 @@ BOOST_FIXTURE_TEST_CASE(streamArbiter_rrs5_packet, StreamTransferFixture)
 	simulateArbiterTestSink(arbiter.out());
 
 	design.postprocess();
+	// TODO: this test sends a random number of packets, it will hang if the number of packets on all 4 streams is not the same
 	runTicks(m_clock.getClk(), 1024);
 }
 
@@ -639,7 +625,7 @@ BOOST_FIXTURE_TEST_CASE(stream_extendWidth, StreamTransferFixture)
 	design.postprocess();
 	//dbg::vis();
 	
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 20, 1'000'000 }));
 }
 
 
@@ -676,7 +662,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth, StreamTransferFixture)
 	simulateRecvData(out);
 
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 1,1'000'000 }));
 }
 
 BOOST_FIXTURE_TEST_CASE(stream_reduceWidth_RvPacketStream, StreamTransferFixture)
@@ -710,7 +696,7 @@ BOOST_FIXTURE_TEST_CASE(stream_reduceWidth_RvPacketStream, StreamTransferFixture
 	simulateRecvData(out);
 
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 1,1'000'000 }));
 }
 
 BOOST_FIXTURE_TEST_CASE(stream_eraseFirstBeat, StreamTransferFixture)
@@ -748,7 +734,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseFirstBeat, StreamTransferFixture)
 	simulateRecvData(out);
 
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 1,1'000'000 }));
 }
 
 BOOST_FIXTURE_TEST_CASE(stream_eraseLastBeat, StreamTransferFixture)
@@ -786,7 +772,7 @@ BOOST_FIXTURE_TEST_CASE(stream_eraseLastBeat, StreamTransferFixture)
 	simulateRecvData(out);
 
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 1,1'000'000 }));
 }
 
 BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
@@ -826,7 +812,7 @@ BOOST_FIXTURE_TEST_CASE(stream_insertFirstBeat, StreamTransferFixture)
 	simulateRecvData(out);
 
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 1,1'000'000 }));
 }
 
 BOOST_FIXTURE_TEST_CASE(stream_addEopDeferred, StreamTransferFixture)
@@ -872,7 +858,7 @@ BOOST_FIXTURE_TEST_CASE(stream_addEopDeferred, StreamTransferFixture)
 	simulateRecvData(out);
 
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 20, 1'000'000 }));
 }
 
 BOOST_FIXTURE_TEST_CASE(stream_addPacketSignalsFromSize, StreamTransferFixture)
@@ -898,7 +884,7 @@ BOOST_FIXTURE_TEST_CASE(stream_addPacketSignalsFromSize, StreamTransferFixture)
 	simulateRecvData(out);
 
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 1,1'000'000 }));
 }
 
 BOOST_FIXTURE_TEST_CASE(spi_stream_test, StreamTransferFixture)
@@ -963,7 +949,7 @@ BOOST_FIXTURE_TEST_CASE(stream_stall, StreamTransferFixture)
 	simulateTransferTest(in, out);
 
 	design.postprocess();
-	runTicks(m_clock.getClk(), 1024);
+	BOOST_TEST(!runHitsTimeout({ 20,1'000'000 }));
 }
 
 BOOST_FIXTURE_TEST_CASE(ReqAckSync_1_10, StreamTransferFixture)

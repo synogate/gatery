@@ -113,6 +113,7 @@ namespace gtry::scl {
 		else
 			HCL_DESIGNCHECK(avmm.readLatency > 1);
 
+		writeResBuffered->data.resetNode();
 		writeResBuffered->data = ConstBVec(readResStalled->data.width());
 
 		scl::StreamArbiter<scl::RvStream<TileLinkD>> responseArbiter;

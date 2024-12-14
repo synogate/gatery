@@ -419,16 +419,10 @@ namespace gtry::scl::strm
 		if constexpr (StreamT::template has<Valid>())
 			valid(in).resetValue('0');
 
-		auto dsSig = constructFrom(copy(downstream(in)));
-
-		IF(ready(in))
-			dsSig = downstream(in);
-
-		dsSig = reg(dsSig, settings);
-
 		StreamT ret;
-		downstream(ret) = dsSig;
 		upstream(in) = upstream(ret);
+		ENIF(ready(in))
+			downstream(ret) = reg(copy(downstream(in)), settings);
 		return ret;
 	}
 
@@ -480,30 +474,11 @@ namespace gtry::scl::strm
 			valid(in).resetValue('0');
 
 		StreamT ret;
-
+		upstream(in) = upstream(ret);
 		if constexpr (StreamT::template has<Ready>())
-		{
-			Bit valid_reg;
-			auto dsSig = constructFrom(copy(downstream(in)));
-
-			IF(ready(in))
-			{
-				valid_reg = valid(in);
-				dsSig = downstream(in);
-			}
-
-			valid_reg = reg(valid_reg, '0', settings);
-			dsSig = reg(dsSig, settings);
-
-			downstream(ret) = dsSig;
-			upstream(in) = upstream(ret);
-			ready(in) |= !valid_reg;
-		}
-		else
-		{
-			downstream(ret) = reg(copy(downstream(in)));
-			upstream(in) = upstream(ret);
-		}
+			ready(in) |= !valid(ret); // force ready when register stage is empty
+		ENIF(ready(in))
+			downstream(ret) = reg(copy(downstream(in)), settings);
 		return ret;
 	}
 
