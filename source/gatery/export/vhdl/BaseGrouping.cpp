@@ -227,8 +227,8 @@ void BaseGrouping::declareLocalSignals(std::ostream &stream, bool asVariables, u
 			stream << "SIGNAL ";
 		cf.formatDeclaration(stream, decl);
 
-		auto it = m_localSignalDefaultValues.find(signal);
-		if (it != m_localSignalDefaultValues.end()) {
+		auto it = m_defaultValues.find(signal);
+		if (it != m_defaultValues.end()) {
 			stream << " := ";
 			formatConstant(stream, it->second, decl.dataType);
 		}
