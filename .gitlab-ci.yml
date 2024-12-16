@@ -78,7 +78,7 @@ test-windows-scl:
 
 test-linux-coverage:
   stage: coverage
-  needs: ["linux-build"]
+  needs: ["linux-gcc-build"]
   tags:
     - linux
   script:
