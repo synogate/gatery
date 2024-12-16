@@ -16,7 +16,7 @@ linux-gcc-build:
   artifacts:
     expire_in: 2 days
     paths:
-      - build/
+      - build/bin/
 
 linux-clang-build:
   stage: build
@@ -30,7 +30,7 @@ linux-clang-build:
   artifacts:
     expire_in: 2 days
     paths:
-      - build/
+      - build/bin/
 
 windows-msvc-build:
   stage: build
@@ -50,7 +50,7 @@ test-linux-frontend:
   tags:
     - linux
   script:
-    - build/tests/frontend/unittest_frontend -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/ --intelQuartus /opt/intelFPGA_pro/24.1/quartus/bin
+    - build/bin/unittest_frontend -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/ --intelQuartus /opt/intelFPGA_pro/24.1/quartus/bin
 
 test-linux-scl:
   stage: test
@@ -58,7 +58,7 @@ test-linux-scl:
   tags:
     - linux
   script:
-    - build/tests/scl/unittest_scl -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/ --intelQuartus /opt/intelFPGA_pro/24.1/quartus/bin
+    - build/bin/unittest_scl -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/ --intelQuartus /opt/intelFPGA_pro/24.1/quartus/bin
 
 test-windows-frontend:
   stage: test
@@ -76,43 +76,48 @@ test-windows-scl:
   script:
     - .\bin\windows-x86_64-Debug\gatery-scl-test.exe
 
-# test-linux-coverage:
-#   stage: coverage
-#   needs: ["linux-build"]
-#   tags:
-#     - linux
-#   script:
-#     - premake5 gmake2
-#     - /usr/bin/time -o buildLog.txt -v make -j20 config=coverage
-#     - mkdir cov
-#     - anybadge -l "Build time (seconds)" -v $(cat buildLog.txt | grep "User time (seconds):" | cut -d' ' -f 4) --file cov/buildTime.svg
-#     - anybadge -l "Build max RSS (kB)" -v $(cat buildLog.txt | grep "Maximum resident set size (kbytes)" | cut -d' ' -f 6) --file cov/buildMaxRSS.svg
-#     - anybadge -l "Lines of Code" -v $(find ./ -type f \( -iname \*.cpp -o -iname \*.h -o -iname \*.hpp \) | xargs wc -l | tail -1 | cut -d' ' -f 2) --file cov/linesOfCode.svg
-#     - lcov --directory . --zerocounters
-#     - bin/linux-x86_64-Coverage/gatery-frontend-test -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/
-#     - bin/linux-x86_64-Coverage/gatery-scl-test -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/
-#     - lcov --directory . --capture --output-file unittest_coverage.info
-#     - lcov --remove unittest_coverage.info '/usr/*' --output-file unittest_coverage.info
-#     - lcov --remove unittest_coverage.info '*/source/external/*' --output-file unittest_coverage.info
-#     - anybadge --value=$(lcov --summary unittest_coverage.info | grep lines | cut -d' ' -f 4 | cut -d'%' -f 1) --file cov/coverage.svg coverage
-#     - genhtml unittest_coverage.info -o cov/
-# #    - rm -rf /mnt/doxygenDocu/gateryCov/*
-# #    - cp -r cov/ /mnt/doxygenDocu/gateryCov
-#   artifacts:
-#     expire_in: 4 weeks
-#     paths:
-#         - cov/
-#   only:
-#     - master
+ test-linux-coverage:
+   stage: coverage
+   needs: ["linux-build"]
+   tags:
+     - linux
+   script:
+     - mkdir cov
+     - cd cov
+     - cmake .. -DCMAKE_BUILD_TYPE=Debug -DTEST_COVERAGE=true
+     - /usr/bin/time -o buildLog.txt -v make -j20 config=coverage
+     - mkdir badges
+     - anybadge -l "Build time (seconds)" -v $(cat buildLog.txt | grep "User time (seconds):" | cut -d' ' -f 4) --file badges/buildTime.svg
+     - anybadge -l "Build max RSS (kB)" -v $(cat buildLog.txt | grep "Maximum resident set size (kbytes)" | cut -d' ' -f 6) --file badges/buildMaxRSS.svg
+     - anybadge -l "Lines of Code" -v $(find ../ -type f \( -iname \*.cpp -o -iname \*.h -o -iname \*.hpp \) | xargs wc -l | tail -1 | cut -d' ' -f 2) --file badges/linesOfCode.svg
+     - lcov --directory . --zerocounters
+     - bin/gatery-frontend-test -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/ --intelQuartus /opt/intelFPGA_pro/24.1/quartus/bin
+     - bin/gatery-scl-test -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/ --intelQuartus /opt/intelFPGA_pro/24.1/quartus/bin
+     - lcov --directory . --capture --output-file unittest_coverage.info
+     - lcov --remove unittest_coverage.info '/usr/*' --output-file unittest_coverage.info
+     - lcov --remove unittest_coverage.info '*/source/external/*' --output-file unittest_coverage.info
+     - anybadge --value=$(lcov --summary unittest_coverage.info | grep lines | cut -d' ' -f 4 | cut -d'%' -f 1) --file badges/coverage.svg coverage
+     - mkdir coverageInfo
+     - genhtml unittest_coverage.info -o coverageInfo/
+ #    - rm -rf /mnt/doxygenDocu/gateryCov/*
+ #    - cp -r cov/ /mnt/doxygenDocu/gateryCov
+   artifacts:
+     expire_in: 4 weeks
+     paths:
+         - cov/badges/
+         - cov/coverageInfo/
+         - doc/gen/
+   only:
+     - master
 
-# documentation-job:
-#   stage: deploy
-#   needs: ["test-linux-coverage"]
-#   tags:
-#     - documount
-#   script:
-#     - doxygen doc/Doxyfile
-#     - rsync -r --delete --checksum doc/gen/html/ /mnt/doxygenDocu/gatery
-#     - rsync -r --delete --checksum cov/ /mnt/doxygenDocu/gateryCov
-#   only:
-#     - master
+ documentation-job:
+   stage: deploy
+   needs: ["test-linux-coverage"]
+   tags:
+     - documount
+   script:
+     - doxygen doc/Doxyfile
+     - rsync -r --delete --checksum doc/gen/html/ /mnt/doxygenDocu/gatery
+     - rsync -r --delete --checksum cov/coverageInfo /mnt/doxygenDocu/gateryCov
+   only:
+     - master

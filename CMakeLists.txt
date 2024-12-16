@@ -17,6 +17,10 @@ IF (USE_CLANG)
     #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 endif()
 
+option(TEST_COVERAGE "Build with test coverage tracing enabled" false)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/) 
+
 enable_testing()
 
 INCLUDE(cmake/GtryCompileResourceFile.cmake)
@@ -102,6 +106,11 @@ else()
     if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     else()
         target_compile_options(gatery_core PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-fcoroutines>)
+
+        if (TEST_COVERAGE)
+            target_compile_options(gatery_core PUBLIC --coverage -fprofile-arcs -ftest-coverage)
+            target_link_options(gatery_core PUBLIC --coverage)
+        endif()
     endif ()
 endif()
 
