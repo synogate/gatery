@@ -84,6 +84,9 @@ test-linux-coverage:
   script:
     - mkdir cov
     - cd cov
+    - python -m venv env
+    - source env/bin/activate
+    - pip install anybadge
     - cmake .. -DCMAKE_BUILD_TYPE=Debug -DTEST_COVERAGE=true
     - /usr/bin/time -o buildLog.txt -v make -j20 config=coverage
     - mkdir badges
