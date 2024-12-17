@@ -97,7 +97,7 @@ test-linux-coverage:
     - bin/unittest_frontend -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/ --intelQuartus /opt/intelFPGA_pro/24.1/quartus/bin
     - bin/unittest_scl -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/ --intelQuartus /opt/intelFPGA_pro/24.1/quartus/bin
     - bin/unittest_tutorial -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/ --intelQuartus /opt/intelFPGA_pro/24.1/quartus/binz
-    - lcov --directory . --capture --output-file unittest_coverage.info
+    - lcov --directory . --capture --output-file unittest_coverage.info --rc no_exception_branch=1
     - lcov --remove unittest_coverage.info '/usr/*' --output-file unittest_coverage.info
     - lcov --remove unittest_coverage.info '*/source/external/*' --output-file unittest_coverage.info
     - anybadge --value=$(lcov --summary unittest_coverage.info | grep lines | cut -d' ' -f 4 | cut -d'%' -f 1) --file badges/coverage.svg coverage
