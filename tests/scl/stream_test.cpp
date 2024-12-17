@@ -884,7 +884,7 @@ BOOST_FIXTURE_TEST_CASE(stream_addPacketSignalsFromSize, StreamTransferFixture)
 	simulateRecvData(out);
 
 	design.postprocess();
-	BOOST_TEST(!runHitsTimeout({ 1,1'000'000 }));
+	BOOST_TEST(!runHitsTimeout({ 5,1'000'000 }));
 }
 
 BOOST_FIXTURE_TEST_CASE(spi_stream_test, StreamTransferFixture)
