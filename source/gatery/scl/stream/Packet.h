@@ -922,8 +922,8 @@ namespace gtry::scl::strm
 		UInt steadyShift = capture(shift, valid(source) & sop(source));
 		StreamBroadcaster sourceCaster(move(source) | attach(ShiftRightSteadyShift{ steadyShift }));
 
-		scl::Stream currentSource = sourceCaster.bcastTo() | strm::eraseBeat(0, 1);
-		scl::Stream previousSource = sourceCaster.bcastTo() | strm::regReady() | strm::delay(1);
+		scl::Stream currentSource = sourceCaster.bcastTo() | strm::eraseBeat(0, 1) | name("currentSource");
+		scl::Stream previousSource = sourceCaster.bcastTo() | strm::regReady() | strm::delay(1) | name("previousSource");
 
 		UInt fullBits = capture(currentSource->width().bits() - zext(emptyBits(currentSource)), valid(currentSource) & eop(currentSource)); HCL_NAMED(fullBits);
 		Bit mustAnticipateEnd = zext(get<ShiftRightSteadyShift>(currentSource).shift) >= fullBits; HCL_NAMED(mustAnticipateEnd);

@@ -1294,4 +1294,28 @@ BOOST_FIXTURE_TEST_CASE(IgnoreSimulationOnlyPins, gtry::GHDLTestFixture)
 	runTest({ 1,1 });
 }
 
+
+BOOST_FIXTURE_TEST_CASE(registerInitializationInPortMap, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000, .resetType = ClockConfig::ResetType::NONE, .initializeRegs = true });
+	ClockScope clockScope(clock);
+
+	auto thing = [](auto in) {
+		Area a{"test", true};
+		HCL_NAMED(in);
+		return reg(in, '0');
+	};
+
+	Bit in = pinIn();
+	HCL_NAMED(in);
+	Bit out = thing(in);
+	HCL_NAMED(out);
+	pinOut(out);
+	
+	testCompilation();
+	BOOST_TEST(exportContains(std::regex{"out_in_delayed1 : OUT STD_LOGIC := '0'"}));
+}
+
 BOOST_AUTO_TEST_SUITE_END()

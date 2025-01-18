@@ -624,10 +624,10 @@ struct BankState
 };
 BOOST_HANA_ADAPT_STRUCT(BankState, rowActive, activeRow);
 
-gtry::scl::VStream<gtry::BVec> gtry::scl::sdram::moduleSimulation(const CommandBus& cmd, Standard standard)
+gtry::scl::VStream<gtry::BVec> gtry::scl::sdram::moduleSimulation(const CommandBus& cmd, Standard standard, std::optional<sim::DefaultBitVectorState> powerOnState)
 {
 	Area ent{ "scl_moduleSimulation", true };
-	HCL_NAMED(cmd);
+	//HCL_NAMED(cmd);
 
 	BitWidth colAddrW = standard == Standard::sdram ? 8_b : 10_b;
 	BitWidth addrWidth = cmd.ba.width() + cmd.a.width() + colAddrW;
@@ -635,13 +635,15 @@ gtry::scl::VStream<gtry::BVec> gtry::scl::sdram::moduleSimulation(const CommandB
 	storage.noConflicts();
 	storage.setType(MemType::DONT_CARE, 0);
 	storage.setName("storage");
+	if(powerOnState)
+		storage.fillPowerOnState(*powerOnState);
 
 	UInt modeBurstLength = 3_b;
 	UInt modeCL = 3_b;
 	Bit modeWriteBurstLength;
 	modeBurstLength = reg(modeBurstLength, 3);
 	HCL_NAMED(modeBurstLength);
-	modeCL = reg(modeCL, 2);
+	modeCL = reg(modeCL, 1);
 	HCL_NAMED(modeCL);
 	modeWriteBurstLength = reg(modeWriteBurstLength, '0');
 	HCL_NAMED(modeWriteBurstLength);
@@ -689,7 +691,7 @@ gtry::scl::VStream<gtry::BVec> gtry::scl::sdram::moduleSimulation(const CommandB
 		{
 			sim_assert(bankState.rowActive) << "read in idle state";
 
-			address = cat(cmd.ba, bankState.activeRow, cmd.a(0, colAddrW));
+			address = cat(bankState.activeRow, cmd.ba, cmd.a(0, colAddrW));
 			bank = cmd.ba;
 			bankState.rowActive = !cmd.a[10];
 
@@ -729,7 +731,7 @@ gtry::scl::VStream<gtry::BVec> gtry::scl::sdram::moduleSimulation(const CommandB
 		{
 			sim_assert(bankState.rowActive) << "write in idle state";
 
-			address = cat(cmd.ba, bankState.activeRow, cmd.a(0, colAddrW));
+			address = cat(bankState.activeRow, cmd.ba, cmd.a(0, colAddrW));
 			bank = cmd.ba;
 			bankState.rowActive = !cmd.a[10];
 
@@ -780,7 +782,8 @@ gtry::scl::VStream<gtry::BVec> gtry::scl::sdram::moduleSimulation(const CommandB
 	UInt writeAddr = delay(address, writeDelay);
 	HCL_NAMED(writeAddr);
 	
-	IF(delay(writeBursts, writeDelay) != 0)
+	Bit writeEnable = delay(writeBursts, writeDelay) != 0 | name("writeEnable");
+	IF(writeEnable)
 	{
 		BVec writeData = storage[writeAddr];
 		for (size_t i = 0; i < cmd.dqm.size(); ++i)
@@ -788,7 +791,6 @@ gtry::scl::VStream<gtry::BVec> gtry::scl::sdram::moduleSimulation(const CommandB
 			IF(!cmd.dqm[i])
 				writeData(i * 8, 8_b) = cmd.dq(i * 8, 8_b);
 		}
-		HCL_NAMED(writeAddr);
 		storage[writeAddr] = writeData;
 	}
 

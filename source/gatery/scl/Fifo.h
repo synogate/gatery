@@ -299,7 +299,7 @@ namespace gtry::scl
 		Memory<TData> mem{ depth(), m_peekData };
 		mem.setType(MemType::DONT_CARE, 1);
 		mem.setName("scl_fifo_memory");
-		if (meta->fifoChoice.latency_writeToEmpty > 1)
+		if (meta->fifoChoice.latency_writeToEmpty > 1 || !meta->fifoChoice.singleClock)
 			mem.noConflicts();
 
 

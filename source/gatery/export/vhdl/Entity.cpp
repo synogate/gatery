@@ -273,6 +273,15 @@ std::vector<std::string> Entity::getPortsVHDL()
 		std::stringstream line;
 		line << decl.name << " : OUT ";
 		cf.formatConnectionType(line, decl);
+
+		// Registers can write directly to port out signals, and then they need
+		// their initializaiton value here in the port declaration.
+		auto it = m_defaultValues.find(signal);
+		if (it != m_defaultValues.end()) {
+			line << " := ";
+			formatConstant(line, it->second, decl.dataType);
+		}
+
 		unsortedPortList.push_back({clockOffset + signal.node->getId(), line.str()});
 	}
 

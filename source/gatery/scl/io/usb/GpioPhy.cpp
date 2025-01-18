@@ -356,17 +356,17 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 	nrzi(txStuffedStream);
 	HCL_NAMED(txStuffedStream);
 
-	Counter txTimer{ hlim::floor(m_clock.absoluteFrequency() / hlim::ClockRational{ 12'000'000 }) };
-	IF(valid(txStuffedStream))
-		txTimer.inc();
-	ELSE
-		txTimer.reset();
-
 	Bit wait = pulseExtender(
 		m_se0,
 		hlim::floor(m_clock.absoluteFrequency() / hlim::ClockRational{ 12'000'000 }) * 3);
 
 	txStuffedStream = scl::strm::stall(move(txStuffedStream), wait);
+
+	Counter txTimer{ hlim::floor(m_clock.absoluteFrequency() / hlim::ClockRational{ 12'000'000 }) };
+	IF(valid(txStuffedStream))
+		txTimer.inc();
+	ELSE
+		txTimer.reset();
 	ready(txStuffedStream) = txTimer.isLast();
 
 	en = valid(txStuffedStream);
