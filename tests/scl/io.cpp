@@ -24,6 +24,7 @@
 #include <gatery/simulation/Simulator.h>
 #include <gatery/scl/io/codingNRZI.h>
 #include <gatery/scl/io/RecoverDataDifferential.h>
+#include <gatery/scl/io/QSpiController.h>
 
 using namespace boost::unit_test;
 using namespace gtry;
@@ -359,4 +360,44 @@ BOOST_FIXTURE_TEST_CASE(recoverDataDifferential_faster_10, BoostUnitTestSimulati
 BOOST_FIXTURE_TEST_CASE(recoverDataDifferential_slower_10, BoostUnitTestSimulationFixture)
 {
 	setup_recoverDataDifferential({11'500'000,1}, 10, *this); // 11.5 MHz bus clock, 10x oversampling
+}
+
+BOOST_FIXTURE_TEST_CASE(io_qspi_phy, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	scl::RvPacketStream<scl::QSpiCmd> cmd{ {8_b} };
+	scl::VPacketStream<BVec> recv = scl::QSpiPhy{}.generate(move(cmd), 1_b);
+
+	pinIn(cmd, "cmd");
+	pinOut(recv, "recv");
+
+	addSimulationProcess([&]()->SimProcess {
+		simu(valid(cmd)) = '0';
+		co_await OnClk(clock);
+
+		simu(eop(cmd)) = '0';
+		simu(cmd->data) = 0xAA;
+		simu(cmd->direction) = scl::QSpiDir::send;
+		co_await performTransfer(cmd, clock);
+		
+		simu(cmd->direction) = scl::QSpiDir::dummy;
+		co_await performTransfer(cmd, clock);
+
+		simu(eop(cmd)) = '1';
+		simu(cmd->direction) = scl::QSpiDir::receive;
+		co_await performTransfer(cmd, clock);
+	});
+
+	addSimulationProcess([&]()->SimProcess {
+		co_await performTransferWait(recv, clock);
+		co_await OnClk(clock);
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 2, 1'000 }));
 }
