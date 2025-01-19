@@ -22,6 +22,27 @@
 
 namespace gtry::scl
 {
+	/**
+	 * @brief SpiPort is an attempt to standardize an interface between spi controller/adapter and phy
+	 */
+	struct SpiPort
+	{
+		BVec cs;	// chip select outputs
+		Bit clkEn;	// toggle clock line for the current word
+		Bit inEn;	// request reading word from data lines. read words are send over in
+
+		VStream<BVec> out;	// word to send out on data line. Valid is used for tristate enables.
+		Reverse<VStream<BVec>> in; // read word, requested by inEn. Latency depends on phy settings and might be zero.
+
+		static SpiPort Create(BitWidth dataW, BitWidth csW = 1_b) {
+			return {
+				.cs = csW,
+				.out = {dataW},
+				.in = Reverse<VStream<BVec>>(dataW)
+			};
+		}
+	};
+
 	enum class QSpiDir
 	{
 		send,
@@ -87,4 +108,5 @@ namespace gtry::scl
 
 }
 
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::SpiPort, cs, clkEn, inEn, out, in);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::QSpiCmd, data, direction);
