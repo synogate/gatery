@@ -250,13 +250,13 @@ namespace gtry::scl::strm
 	using gtry::pipeinput;
 	/// Add register spawners to the downstream signals which are enabled by the upstream ready (if it exists).
 	template<StreamSignal T>
-	T pipeinput(T&& in)
+	std::remove_cvref_t<T> pipeinput(T&& in)
 	{
-		T out;
+		std::remove_cvref_t<T> out;
 		ENIF(ready(out))
 		{
 			PipeBalanceGroup group;
-			if constexpr (T::template has<Valid>())
+			if constexpr (std::remove_cvref_t<T>::template has<Valid>())
 				valid(in).resetValue('0');
 
 			downstream(out) = gtry::pipeinput(copy(downstream(in)), group);

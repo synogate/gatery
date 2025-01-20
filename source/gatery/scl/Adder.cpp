@@ -23,13 +23,13 @@ template class gtry::scl::Adder<gtry::UInt>;
 gtry::scl::CarrySafeAdder& gtry::scl::CarrySafeAdder::add(const UInt& b)
 {
 	if (m_count == 0)
-		m_sum = b;
+		m_val.sum = b;
 	else if (m_count == 1)
-		m_carry = b;
+		m_val.carry = b;
 	else
 	{
-		std::tie(m_sum, m_carry) = addCarrySave(m_sum, m_carry, b);
-		m_carry <<= 1;
+		m_val = addCarrySave(m_val.sum, m_val.carry, b);
+		m_val.carry <<= 1;
 	}
 	m_count++;
 	return *this;
@@ -38,9 +38,9 @@ gtry::scl::CarrySafeAdder& gtry::scl::CarrySafeAdder::add(const UInt& b)
 gtry::UInt gtry::scl::CarrySafeAdder::sum() const
 {
 	if (m_count <= 1)
-		return m_sum;
+		return m_val.sum;
 
-	return m_sum + m_carry;
+	return m_val.sum + m_val.carry;
 }
 
 std::tuple<gtry::UInt, gtry::UInt> gtry::scl::add(const UInt& a, const UInt& b, const Bit& cin)
@@ -56,9 +56,28 @@ std::tuple<gtry::UInt, gtry::UInt> gtry::scl::add(const UInt& a, const UInt& b, 
 	return { sum, cout };
 }
 
-std::tuple<gtry::UInt, gtry::UInt> gtry::scl::addCarrySave(const UInt& a, const UInt& b, const UInt& c) 
+gtry::scl::CarrySaveValue gtry::scl::addCarrySave(const UInt& a, const UInt& b, const UInt& c)
 {
-	UInt sum = a ^ b ^ c;
-	UInt carry = (a & c) | (a & b) | (c & b);
-	return { sum, carry };
+	return {
+		.sum = a ^ b ^ c,
+		.carry = (a & c) | (a & b) | (c & b)
+	};
+}
+
+gtry::scl::CarrySaveValue gtry::scl::CarrySaveValue::add(const UInt& summand) const
+{
+	gtry::scl::CarrySaveValue ret = addCarrySave(sum, carry, summand);
+	ret.carry <<= 1;
+	return ret;
+}
+
+gtry::scl::CarrySaveValue gtry::scl::CarrySaveValue::add(const UInt& summand, const Bit& subtract) const
+{
+	gtry::scl::CarrySaveValue ret = addCarrySave(
+		sum, 
+		cat(carry.upper(-1_b), subtract), 
+		summand ^ subtract
+	);
+	ret.carry <<= 1;
+	return ret;
 }

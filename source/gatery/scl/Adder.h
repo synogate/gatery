@@ -54,6 +54,17 @@ namespace gtry::scl
 
 	extern template class gtry::scl::Adder<gtry::UInt>;
 
+	struct CarrySaveValue
+	{
+		UInt sum;
+		UInt carry;
+
+		CarrySaveValue add(const UInt& summand) const;
+		CarrySaveValue add(const UInt& summand, const Bit& subtract) const;
+
+		CarrySaveValue operator + (const UInt& summand) const { return add(summand); }
+	};
+
 	class CarrySafeAdder
 	{
 	public:
@@ -67,15 +78,16 @@ namespace gtry::scl
 		UInt sum() const;
 		operator UInt () const { return sum(); }
 
-		const UInt& intermediateSum() const { return m_sum; }
-		const UInt& intermediateCarry() const { return m_carry; }
+		const UInt& intermediateSum() const { return m_val.sum; }
+		const UInt& intermediateCarry() const { return m_val.carry; }
 
 	private:
 		size_t m_count = 0;
-		UInt m_sum;
-		UInt m_carry;
+		CarrySaveValue m_val;
 	};
 
 	std::tuple<UInt, UInt> add(const UInt& a, const UInt& b, const Bit& cin = '0');
-	std::tuple<UInt, UInt> addCarrySave(const UInt& a, const UInt& b, const UInt& c);
+	CarrySaveValue addCarrySave(const UInt& a, const UInt& b, const UInt& c);
 }
+
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::CarrySaveValue, sum, carry);
