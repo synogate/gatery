@@ -26,14 +26,14 @@ namespace gtry::scl
 	{
 		BitWidth sourceW = 0_b;
 		std::optional<BitWidth> sizeW;
+		uint8_t readQuadIOCode = 0xEB;
 	};
-
 
 	TileLinkUB tileLinkSpiFlash(SpiPort& port, TileLinkSpiFlashConfig config = {})
 	{
 		// TODO: adapt to port width
 		// TODO: send error response on invalid request
-		// TODO: use counter instead of redundand states
+		// TODO: support SDR phy by sending one command bit per cycle
 		// TODO: presend command code to reduce latency, but with timeout
 		// TODO: optional support for deep sleep mode
 		// TODO: support multiple chip select pins by adding more address bits
@@ -44,9 +44,9 @@ namespace gtry::scl
 
 		enum class State {
 			idle, 
-			cmd0, cmd1, cmd2, cmd3,
-			addr0, addr1, addr2, m0,
-			dummy0, dummy1,
+			cmd,
+			addr,
+			dummy,
 			read,
 			readWait
 		};
@@ -54,87 +54,78 @@ namespace gtry::scl
 		Reg<Enum<State>> state(State::idle);
 		state.setName("state");
 
+		Counter counter(std::max(2_b, BitWidth{ out.a->size.width().count() }));
+		IF(state.next() != state.current())
+			counter.reset();
+
 		port.cs[0] = state.current() != State::idle;
-		port.clkEn = state.current() != State::idle;
+		port.clkEn = '1';
 		port.inEn = '0';
 		valid(port.out) = '0';
 		*port.out = dontCare(*port.out);
 
 		IF(state.current() == State::idle)
 		{
+			port.clkEn = '0';
 			IF(valid(out.a))
-				state = State::cmd0;
+				state = State::cmd;
 		}
-		// quad read i/o command 0xEB = 0b11'10'10'11
-		IF(state.current() == State::cmd0)
+
+		IF(state.current() == State::cmd)
 		{
 			valid(port.out) = '1';
+
+			UInt cmdBits = "2b00";
+			const UInt& cnt = counter.value().lower(2_b);
+			for (size_t i = 0; i < 4; ++i)
+				IF (cnt == i)
+					cmdBits = config.readQuadIOCode >> 2 * i & 0x3;
+
+			// command is read on lane 0 only, we pad the others with one to reduce transitions
+			*port.out = (BVec)cat("3b111", cmdBits[1], "3b111", cmdBits[0]);
+			IF(cnt == 3)
+				state = State::addr;
+		}
+
+		IF(state.current() == State::addr)
+		{
+			valid(port.out) = '1';
+
+			const UInt& cnt = counter.value().lower(2_b);
+			IF(cnt == 0)
+				*port.out = (BVec)out.a->address(16, 8_b);
+			IF(cnt == 1)
+				*port.out = (BVec)out.a->address(8, 8_b);
+			IF(cnt == 2)
+				*port.out = (BVec)out.a->address(0, 8_b);
+
+			IF(cnt == 2)
+				state = State::dummy;
+		}
+
+		IF(state.current() == State::dummy)
+		{
+			const UInt& cnt = counter.value().lower(2_b);
+
+			// the first cycle is called "M" cycle where we need to send 0xFx
+			valid(port.out) = cnt == 0;
 			*port.out = 0xFF;
-			state = State::cmd1;
+
+			IF(cnt[1])
+				state = State::read;
 		}
-
-		IF(state.current() == State::cmd1)
-		{
-			valid(port.out) = '1';
-			*port.out = 0xFE;
-			state = State::cmd2;
-		}
-
-		IF(state.current() == State::cmd2)
-		{
-			valid(port.out) = '1';
-			*port.out = 0xFE;
-			state = State::cmd3;
-		}
-
-		IF(state.current() == State::cmd3)
-		{
-			valid(port.out) = '1';
-			*port.out = 0xFF;
-			state = State::addr0;
-		}
-
-		IF(state.current() == State::addr0)
-		{
-			valid(port.out) = '1';
-			*port.out = (BVec)out.a->address(16, 8_b);
-			state = State::addr1;
-		}
-
-		IF(state.current() == State::addr1)
-		{
-			valid(port.out) = '1';
-			*port.out = (BVec)out.a->address(8, 8_b);
-			state = State::addr2;
-		}
-
-		IF(state.current() == State::addr2)
-		{
-			valid(port.out) = '1';
-			*port.out = (BVec)out.a->address(0, 8_b);
-			state = State::m0;
-		}
-
-		IF(state.current() == State::m0)
-		{
-			valid(port.out) = '1';
-			*port.out = 0xFF;
-			state = State::dummy0;
-		}
-
-		IF(state.current() == State::dummy0)
-			state = State::dummy1;
-
-		IF(state.current() == State::dummy1)
-			state = State::read;
 
 		IF(state.current() == State::read)
 		{
 			port.inEn = '1';
-
-			UInt len = transferLengthFromLogSize(out.a->size, 1);
-			IF(Counter(len).isLast())
+			UInt counterNext = counter.value() + 1 | name("counterNext");
+			IF(counterNext[out.a->size])
 				state = State::readWait;
+		}
+
+		IF(state.current() == State::readWait)
+		{
+			port.clkEn = '0';
 		}
 
 		IF(transfer(out.a))

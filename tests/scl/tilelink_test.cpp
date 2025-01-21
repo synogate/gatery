@@ -1115,7 +1115,9 @@ BOOST_FIXTURE_TEST_CASE(tilelink_spiflash_test, BoostUnitTestSimulationFixture)
 	pinOut(spiPort, "spi");
 
 	// most basic simulation model
-	valid(*spiPort.in) = spiPort.inEn;
+	spiPort.inEn.resetValue('0');
+	UInt inDelay = pinIn(2_b).setName("inDelay");
+	valid(*spiPort.in) = delay(spiPort.inEn, inDelay);
 	**spiPort.in = 0;
 
 	scl::TileLinkUB tlPort = scl::tileLinkSpiFlash(spiPort, { .sourceW = 1_b, .sizeW = 3_b });
@@ -1123,19 +1125,23 @@ BOOST_FIXTURE_TEST_CASE(tilelink_spiflash_test, BoostUnitTestSimulationFixture)
 	mm.initAndDrive("tl", move((TileLinkUL&)tlPort));
 
 	addSimulationProcess([&]()->SimProcess {
-		co_await OnClk(clock);
-
-		for (size_t i = 0; i < 5; ++i)
+		for (size_t d = 0; d < 3; d += 2)
 		{
-			auto [val, def, err] = co_await mm.get(72211 * i, i, clock);
-			BOOST_TEST(!err);
-			BOOST_TEST(val == 0);
-		}
+			co_await OnClk(clock);
+			simu(inDelay) = d;
 
-		co_await OnClk(clock);
+			for (size_t i = 0; i < 5; ++i)
+			{
+				auto [val, def, err] = co_await mm.get(72211 * i, i, clock);
+				BOOST_TEST(!err);
+				BOOST_TEST(val == 0);
+			}
+
+			co_await OnClk(clock);
+		}
 		stopTest();
 	});
 
 	design.postprocess();
-	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+	BOOST_TEST(!runHitsTimeout({ 3, 1'000'000 }));
 }
