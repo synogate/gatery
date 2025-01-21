@@ -62,12 +62,12 @@ class Clock
 		inline const std::string &getName() const { return m_name; }		
 		inline const std::string &getResetName() const { return m_resetName; }
 		inline const TriggerEvent &getTriggerEvent() const { return m_triggerEvent; }
-		inline const bool &getPhaseSynchronousWithParent() const { return m_phaseSynchronousWithParent; }
+		inline std::optional<size_t> getPhaseShift() const { return m_phaseShift; }
 
 		inline void setName(std::string name) { m_name = std::move(name); }
 		inline void setResetName(std::string name) { m_resetName = std::move(name); }
 		inline void setTriggerEvent(TriggerEvent trigEvt) { m_triggerEvent = trigEvt; }
-		inline void setPhaseSynchronousWithParent(bool phaseSync) { m_phaseSynchronousWithParent = phaseSync; }
+		inline void setPhaseShift(std::optional<size_t> phaseShift) { m_phaseShift = phaseShift; }
 
 		inline RegisterAttributes &getRegAttribs() { return m_registerAttributes; }
 		inline const RegisterAttributes &getRegAttribs() const { return m_registerAttributes; }
@@ -138,7 +138,7 @@ class Clock
 		std::string m_name;
 		std::string m_resetName;
 		TriggerEvent m_triggerEvent;
-		bool m_phaseSynchronousWithParent;
+		std::optional<size_t> m_phaseShift;
 
 		RegisterAttributes m_registerAttributes;
 

@@ -65,10 +65,10 @@ namespace gtry {
 
 		std::optional<ClockRational> absoluteFrequency;
 		std::optional<ClockRational> frequencyMultiplier;
+		std::optional<size_t> phaseShiftDeg = 0; // Phase shift in degrees. Not set means no defined phase relationship.
 		std::optional<std::string> name;
 		std::optional<std::string> resetName;
 		std::optional<TriggerEvent> triggerEvent;
-		std::optional<bool> phaseSynchronousWithParent;
 
 		std::optional<ResetType> resetType;
 		std::optional<ResetType> memoryResetType;

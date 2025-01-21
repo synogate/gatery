@@ -33,7 +33,6 @@ Clock::Clock()
 	m_name = "clk";
 	m_resetName = "reset";
 	m_triggerEvent = TriggerEvent::RISING;
-	m_phaseSynchronousWithParent = true;
 	m_parentClock = nullptr;
 }
 
@@ -58,7 +57,7 @@ std::unique_ptr<Clock> Clock::cloneUnconnected(Clock *newParent)
 	res->m_resetName = m_resetName;
 	res->m_triggerEvent = m_triggerEvent;
 	res->m_registerAttributes = m_registerAttributes;
-	res->m_phaseSynchronousWithParent = m_phaseSynchronousWithParent;
+	res->m_phaseShift = m_phaseShift;
 	return res;
 }
 
@@ -82,11 +81,10 @@ size_t Clock::getMinResetCycles() const
 	if (m_registerAttributes.resetType == RegisterAttributes::ResetType::SYNCHRONOUS && !m_clockedNodes.empty())
 		res = std::max<size_t>(res, 1);
 
-	for (auto d : m_derivedClocks) {
-		HCL_ASSERT(d->m_phaseSynchronousWithParent);
-		auto cycles = d->getMinResetCycles() / d->getFrequencyMuliplier();
-
-		res = std::max(res, ceil(cycles));
+	for (const DerivedClock* d : m_derivedClocks) {
+		ClockRational cycles = d->getMinResetCycles() / d->getFrequencyMuliplier();
+		size_t phaseInitOffset = m_phaseShift ? 1 : 0;
+		res = std::max(res, ceil(cycles) + phaseInitOffset);
 	}
 	return res;
 }
@@ -112,7 +110,7 @@ bool Clock::inheritsClockPinSource() const
 
 	if (m_parentClock->getName() != getName() ||
 		m_parentClock->absoluteFrequency() != absoluteFrequency() ||
-		!m_phaseSynchronousWithParent)
+		!m_phaseShift || *m_phaseShift != 0)
 		return false;
 
 	return true;
@@ -249,7 +247,7 @@ DerivedClock::DerivedClock(Clock *parentClock)
 	
 	m_resetName = m_parentClock->getResetName();
 	m_triggerEvent = m_parentClock->getTriggerEvent();
-	m_phaseSynchronousWithParent = m_parentClock->getPhaseSynchronousWithParent();
+	m_phaseShift = 0;
 
 	m_registerAttributes = m_parentClock->getRegAttribs();
 	m_parentClock->addDerivedClock(this);

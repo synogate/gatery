@@ -202,7 +202,7 @@ namespace gtry
 		if (config.name) m_clock->setName(*config.name);
 		if (config.resetName) m_clock->setResetName(*config.resetName);
 		if (config.triggerEvent) m_clock->setTriggerEvent(*config.triggerEvent);
-		if (config.phaseSynchronousWithParent) m_clock->setPhaseSynchronousWithParent(*config.phaseSynchronousWithParent);
+		m_clock->setPhaseShift(*config.phaseShiftDeg);
 
 		// By default, use the same behavior for memory and registers ...
 		if (config.resetType) m_clock->getRegAttribs().memoryResetType = m_clock->getRegAttribs().resetType = *config.resetType;
