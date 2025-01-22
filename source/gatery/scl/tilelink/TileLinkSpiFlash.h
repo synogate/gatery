@@ -32,9 +32,7 @@ namespace gtry::scl
 	TileLinkUB tileLinkSpiFlash(SpiPort& port, TileLinkSpiFlashConfig config = {})
 	{
 		// TODO: adapt to port width
-		// TODO: send error response on invalid request
 		// TODO: support SDR phy by sending one command bit per cycle
-		// TODO: presend command code to reduce latency, but with timeout
 		// TODO: optional support for deep sleep mode
 		// TODO: support multiple chip select pins by adding more address bits
 		// TODO: add ease of use wrapper with input a channel stall and d channel fifo
@@ -44,11 +42,14 @@ namespace gtry::scl
 
 		enum class State {
 			idle, 
+			preloadCmd,
 			cmd,
+			waitForRequest,
 			addr,
 			dummy,
 			read,
-			readWait
+			readWait,
+			invalidRequest
 		};
 
 		Reg<Enum<State>> state(State::idle);
@@ -58,7 +59,7 @@ namespace gtry::scl
 		IF(state.next() != state.current())
 			counter.reset();
 
-		port.cs[0] = state.current() != State::idle;
+		port.cs[0] = '1';
 		port.clkEn = '1';
 		port.inEn = '0';
 		valid(port.out) = '0';
@@ -66,9 +67,21 @@ namespace gtry::scl
 
 		IF(state.current() == State::idle)
 		{
+			port.cs[0] = '0';
 			port.clkEn = '0';
 			IF(valid(out.a))
+			{
 				state = State::cmd;
+
+				IF(!out.a->isGet())
+					state = State::invalidRequest;
+			}
+		}
+
+		IF(state.current() == State::preloadCmd)
+		{
+			port.cs[0] = '0';
+			state = State::cmd;
 		}
 
 		IF(state.current() == State::cmd)
@@ -84,7 +97,26 @@ namespace gtry::scl
 			// command is read on lane 0 only, we pad the others with one to reduce transitions
 			*port.out = (BVec)cat("3b111", cmdBits[1], "3b111", cmdBits[0]);
 			IF(cnt == 3)
+				state = State::waitForRequest;
+		}
+
+		IF(state.combinatorial() == State::waitForRequest)
+		{
+			IF(valid(out.a))
+			{
 				state = State::addr;
+
+				IF(!out.a->isGet())
+					state = State::invalidRequest;
+			}
+		}
+
+		IF(state.current() == State::waitForRequest)
+		{
+			port.clkEn = '0';
+
+			IF(counter.isLast())
+				state = State::idle;
 		}
 
 		IF(state.current() == State::addr)
@@ -125,11 +157,17 @@ namespace gtry::scl
 
 		IF(state.current() == State::readWait)
 		{
+			port.cs[0] = '0';
 			port.clkEn = '0';
 		}
 
-		IF(transfer(out.a))
-			state = State::idle;
+		Bit endOfTransaction = (transfer(out.a) & eop(out.a)) | name("endOfTransaction");
+		IF(endOfTransaction)
+		{
+			state = State::preloadCmd;
+			IF(state.current() == State::invalidRequest)
+				state = State::idle;
+		}
 
 		**out.d = tileLinkDefaultResponse(*out.a);
 		valid(*out.d) = valid(*port.in);
@@ -139,6 +177,16 @@ namespace gtry::scl
 
 		// accept request
 		ready(out.a) = transfer(*out.d) & eop(*out.d);
+
+		IF(state.current() == State::invalidRequest)
+		{
+			port.cs[0] = '0';
+			port.clkEn = '0';
+
+			(*out.d)->error = '1';
+			ready(out.a) = '1';
+			valid(*out.d) = endOfTransaction;
+		}
 
 		HCL_NAMED(out);
 		return out;

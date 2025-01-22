@@ -1125,9 +1125,11 @@ BOOST_FIXTURE_TEST_CASE(tilelink_spiflash_test, BoostUnitTestSimulationFixture)
 	mm.initAndDrive("tl", move((TileLinkUL&)tlPort));
 
 	addSimulationProcess([&]()->SimProcess {
+		co_await OnClk(clock);
 		for (size_t d = 0; d < 3; d += 2)
 		{
-			co_await OnClk(clock);
+			bool putErr = co_await mm.put(0, d, 0, clock);
+			BOOST_TEST(putErr);
 			simu(inDelay) = d;
 
 			for (size_t i = 0; i < 5; ++i)
@@ -1135,13 +1137,20 @@ BOOST_FIXTURE_TEST_CASE(tilelink_spiflash_test, BoostUnitTestSimulationFixture)
 				auto [val, def, err] = co_await mm.get(72211 * i, i, clock);
 				BOOST_TEST(!err);
 				BOOST_TEST(val == 0);
+
+				if(i == 3) // wait to test command preloading
+					for(size_t w = 0; w < 8; ++w)
+						co_await OnClk(clock);
 			}
 
 			co_await OnClk(clock);
 		}
+
+		for (size_t w = 0; w < 8; ++w)
+			co_await OnClk(clock);
 		stopTest();
 	});
 
 	design.postprocess();
-	BOOST_TEST(!runHitsTimeout({ 3, 1'000'000 }));
+	BOOST_TEST(!runHitsTimeout({ 5, 1'000'000 }));
 }
