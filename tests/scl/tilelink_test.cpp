@@ -1120,7 +1120,11 @@ BOOST_FIXTURE_TEST_CASE(tilelink_spiflash_test, BoostUnitTestSimulationFixture)
 	valid(*spiPort.in) = delay(spiPort.inEn, inDelay);
 	**spiPort.in = 0;
 
-	scl::TileLinkUB tlPort = scl::tileLinkSpiFlash(spiPort, { .sourceW = 1_b, .sizeW = 3_b });
+	scl::TileLinkUB tlPort = scl::tileLinkSpiFlash(spiPort, { 
+		.sourceW = 1_b, .sizeW = 3_b,
+		.preloadCommandByteTimeout = hlim::ClockRational{ 1, 1'000'000 },
+	});
+
 	scl::TileLinkMasterModel mm;
 	mm.initAndDrive("tl", move((TileLinkUL&)tlPort));
 
