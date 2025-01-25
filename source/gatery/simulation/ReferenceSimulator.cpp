@@ -645,7 +645,7 @@ void ReferenceSimulator::powerOn()
 			.clockPinIdx = i,
 			.risingEdge = !cs.high,
 		};
-		e.timeOfEvent = m_simulationTime + hlim::ClockRational(1,2) / clock->absoluteFrequency();
+		e.timeOfEvent = m_simulationTime + hlim::ClockRational(1,2) / clock->absoluteFrequency() + clock->absolutePhaseShift().shift;
 
 		m_nextEvents.push(e);
 	}

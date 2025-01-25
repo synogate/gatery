@@ -37,7 +37,7 @@ struct SignalClockDomain;
 
 void inferClockDomains(Circuit &circuit, utils::UnstableMap<hlim::NodePort, SignalClockDomain> &domains);
 
-void detectUnguardedCDCCrossings(Circuit &circuit, const ConstSubnet &subnet, std::function<void(const BaseNode*)> detectionCallback);
+void detectUnguardedCDCCrossings(Circuit &circuit, const ConstSubnet &subnet, std::function<void(const BaseNode*, std::vector<SignalClockDomain> *)> detectionCallback);
 
 
 }

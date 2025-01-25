@@ -130,18 +130,30 @@ void BaseTestbenchRecorder::buildClockProcess(std::ostream &stream, const hlim::
 	cf.indent(stream, 1);
 	stream << "BEGIN" << std::endl;	
 
-	auto halfPeriod = hlim::ClockRational(1,2) / clock->absoluteFrequency();
+	cf.indent(stream, 2);
+	stream << "WAIT FOR ";
+	hlim::formatTime(stream, clock->absolutePhaseShift().shift);
+	stream << ';' << std::endl;
+
 
 	cf.indent(stream, 2);
+	stream << "WHILE TB_testbench_is_done = '0' LOOP" << std::endl;
+
+	auto halfPeriod = hlim::ClockRational(1,2) / clock->absoluteFrequency();
+
+	cf.indent(stream, 3);
 	stream << "WAIT FOR ";
 	hlim::formatTime(stream, halfPeriod);
 	stream << ';' << std::endl;
 
-	cf.indent(stream, 2);
+	cf.indent(stream, 3);
 	stream << clockName << " <= not " << clockName << ";\n";
 
 	cf.indent(stream, 2);
-	stream << "IF TB_testbench_is_done = '1' THEN WAIT; END IF;" << std::endl;  
+	stream << "END LOOP;" << std::endl;  
+
+	cf.indent(stream, 2);
+	stream << "WAIT;" << std::endl;  
 
 	cf.indent(stream, 1);
 	stream << "END PROCESS;" << std::endl;

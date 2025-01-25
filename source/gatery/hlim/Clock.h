@@ -39,6 +39,17 @@ class Node_Signal2Rst;
 class DerivedClock;
 class Circuit;
 
+/**
+ * @brief Defines the phase shift of a clock.
+ * @details If clocks don't have a well defined phase shift (because on practice the PLLs are not synchronised),
+ * this struct still allows to express a shift such that this struct can be used in simulation to compute some form of shift
+ * while still retaining the information that it is actually only for display.
+ */
+struct PhaseShift {
+	ClockRational shift = {0, 1};
+	bool shiftStable = true;
+};
+
 class Clock
 {
 	public:
@@ -52,8 +63,20 @@ class Clock
 		Clock();
 		virtual ~Clock();
 
+		/// Returns a list of all clocks from this clock to the root clock.
+		std::vector<const Clock*> getPathToRoot() const;
+		/**
+		 * @brief Returns two lists such as from getPathToRoot() but terminating when entry1->getParentClock() == entry2->getParentClock()
+		 * @details If both clocks share a common ancestry then these are the respective paths to the lowest common ancestor.
+		 * If the clocks are unrelated, both paths are to the root and the last()->getParentClock() is nullptr for both.
+		 */
+		std::pair<std::vector<const Clock*>, std::vector<const Clock*>> getRelationTo(const Clock &other) const;
 		virtual ClockRational absoluteFrequency() const = 0;
-		virtual ClockRational getFrequencyRelativeTo(Clock &other) const = 0;
+		//virtual ClockRational getFrequencyRelativeTo(const Clock &other) const = 0;
+		/// Phase shift in seconds relative to simulation
+		virtual PhaseShift absolutePhaseShift() const = 0;
+		/// Phase shift in seconds from this clock to other clock.
+		PhaseShift getPhaseShiftRelativeTo(const Clock &other) const;
 
 		inline Clock *getParentClock() const { return m_parentClock; }
 
@@ -62,12 +85,13 @@ class Clock
 		inline const std::string &getName() const { return m_name; }		
 		inline const std::string &getResetName() const { return m_resetName; }
 		inline const TriggerEvent &getTriggerEvent() const { return m_triggerEvent; }
-		inline std::optional<size_t> getPhaseShift() const { return m_phaseShift; }
+		/// Phase shift as a fraction of this clock's period, relative to the parent's absolute phase shift.
+		inline PhaseShift getPhaseShift() const { return m_phaseShift; }
 
 		inline void setName(std::string name) { m_name = std::move(name); }
 		inline void setResetName(std::string name) { m_resetName = std::move(name); }
 		inline void setTriggerEvent(TriggerEvent trigEvt) { m_triggerEvent = trigEvt; }
-		inline void setPhaseShift(std::optional<size_t> phaseShift) { m_phaseShift = phaseShift; }
+		inline void setPhaseShift(PhaseShift phaseShift) { m_phaseShift = phaseShift; }
 
 		inline RegisterAttributes &getRegAttribs() { return m_registerAttributes; }
 		inline const RegisterAttributes &getRegAttribs() const { return m_registerAttributes; }
@@ -138,7 +162,7 @@ class Clock
 		std::string m_name;
 		std::string m_resetName;
 		TriggerEvent m_triggerEvent;
-		std::optional<size_t> m_phaseShift;
+		PhaseShift m_phaseShift;
 
 		RegisterAttributes m_registerAttributes;
 
@@ -166,7 +190,7 @@ class RootClock : public Clock
 		RootClock(std::string name, ClockRational frequency);
 
 		virtual ClockRational absoluteFrequency() const override { return m_frequency; }
-		virtual ClockRational getFrequencyRelativeTo(Clock &other) const override;
+		virtual PhaseShift absolutePhaseShift() const override;
 
 		void setFrequency(ClockRational frequency) { m_frequency = frequency; }
 
@@ -183,7 +207,7 @@ class DerivedClock : public Clock
 		DerivedClock(Clock *parentClock);
 		
 		virtual ClockRational absoluteFrequency() const override;
-		virtual ClockRational getFrequencyRelativeTo(Clock &other) const override;
+		virtual PhaseShift absolutePhaseShift() const override;
 		
 		inline void setFrequencyMuliplier(ClockRational m) { m_parentRelativeMultiplicator = m; }
 		inline ClockRational getFrequencyMuliplier() const { return m_parentRelativeMultiplicator; }

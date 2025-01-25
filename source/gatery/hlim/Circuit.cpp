@@ -1650,9 +1650,30 @@ void Circuit::postprocess(const PostProcessor &postProcessor)
 	dbg::changeState(dbg::State::POSTPROCESS, this);
 	postProcessor.run(*this);
 
-	detectUnguardedCDCCrossings(*this, ConstSubnet::all(*this), [this](const BaseNode *affectedNode) {
+	detectUnguardedCDCCrossings(*this, ConstSubnet::all(*this), [this](const BaseNode *affectedNode, std::vector<gtry::hlim::SignalClockDomain> *inputClockDomains) {
+
+		std::stringstream inputs;
+		inputs << "Inputs:\n";
+		for (size_t i = 0; i < inputClockDomains->size(); i++) {
+			inputs << "   input " << i << ": ";
+			const auto &d = (*inputClockDomains)[i];
+			switch (d.type) {
+				case gtry::hlim::SignalClockDomain::UNKNOWN:
+					inputs << "Unknown\n";
+				break;
+				case gtry::hlim::SignalClockDomain::CONSTANT:
+					inputs << "Constant\n";
+				break;
+				case gtry::hlim::SignalClockDomain::CLOCK:
+					inputs << "Clock " << d.clk->getId() << " - " << d.clk->getName()
+							 << " clock signal from " << d.clk->getClockPinSource()->getId() << " - " << d.clk->getClockPinSource()->getName() << "\n";
+				break;
+			}
+		}
+
 		dbg::log(dbg::LogMessage(affectedNode->getGroup()) << dbg::LogMessage::LOG_ERROR << dbg::LogMessage::LOG_POSTPROCESSING 
-				<< "Unintentional clock domain crossing detected at node " << affectedNode
+			<< "Unintentional clock domain crossing detected at node " << affectedNode
+			<< "\n" << inputs.str()
 		);
 
 		ConstSubnet net;
@@ -1663,7 +1684,8 @@ void Circuit::postprocess(const PostProcessor &postProcessor)
 		visualize(*this, "CDC_full");
 
 		std::stringstream msg;
-		msg << "Unintentional clock domain crossing detected at node: " << affectedNode->getName() << " " << affectedNode->getTypeName() << " (" << affectedNode->getId() << " ) from:"
+		msg << "Unintentional clock domain crossing detected at node: " << affectedNode->getName() << " " << affectedNode->getTypeName() << " (" << affectedNode->getId() << " )"
+			<< "\n" << inputs.str() << "\nfrom:\n"
 			<< affectedNode->getStackTrace();
 		HCL_DESIGNCHECK_HINT(false, msg.str());
 	});

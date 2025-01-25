@@ -50,6 +50,52 @@ Clock &Clock::createClockDivider(ClockRational frequencyDivider, ClockRational p
 }
 */
 
+std::vector<const Clock*> Clock::getPathToRoot() const
+{
+	std::vector<const Clock*> result;
+	auto *ptr = this;
+	while (ptr != nullptr) {
+		result.push_back(ptr);
+		ptr = ptr->getParentClock();
+	}
+	return result;
+}
+
+std::pair<std::vector<const Clock*>, std::vector<const Clock*>> Clock::getRelationTo(const Clock &other) const
+{
+	auto myPath = getPathToRoot();
+	auto otherPath = other.getPathToRoot();
+
+	while (myPath.back() == otherPath.back()) {
+		myPath.pop_back();
+		otherPath.pop_back();
+	}
+	return { std::move(myPath), std::move(otherPath) };
+}
+
+PhaseShift Clock::getPhaseShiftRelativeTo(const Clock &other) const
+{
+	auto relation = getRelationTo(other);
+	PhaseShift shift;
+	shift.shift = 0;
+	shift.shiftStable = true;
+
+	for (const auto *clk : relation.first) {
+		shift.shift -= clk->getPhaseShift().shift * clk->absoluteFrequency();
+		shift.shiftStable &= clk->getPhaseShift().shiftStable;
+	}
+
+	if (relation.first.back()->getParentClock() == nullptr)
+		shift.shiftStable = false;
+
+	for (const auto *clk : relation.second) {
+		shift.shift -= clk->getPhaseShift().shift * clk->absoluteFrequency();
+		shift.shiftStable &= clk->getPhaseShift().shiftStable;
+	}
+
+	return shift;
+}
+
 std::unique_ptr<Clock> Clock::cloneUnconnected(Clock *newParent)
 {
 	std::unique_ptr<Clock> res = allocateClone(newParent);
@@ -83,9 +129,10 @@ size_t Clock::getMinResetCycles() const
 
 	for (const DerivedClock* d : m_derivedClocks) {
 		ClockRational cycles = d->getMinResetCycles() / d->getFrequencyMuliplier();
-		size_t phaseInitOffset = m_phaseShift ? 1 : 0;
-		res = std::max(res, ceil(cycles) + phaseInitOffset);
+		res = std::max(res, ceil(cycles));
 	}
+	if (m_phaseShift.shift != ClockRational{0})
+		res += 1;
 	return res;
 }
 
@@ -110,7 +157,7 @@ bool Clock::inheritsClockPinSource() const
 
 	if (m_parentClock->getName() != getName() ||
 		m_parentClock->absoluteFrequency() != absoluteFrequency() ||
-		!m_phaseShift || *m_phaseShift != 0)
+		!m_phaseShift.shiftStable || m_phaseShift.shift != ClockRational{0})
 		return false;
 
 	return true;
@@ -216,11 +263,14 @@ RootClock::RootClock(std::string name, ClockRational frequency) : m_frequency(fr
 {
 	m_name = std::move(name);
 }
-	
 
-ClockRational RootClock::getFrequencyRelativeTo(Clock &other) const
+
+PhaseShift RootClock::absolutePhaseShift() const
 {
-	return {};
+	return {
+		m_phaseShift.shift / m_frequency,
+		m_phaseShift.shiftStable
+	};
 }
 
 
@@ -247,7 +297,6 @@ DerivedClock::DerivedClock(Clock *parentClock)
 	
 	m_resetName = m_parentClock->getResetName();
 	m_triggerEvent = m_parentClock->getTriggerEvent();
-	m_phaseShift = 0;
 
 	m_registerAttributes = m_parentClock->getRegAttribs();
 	m_parentClock->addDerivedClock(this);
@@ -259,9 +308,13 @@ ClockRational DerivedClock::absoluteFrequency() const
 	return m_parentClock->absoluteFrequency() * m_parentRelativeMultiplicator;
 }
 
-ClockRational DerivedClock::getFrequencyRelativeTo(Clock &other) const
+PhaseShift DerivedClock::absolutePhaseShift() const
 {
-	return {};
+	auto parentShift = m_parentClock->absolutePhaseShift();
+	return {
+		m_phaseShift.shift / absoluteFrequency() + parentShift.shift,
+		m_phaseShift.shiftStable && parentShift.shiftStable
+	};
 }
 
 
