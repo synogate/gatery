@@ -202,7 +202,23 @@ namespace gtry
 		if (config.name) m_clock->setName(*config.name);
 		if (config.resetName) m_clock->setResetName(*config.resetName);
 		if (config.triggerEvent) m_clock->setTriggerEvent(*config.triggerEvent);
-		m_clock->setPhaseShift(*config.phaseShiftDeg);
+
+		if (config.phaseShiftDeg)
+			m_clock->setPhaseShift({
+				.shift = {*config.phaseShiftDeg, 360},
+				.shiftStable = true,
+			});
+		else {
+			size_t clocksOnSameLevel;
+			if (m_clock->getParentClock() != nullptr)
+				clocksOnSameLevel = m_clock->getParentClock()->getDerivedClocks().size();
+			else
+				clocksOnSameLevel = 1;
+			m_clock->setPhaseShift({
+				.shift = {1 + clocksOnSameLevel, clocksOnSameLevel * 10},
+				.shiftStable = false,
+			});
+		}
 
 		// By default, use the same behavior for memory and registers ...
 		if (config.resetType) m_clock->getRegAttribs().memoryResetType = m_clock->getRegAttribs().resetType = *config.resetType;

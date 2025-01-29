@@ -119,7 +119,7 @@ void inferClockDomains(Circuit &circuit, utils::UnstableMap<hlim::NodePort, Sign
 }
 
 
-void detectUnguardedCDCCrossings(Circuit &circuit, const ConstSubnet &subnet, std::function<void(const BaseNode*)> detectionCallback)
+void detectUnguardedCDCCrossings(Circuit &circuit, const ConstSubnet &subnet, std::function<void(const BaseNode*, std::vector<SignalClockDomain> *)> detectionCallback)
 {
 	utils::UnstableMap<hlim::NodePort, SignalClockDomain> domains;
 	inferClockDomains(circuit, domains);
@@ -140,7 +140,7 @@ void detectUnguardedCDCCrossings(Circuit &circuit, const ConstSubnet &subnet, st
 		}
 
 		if (!n->checkValidInputClocks(inputClocks))
-			detectionCallback(n);
+			detectionCallback(n, &inputClocks);
 	}
 }
 

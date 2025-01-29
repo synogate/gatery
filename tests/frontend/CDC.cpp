@@ -56,7 +56,7 @@ BOOST_FIXTURE_TEST_CASE(unintentionalCDCDetection, gtry::BoostUnitTestSimulation
 	gtry::hlim::detectUnguardedCDCCrossings(
 		design.getCircuit(), 
 		gtry::hlim::ConstSubnet::all(design.getCircuit()), 
-		[&detections](const gtry::hlim::BaseNode* node){
+		[&detections](const gtry::hlim::BaseNode* node, std::vector<gtry::hlim::SignalClockDomain> *){
 
 		BOOST_TEST(dynamic_cast<const gtry::hlim::Node_Register*>(node) != nullptr);
 		detections++;
@@ -95,7 +95,7 @@ BOOST_FIXTURE_TEST_CASE(unintentionalCDCDetectionMemory, gtry::BoostUnitTestSimu
 	gtry::hlim::detectUnguardedCDCCrossings(
 		design.getCircuit(), 
 		gtry::hlim::ConstSubnet::all(design.getCircuit()), 
-		[&detections](const gtry::hlim::BaseNode* node){
+		[&detections](const gtry::hlim::BaseNode* node, std::vector<gtry::hlim::SignalClockDomain> *){
 
 		BOOST_TEST(dynamic_cast<const gtry::hlim::Node_MemPort*>(node) != nullptr);
 		detections++;
@@ -134,7 +134,7 @@ BOOST_FIXTURE_TEST_CASE(noUnintentionalCDCDetectionMemoryNoConflict, gtry::Boost
 	gtry::hlim::detectUnguardedCDCCrossings(
 		design.getCircuit(), 
 		gtry::hlim::ConstSubnet::all(design.getCircuit()), 
-		[&detections](const gtry::hlim::BaseNode* node){
+		[&detections](const gtry::hlim::BaseNode* node, std::vector<gtry::hlim::SignalClockDomain> *){
 
 		detections++;
 	});
@@ -172,7 +172,7 @@ BOOST_FIXTURE_TEST_CASE(intentionalCDCDetection, gtry::BoostUnitTestSimulationFi
 	gtry::hlim::detectUnguardedCDCCrossings(
 		design.getCircuit(), 
 		gtry::hlim::ConstSubnet::all(design.getCircuit()), 
-		[&detections](const gtry::hlim::BaseNode* node){
+		[&detections](const gtry::hlim::BaseNode* node, std::vector<gtry::hlim::SignalClockDomain> *){
 
 		detections++;
 	});

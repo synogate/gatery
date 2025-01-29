@@ -1318,4 +1318,73 @@ BOOST_FIXTURE_TEST_CASE(registerInitializationInPortMap, gtry::GHDLTestFixture)
 	BOOST_TEST(exportContains(std::regex{"out_in_delayed1 : OUT STD_LOGIC := '0'"}));
 }
 
+
+
+
+
+BOOST_FIXTURE_TEST_CASE(PhaseShiftedClocks, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Clock unrelatedClock({ .absoluteFrequency = 1000'000 });
+
+
+	Clock rootClock({ .absoluteFrequency = 1000'000 });
+	Bit outRoot;
+	{
+		ClockScope clockScope(rootClock);
+		outRoot = reg(~outRoot, '0');
+		pinOut(outRoot, "out");
+	}
+
+
+	Clock clockA = rootClock.deriveClock({ .phaseShiftDeg = 90, .name = {"clockA"}, });
+	Bit outA;
+	{
+		ClockScope clockScopeA(clockA);
+		outA = reg(~outA, '0');
+		pinOut(outA, "outA");
+	}
+
+
+	Clock clockB = rootClock.deriveClock({.phaseShiftDeg = 255,  .name = {"clockB"},  });
+	Bit outB;
+	{
+		ClockScope clockScopeB(clockB);
+		outB = reg(~outB, '0');
+		pinOut(outB, "outB");
+	}
+
+	BOOST_TEST(clockA.getClk()->getPhaseShiftRelativeTo(*clockB.getClk()).shiftStable);
+	BOOST_TEST(clockA.getClk()->getPhaseShiftRelativeTo(*rootClock.getClk()).shiftStable);
+	BOOST_TEST(!clockA.getClk()->getPhaseShiftRelativeTo(*unrelatedClock.getClk()).shiftStable);
+
+	addSimulationProcess([=, this]()->SimProcess {
+		for ([[maybe_unused]] auto i : gtry::utils::Range(100)) {
+			co_await AfterClk(rootClock);
+#if 0
+			if (simu(outRoot) == '1') {
+				BOOST_TEST(simu(outA) == '0');
+				BOOST_TEST(simu(outB) == '1');
+			}
+			if (simu(outRoot) == '0') {
+				BOOST_TEST(simu(outA) == '1');
+				BOOST_TEST(simu(outB) == '0');
+			}
+#endif
+			auto a = simu(outRoot) == '0';
+			auto b = simu(outA) == '0';
+			auto c = simu(outB) == '0';
+		}
+
+		stopTest();
+	});
+
+
+	runTest({ 1,1 });
+}
+
+
+
+
 BOOST_AUTO_TEST_SUITE_END()
