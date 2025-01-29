@@ -65,6 +65,15 @@ void DotExport::operator()(const hlim::Circuit &circuit, const hlim::ConstSubnet
 	writeDotFile(circuit, subnet, nullptr, &signalDelays);
 }
 
+DotExport& DotExport::highlightNodes(std::vector<size_t> nodes)
+{
+	std::vector<size_t> mergedNodes;
+	mergedNodes.reserve(nodes.size() + m_highlightNodes.size());
+	std::merge(m_highlightNodes.begin(), m_highlightNodes.end(), nodes.begin(), nodes.end(), std::back_inserter(mergedNodes));
+	m_highlightNodes = move(mergedNodes);
+	return *this;
+}
+
 void DotExport::operator()(const hlim::Circuit &circuit, hlim::NodeGroup *nodeGroup)
 {
 	if (m_mergeCombinatoryNodes && nodeGroup == nullptr)
@@ -83,30 +92,45 @@ void DotExport::writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubn
 	utils::StableMap<hlim::BaseNode*, unsigned> node2idx;
 //  utils::UnstableMap<hlim::NodeGroup*, unsigned> nodeGroup2idx;
 
+	auto styleNode = [this](std::fstream &file, hlim::BaseNode *node) {
+		using namespace std::string_view_literals;
 
-	auto styleNode = [](std::fstream &file, hlim::BaseNode *node) {
+		struct NodeStyle
+		{
+			std::string_view shape = "box";
+			std::optional<uint32_t> fillcolor;
+		} style;
+
 		if (dynamic_cast<hlim::Node_Register*>(node))
-			file << R"( shape="box" style="filled" fillcolor="#a0a0ff")";
+			style = NodeStyle{ "box", 0xA0'A0'FF };
 		else if (dynamic_cast<hlim::Node_Constant*>(node))
-			file << R"( shape="ellipse" style="filled" fillcolor="#ffa0a0")";
+			style = NodeStyle{ "ellipse", 0xFF'A0'A0 };
 		else if (dynamic_cast<hlim::Node_Multiplexer*>(node))
-			file << R"( shape="diamond" style="filled" fillcolor="#b0b0b0")";
+			style = NodeStyle{ "diamond", 0xB0'B0'B0 };
 		else if (dynamic_cast<hlim::Node_Arithmetic*>(node))
-			file << R"( shape="box" style="filled" fillcolor="#a0ffa0")";
+			style = NodeStyle{ "circle", 0xA0'FF'A0 };
 		else if (dynamic_cast<hlim::Node_Logic*>(node))
-			file << R"( shape="box" style="filled" fillcolor="#ffffa0")";
+			style = NodeStyle{ "invtrapezium", 0xFF'FF'A0 };
 		else if (dynamic_cast<hlim::Node_Compare*>(node))
-			file << R"( shape="box" style="filled" fillcolor="#ffd0a0")";
+			style = NodeStyle{ "octagon", 0xFF'D0'A0 };
 		else if (dynamic_cast<hlim::Node_Pin*>(node))
-			file << " shape=\"house\"";
+			style = NodeStyle{ "house" };
 		else if (dynamic_cast<hlim::Node_SignalTap*>(node))
-			file << " shape=\"cds\"";
-		else
-			if (node->hasRef())
-				file << R"( shape="box" style="filled" fillcolor="#eeeeee")";
-			else
-				file << " shape=\"box\"";
+			style = NodeStyle{ "cds" };
 
+		if (node->hasRef())
+			style.fillcolor = 0xEE'EE'EE;
+
+		auto itHighlight = std::lower_bound(m_highlightNodes.cbegin(), m_highlightNodes.cend(), node->getId());
+		if (itHighlight != m_highlightNodes.cend() && *itHighlight == node->getId())
+			style.fillcolor = 0xFF'10'10;
+
+		std::format_to(std::ostreambuf_iterator<char>(file), 
+			R"( shape="{}" {}fillcolor="#{:06X}")", 
+			style.shape, 
+			style.fillcolor ? "style=\"filled\" " : "",
+			style.fillcolor ? *style.fillcolor : 0xFFFFFF
+		);
 	};
 
 	{
@@ -617,9 +641,10 @@ void visualize(const hlim::Circuit &circuit, const std::string &filename, hlim::
 	exp.runGraphViz(filename+".svg");
 }
 
-void visualize(const hlim::Circuit &circuit, const std::string &filename, const hlim::ConstSubnet &subnet)
+void visualize(const hlim::Circuit &circuit, const std::string &filename, const hlim::ConstSubnet &subnet, std::vector<size_t> highlightNodes)
 {
 	DotExport exp(filename+".dot");
+	exp.highlightNodes(highlightNodes);
 	exp(circuit, subnet);
 	exp.runGraphViz(filename+".svg");
 }

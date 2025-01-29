@@ -1656,10 +1656,10 @@ void Circuit::postprocess(const PostProcessor &postProcessor)
 		);
 
 		ConstSubnet net;
-		net.add(affectedNode); 
-		for(size_t i=0; i< 10; i++)
-			net.dilate(false, true);
-		visualize(*this, "CDC_partial", net);
+		net.dilate(DilateDir::input, 1, affectedNode);
+		net.dilateIf<Node_Register, Node_MemPort>(DilateDir::none, DilateDir::input);
+		//net.dilateIf<Node_Register, Node_MemPort>(DilateDir::none, DilateDir::output, 0, affectedNode);
+		visualize(*this, "CDC_partial", net, { affectedNode->getId() });
 		visualize(*this, "CDC_full");
 
 		std::stringstream msg;

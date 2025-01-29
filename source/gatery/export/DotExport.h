@@ -19,23 +19,25 @@
 
 #include <filesystem>
 
-namespace gtry::hlim {
+namespace gtry::hlim
+{
 
-class Circuit;
-class NodeGroup;
-class Subnet;
-class ConstSubnet;
-class SignalDelay;
+	class Circuit;
+	class NodeGroup;
+	class Subnet;
+	class ConstSubnet;
+	class SignalDelay;
 
 }
 
-namespace gtry {
+namespace gtry
+{
 
 /**
  * @brief Export circuit into a .dot file for visualization
  */
-class DotExport
-{
+	class DotExport
+	{
 	public:
 		/**
 		 * @brief Construct with default settings, which can be overriden before invoking the export
@@ -47,14 +49,15 @@ class DotExport
 		 * @brief Invokes the export
 		 * @param circuit The circuit to export into the .dot file.
 		 */
-		void operator()(const hlim::Circuit &circuit, hlim::NodeGroup *nodeGroup = nullptr);
-		
-		void operator()(const hlim::Circuit &circuit, const hlim::ConstSubnet &subnet);
+		void operator()(const hlim::Circuit& circuit, hlim::NodeGroup* nodeGroup = nullptr);
 
-		void operator()(const hlim::Circuit &circuit, const hlim::ConstSubnet &subnet, const hlim::SignalDelay &signalDelays);
+		void operator()(const hlim::Circuit& circuit, const hlim::ConstSubnet& subnet);
+
+		void operator()(const hlim::Circuit& circuit, const hlim::ConstSubnet& subnet, const hlim::SignalDelay& signalDelays);
 
 		void mergeCombinatoryNodes() { m_mergeCombinatoryNodes = true; }
 
+		DotExport& highlightNodes(std::vector<size_t> nodes);
 		/**
 		 * @brief Executes graphviz on the .dot file to produce an svg.
 		 * @details Requires prior invocation of the export.
@@ -65,12 +68,14 @@ class DotExport
 		std::filesystem::path m_destination;
 		bool m_mergeCombinatoryNodes = false;
 
-		void writeDotFile(const hlim::Circuit &circuit, const hlim::ConstSubnet &subnet, hlim::NodeGroup *nodeGroup, const hlim::SignalDelay *signalDelays);
-		void writeMergedDotFile(const hlim::Circuit &circuit, const hlim::ConstSubnet &subnet);
+		void writeDotFile(const hlim::Circuit& circuit, const hlim::ConstSubnet& subnet, hlim::NodeGroup* nodeGroup, const hlim::SignalDelay* signalDelays);
+		void writeMergedDotFile(const hlim::Circuit& circuit, const hlim::ConstSubnet& subnet);
 
-};
+	private:
+		std::vector<size_t> m_highlightNodes;
+	};
 
-void visualize(const hlim::Circuit &circuit, const std::string &filename, hlim::NodeGroup *nodeGroup = nullptr);
-void visualize(const hlim::Circuit &circuit, const std::string &filename, const hlim::ConstSubnet &subnet);
+	void visualize(const hlim::Circuit& circuit, const std::string& filename, hlim::NodeGroup* nodeGroup = nullptr);
+	void visualize(const hlim::Circuit& circuit, const std::string& filename, const hlim::ConstSubnet& subnet, std::vector<size_t> highlightNodes = {});
 
 }
