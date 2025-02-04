@@ -345,18 +345,12 @@ namespace gtry::scl::sdram
 		pinOut(phy.odt, cfg.pinPrefix + "odt");
 
 		// CK: we do a 180� phase shift by inverting ddr inputs
-		// fake differential signal as long as not located on ball pairs
-		CC_OBUF clkBufP, clkBufN;
-		clkBufP.voltage("1.8");
-		clkBufN.voltage("1.8");
-		pinOut(clkBufP.pad(), cfg.pinPrefix + "ck_p");
-		pinOut(clkBufN.pad(), cfg.pinPrefix + "ck_n");
-		CC_ODDR clkDDRp(clkBufP);
+		CC_LVDS_OBUF clkBuf;
+		clkBuf.voltage("1.8");
+		clkBuf.pin(cfg.pinPrefix + "ck_p", cfg.pinPrefix + "ck_n");
+		CC_ODDR clkDDRp(clkBuf);
 		clkDDRp.D0() = '1';
 		clkDDRp.D1() = '0';
-		CC_ODDR clkDDRn(clkBufN);
-		clkDDRn.D0() = '0';
-		clkDDRn.D1() = '1';
 
 		Bit dqsEnable = reg(phy.dqWriteValid | reg(phy.dqWriteValid, '0'), '0');
 		HCL_NAMED(dqsEnable);
