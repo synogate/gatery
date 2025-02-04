@@ -69,6 +69,15 @@ void ExternalModule::clockIn(const Clock& clock, std::string_view name, std::str
 	m_node.resetNames().emplace_back(resetName);
 }
 
+Clock gtry::ExternalModule::clockInFind(std::string_view name)
+{
+	for (size_t i = 0; i < m_node.clockNames().size(); ++i)
+	{
+		if (m_node.clockNames()[i] == name)
+			return Clock(m_node.getClocks()[i]);
+	}
+	throw std::runtime_error("clock not found");
+}
 
 const Clock& ExternalModule::clockOut(std::string_view name, std::optional<std::string_view> resetName, ClockConfig cfg)
 {
@@ -287,7 +296,7 @@ ExternalModule& ExternalModule::inoutPin(std::string_view portName, std::string_
 	return *this;
 }
 
-ExternalModule& ExternalModule::inoutPin(std::string_view portName, std::string_view pinName, PinConfig cfg)
+ExternalModule& ExternalModule::inoutPin(std::string_view portName, std::string_view pinName, PinConfig cfg, const Bit& simuValue)
 {
 	HCL_DESIGNCHECK_HINT(!cfg.isEnableSignal, "Only input bit signals can be declared enable signals!");
 
@@ -306,7 +315,7 @@ ExternalModule& ExternalModule::inoutPin(std::string_view portName, std::string_
 	multiDriver->rewireInput(0, {.node = &m_node, .port = m_node.outs().size()-1});
 	m_node.rewireInput(m_node.ins().size()-1, {.node = multiDriver, .port = 0ull});
 
-	Bit out = 'x';
+	Bit out = simuValue;
 	out.exportOverride(Bit(SignalReadPort(multiDriver)));
 	multiDriver->rewireInput(1, Bit(bidirPin(out).setName(std::string(pinName))).readPort());
 

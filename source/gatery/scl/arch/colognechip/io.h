@@ -16,6 +16,8 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
+#include <exception>
+
 #include <gatery/frontend/Bit.h>
 #include <gatery/frontend/ExternalModule.h>
 
@@ -105,7 +107,7 @@ namespace gtry::scl::arch::colognechip
 		}
 
 		Bit& O() { return in("A"); }
-		Bit pad() { return out("O"); }
+		Bit pad() { Bit o = out("O"); o.simulationOverride(final(O())); return o; }
 	};
 
 	class CC_TOBUF : public ExternalModule, public CC_PIN<CC_TOBUF>, public CC_PIN_OUT<CC_TOBUF>
@@ -122,7 +124,11 @@ namespace gtry::scl::arch::colognechip
 
 		Bit& disable() { return in("T"); }
 		Bit& O() { return in("A"); }
-		Bit pad() { return out("O"); }
+		Bit pad() { 
+			Bit o = out("O");
+			o.simulationOverride(mux(final(disable()), { final(O()), Bit{'X'} }));
+			return o;
+		}
 	};
 
 	class CC_IOBUF : public ExternalModule, public CC_PIN<CC_IOBUF>, public CC_PIN_IN<CC_IOBUF>, public CC_PIN_OUT<CC_IOBUF>
@@ -132,11 +138,19 @@ namespace gtry::scl::arch::colognechip
 			disable() = '0';
 		}
 
-		CC_IOBUF& pin(std::string_view portName) { inoutPin("IO", portName); return *this; }
+		CC_IOBUF& pin(std::string_view portName) { 
+			Bit simVal = mux(final(disable()), { final(O()), Bit{'x'} });
+			inoutPin("IO", portName, {}, simVal);
+			return *this; 
+		}
 
 		Bit& disable() { return in("T"); }
 		Bit& O() { return in("A"); }
-		Bit I() { return out("Y"); }
+		Bit I() { 
+			Bit o = out("Y");
+			o.simulationOverride(mux(final(disable()), { final(O()), Bit{'X'} }));
+			return o;
+		}
 	};
 
 	template<class T>
@@ -277,16 +291,43 @@ namespace gtry::scl::arch::colognechip
 			D() = ibuf.I();
 		}
 
+		~CC_IDDR() {
+			if (!std::uncaught_exceptions())
+				generate();
+		}
+
 		CC_IDDR& clk(const Clock& clk) { clockIn(clk, "CLK"); return *this; }
 		CC_IDDR& clockInversion(bool inv) { generic("CLK_INV") = inv ? 1 : 0; return *this; }
 
 		// D input can be connected to any of the above input buffers
 		Bit& D() { return in("D"); }
 
-		Bit Q0() { return out("Q0"); }
-		Bit Q1() { return out("Q1"); }
+		Bit Q0() { Bit q = out("Q0"); q.simulationOverride(m_simQ0); return q; }
+		Bit Q1() { Bit q = out("Q1"); q.simulationOverride(m_simQ1); return q; }
+
+		void generate()
+		{
+			Clock clk0 = clockInFind("CLK").deriveClock(ClockConfig{
+				.triggerEvent = ClockConfig::TriggerEvent::RISING
+			});
+			Clock clk1 = clk0.deriveClock(ClockConfig{
+				.triggerEvent = ClockConfig::TriggerEvent::FALLING
+			});
+
+			if (generic("CLK_INV") == 1)
+				std::swap(clk0, clk1);
+
+			m_simQ0 = reg(D(), { .clock = clk0 });
+			m_simQ1 = reg(D(), { .clock = clk1 });
+		}
+	private:
+		Bit m_simQ0;
+		Bit m_simQ1;
 	};
 
+	/**
+	 * @brief To output first D0 and then D1 in the next clock cycle clockInversion(true) can be used.
+	 */
 	class CC_ODDR : public ExternalModule
 	{
 	public:
@@ -300,24 +341,6 @@ namespace gtry::scl::arch::colognechip
 			clockInversion(false);
 			Q();
 		}
-
-		//~CC_ODDR() {
-		//
-		//	Clock clk = ClockScope::getClk();
-		//	Bit d0 = D0();
-		//	Bit d1 = D1();
-		//	Bit q0 = pinIn(PinNodeParameter{ .simulationOnlyPin = true });
-		//	Q().simulationOverride(q0);
-		//
-		//	DesignScope::get()->getCircuit().addSimulationProcess([d0, d1, q0, clk]() -> SimProcess {
-		//		while (1)
-		//		{
-		//			co_await OnClk(clk);
-		//			simu(q0) = '1';
-		//		}
-		//	});
-		//
-		//}
 
 		CC_ODDR(CC_OBUF& obuf) : CC_ODDR() {
 			obuf.O() = Q();
@@ -343,10 +366,14 @@ namespace gtry::scl::arch::colognechip
 			obuf.O() = Q();
 		}
 
+		~CC_ODDR() {
+			if(!std::uncaught_exceptions())
+				generate();
+		}
+
 		CC_ODDR& clk(const Clock& clk) {
 			clockIn(clk, "CLK");
 			clockIn(clk, "DDR");
-			generic("CLK_INV") = clk.getClk()->getTriggerEvent() == hlim::Clock::TriggerEvent::FALLING ? 1 : 0;
 			return *this;
 		}
 
@@ -357,6 +384,32 @@ namespace gtry::scl::arch::colognechip
 		Bit& D1() { return in("D1"); }
 
 		// Q output can be connected to any of the above output buffers
-		Bit Q() { return out("Q"); }
+		Bit Q() {  
+			Bit q = out("Q");
+			q.simulationOverride(m_simuValue);
+			return q; 
+		}
+
+		void generate() 
+		{
+			Clock clk0 = clockInFind("CLK").deriveClock(ClockConfig{
+				.triggerEvent = ClockConfig::TriggerEvent::RISING
+			});
+			Clock clk1 = clk0.deriveClock(ClockConfig{ 
+				.triggerEvent = ClockConfig::TriggerEvent::FALLING
+			});
+
+			if (generic("CLK_INV") == 1)
+				std::swap(clk0, clk1);
+
+			Bit d0r = reg(D0(), { .clock = clk0 });
+			Bit d1r = reg(D1(), { .clock = clk1 });
+
+			Clock ddr = clockInFind("DDR");
+			m_simuValue = mux(ddr.clkSignal(), { d1r, d0r });
+		}
+
+	private:
+		Bit m_simuValue;
 	};
 }

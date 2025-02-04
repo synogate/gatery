@@ -51,6 +51,7 @@ namespace gtry
 
 		void clockIn(std::string_view name, std::string_view resetName = {});
 		void clockIn(const Clock& clock, std::string_view name, std::string_view resetName = {});
+		Clock clockInFind(std::string_view name); // getter for already declared clocks
 
 		const Clock&		clockOut(std::string_view name, std::optional<std::string_view> resetName = {}, ClockConfig cfg = {});
 		const Clock&		clockOut(std::string_view name, BitWidth W, size_t index, std::optional<std::string_view> resetName = {}, ClockConfig cfg = {});
@@ -65,7 +66,7 @@ namespace gtry
 		Bit					out(std::string_view name, PinConfig cfg = {});
 
 		ExternalModule& inoutPin(std::string_view portName, std::string_view pinName, BitWidth W, PinConfig cfg = {});
-		ExternalModule& inoutPin(std::string_view portName, std::string_view pinName, PinConfig cfg = {});
+		ExternalModule& inoutPin(std::string_view portName, std::string_view pinName, PinConfig cfg = {}, const Bit& simuValue = 'x');
 
 		void isEntity(bool b) { m_node.isEntity(b); }
 		void requiresComponentDeclaration(bool b) { m_node.requiresComponentDeclaration(b); }
