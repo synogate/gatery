@@ -382,6 +382,7 @@ namespace gtry::scl::sdram
 #else
 		dqsBuf.O() = !preamble & ClockScope::getClk().clkSignal();
 #endif
+		Clock sysClk = ClockScope::getClk();
 		Clock dqsClk{ ClockConfig{
 			.absoluteFrequency = ClockScope::getClk().absoluteFrequency(), 
 			.name = "dqsClk", 
@@ -399,16 +400,18 @@ namespace gtry::scl::sdram
 			dqBuf.voltage("1.8");
 			dqBuf.pin(cfg.pinPrefix + "dq" + std::to_string(i));
 			dqBuf.disable() = !dqsEnable;
+			dqBuf.I(); // instantiate for clock scope
 
 			CC_ODDR dqDDR(dqBuf);
 			dqDDR.clockInversion(true);
 			dqDDR.D0() = reg(phy.cmd.dq.part(2, 0)[i]);
 			dqDDR.D1() = reg(phy.cmd.dq.part(2, 1)[i]);
 
-			CC_IDDR dqInDDR(dqBuf);
-			dqInDDR.clk(dqsClk);
-			phy.dqIn.part(2, 0)[i] = dqInDDR.Q0();
-			phy.dqIn.part(2, 1)[i] = dqInDDR.Q1();
+			ClockScope dqsDomain(dqsClk);
+			CC_IDDR dqInDDR;
+			dqInDDR.D() = allowClockDomainCrossing(dqBuf.I(), sysClk, dqsClk);
+			phy.dqIn.part(2, 0)[i] = allowClockDomainCrossing(dqInDDR.Q0(), dqsClk, sysClk);
+			phy.dqIn.part(2, 1)[i] = allowClockDomainCrossing(dqInDDR.Q1(), dqsClk, sysClk);
 		}
 
 		// DQM

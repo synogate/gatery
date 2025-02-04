@@ -50,6 +50,14 @@
 #
 
 Pin_in      "CLK12M"        Loc = "IO_SB_A8";
-Pin_inout   "USB_DP"        Loc = "IO_WB_A5";
-Pin_inout   "USB_DN"        Loc = "IO_WB_A6";
-Pin_out     "USB_EN"        Loc = "IO_WB_B7";
+
+# BFC 1es
+Pin_inout   "USB_DP"        Loc = "IO_WB_A6";
+Pin_inout   "USB_DN"        Loc = "IO_WB_B6";
+Pin_out     "USB_EN"        Loc = "IO_WB_A4";
+
+# rev3 cartridge
+#Pin_inout   "USB_DP"        Loc = "IO_WB_A5";
+#Pin_inout   "USB_DN"        Loc = "IO_WB_A6";
+#Pin_out     "USB_EN"        Loc = "IO_WB_B7";
+
