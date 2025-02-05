@@ -1082,7 +1082,7 @@ BOOST_FIXTURE_TEST_CASE(foldBinaryMuxesToCase, gtry::GHDLTestFixture)
 	//design.visualize("before");
 	testCompilation();
 	//design.visualize("after");
-	BOOST_TEST(exportContains(std::regex{"CASE UNSIGNED\\(selector\\) IS"}));
+	BOOST_TEST(exportContains(std::regex{"CASE v_selector IS"}));
 }
 
 
