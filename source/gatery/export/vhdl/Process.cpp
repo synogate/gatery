@@ -193,6 +193,11 @@ void Process::extractSignals()
 		if (auto *muxNode = dynamic_cast<hlim::Node_Multiplexer *>(node)) {
 			hlim::NodePort driver{.node = muxNode, .port = 0};
 			potentialLocalSignals.insert(driver);
+			// If this is a case statement, then the input must also be a non-expression
+			if (muxNode->getNumInputPorts() > 3) {
+				hlim::NodePort selectorDriver = muxNode->getDriver(0);
+				potentialLocalSignals.insert(selectorDriver);
+			}
 		}
 
 		// check for prio conditional

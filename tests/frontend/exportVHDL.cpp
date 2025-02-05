@@ -1387,4 +1387,54 @@ BOOST_FIXTURE_TEST_CASE(PhaseShiftedClocks, gtry::GHDLTestFixture)
 
 
 
+
+BOOST_FIXTURE_TEST_CASE(MuxExpression, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 1000'000 });
+	ClockScope clockScope(clock);
+
+	Bit in1 = pinIn().setName("in1");
+	Bit in2 = pinIn().setName("in2");
+
+
+	BVec out = mux(cat(in1, in2), {
+                BVec{"10b1101010100"}, 
+                BVec{"10b0010101011"}, 
+                BVec{"10b0101010100"}, 
+                BVec{"10b1010101011"}  
+	});
+
+	pinOut(out).setName("out");
+
+	UInt inConcatTerminal = cat(in1, in2);
+	HCL_NAMED(inConcatTerminal);
+
+
+	BVec out2 = mux(inConcatTerminal, {
+                BVec{"10b1101010100"}, 
+                BVec{"10b0010101011"}, 
+                BVec{"10b0101010100"}, 
+                BVec{"10b1010101011"}  
+	});
+
+	pinOut(out2).setName("out2");
+
+	addSimulationProcess([&]()->SimProcess {
+		for ([[maybe_unused]] auto i : gtry::utils::Range(100)) {
+			simu(in1) = (i & 1) != 0;
+			simu(in2) = (i & 2) != 0;
+			co_await AfterClk(clock);
+			int unsused = simu(out);
+			//int unsused2 = simu(out2);
+		}
+		stopTest();
+	});
+
+	runTest({ 1,1 });
+}
+
+
+
 BOOST_AUTO_TEST_SUITE_END()
