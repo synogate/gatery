@@ -16,6 +16,9 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "gatery/scl_pch.h"
+
+#include <gatery/scl/Counter.h>
+#include <gatery/scl/flag.h>
 #include "DisplaySync.h"
 
 namespace gtry::scl
@@ -49,35 +52,30 @@ namespace gtry::scl
 		return s;
 	}
 
-	void DisplaySync::init(DisplayMode& mode)
+	void DisplaySync::init(const DisplayMode& mode)
 	{
-		GroupScope ent{ GroupScope::GroupType::ENTITY, "DisplaySync" };
-
+		Area ent{ "scl_DisplaySync", true };
 		HCL_NAMED(mode);
 
-		x = mode.w.total.width();
-		y = mode.h.total.width();
+		scl::Counter cx{ mode.w.total };
+		x = reg(cx.value(), 0);
 
-		x += 1;
-		IF(x == mode.w.total)
-		{
-			x = 0;
-			y += 1;
+		// the copy is needed to break the loop inside of flag. TODO analyze why this matters.
+		hsync = copy(flag(cx.value() == mode.w.syncStart, cx.value() == mode.w.syncEnd));
+		onScreen = copy(flag(cx.value() == 0, cx.value() == mode.w.resolution) | name("de_x"));
 
-			IF(y == mode.h.total)
-				y = 0;
-		}
+		scl::Counter cy{ mode.h.total };
+		IF(cx.isLast())
+			cy.inc();
+
+		y = reg(cy.value(), 0);
+		vsync = copy(flag(cy.value() == mode.h.syncStart, cy.value() == mode.h.syncEnd));
+		onScreen &= flag(cy.value() == 0, cy.value() == mode.h.resolution) | name("de_y");
+
 		HCL_NAMED(x);
 		HCL_NAMED(y);
-
-		hsync = reg(x >= mode.w.syncStart & x < mode.w.syncEnd);
-		vsync = reg(y >= mode.h.syncStart & y < mode.h.syncEnd);
-		onScreen = reg(x < mode.w.resolution & y < mode.h.resolution);
 		HCL_NAMED(hsync);
 		HCL_NAMED(vsync);
 		HCL_NAMED(onScreen);
-
-		x = reg(x);
-		y = reg(y);
 	}
 }

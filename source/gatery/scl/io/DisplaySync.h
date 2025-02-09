@@ -37,11 +37,7 @@ namespace gtry::scl
 
 	struct DisplaySync
 	{
-		DisplaySync() = default;
-		DisplaySync(const DisplaySync&) = default;
-		DisplaySync(DisplaySync&&) = default;
-
-		void init(DisplayMode& mode);
+		void init(const DisplayMode& mode);
 
 		UInt x, y;
 		Bit onScreen;

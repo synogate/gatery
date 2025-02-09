@@ -234,8 +234,8 @@ namespace gtry::scl::arch::colognechip
 			return *this;
 		}
 
-		Bit padP() { return out("O_P"); }
-		Bit padN() { return out("O_N"); }
+		Bit padP() { Bit o = out("O_P"); o.simulationOverride(O()); return o; }
+		Bit padN() { Bit o = out("O_N"); o.simulationOverride(!O()); return o; }
 		Bit& O() { return in("A"); }
 	};
 
@@ -244,6 +244,12 @@ namespace gtry::scl::arch::colognechip
 	public:
 		CC_LVDS_TOBUF() : ExternalModule("CC_LVDS_TOBUF") {
 			disable() = '0';
+		}
+
+		CC_LVDS_TOBUF& pin(std::string_view portNameP, std::string_view portNameN) {
+			pinOut(padP()).setName(std::string{ portNameP });
+			pinOut(padN()).setName(std::string{ portNameN });
+			return *this;
 		}
 		
 		Bit& disable() { return in("T"); }
