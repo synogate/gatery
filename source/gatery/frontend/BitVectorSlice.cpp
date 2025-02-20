@@ -97,6 +97,9 @@ SignalReadPort gtry::BitVectorSliceStatic::readPort(SignalReadPort rootPort) con
 
 SignalReadPort gtry::BitVectorSliceStatic::assignLocal(SignalReadPort current, std::function<SignalReadPort(SignalReadPort)> childAssign) const
 {
+	if (m_width == 0)
+		return current;
+
 	auto* extract = DesignScope::createNode<hlim::Node_Rewire>(1);
 	extract->connectInput(0, current);
 	extract->setExtract(m_offset, m_width);
