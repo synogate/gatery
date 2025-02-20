@@ -54,7 +54,7 @@ namespace gtry::scl::strm {
 	*/
 	const Bit valid(const StreamSignal auto& stream) { return '1'; }
 	const Bit eop(const StreamSignal auto& stream) { return '1'; }
-	const Bit sop(const StreamSignal auto& stream) { return '1'; }
+	const Bit sop(const StreamSignal auto& signal) { return !flag(transfer(signal), transfer(signal) & eop(signal)); }
 	const UInt byteEnable(const StreamSignal auto& stream) { return ConstUInt(1, 1_b); }
 	const BVec dwordEnable(const StreamSignal auto& stream) { return ConstBVec(1, 1_b); }
 	const Bit error(const StreamSignal auto& stream) { return '0'; }
@@ -131,9 +131,6 @@ namespace gtry::scl::strm {
 		Bit& eop(StreamT& stream) { return get<Eop>(stream).eop; }
 	template<StreamSignal StreamT> requires (StreamT::template has<Eop>())
 		const Bit& eop(const StreamT& stream) { return get<Eop>(stream).eop; }
-	template<StreamSignal StreamT> requires (StreamT::template has<Valid>() and StreamT::template has<Eop>())
-		const Bit sop(const StreamT& signal) { return !flag(transfer(signal), transfer(signal) & eop(signal)); }
-
 
 	struct Sop
 	{
