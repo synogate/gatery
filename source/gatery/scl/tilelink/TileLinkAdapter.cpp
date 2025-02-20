@@ -105,14 +105,17 @@ namespace gtry::scl
 
 			// select word based on address for single beat requests
 			Bit sendUpperHalf = sendUpperHalfReg;
-			IF(valid(masterA) & !slave.a->isBurst())
-			{
-				size_t logBurstSize = utils::Log2(slave.a->mask.width().bits());
-				sendUpperHalf = masterA->address[logBurstSize];
-			}
+
+			if(slave.a->data.width() >= 8_b)
+				IF(valid(masterA) & !slave.a->isBurst())
+				{
+					size_t logBurstSize = utils::Log2(slave.a->mask.width().bits());
+					sendUpperHalf = masterA->address[logBurstSize];
+				}
 
 			HCL_NAMED(sendUpperHalf);
-			slave.a->mask = muxWord(sendUpperHalf, masterA->mask);
+			if (slave.a->data.width() >= 8_b)
+				slave.a->mask = muxWord(sendUpperHalf, masterA->mask);
 			slave.a->data = muxWord(sendUpperHalf, masterA->data);
 
 			// toggle between words for burst requests

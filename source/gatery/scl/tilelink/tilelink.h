@@ -123,6 +123,8 @@ namespace gtry::scl
 
 	template<class T>
 	concept TileLinkSignal = Signal<T> and internal::is_tilelink_signal<std::remove_cvref_t<T>>::value;
+	template<class T>
+	concept TileLinkChannel = StreamSignal<T> and (std::same_as<T, TileLinkChannelA> or std::same_as<T, TileLinkChannelD>);
 
 	struct TileLinkCapBurst;
 	struct TileLinkCapHint;
@@ -146,17 +148,9 @@ namespace gtry::scl
 	requires(T::template has<TileLinkD>())
 	UInt transferLength(const T& source);
 
-	template<StreamSignal T>
-	requires requires (T& s) { { transferLength(s) } -> std::convertible_to<UInt>; }
-	std::tuple<Sop, Eop> seop(const T& source);
-
-	template<StreamSignal T>
-	requires requires (const T& s) { { transferLength(s) } -> std::convertible_to<UInt>; }
-	Bit sop(const T& source);
-
-	template<StreamSignal T>
-	requires requires (T& s) { { transferLength(s) } -> std::convertible_to<UInt>; }
-	Bit eop(const T& source);
+	// Marks last beat of burst based on channel type, opcode, size and data width.
+	Bit eop(const TileLinkChannel auto& source);
+	Bit eop(const UInt& logByteSize, BitWidth bitPerBeat, Bit forceEop);
 
 	BVec fullByteEnableMask(const UInt& address, const UInt& size, BitWidth maskW);
 	inline BVec fullByteEnableMask(const TileLinkA& a) { return fullByteEnableMask(a.address, a.size, a.mask.width()); }
@@ -241,59 +235,11 @@ namespace gtry::scl
 		return len;
 	}
 
-	template<StreamSignal T>
-	requires requires (T& s) { { transferLength(s) } -> std::convertible_to<UInt>; }
-	std::tuple<Sop, Eop> seop(const T& source)
+	std::tuple<Sop, Eop> seop(const TileLinkChannel auto& source)
 	{
-		auto scope = Area{ "scl_seop" }.enter();
-
-		UInt size = transferLength(source);
-		HCL_NAMED(size);
-
-		UInt beatCounter = size.width();
-		UInt beatCounterNext = beatCounter + 1;
-
-		Bit start;
-		IF(transfer(source))
-		{
-			//sim_assert(size != 0) << "what is a zero length packet?";
-			start = '0';
-			beatCounter = beatCounterNext;
-		}
-
-		Bit end = '0';
-		IF(beatCounterNext == size)
-		{
-			end = '1';
-			IF(transfer(source))
-			{
-				start = '1';
-				beatCounter = 0;
-			}
-		}
-		start = reg(start, '1');
-		beatCounter = reg(beatCounter, 0);
-
-		HCL_NAMED(beatCounter);
-		HCL_NAMED(start);
-		HCL_NAMED(end);
+		Bit end = eop(source);
+		Bit start = flag(end & transfer(source), !end & transfer(source), '1') | name("sop");
 		return { Sop{start}, Eop{end} };
-	}
-
-	template<StreamSignal T>
-	requires requires (const T& s) { { transferLength(s) } -> std::convertible_to<UInt>; }
-	Bit sop(const T& source)
-	{
-		auto [s, e] = seop(source);
-		return s.sop;
-	}
-
-	template<StreamSignal T>
-	requires requires (T& s) { { transferLength(s) } -> std::convertible_to<UInt>; }
-	Bit eop(const T& source)
-	{
-		auto [s, e] = seop(source);
-		return e.eop;
 	}
 
 	template<TileLinkSignal TLink>
@@ -318,7 +264,7 @@ namespace gtry::scl
 		link.a->size = sizeWidth;
 		link.a->source = sourceWidth;
 		link.a->address = addrWidth;
-		link.a->mask = dataWidth / 8;
+		link.a->mask = BitWidth{ dataWidth.bits() / 8 };
 		link.a->data = dataWidth;
 
 		(*link.d)->data = dataWidth;
@@ -382,10 +328,6 @@ namespace gtry::scl
 
 	extern template UInt transferLength(const TileLinkChannelA&);
 	extern template UInt transferLength(const TileLinkChannelD&);
-	extern template std::tuple<Sop, Eop> seop(const TileLinkChannelA&);
-	extern template std::tuple<Sop, Eop> seop(const TileLinkChannelD&);
-	extern template Bit sop(const TileLinkChannelA&);
-	extern template Bit sop(const TileLinkChannelD&);
 	extern template Bit eop(const TileLinkChannelA&);
 	extern template Bit eop(const TileLinkChannelD&);
 }

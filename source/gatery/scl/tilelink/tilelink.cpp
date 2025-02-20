@@ -37,6 +37,9 @@ namespace gtry::scl
 
 	Bit TileLinkA::isBurst() const
 	{
+		if (data.width() < 8_b)
+			return hasData();
+
 		size_t bytePerBeat = utils::Log2(data.width().bytes());
 		return size > bytePerBeat & hasData();
 	}
@@ -106,21 +109,54 @@ namespace gtry::scl
 
 	Bit TileLinkD::isBurst() const
 	{
+		if (data.width() < 8_b)
+			return hasData();
+
 		size_t bytePerBeat = utils::Log2(data.width().bytes());
 		return size > bytePerBeat & hasData();
 	}
+
+	Bit eop(const UInt& logByteSize, BitWidth bitPerBeat, Bit forceEop)
+	{
+		Area ent{ "scl_eop_logsize", true };
+
+		BitWidth beatCounterW =
+			BitWidth{ logByteSize.width().count() }
+			- BitWidth::count(bitPerBeat.bits())
+			+ 3;
+		UInt beatCounter = beatCounterW;
+		beatCounter += 1;
+
+		UInt paddedBeatCounter = ConstUInt(BitWidth{ logByteSize.width().count() });
+		BitWidth paddedBeatCounterUpperW = std::min(paddedBeatCounter.width(), beatCounter.width() - 1);
+		if(paddedBeatCounterUpperW != paddedBeatCounter.width())
+			paddedBeatCounter.lower(-paddedBeatCounterUpperW) |= '1';
+		paddedBeatCounter.upper(paddedBeatCounterUpperW) = beatCounter.upper(paddedBeatCounterUpperW);
+		HCL_NAMED(paddedBeatCounter);
+
+		Bit end = paddedBeatCounter[logByteSize];
+		end |= forceEop;
+		HCL_NAMED(end);
+
+		IF(end)
+			beatCounter = 0;
+		beatCounter = reg(beatCounter, 0) | name("beatCounter");
+		return end;
+	}
+
+	Bit eop(const TileLinkChannel auto& source)
+	{
+		gtry::EnableScope en{ transfer(source) };
+		return eop(source->size, source->data.width(), !source->hasData());
+	}
+	template Bit eop(const TileLinkChannelA&);
+	template Bit eop(const TileLinkChannelD&);
 
 	template struct strm::Stream<TileLinkA, Ready, Valid>;
 	template struct strm::Stream<TileLinkD, Ready, Valid>;
 
 	template UInt transferLength(const TileLinkChannelA&);
 	template UInt transferLength(const TileLinkChannelD&);
-	template std::tuple<Sop, Eop> seop(const TileLinkChannelA&);
-	template std::tuple<Sop, Eop> seop(const TileLinkChannelD&);
-	template Bit sop(const TileLinkChannelA&);
-	template Bit sop(const TileLinkChannelD&);
-	template Bit eop(const TileLinkChannelA&);
-	template Bit eop(const TileLinkChannelD&);
 
 	BVec fullByteEnableMask(const UInt& address, const UInt& size, BitWidth maskW)
 	{
