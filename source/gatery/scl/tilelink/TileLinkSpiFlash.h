@@ -27,8 +27,11 @@ namespace gtry::scl
 		BitWidth sourceW = 0_b;
 		std::optional<BitWidth> sizeW;
 
-		// command byte send to flash for quad io read
-		uint8_t readQuadIOCode = 0xEB;
+		// command byte send to flash for read, default is based on bitwidth
+		std::optional<uint8_t> readCode;
+
+		// number of dummy clock cycles between command and data, default is based on readCode
+		std::optional<uint8_t> dummyCycles;
 
 		// send command byte to flash ahead of time for improved random access latency
 		// specifies how long the preloaded command should wait for a request before deselecting flash
@@ -49,6 +52,28 @@ namespace gtry::scl
 
 		Area ent{ "scl_tileLinkSpiFlash", true };
 		TileLinkUB out = tileLinkInit<TileLinkUB>(24_b, port.out->width(), config.sourceW, config.sizeW);
+
+		uint8_t readCode;
+		if (config.readCode)
+			readCode = *config.readCode;
+		else if (port.out->width() == 8_b)
+			readCode = 0xEB;
+		else if (port.out->width() == 4_b)
+			readCode = 0xBB;
+		else if (port.out->width() == 2_b)
+			readCode = 0x0B;
+		else
+			HCL_DESIGNCHECK_HINT(false, "could not identify read code");
+
+		uint8_t dummyCycles = 0;
+		if (config.dummyCycles)
+			dummyCycles = *config.dummyCycles;
+		else if (readCode == 0xEB)
+			dummyCycles = 6 / 2;
+		else if (readCode == 0xBB)
+			dummyCycles = 4 / 2;
+		else if (readCode == 0x0B)
+			dummyCycles = 8 / 2;
 
 		enum class State {
 			idle,			// wait for request and chip deselect
@@ -119,10 +144,13 @@ namespace gtry::scl
 			const UInt& cnt = counter.value().lower(2_b);
 			for (size_t i = 0; i < 4; ++i)
 				IF (cnt == i)
-					cmdBits = config.readQuadIOCode >> 2 * i & 0x3;
+					cmdBits = readCode >> 2 * i & 0x3;
 
 			// command is read on lane 0 only, we pad the others with one to reduce transitions
-			*port.out = (BVec)cat("3b111", cmdBits[1], "3b111", cmdBits[0]);
+			*port.out = (BVec)pack(
+				oext(cmdBits[0], port.out->width() / 2), 
+				oext(cmdBits[1], port.out->width() / 2)
+			);
 			IF(cnt == 3)
 				state = config.preloadCommandByteTimeout ? State::waitForRequest : State::addr;
 		}
@@ -155,27 +183,23 @@ namespace gtry::scl
 		{
 			valid(port.out) = '1';
 
-			const UInt& cnt = counter.value().lower(2_b);
-			IF(cnt == 0)
-				*port.out = (BVec)out.a->address(16, 8_b);
-			IF(cnt == 1)
-				*port.out = (BVec)out.a->address(8, 8_b);
-			IF(cnt == 2)
-				*port.out = (BVec)out.a->address(0, 8_b);
+			size_t addressBeats = 24_b / port.out->width();
+			const UInt& cnt = counter.value().lower(BitWidth::count(addressBeats));
+			*port.out = (BVec)out.a->address.part(addressBeats, cnt);
 
-			IF(cnt == 2)
-				state = State::dummy;
+			IF(cnt == addressBeats - 1)
+				state = dummyCycles ? State::dummy : State::read;
 		}
 
 		IF(state.current() == State::dummy)
 		{
-			const UInt& cnt = counter.value().lower(2_b);
+			const UInt& cnt = counter.value().lower(BitWidth::count(dummyCycles));
 
 			// the first cycle is called "M" cycle where we need to send 0xFx
 			valid(port.out) = cnt == 0;
-			*port.out = 0xFF;
+			*port.out = port.out->width().mask();
 
-			IF(cnt[1])
+			IF(cnt == dummyCycles - 1)
 				state = State::read;
 		}
 
@@ -183,7 +207,8 @@ namespace gtry::scl
 		{
 			port.inEn = '1';
 			UInt counterNext = counter.value() + 1 | name("counterNext");
-			IF(counterNext[out.a->size])
+			BitWidth counterOffset{ 3 - utils::Log2(port.out->width().bits()) };
+			IF(counterNext.upper(-counterOffset)[out.a->size])
 				state = State::readWait;
 		}
 
