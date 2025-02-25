@@ -308,13 +308,17 @@ namespace gtry
 		m_clock->setLogicResetDriver(node);
 	}
 
-	void Clock::reset(const Bit& signal, const Clock& sourceClock)
+	void Clock::reset(const Bit& signal, const Clock& sourceClock, ResetActive active)
 	{
+		Bit inSignal = signal;
+		if(active != m_clock->getRegAttribs().resetActive)
+			inSignal = !inSignal;
+
 		Bit synchronizedSignal;
-		if(m_clock->getRegAttribs().resetType == ResetType::SYNCHRONOUS)
-			synchronizedSignal = scl::synchronize(signal, sourceClock, *this);
+		if (m_clock->getRegAttribs().resetType == ResetType::SYNCHRONOUS)
+			synchronizedSignal = scl::synchronize(inSignal, sourceClock, *this, { .inStage = false });
 		else
-			synchronizedSignal = scl::synchronizeRelease(signal, sourceClock, *this, m_clock->getRegAttribs().resetActive);
+			synchronizedSignal = scl::synchronizeRelease(inSignal, sourceClock, *this, m_clock->getRegAttribs().resetActive);
 
 		reset(synchronizedSignal);
 	}

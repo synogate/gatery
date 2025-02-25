@@ -126,7 +126,7 @@ namespace gtry {
 
 			Bit reset(ResetActive active) const;
 			void reset(const Bit& signal);
-			void reset(const Bit& signal, const Clock& sourceClock);
+			void reset(const Bit& signal, const Clock& sourceClock, ResetActive active);
 
 			std::string_view name() const { return m_clock->getName(); }
 			void setName(std::string name) { m_clock->setName(std::move(name)); }
