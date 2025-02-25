@@ -34,11 +34,14 @@ namespace gtry::scl
 		VStream<BVec> out;	// word to send out on data line. Valid is used for tristate enables.
 		Reverse<VStream<BVec>> in; // read word, requested by inEn. Latency depends on phy settings and might be zero.
 
-		static SpiPort Create(BitWidth dataW, BitWidth csW = 1_b) {
+		bool ddrMode = false; // every command is worth 2 cycles in ddr mode.
+
+		static SpiPort Create(BitWidth dataW, bool ddr, BitWidth csW = 1_b) {
 			return {
 				.cs = csW,
 				.out = {dataW},
-				.in = Reverse<VStream<BVec>>(dataW)
+				.in = Reverse<VStream<BVec>>(dataW),
+				.ddrMode = ddr,
 			};
 		}
 	};

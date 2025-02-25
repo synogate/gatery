@@ -16,11 +16,16 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "scl/pch.h"
+#include <future>
+
 #include <boost/test/unit_test.hpp>
 #include <boost/test/data/dataset.hpp>
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
+#include <gatery/scl/arch/colognechip/CPE.h>
+#include <gatery/scl/arch/colognechip/io.h>
+#include <gatery/scl/arch/colognechip/SpecialFunction.h>
 #include <gatery/scl/synthesisTools/IntelQuartus.h>
 
 #include <gatery/scl/stream/SimuHelpers.h>
@@ -1111,7 +1116,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_spiflash_test, BoostUnitTestSimulationFixture)
 	Clock clock({ .absoluteFrequency = 100'000'000, .memoryResetType = ClockConfig::ResetType::NONE });
 	ClockScope clkScp(clock);
 
-	scl::SpiPort spiPort = scl::SpiPort::Create(8_b);
+	scl::SpiPort spiPort = scl::SpiPort::Create(8_b, true);
 	pinOut(spiPort, "spi");
 
 	// most basic simulation model
@@ -1164,16 +1169,16 @@ BOOST_FIXTURE_TEST_CASE(tilelink_spiflash_dual_ddr_test, BoostUnitTestSimulation
 	Clock clock({ .absoluteFrequency = 100'000'000, .memoryResetType = ClockConfig::ResetType::NONE });
 	ClockScope clkScp(clock);
 
-	scl::SpiPort spiPort = scl::SpiPort::Create(4_b);
+	scl::SpiPort spiPort = scl::SpiPort::Create(4_b, true);
 	pinOut(spiPort, "spi");
 
 	// most basic simulation model
 	valid(*spiPort.in) = reg(spiPort.inEn, '0');
 	**spiPort.in = 0;
 
-	scl::TileLinkUB tlPort = scl::tileLinkDoubleWidth(scl::tileLinkSpiFlash(spiPort, {
+	scl::TileLinkUB tlPort = scl::tileLinkSpiFlash(spiPort, {
 		.sourceW = 1_b, .sizeW = 3_b
-	}));
+	});
 
 	scl::TileLinkMasterModel mm;
 	mm.initAndDrive("tl", move((TileLinkUL&)tlPort));
@@ -1196,4 +1201,217 @@ BOOST_FIXTURE_TEST_CASE(tilelink_spiflash_dual_ddr_test, BoostUnitTestSimulation
 
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 2, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(tilelink_spiflash_dual_sdr_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000, .memoryResetType = ClockConfig::ResetType::NONE });
+	ClockScope clkScp(clock);
+
+	scl::SpiPort spiPort = scl::SpiPort::Create(2_b, false);
+	pinOut(spiPort, "spi");
+
+	// most basic simulation model
+	valid(*spiPort.in) = reg(spiPort.inEn, '0');
+	**spiPort.in = 0;
+
+	scl::TileLinkUB tlPort = scl::tileLinkSpiFlash(spiPort, {
+			.sourceW = 1_b, .sizeW = 3_b
+		});
+
+	scl::TileLinkMasterModel mm;
+	mm.initAndDrive("tl", move((TileLinkUL&)tlPort));
+
+	addSimulationProcess([&]()->SimProcess {
+		co_await OnClk(clock);
+
+		for (size_t i = 0; i < 5; ++i)
+		{
+			auto [val, def, err] = co_await mm.get(72211 * i, i, clock);
+			BOOST_TEST(!err);
+			BOOST_TEST(val == 0);
+		}
+
+		for (size_t w = 0; w < 8; ++w)
+			co_await OnClk(clock);
+
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 3, 1'000'000 }));
+}
+
+namespace gtry::scl
+{
+	void spiPortGateMate(SpiPort& port, std::string pinPrefix = "SPI_", bool useLatch = true)
+	{
+		using namespace arch::colognechip;
+		HCL_DESIGNCHECK(!port.ddrMode);
+
+		//pinOut(scl::Counter{2_b}.value().msb(), "FLASH_CLK");
+
+		CC_OBUF clkBuf;
+		clkBuf.pin(pinPrefix + "CLK");
+		clkBuf.O() = !ClockScope::getClk().clkSignal() & reg(port.clkEn);
+		// TODO: use ODDR for clock
+
+		CC_OBUF csnBuf;
+		csnBuf.pin(pinPrefix + "CSn");
+		csnBuf.regOut(true);
+		csnBuf.O() = reg(!port.cs.lsb());
+
+		auto captureInputOnHalfCycle = [=](Bit in) {
+			if (useLatch)
+			{
+				// the latch gives us slightly more margin on the output
+				// we could also use the register path in case latch makes problems
+				CC_DLT inLatch;
+				inLatch.G() = ClockScope::getClk().clkSignal();
+				inLatch.D() = in;
+				return inLatch.Q();
+			}
+			else
+			{
+				CC_DFF inDff;
+				inDff.clkInv(true);
+				inDff.D() = in;
+				return inDff.Q();
+			}
+		};
+
+		**port.in = undefined(**port.in);
+		if(port.out->width() == 1_b)
+		{
+			// there is a desdicated input and output pin in 1 bit mode
+			CC_OBUF outBuf;
+			outBuf.pin(pinPrefix + "DAT0");
+			outBuf.regOut(true);
+			outBuf.O() = reg(port.out->lsb());
+
+			CC_IBUF inBuf;
+			inBuf.pin(pinPrefix + "DAT1");
+			inBuf.regIn(true);
+			inBuf.schmittTrigger(true);
+
+			(**port.in).lsb() = captureInputOnHalfCycle(inBuf.I());
+		}
+		else
+		{
+			// in all other modes pins are bidirectional
+			for (size_t i = 0; i < port.out->size(); ++i)
+			{
+				arch::colognechip::CC_IOBUF buf;
+				buf.regIn(true);
+				buf.regOut(true);
+				buf.pin(pinPrefix + "DAT" + std::to_string(i));
+				buf.O() = reg(port.out->at(i));
+				buf.disable() = reg(!valid(port.out), '1');
+				buf.schmittTrigger(true);
+				(**port.in)[i] = captureInputOnHalfCycle(buf.I());
+			}
+		}
+
+		valid(*port.in) = reg(port.inEn, '0');
+		**port.in = gtry::simOverride(**port.in, ConstBVec(0, (**port.in).width()));
+	}
+}
+
+BOOST_FIXTURE_TEST_CASE(tilelink_spiflash_sdr_gatemate_test, BoostUnitTestSimulationFixture, *boost::unit_test::disabled())
+{
+	{
+		std::ofstream f{ "export/tilelink_spiflash_sdr_gatemate_test/flash_content.hex", std::ios::binary };
+		for (size_t i = 0; i < 4096; ++i)
+			f.put((char)i);
+	}
+
+#if 1
+	Clock clock({ 
+		.absoluteFrequency = 12'000'000, 
+		.name = "CLK12M", 
+		.resetType = ClockConfig::ResetType::SYNCHRONOUS,
+		.memoryResetType = ClockConfig::ResetType::NONE,
+		.resetActive = ClockConfig::ResetActive::LOW,
+	});
+
+	Bit synchronizedReset = scl::synchronizeRelease(arch::colognechip::usr_rstn(), ClockScope::getClk(), clock, ClockConfig::ResetActive::LOW);
+	clock.reset(synchronizedReset);
+#else
+	Clock clockIn({
+		.absoluteFrequency = 12'000'000,
+		.name = "CLK12M",
+		.resetType = ClockConfig::ResetType::NONE,
+	});
+	ClockScope pinScope{ arch::colognechip::globalReset(clockIn) };
+	Clock clock = arch::colognechip::globalReset(
+		arch::colognechip::pll({ 
+			.absoluteFrequency = 6'000'000,
+		})
+	);
+#endif
+	ClockScope clkScp(clock);
+
+	scl::SpiPort spiPort = scl::SpiPort::Create(4_b, false);
+	spiPortGateMate(spiPort, "FLASH_");
+
+#if 1
+	scl::TileLinkUB tlPort = scl::tileLinkSpiFlash(spiPort, {
+			.sourceW = 1_b, .sizeW = 3_b,
+		//	.preloadCommandByteTimeout = hlim::ClockRational{1, 1},
+	});
+
+	{ // test driver
+		enum class State {
+			wait,
+			request,
+			response
+		};
+		Reg<Enum<State>> state{ State::wait };
+	
+		IF(state.current() == State::wait)
+		{
+			IF(scl::Counter{ 21_b }.isLast())
+				state = State::request;
+		}
+
+		scl::Counter addrCounter{ 12_b };
+
+		tlPort.a->setupGet(zext(addrCounter.value()) | 1048576);
+		valid(tlPort.a) = '0';
+		ready(*tlPort.d) = '1';
+
+		IF(state.current() == State::request)
+		{
+			valid(tlPort.a) = '1';
+			IF(transfer(tlPort.a))
+				state = State::response;
+		}
+
+		Bit resultCheck;
+		IF(state.current() == State::response)
+		{
+			IF(transfer(*tlPort.d))
+			{
+				state = State::wait;
+				resultCheck = (*tlPort.d)->data == addrCounter.value().lower(8_b);
+				addrCounter.inc();
+			}
+		}
+		resultCheck = reg(resultCheck, Bit{ '0' }) | name("resultCheck");
+		pinOut(resultCheck, "UART0_TX");
+	}
+#endif
+
+	design.postprocess();
+
+	vhdl::VHDLExport vhdl("export/tilelink_spiflash_sdr_gatemate_test/tilelink_spiflash_sdr_gatemate_test.vhd");
+	vhdl(design.getCircuit());
+
+	auto flowTask = std::async([]() {
+		return std::system("make -C export/tilelink_spiflash_sdr_gatemate_test");
+	});
+
+	runHitsTimeout({ 4, 1'000'000 });
+
+	flowTask.wait();
 }

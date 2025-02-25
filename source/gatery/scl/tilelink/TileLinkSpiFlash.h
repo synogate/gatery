@@ -19,6 +19,7 @@
 #include <gatery/frontend.h>
 #include <gatery/scl/io/QSpiController.h>
 #include "tilelink.h"
+#include "TileLinkAdapter.h"
 
 namespace gtry::scl
 {
@@ -54,13 +55,14 @@ namespace gtry::scl
 		TileLinkUB out = tileLinkInit<TileLinkUB>(24_b, port.out->width(), config.sourceW, config.sizeW);
 
 		uint8_t readCode;
+		const BitWidth busW = port.ddrMode ? port.out->width() / 2 : port.out->width();
 		if (config.readCode)
 			readCode = *config.readCode;
-		else if (port.out->width() == 8_b)
+		else if (busW == 4_b)
 			readCode = 0xEB;
-		else if (port.out->width() == 4_b)
+		else if (busW == 2_b)
 			readCode = 0xBB;
-		else if (port.out->width() == 2_b)
+		else if (busW == 1_b)
 			readCode = 0x0B;
 		else
 			HCL_DESIGNCHECK_HINT(false, "could not identify read code");
@@ -69,11 +71,17 @@ namespace gtry::scl
 		if (config.dummyCycles)
 			dummyCycles = *config.dummyCycles;
 		else if (readCode == 0xEB)
-			dummyCycles = 6 / 2;
+			dummyCycles = 6;
 		else if (readCode == 0xBB)
-			dummyCycles = 4 / 2;
+			dummyCycles = 4;
 		else if (readCode == 0x0B)
-			dummyCycles = 8 / 2;
+			dummyCycles = 8;
+
+		if (port.ddrMode)
+		{
+			HCL_DESIGNCHECK(dummyCycles % 2 == 0);
+			dummyCycles /= 2;
+		}
 
 		enum class State {
 			idle,			// wait for request and chip deselect
@@ -140,18 +148,33 @@ namespace gtry::scl
 		{
 			valid(port.out) = '1';
 
-			UInt cmdBits = "2b00";
-			const UInt& cnt = counter.value().lower(2_b);
-			for (size_t i = 0; i < 4; ++i)
-				IF (cnt == i)
-					cmdBits = readCode >> 2 * i & 0x3;
+			const size_t commandCycles = port.ddrMode ? 4 : 8;
+			const UInt& cnt = counter.value().lower(BitWidth::count(commandCycles));
 
-			// command is read on lane 0 only, we pad the others with one to reduce transitions
-			*port.out = (BVec)pack(
-				oext(cmdBits[0], port.out->width() / 2), 
-				oext(cmdBits[1], port.out->width() / 2)
-			);
-			IF(cnt == 3)
+			if(port.ddrMode)
+			{	
+				UInt cmdBits = "2b00";
+				for (size_t i = 0; i < 4; ++i)
+					IF(cnt == i)
+						cmdBits = readCode >> 2 * i & 0x3;
+
+				// command is read on lane 0 only, we pad the others with one to reduce transitions
+				*port.out = (BVec)pack(
+					oext(cmdBits[0], port.out->width() / 2),
+					oext(cmdBits[1], port.out->width() / 2)
+				);
+			}
+			else
+			{
+				Bit cmdBit = '0';
+				for (size_t i = 0; i < 8; ++i)
+					IF(cnt == i)
+						cmdBit = (readCode >> (7-i) & 0x1) != 0;
+
+				*port.out = (BVec)oext(cmdBit, port.out->width());
+			}
+
+			IF(cnt == commandCycles - 1)
 				state = config.preloadCommandByteTimeout ? State::waitForRequest : State::addr;
 		}
 
@@ -185,7 +208,7 @@ namespace gtry::scl
 
 			size_t addressBeats = 24_b / port.out->width();
 			const UInt& cnt = counter.value().lower(BitWidth::count(addressBeats));
-			*port.out = (BVec)out.a->address.part(addressBeats, cnt);
+			*port.out = (BVec)swapEndian(out.a->address, port.out->width()).part(addressBeats, cnt);
 
 			IF(cnt == addressBeats - 1)
 				state = dummyCycles ? State::dummy : State::read;
@@ -252,7 +275,17 @@ namespace gtry::scl
 		}
 
 		HCL_NAMED(out);
-		return out;
+
+		std::function<TileLinkUB(TileLinkUB&&)> incWidth = [&](TileLinkUB&& slave) {
+			if (slave.a->data.width() == 8_b)
+				return slave;
+			return incWidth(tileLinkDoubleWidth(move(slave)));
+		};
+
+		TileLinkUB out8b = incWidth(move(out));
+		(*out8b.d)->data = swapEndian((*out8b.d)->data, port.out->width());
+		HCL_NAMED(out8b);
+		return out8b;
 	}
 
 
