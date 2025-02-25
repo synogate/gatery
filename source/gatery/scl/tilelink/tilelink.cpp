@@ -241,6 +241,17 @@ namespace gtry::scl
 		desc->name = mem.name();
 		connectAddrDesc(link.addrSpaceDesc, desc);
 	}
+
+	TileLinkUL tileLinkMemory(BitWidth addrW, BitWidth dataW, BitWidth sourceW)
+	{
+		Area ent{ "scl_TLMemory", true };
+
+		BitWidth memAddrW = addrW - BitWidth::count((dataW / 8).bits());
+		Memory<BVec> mem(memAddrW.count(), dataW);
+		auto link = tileLinkInit<TileLinkUL>(addrW, dataW, sourceW);
+		connect(mem, link);
+		return link;
+	}
 }
 
 namespace gtry 

@@ -169,6 +169,8 @@ namespace gtry::scl
 	using gtry::connect;
 	void connect(Memory<BVec>& mem, TileLinkUL& link);
 
+	TileLinkUL tileLinkMemory(BitWidth addrW, BitWidth dataW, BitWidth sourceW = 0_b);
+
 	template<TileLinkSignal TLink> TLink regDecouple(TLink&& link);
 	/**
 	 * @brief	Places stream decoupling registers in both the A channel direction and the D channel direction. Quick and sometimes dirty way to add

@@ -297,7 +297,7 @@ namespace gtry::scl
 		}
 	}
 
-	scl::TileLinkUB tileLinkAddBurst(scl::TileLinkUL& slave, BitWidth sizeW)
+	scl::TileLinkUB tileLinkAddBurst(scl::TileLinkUL&& slave, BitWidth sizeW)
 	{
 		Area ent{ "scl_tileLinkAddBurst", true };
 

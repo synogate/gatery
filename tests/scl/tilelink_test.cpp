@@ -30,6 +30,7 @@
 
 #include <gatery/scl/stream/SimuHelpers.h>
 #include <gatery/scl/tilelink/tilelink.h>
+#include <gatery/scl/tilelink/TileLinkCache.h>
 #include <gatery/scl/tilelink/TileLinkDMA.h>
 #include <gatery/scl/tilelink/TileLinkHub.h>
 #include <gatery/scl/tilelink/TileLinkErrorResponder.h>
@@ -837,7 +838,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_burst_stream_fetch_test, BoostUnitTestSimulatio
 
 	TileLinkUL memTL = tileLinkInit<TileLinkUL>(fetcher.a->address.width(), fetcher.a->data.width(), fetcher.a->source.width() + 5_b);
 	mem <<= memTL;
-	tileLinkAddBurst(memTL, fetcher.a->size.width()) <<= fetcher;
+	tileLinkAddBurst(move(memTL), fetcher.a->size.width()) <<= fetcher;
 
 	std::array<std::array<size_t, 2>, 3> testCases = {
 		std::array<size_t, 2>{ 16, 4 },
@@ -895,7 +896,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_addburst_test, LinkTest)
 	scl::tileLinkInit(memLink, 8_b, 8_b, 0_b, 6_b);
 	mem <<= memLink;
 
-	scl::TileLinkUB memBurst = scl::tileLinkAddBurst(memLink, 2_b);
+	scl::TileLinkUB memBurst = scl::tileLinkAddBurst(move(memLink), 2_b);
 
 	linkModel.init("m", 8_b, 8_b, 2_b);
 	memBurst <<= link;
@@ -924,7 +925,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_addburst2_test, LinkTest)
 	scl::tileLinkInit(memLink, 8_b, 16_b, 1_b, 12_b);
 	mem <<= memLink;
 
-	scl::TileLinkUB memBurst = scl::tileLinkAddBurst(memLink, 3_b);
+	scl::TileLinkUB memBurst = scl::tileLinkAddBurst(move(memLink), 3_b);
 
 	linkModel.init("m", 8_b, 16_b, 3_b, 5_b);
 	memBurst <<= link;
@@ -976,7 +977,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_doublewidth_test, LinkTest)
 	scl::tileLinkInit(memLink, 8_b, 8_b, 0_b, 6_b);
 	mem <<= memLink;
 
-	scl::TileLinkUB memBurst = scl::tileLinkAddBurst(memLink, 2_b);
+	scl::TileLinkUB memBurst = scl::tileLinkAddBurst(move(memLink), 2_b);
 	scl::TileLinkUB memDouble = scl::tileLinkDoubleWidth(memBurst);
 
 	linkModel.init("m", 8_b, 16_b, 2_b);
@@ -1109,6 +1110,58 @@ BOOST_FIXTURE_TEST_CASE(tilelink_FromStream_test, BoostUnitTestSimulationFixture
 
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(tilelink_cache_dmrob_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000, .memoryResetType = ClockConfig::ResetType::NONE });
+	ClockScope clkScp(clock);
+
+	auto testVal = [](size_t i) { return (i | (~i << 8)) & 0xFFFF; };
+
+	gtry::sim::DefaultBitVectorState memoryState;
+	memoryState.resize(128 * 16);
+	for (size_t i = 0; i < 128; ++i)
+	{
+		memoryState.insert(sim::DefaultConfig::VALUE, i * 16, 16, testVal(i));
+		memoryState.insert(sim::DefaultConfig::DEFINED, i * 16, 16, 0xFFFF);
+	}
+
+	Memory<BVec> mem(memoryState.size() / 16, 16_b);
+	mem.fillPowerOnState(memoryState);
+	auto link = tileLinkInit<TileLinkUL>(8_b, 16_b, 7_b);
+	mem <<= link;
+
+	scl::TileLinkUB memory = move(link) | scl::tileLinkAddBurst(2_b) | name("mem");
+	scl::TileLinkUL cached = scl::tileLinkCacheDirectMappedReadOnlyBurst(move((scl::TileLinkUL&)memory), 4_b);
+
+	scl::TileLinkMasterModel mm;
+	mm.initAndDrive("tl", move(cached));
+
+	addSimulationProcess([&]()->SimProcess {
+		co_await OnClk(clock);
+
+		// TODO: parallel requests
+		// TODO: fuzzing access pattern
+
+		for (size_t j = 0; j < 2; ++j)
+			for (size_t i = 0; i < 16; ++i)
+			{
+				auto test = fork(mm.get(i * 2, 1, clock));
+
+				auto [val, def, err] = co_await join(test);
+				BOOST_TEST(!err);
+				BOOST_TEST(def == 0xFFFF);
+				BOOST_TEST(val == testVal(i));
+			}
+
+		for (size_t w = 0; w < 4; ++w)
+			co_await OnClk(clock);
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 5, 1'000'000 }));
 }
 
 BOOST_FIXTURE_TEST_CASE(tilelink_spiflash_test, BoostUnitTestSimulationFixture)

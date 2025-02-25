@@ -30,6 +30,6 @@ namespace gtry::scl
 	inline scl::TileLinkUB tileLinkDoubleWidth(scl::TileLinkUB&& slave) { return tileLinkDoubleWidth(slave); }
 	inline auto tileLinkDoubleWidth() {	return [=](auto&& in) { return tileLinkDoubleWidth(std::forward<decltype(in)>(in)); }; }
 
-	scl::TileLinkUB tileLinkAddBurst(scl::TileLinkUL& slave, BitWidth sizeW);
+	scl::TileLinkUB tileLinkAddBurst(scl::TileLinkUL&& slave, BitWidth sizeW);
 	inline auto tileLinkAddBurst(BitWidth sizeW) { return [=](auto&& in) { return tileLinkAddBurst(std::forward<decltype(in)>(in), sizeW); }; }
 }
