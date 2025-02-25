@@ -54,6 +54,9 @@ void ExternalModule::clockIn(std::string_view name, std::string_view resetName)
 
 void ExternalModule::clockIn(const Clock& clock, std::string_view name, std::string_view resetName)
 {
+	if (clock.getClk()->getRegAttribs().resetType == ClockConfig::ResetType::NONE)
+		resetName = "";
+
 	for (size_t i = 0; i < m_node.clockNames().size(); ++i)
 	{
 		if (m_node.clockNames()[i] == name)
