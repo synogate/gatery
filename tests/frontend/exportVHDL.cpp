@@ -1426,7 +1426,7 @@ BOOST_FIXTURE_TEST_CASE(MuxExpression, gtry::GHDLTestFixture)
 			simu(in1) = (i & 1) != 0;
 			simu(in2) = (i & 2) != 0;
 			co_await AfterClk(clock);
-			int unsused = simu(out);
+			uint64_t unsused = simu(out);
 			//int unsused2 = simu(out2);
 		}
 		stopTest();
