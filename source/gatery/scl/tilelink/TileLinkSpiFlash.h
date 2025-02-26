@@ -108,7 +108,7 @@ namespace gtry::scl
 
 		size_t counterEnd = 4;
 		// burst count
-		counterEnd = std::max(counterEnd, 1ull << out.a->size.width().count());
+		counterEnd = std::max<size_t>(counterEnd, 1ull << out.a->size.width().count());
 		// timeout count
 		if (preloadCommandByteTimeoutCycles)
 			counterEnd = std::max(counterEnd, *preloadCommandByteTimeoutCycles);
