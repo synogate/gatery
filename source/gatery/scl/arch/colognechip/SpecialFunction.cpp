@@ -17,6 +17,11 @@
 */
 #include "gatery/scl_pch.h"
 #include "SpecialFunction.h"
+#include "io.h"
+
+#include "../../Counter.h"
+#include "../../flag.h"
+#include "../../cdc.h"
 
 namespace gtry::scl::arch::colognechip
 {
@@ -120,5 +125,90 @@ namespace gtry::scl::arch::colognechip
 		return CC_PLL{}
 			.clkRef(ClockScope::getClk())
 			.clkOut(cfg);
+	}
+
+	Clock clkdiv(const Clock& src, ClockConfig cfg)
+	{
+		if (!cfg.absoluteFrequency)
+		{
+			// we convert to absolute frequency to signal no phase relationsship to gatery
+			HCL_DESIGNCHECK(cfg.frequencyMultiplier);
+			cfg.absoluteFrequency = src.absoluteFrequency() * *cfg.frequencyMultiplier;
+			cfg.frequencyMultiplier.reset();
+		}
+
+		hlim::ClockRational mul = *cfg.absoluteFrequency / src.absoluteFrequency();
+		HCL_DESIGNCHECK_HINT(mul.numerator() == 1, "can only divide, not multiply. use pll to multiply.");
+
+		size_t divider = mul.denominator();
+		if (divider == 1)
+			return src.deriveClock(cfg);
+
+		ClockScope clkscope{ src };
+		Bit clkSignal;
+		if (divider % 2 == 0)
+		{
+			clkSignal = reg(clkSignal ^ scl::Counter(divider / 2).isLast(), '0');
+		}
+		else
+		{
+			Clock risingClk = src.deriveClock({ .triggerEvent = ClockConfig::TriggerEvent::RISING });;
+			Clock fallingClk = src.deriveClock({ .triggerEvent = ClockConfig::TriggerEvent::FALLING });
+
+			ClockScope rising{ risingClk };
+			scl::Counter ctr1(divider);
+			Bit clk1 = scl::flag(ctr1.isLast(), ctr1.value() == divider / 2 - 1) | name("clk1");
+
+			ClockScope falling{ fallingClk };
+			scl::Counter ctr2(divider);
+			Bit clk2 = scl::flag(ctr2.isLast(), ctr2.value() == divider / 2 - 1) | name("clk2");
+
+			clkSignal = clk1 | clk2;
+		}
+		
+		CC_BUFG buf;
+		buf.I() = clkSignal;
+		Clock slowClk = buf.clockOut("O", {}, cfg);
+
+		if (slowClk.getClk()->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE)
+		{
+			HCL_DESIGNCHECK(src.getClk()->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE);
+			slowClk.reset(src.rstSignal(), src.getClk(), src.getClk()->getRegAttribs().resetActive);
+		}
+		return slowClk;
+	}
+
+	Bit serdes(BVec data, const Clock& slowClk, const Clock& fastClk)
+	{
+		Area ent{ "scl_serdes", true };
+
+		gtry::hlim::ClockRational ratio = fastClk.absoluteFrequency() / slowClk.absoluteFrequency();
+		HCL_DESIGNCHECK(ratio.denominator() == 1);
+		HCL_DESIGNCHECK(ratio.numerator() == data.size() || (data.size() % 2 == 0 && ratio.numerator() == data.size() / 2));
+		const bool ddrMode = ratio.numerator() == data.size() / 2;
+
+		if (data.width() == 1_b)
+			return data.lsb();
+
+		Bit slowEdge = scl::synchronizeEvent('1', slowClk, fastClk) | name("slowEdge");
+		BVec inWord = reg(data, { .clock = slowClk }) | name("inWord");
+
+		BVec shiftReg = data.width();
+		shiftReg >>= ddrMode ? 2 : 1;
+		IF(slowEdge)
+			shiftReg = allowClockDomainCrossing(inWord, slowClk, fastClk);
+		shiftReg = reg(shiftReg, { .clock = fastClk }) | name("shiftReg");
+
+		if (ddrMode)
+		{
+			scl::arch::colognechip::CC_ODDR ddr;
+			ddr.D0() = shiftReg[1];
+			ddr.D1() = shiftReg[0];
+			return ddr.Q();
+		}
+		else
+		{
+			return shiftReg.lsb();
+		}
 	}
 }
