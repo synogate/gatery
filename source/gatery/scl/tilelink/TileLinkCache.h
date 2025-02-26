@@ -31,12 +31,19 @@ namespace gtry::scl
 		};
 	}
 
-	TileLinkUL tileLinkCacheDirectMappedReadOnly(TileLinkUL&& slave, BitWidth addrW);
-	inline auto tileLinkCacheDirectMappedReadOnly(BitWidth addrW) { return [=](auto&& in) { return tileLinkAddBurst(std::forward<decltype(in)>(in), addrW); }; }
-
-	TileLinkUL tileLinkCacheDirectMappedReadOnlyBurst(TileLinkUL&& slave, gtry::BitWidth addrW);
-	inline auto tileLinkCacheDirectMappedReadOnlyBurst(BitWidth addrW) { return [=](auto&& in) { return tileLinkAddBurst(std::forward<decltype(in)>(in), addrW); }; }
-
+	/**
+	 * @brief 
+		- typical cache for the instruction fetch port of a CPU
+		- direct mapped
+		- read only. any non get access triggers undefined behavior.
+		- the cpu interface does not support bursts
+		- 8 byte bursts on memory interface iff address is aligned
+		
+	 * @param addrW Number of address bits for cache memory. The cache memory will have 2^addrW words.
+	 * @param selectBurst Optional function to select the burst size and conditions. The function is called with the memory request channel and can modify the channel.
+	 */
+	TileLinkUL tileLinkCacheDirectMappedReadOnlyBurst(TileLinkUL&& slave, gtry::BitWidth addrW, std::function<void(TileLinkChannelA&)> selectBurst = {});
+	inline auto tileLinkCacheDirectMappedReadOnlyBurst(BitWidth addrW, std::function<void(TileLinkChannelA&)> selectBurst = {}) { return [=](auto&& in) { return tileLinkAddBurst(std::forward<decltype(in)>(in), addrW, move(selectBurst)); }; }
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::internal::RoCacheData, tag, value, valid);

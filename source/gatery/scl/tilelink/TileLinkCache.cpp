@@ -20,65 +20,7 @@
 
 namespace gtry::scl
 {
-	TileLinkUL tileLinkCacheDirectMappedReadOnly(TileLinkUL&& out, BitWidth addrW)
-	{
-		Area ent{ "scl_RoCache", true };
-		//HCL_NAMED(link);
-
-		scl::TileLinkUL link = constructFrom(out);
-		*link.d <<= *out.d;
-
-		const size_t bytePerBeatLog = utils::Log2(link.a->data.width().bytes());
-		const BitWidth tagW = link.a->address.width() - bytePerBeatLog - addrW;
-		Memory<internal::RoCacheData> cacheMem(addrW.count(), internal::RoCacheData{
-			.tag = tagW,
-			.value = link.a->data.width()
-			});
-		HCL_NAMED(cacheMem);
-		cacheMem.noConflicts();
-		cacheMem.setType(MemType::DONT_CARE, 1);
-		cacheMem.initZero();
-
-		UInt reqAddr = link.a->address.width();
-		IF(valid(out.a))
-			reqAddr = out.a->address;
-		reqAddr = reg(reqAddr);
-		HCL_NAMED(reqAddr);
-
-		IF(valid(*out.d))
-		{
-			cacheMem[reqAddr(bytePerBeatLog, addrW)] = internal::RoCacheData{
-				.tag = reqAddr.upper(tagW),
-				.value = (*out.d)->data,
-				.valid = '1',
-			};
-		}
-
-		internal::RoCacheData line = cacheMem[link.a->address(bytePerBeatLog, addrW)];
-		line = reg(line, RegisterSettings{ .allowRetimingBackward = true });
-		HCL_NAMED(line);
-
-		scl::TileLinkChannelA req = scl::strm::regDownstream(move(link.a));
-		HCL_NAMED(req);
-
-		// cache hit
-		IF(valid(req) & line.valid & line.tag == req->address.upper(tagW))
-		{
-			ready(req) = ready(*link.d);
-			valid(*link.d) = '1';
-			**link.d = scl::tileLinkDefaultResponse(*req);
-			(*link.d)->data = line.value;
-
-			valid(req) = '0';
-		}
-
-		out.a <<= req;
-
-		HCL_NAMED(link);
-		return link;
-	}
-
-	TileLinkUL tileLinkCacheDirectMappedReadOnlyBurst(TileLinkUL&& ram, gtry::BitWidth addrW)
+	TileLinkUL tileLinkCacheDirectMappedReadOnlyBurst(TileLinkUL&& ram, gtry::BitWidth addrW, std::function<void(TileLinkChannelA&)> selectBurst)
 	{
 		Area ent{ "scl_RoCache", true };
 		scl::TileLinkUL cpu = constructFrom(ram);
@@ -135,9 +77,12 @@ namespace gtry::scl
 
 		// issue ram request on cache miss
 		*ram.a = *req;
-		// request burst only from dram
-		IF(ram.a->address.msb() == '0' & ram.a->address.lower(3_b) == 0)
+		IF(ram.a->address.lower(3_b) == 0)
 			ram.a->size = 3;
+		if(selectBurst)
+			selectBurst(ram.a);
+
+		// request burst only from dram
 		valid(ram.a) = !ramBusy & valid(req) & !cacheHit;
 		ready(*ram.d) = '1';
 

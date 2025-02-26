@@ -1112,56 +1112,101 @@ BOOST_FIXTURE_TEST_CASE(tilelink_FromStream_test, BoostUnitTestSimulationFixture
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
 }
 
-BOOST_FIXTURE_TEST_CASE(tilelink_cache_dmrob_test, BoostUnitTestSimulationFixture)
+class TileLinkInstructionCacheTest : public BoostUnitTestSimulationFixture
 {
-	Clock clock({ .absoluteFrequency = 100'000'000, .memoryResetType = ClockConfig::ResetType::NONE });
-	ClockScope clkScp(clock);
-
-	auto testVal = [](size_t i) { return (i | (~i << 8)) & 0xFFFF; };
-
-	gtry::sim::DefaultBitVectorState memoryState;
-	memoryState.resize(128 * 16);
-	for (size_t i = 0; i < 128; ++i)
+public:
+	TileLinkInstructionCacheTest()
 	{
-		memoryState.insert(sim::DefaultConfig::VALUE, i * 16, 16, testVal(i));
-		memoryState.insert(sim::DefaultConfig::DEFINED, i * 16, 16, 0xFFFF);
+		memoryState.resize(128 * 16);
+		for (size_t i = 0; i < memoryState.size() / 16; ++i)
+		{
+			memoryState.insert(sim::DefaultConfig::VALUE, i * 16, 16, rng() & 0xFFFF);
+			memoryState.insert(sim::DefaultConfig::DEFINED, i * 16, 16, 0xFFFF);
+		}
+
+		mm.probability(0.9f, 0.9f);
 	}
 
-	Memory<BVec> mem(memoryState.size() / 16, 16_b);
-	mem.fillPowerOnState(memoryState);
-	auto link = tileLinkInit<TileLinkUL>(8_b, 16_b, 7_b);
-	mem <<= link;
-
-	scl::TileLinkUB memory = move(link) | scl::tileLinkAddBurst(2_b) | name("mem");
-	scl::TileLinkUL cached = scl::tileLinkCacheDirectMappedReadOnlyBurst(move((scl::TileLinkUL&)memory), 4_b);
-
-	scl::TileLinkMasterModel mm;
-	mm.initAndDrive("tl", move(cached));
-
-	addSimulationProcess([&]()->SimProcess {
+	SimProcess performCpuAccessTest()
+	{
 		co_await OnClk(clock);
 
-		// TODO: parallel requests
-		// TODO: fuzzing access pattern
+		size_t openRequests = 0;
+		size_t addr = 0;
+		while (true)
+		{
+			while (openRequests == 2)
+				co_await OnClk(clock);
 
-		for (size_t j = 0; j < 2; ++j)
-			for (size_t i = 0; i < 16; ++i)
-			{
-				auto test = fork(mm.get(i * 2, 1, clock));
+			addr += 2;
+			if (rng() % 5 == 0)
+				addr -= 6; // branch back (loop)
+			if (rng() % 11 == 0)
+				addr = rng(); // branch random (call)
+			addr %= memoryState.size() / 8;
+			addr &= ~1;
 
-				auto [val, def, err] = co_await join(test);
+			openRequests++;
+			fork([&]()->SimProcess {
+				size_t value = memoryState.extract(sim::DefaultConfig::VALUE, addr * 8, 16);
+				size_t defined = memoryState.extract(sim::DefaultConfig::DEFINED, addr * 8, 16);
+
+				auto [val, def, err] = co_await mm.get(addr, 1, clock);
 				BOOST_TEST(!err);
-				BOOST_TEST(def == 0xFFFF);
-				BOOST_TEST(val == testVal(i));
-			}
+				BOOST_TEST(val == value);
+				BOOST_TEST(def == defined);
+				openRequests--;
+				checkedRequests++;
+				});
+		}
+	}
 
-		for (size_t w = 0; w < 4; ++w)
-			co_await OnClk(clock);
-		stopTest();
-	});
+	SimProcess checkProgress(size_t cyclesBetweenChecks)
+	{
+		size_t lastCheckedRequests = 0;
+		while (true)
+		{
+			for (size_t i = 0; i < cyclesBetweenChecks; ++i)
+				co_await OnClk(clock);
+
+			BOOST_TEST(lastCheckedRequests != checkedRequests);
+			lastCheckedRequests = checkedRequests;
+		}
+	}
+protected:
+	Clock clock = Clock({ .absoluteFrequency = 100'000'000, .memoryResetType = ClockConfig::ResetType::NONE });
+	std::mt19937_64 rng = std::mt19937_64{ std::random_device{}() };
+	gtry::sim::DefaultBitVectorState memoryState;
+	scl::TileLinkMasterModel mm;
+	size_t checkedRequests = 0;
+
+	scl::TileLinkUB generateTestMemory()
+	{
+		Memory<BVec> mem(memoryState.size() / 16, 16_b);
+		mem.fillPowerOnState(memoryState);
+		auto link = tileLinkInit<TileLinkUL>(8_b, 16_b, 6_b);
+		mem <<= link;
+
+		return move(link) | scl::tileLinkAddBurst(2_b) | name("mem");
+	}
+
+
+};
+
+BOOST_FIXTURE_TEST_CASE(tilelink_cache_dmrob_test, TileLinkInstructionCacheTest)
+{
+	{
+		ClockScope clkScp(clock);
+		scl::TileLinkUB memory = generateTestMemory();
+		scl::TileLinkUL cached = scl::tileLinkCacheDirectMappedReadOnlyBurst(move((scl::TileLinkUL&)memory), 4_b);
+		mm.initAndDrive("tl", move(cached));
+	}
+
+	addSimulationProcess(std::bind(&TileLinkInstructionCacheTest::performCpuAccessTest, this));
+	addSimulationProcess(std::bind(&TileLinkInstructionCacheTest::checkProgress, this, 8));
 
 	design.postprocess();
-	BOOST_TEST(!runHitsTimeout({ 5, 1'000'000 }));
+	runHitsTimeout({ 10, 1'000'000 });
 }
 
 BOOST_FIXTURE_TEST_CASE(tilelink_spiflash_test, BoostUnitTestSimulationFixture)
