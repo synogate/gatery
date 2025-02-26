@@ -97,7 +97,7 @@ BOOST_FIXTURE_TEST_CASE(eventSyncTest, BoostUnitTestSimulationFixture)
 				}
 				});
 
-			addSimulationProcess([=]()->SimProcess {
+			addSimulationProcess([=, this]()->SimProcess {
 				*eventsCaught = 0;
 				while (*eventsCaught < eventsToSend) {
 					while (simu(eventOut) != '1')
