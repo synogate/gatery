@@ -1303,11 +1303,14 @@ namespace gtry::scl
 		HCL_DESIGNCHECK(!port.ddrMode);
 
 		//pinOut(scl::Counter{2_b}.value().msb(), "FLASH_CLK");
+		//return;
 
 		CC_OBUF clkBuf;
 		clkBuf.pin(pinPrefix + "CLK");
-		clkBuf.O() = !ClockScope::getClk().clkSignal() & reg(port.clkEn);
-		// TODO: use ODDR for clock
+		CC_ODDR clkDDR{clkBuf};
+		clkDDR.clockInversion(true);
+		clkDDR.D0() = '0';
+		clkDDR.D1() = port.clkEn;
 
 		CC_OBUF csnBuf;
 		csnBuf.pin(pinPrefix + "CSn");
@@ -1395,7 +1398,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_spiflash_sdr_gatemate_test, BoostUnitTestSimula
 		.name = "CLK12M",
 		.resetType = ClockConfig::ResetType::NONE,
 	});
-	ClockScope pinScope{ arch::colognechip::globalReset(clockIn) };
+	ClockScope pinScope{ (clockIn) };
 	Clock clock = arch::colognechip::globalReset(
 		arch::colognechip::pll({ 
 			.absoluteFrequency = 6'000'000,
@@ -1409,8 +1412,8 @@ BOOST_FIXTURE_TEST_CASE(tilelink_spiflash_sdr_gatemate_test, BoostUnitTestSimula
 
 #if 1
 	scl::TileLinkUB tlPort = scl::tileLinkSpiFlash(spiPort, {
-			.sourceW = 1_b, .sizeW = 3_b,
-		//	.preloadCommandByteTimeout = hlim::ClockRational{1, 1},
+		.sourceW = 1_b, .sizeW = 3_b,
+		//.preloadCommandByteTimeout = hlim::ClockRational{1, 1},
 	});
 
 	{ // test driver
