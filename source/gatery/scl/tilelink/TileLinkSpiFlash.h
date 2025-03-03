@@ -17,7 +17,7 @@
 */
 #pragma once
 #include <gatery/frontend.h>
-#include <gatery/scl/io/QSpiController.h>
+#include <gatery/scl/io/SpiPort.h>
 #include "tilelink.h"
 #include "TileLinkAdapter.h"
 

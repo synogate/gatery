@@ -24,7 +24,7 @@
 #include <gatery/simulation/Simulator.h>
 #include <gatery/scl/io/codingNRZI.h>
 #include <gatery/scl/io/RecoverDataDifferential.h>
-#include <gatery/scl/io/QSpiController.h>
+#include <gatery/scl/io/SpiPort.h>
 
 using namespace boost::unit_test;
 using namespace gtry;
