@@ -64,6 +64,7 @@ void gtry::scl::usb::Function::setup(Phy& phy)
 	m_phy.tx.valid = '0';
 	m_phy.tx.error = '0';
 	m_phy.tx.data = 0;
+	m_phyCyclesPerTransfer = phy.cyclesPerTransfer();
 
 	if (DeviceDescriptor* dev = m_descriptor.device())
 		m_maxPacketSize = dev->MaxPacketSize;
@@ -454,7 +455,8 @@ void gtry::scl::usb::Function::generateInitialFsm()
 	m_configuration = reg(m_configuration, 0);
 	HCL_NAMED(m_configuration);
 
-	IF(m_state.next() == State::sendDataPid)
+	Bit descLengthPipeStageValid = reg(m_state.next() == State::sendDataPid, '0') | name("descLengthPipeStageValid");
+	IF(descLengthPipeStageValid)
 	{
 		m_descAddressActive = m_descAddress;
 		m_descLengthActive = m_descLength;
@@ -477,7 +479,7 @@ void gtry::scl::usb::Function::generateInitialFsm()
 	
 	m_descAddressActive = reg(m_descAddressActive);
 	HCL_NAMED(m_descAddressActive);
-	m_descLengthActive = reg(m_descLengthActive);
+	m_descLengthActive = reg(m_descLengthActive, 0);
 	HCL_NAMED(m_descLengthActive);
 	m_descAddress = reg(m_descAddress);
 	HCL_NAMED(m_descAddress);
@@ -507,11 +509,16 @@ void gtry::scl::usb::Function::generateInitialFsm()
 
 	HCL_NAMED(m_tx);
 	m_tx.ready = '0';
+
 	IF(m_state.current() == State::sendData)
 	{
 		PhyTxStream& tx = m_phy.tx;
-		Bit lenghtLimitReached = m_packetLen == m_packetLenTxLimit;
-		IF(m_tx.valid & m_tx.endPoint == m_endPoint & !lenghtLimitReached)
+
+		Bit lenghtLimitReached = m_packetLen == m_packetLenTxLimit | name("lenghtLimitReached");
+		Bit sendDataValid = (m_tx.valid & m_tx.endPoint == m_endPoint & !lenghtLimitReached) | name("sendDataValid");
+		if(m_phyCyclesPerTransfer > 1)
+			sendDataValid = reg(sendDataValid, '1');
+		IF(sendDataValid)
 		{
 			m_tx.ready = tx.ready;
 			tx.valid = '1';

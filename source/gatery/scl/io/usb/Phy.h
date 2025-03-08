@@ -69,7 +69,8 @@ namespace gtry::scl::usb
 		virtual PhyTxStream& tx() = 0;
 		virtual PhyRxStream& rx() = 0;
 
-		virtual bool supportCrc() const { return false; }
+		virtual bool supportCrc() const { return false; } // the phy is generating and checking crc
+		virtual size_t cyclesPerTransfer() const { return 1; } // used for optimizations in case of slow transmitting phys
 	};
 }
 

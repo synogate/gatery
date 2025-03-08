@@ -88,10 +88,12 @@ namespace gtry::scl::usb
 	public:
 		Function();
 
+		// configuration
 		Descriptor& descriptor() { return m_descriptor; }
 		void addClassSetupHandler(std::function<Bit(const SetupPacket&)> handler);
 		void addClassDataHandler(std::function<void(const BVec&)> handler);
 		
+		// generation
 		void setup(Phy& phy);
 
 		template<class Tphy>
@@ -105,6 +107,7 @@ namespace gtry::scl::usb
 			return phyRef;
 		}
 
+		// signal access after generation
 		const UInt& frameId() const { return m_frameId; }
 		const UInt& deviceAddress() const { return m_address; }
 		const UInt& configuration() const { return m_configuration; }
@@ -135,6 +138,7 @@ namespace gtry::scl::usb
 
 		std::unique_ptr<Phy> m_phyMem;
 		CrcHandler m_phy;
+		size_t m_phyCyclesPerTransfer = 0;
 		std::optional<Clock> m_clock;
 		PhyRxStatus m_rxStatus;
 
