@@ -250,10 +250,6 @@ BOOST_FIXTURE_TEST_CASE(basicGateMateHDMI_test, gtry::BoostUnitTestSimulationFix
 				for (size_t i = 0; i < tmdsCode.size(); ++i)
 					tmdsCode[i] = (BVec)scl::hdmi::tmdsEncodeSymbol(rgb[2 - i]);
 
-			// TODO: find mistake
-			for (size_t i = 0; i < 3; ++i)
-				tmdsCode[i] = ~tmdsCode[i];
-
 			return tmdsCode;
 		}
 		throw;
@@ -270,34 +266,38 @@ BOOST_FIXTURE_TEST_CASE(basicGateMateHDMI_test, gtry::BoostUnitTestSimulationFix
 		//buf.boost(true);
 
 		std::string name = "HDMI_D" + std::to_string(i);
-		buf.pin(name + "p", name + "n");
+		// not that "n" and "p" are swapped. this is because TMDS is logically inverted. (pulling D+ to ground is a logic high)
+		buf.pin(name + "n", name + "p");
 		buf.O() = scl::arch::colognechip::serdes(tmdsChan->at(i), clkSlow, clkFast);
 	}
 	{
 		ClockScope ioScope{ clkSlow };
 		scl::arch::colognechip::CC_LVDS_OBUF buf;
-		buf.pin("HDMI_CKp", "HDMI_CKn");
+		buf.pin("HDMI_CKn", "HDMI_CKp");
 		buf.O() = clkSlow.clkSignal();
 	}
 	
-	//{
-	//	ClockScope ioScope{ clkSlow };
-	//	Bit toggle;
-	//	toggle = reg(toggle ^ scl::Counter(25'0 / 2).isLast()) | name("toggleScl");
-	//
-	//	scl::arch::colognechip::CC_IOBUF scl;
-	//	scl.voltage("1.8");
-	//	scl.pullup(true);
-	//	scl.pin("HDMI_SCL");
-	//	scl.disable() = '0';
-	//	scl.O() = toggle;
-	//
-	//	scl::arch::colognechip::CC_IOBUF sda;
-	//	sda.voltage("1.8");
-	//	sda.pullup(true);
-	//	sda.pin("HDMI_SDA");
-	//	sda.disable() = '1';
-	//}
+#if 0 // basic DDC channel level shifter test
+	{
+		ClockScope ioScope{ clkSlow };
+		Bit toggle;
+		toggle = reg(toggle ^ scl::Counter(25'0 / 2).isLast()) | name("toggleScl");
+	
+		scl::arch::colognechip::CC_IOBUF scl;
+		scl.voltage("1.8");
+		scl.pullup(true);
+		scl.pin("HDMI_SCL");
+		scl.disable() = toggle;
+		scl.O() = '0';
+
+		scl::arch::colognechip::CC_IOBUF sda;
+		sda.voltage("1.8");
+		sda.pullup(true);
+		sda.pin("HDMI_SDA");
+		sda.disable() = toggle;
+		sda.O() = '0';
+	}
+#endif
 
 	// https://www.rapidtables.com/convert/color/hsv-to-rgb.html
 	/*

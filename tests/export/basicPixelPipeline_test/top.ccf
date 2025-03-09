@@ -49,22 +49,24 @@
 #   default_GPIO | DRIVE=3; # sets all output strengths to 3mA, unless overwritten
 #
 
-Pin_in   "CLK12M"       Loc = "IO_SB_A8";
+# pin assignment for BFC rev5
+Pin_in      "CLK12M"          Loc = "IO_SB_A5";
 
 # Pin_in     "reset"      Loc = "IO_SA_B1" | PULLDOWN=true;       # RX
 # Pin_in     "reset_2"    Loc = "IO_SA_A1" | PULLDOWN=true;       # TX
 
-Pin_out     "UART0_TX"        Loc = "IO_SA_A1";
-Pin_out     "UART0_RX"        Loc = "IO_SA_B1";
+Pin_out     "UART0_TX"        Loc = "IO_WB_A8";
+Pin_out     "UART0_RX"        Loc = "IO_WB_B8";
 
-Pin_out     "HDMI_CKp"      Loc = "IO_WC_A8";
-Pin_out     "HDMI_CKn"      Loc = "IO_WC_B8";
-Pin_out     "HDMI_D0p"      Loc = "IO_WC_A5";
-Pin_out     "HDMI_D0n"      Loc = "IO_WC_B5";
-Pin_out     "HDMI_D1p"      Loc = "IO_WC_A3";
-Pin_out     "HDMI_D1n"      Loc = "IO_WC_B3";
-Pin_out     "HDMI_D2p"      Loc = "IO_WC_A0";
-Pin_out     "HDMI_D2n"      Loc = "IO_WC_B0";
-Pin_inout   "HDMI_SCL"      Loc = "IO_WC_A4" | PULLUP=true;
-Pin_inout   "HDMI_SDA"      Loc = "IO_WC_B4" | PULLUP=true;
-Pin_in      "HDMI_HPD"      Loc = "IO_WC_A6";
+# HDMI
+Pin_out     "HDMI_CKp"      Loc = "IO_SA_B0";
+Pin_out     "HDMI_CKn"      Loc = "IO_SA_A0";
+Pin_out     "HDMI_D0p"      Loc = "IO_SA_B3";
+Pin_out     "HDMI_D0n"      Loc = "IO_SA_A3";
+Pin_out     "HDMI_D1p"      Loc = "IO_SA_B5";
+Pin_out     "HDMI_D1n"      Loc = "IO_SA_A5";
+Pin_out     "HDMI_D2p"      Loc = "IO_SA_B8";
+Pin_out     "HDMI_D2n"      Loc = "IO_SA_A8";
+Pin_inout   "HDMI_SCL"      Loc = "IO_SA_A4" | PULLUP=true;
+Pin_inout   "HDMI_SDA"      Loc = "IO_SA_A6" | PULLUP=true;
+Pin_in      "HDMI_HPD"      Loc = "IO_SA_A2" | PULLDOWN=true;
