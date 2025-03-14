@@ -43,6 +43,7 @@
 #include <set>
 #include <stdexcept>
 #include <cstdlib>
+#include <format>
 
 // Adopted from Andy's codebase
 
