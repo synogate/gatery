@@ -1,4 +1,5 @@
 #pragma once
+#include <future>
 
 #include <gatery/frontend.h>
 #include <gatery/frontend/GHDLTestFixture.h>

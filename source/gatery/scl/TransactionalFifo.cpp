@@ -25,7 +25,7 @@ void gtry::scl::internal::generateCDCReqAck(const UInt& inData, UInt& outData, c
 	RvStream<UInt> inDataStream{ inData };
 	valid(inDataStream) = '1';
 	RvStream<UInt> synchronizableInDataStream = strm::regDownstream(move(inDataStream), RegisterSettings{.clock = inDataClock});
-	auto outDataStream = synchronizeStreamReqAck(synchronizableInDataStream, inDataClock, outDataClock);
+	auto outDataStream = synchronizeStreamReqAck(move(synchronizableInDataStream), inDataClock, outDataClock);
 	ENIF(valid(outDataStream))
 		outData = reg(*outDataStream, 0 , RegisterSettings{ .clock = outDataClock });
 	ready(outDataStream) = '1';

@@ -195,8 +195,7 @@ BOOST_FIXTURE_TEST_CASE(basicGateMateHDMI_test, gtry::BoostUnitTestSimulationFix
 	// we use ddr output to reduce out bit clock to 5 * pixel clock
 	hlim::ClockRational bitFreq = mode.pixelFreq * hlim::ClockRational{ 10, 2 };
 	
-	ClockScope pinClk{ clk12 };
-	Clock clkFast = scl::arch::colognechip::pll({ .absoluteFrequency = bitFreq, .resetType = ClockConfig::ResetType::NONE });
+	Clock clkFast = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = bitFreq, .resetType = ClockConfig::ResetType::NONE });
 	Clock clkSlow = scl::arch::colognechip::clkdiv(clkFast, { .absoluteFrequency = mode.pixelFreq, .resetType = ClockConfig::ResetType::NONE });
 	ClockScope scope(clkSlow);
 

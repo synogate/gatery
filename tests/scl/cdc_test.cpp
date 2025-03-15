@@ -119,19 +119,170 @@ BOOST_FIXTURE_TEST_CASE(eventSyncTest, BoostUnitTestSimulationFixture)
 		BOOST_TEST(!runHitsTimeout({ 50, 1'000'000 }));
 }
 
-BOOST_FIXTURE_TEST_CASE(cdc_gatemate_fifo_hw_test, BoostUnitTestSimulationFixture, *boost::unit_test::disabled())
+class GateMateStreamCdcTest : public BoostUnitTestSimulationFixture
 {
+protected:
+	size_t incBy = 7;
+
+	scl::RvStream<UInt> generator(BitWidth dataW = 8_b) const
+	{
+		return scl::strm::iota(ConstUInt(0, dataW), incBy);
+	}
+
+	Bit checker(scl::RvStream<UInt> in) const
+	{
+		Area checker{ "test_checker", true };
+		scl::Stream err = move(in)
+			| scl::strm::join(generator(in->width()))
+			| scl::strm::transform([](const std::pair<UInt, UInt>& inc) {
+				return inc.first != inc.second;
+			});
+		ready(err) = '1';
+		return (valid(err) & *err) | name("error");
+	}
+
+	void pinoutError(Bit error)
+	{
+		Bit errorLatch = scl::flag(error, '0') | name("errorLatch");
+
+		scl::Counter aliveSignalCtr(12_b);
+		errorLatch ^= aliveSignalCtr.isLast();
+
+		pinOut(reg(error, '0'), "UART0_TX");
+		pinOut(reg(errorLatch, '0'), "UART0_RX");
+
+		addSimulationProcess([error, clk = ClockScope::getClk()]() -> SimProcess {
+			while (true)
+			{
+				co_await OnClk(clk);
+				BOOST_TEST(simu(error) == '0');
+			}
+		});
+	}
+
+	void run()
+	{
+		design.postprocess();
+		
+		const std::string& testName = boost::unit_test::framework::current_test_case().p_name.get();
+		std::filesystem::path cwd = std::filesystem::path{ "export" } / testName;
+
+		std::future<int> flow;
+		if (std::filesystem::is_directory(cwd))
+		{
+			vhdl::VHDLExport vhdl(cwd / "top.vhd");
+			vhdl(design.getCircuit());
+
+			flow = std::async([=]() {
+				return std::system(("make -C " + cwd.string()).c_str());
+			});
+		}
+		runHitsTimeout({ 10, 1'000'000 });
+		
+		if(flow.valid())
+			BOOST_TEST(flow.get() == 0);
+
+	}
+
 	Clock clk12{ ClockConfig{
 		.absoluteFrequency = 12'000'000,
 		.name = "CLK12M",
 		.resetType = hlim::RegisterAttributes::ResetType::NONE
 	} };
 
+	Clock clkFast = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = {4 * 30'000'000}, .resetType = ClockConfig::ResetType::NONE });
+	Clock clkSlow = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = {4 * 29'666'000}, .resetType = ClockConfig::ResetType::NONE });
+};
 
-	ClockScope pinClk{ clk12 };
-	Clock clkFast = scl::arch::colognechip::pll({ .absoluteFrequency = {30'000'000}, .resetType = ClockConfig::ResetType::NONE });
-	Clock clkSlow = scl::arch::colognechip::pll({ .absoluteFrequency = {29'500'000}, .resetType = ClockConfig::ResetType::NONE });
+BOOST_FIXTURE_TEST_CASE(cdc_gatemate_reqack_hw_test, GateMateStreamCdcTest, *boost::unit_test::disabled())
+{
+	ClockScope genSide{ clkFast };
+	scl::Stream toCheck = generator() | scl::strm::synchronizeStreamReqAck(clkFast, clkSlow);
 
+	ClockScope checkSide{ clkSlow };
+	pinoutError(checker(move(toCheck)));
+
+	run();
+}
+
+BOOST_FIXTURE_TEST_CASE(cdc_gatemate_fifo_fast_hw_test, GateMateStreamCdcTest, *boost::unit_test::disabled())
+{
+	scl::Fifo<UInt> fifo(128, 8_b);
+
+	ClockScope genSide{ clkFast };
+	generator() | scl::strm::push(fifo);
+
+	ClockScope checkSide{ clkSlow };
+	pinoutError(checker(scl::strm::pop(fifo)));
+
+	fifo.generate();
+	run();
+}
+
+BOOST_FIXTURE_TEST_CASE(cdc_gatemate_fifo_slow_hw_test, GateMateStreamCdcTest, *boost::unit_test::disabled())
+{
+	scl::Fifo<UInt> fifo(128, 8_b);
+
+	ClockScope genSide{ clkFast };
+	generator() | scl::strm::insertGap(4) | scl::strm::push(fifo);
+
+	ClockScope checkSide{ clkSlow };
+	pinoutError(checker(scl::strm::pop(fifo)));
+
+	fifo.generate();
+	run();
+}
+
+BOOST_FIXTURE_TEST_CASE(cdc_gatemate_txnfifo_fast_hw_test, GateMateStreamCdcTest, *boost::unit_test::disabled())
+{
+	scl::TransactionalFifo<UInt> fifo(128, 8_b);
+
+	ClockScope genSide{ clkFast };
+	generator() | scl::strm::push(fifo);
+
+	ClockScope checkSide{ clkSlow };
+	pinoutError(checker(scl::strm::pop(fifo)));
+
+	fifo.generate();
+	run();
+}
+
+BOOST_FIXTURE_TEST_CASE(cdc_gatemate_txnfifo_slow_hw_test, GateMateStreamCdcTest, *boost::unit_test::disabled())
+{
+	scl::TransactionalFifo<UInt> fifo(128, 8_b);
+
+	ClockScope genSide{ clkFast };
+	generator() | scl::strm::insertGap(4) | scl::strm::push(fifo);
+
+	IF(scl::Counter(2).isLast())
+		fifo.commitPush();
+
+	ClockScope checkSide{ clkSlow };
+	pinoutError(checker(scl::strm::pop(fifo)));
+
+	IF(scl::Counter(9).isLast())
+		fifo.commitPop();
+
+	fifo.generate();
+	run();
+}
+
+BOOST_FIXTURE_TEST_CASE(cdc_gatemate_fifo_dummy_hw_test, GateMateStreamCdcTest, *boost::unit_test::disabled())
+{
+	scl::Fifo<UInt> fifo(128, 8_b, 2);
+
+	ClockScope genSide{ clkFast };
+	generator() | scl::strm::push(fifo);
+
+	//ClockScope checkSide{ clkSlow };
+	pinoutError(checker(scl::strm::pop(fifo)));
+
+	fifo.generate();
+	run();
+}
+
+BOOST_FIXTURE_TEST_CASE(cdc_gatemate_fifo_hw_test, GateMateStreamCdcTest, *boost::unit_test::disabled())
+{
 
 	scl::Fifo<UInt> toLoop(256, 8_b);
 	{
