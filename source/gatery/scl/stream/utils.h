@@ -152,7 +152,17 @@ namespace gtry::scl::strm
 	{
 		return [=](auto&& source) { return allowanceStall(std::forward<decltype(source)>(source), allow, allowanceW, initialAllowance); };
 	}
+
+	/**
+	 * @brief Stalls a stream for a given number of cycles after a condition is met during transfer or after reset.  
+	 * @param rate The rate in cycles at which the stream is passed.
+	 * @param condition Can be used to insert gaps between packets by passing eop(source). Or to disable gap insertion conditionally.
+	 */
+	template<StreamSignal T>
+	T insertGap(T source, UInt rate, Bit condition = '1');
 		
+	inline auto insertGap(UInt rate, Bit condition = '1') { return [=](auto&& source) { return insertGap(std::forward<decltype(source)>(source), rate, condition); }; }
+
 	/**
 	 * @brief stalls a packet stream using a stall condition. This function ensures a stream is backpressured without losing any data. It will not interrupt an ongoing packet
 	 * @param source source stream
@@ -660,7 +670,7 @@ namespace gtry::scl::strm
 		T out;
 		out <<= source;
 
-		IF(stallCondition)
+		IF(stallCondition | name("stallCondition"))
 		{
 			valid(out) = '0';
 			ready(source) = '0';
@@ -688,6 +698,27 @@ namespace gtry::scl::strm
 		return stalledSource;
 	}
 
+	template<StreamSignal T>
+	T insertGap(T source, UInt rate, Bit condition)
+	{
+		Area ent{ "scl_insertGap", true };
+		HCL_NAMED(rate);
+		HCL_NAMED(condition);
+
+		Counter counter{ rate };
+		IF(!counter.isLast())
+			counter.inc();
+
+		Stream out = move(source)
+			| name("in")
+			| stall(!counter.isLast())
+			| name("out");
+
+		IF(transfer(out) & condition)
+			counter.reset();
+
+		return out;
+	}
 
 	template<StreamSignal T>
 		requires (T::template has<Ready>() and T::template has<Valid>())
