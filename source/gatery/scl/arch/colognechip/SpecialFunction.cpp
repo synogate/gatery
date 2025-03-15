@@ -120,10 +120,10 @@ namespace gtry::scl::arch::colognechip
 		return *this;
 	}
 
-	Clock pll(const ClockConfig& cfg)
+	Clock pll(const ClockConfig& cfg, bool userClk)
 	{
 		return CC_PLL{}
-			.clkRef(ClockScope::getClk())
+			.clkRef(ClockScope::getClk(), userClk)
 			.clkOut(cfg);
 	}
 
