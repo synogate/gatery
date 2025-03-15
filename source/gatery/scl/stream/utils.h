@@ -213,7 +213,12 @@ namespace gtry::scl::strm
 	* @param outClock clock domain of returned stream
 	*/
 	template<StreamSignal StreamT>
-	StreamT synchronizeStreamReqAck(StreamT& in, const Clock& inClock, const Clock& outClock);
+	StreamT synchronizeStreamReqAck(StreamT in, const Clock& inClock, const Clock& outClock);
+
+	inline auto synchronizeStreamReqAck(const Clock& inClock, const Clock& outClock)
+	{
+		return [=](auto&& in) { return synchronizeStreamReqAck(std::forward<decltype(in)>(in), inClock, outClock); };
+	}
 
 	/**
 	 * @brief This helper creates a stream whose payload is SignalT, a metaSignal of the original stream
@@ -419,6 +424,24 @@ namespace gtry::scl::strm
 	{
 		return [&](auto&& s1) { return join(std::forward<decltype(s1)>(s1), std::forward<decltype(s2)>(s2), move(joinOp), move(metaJoinOp)); };
 	};
+
+	template<Signal T, class IncT>
+	RvStream<T> iota(T start, IncT inc = 1u)
+	{
+		Area ent{ "scl_iota", true };
+		scl::RvStream<T> out;
+
+		T ctr = constructFrom(start);
+		IF(transfer(out))
+			ctr += inc;
+		ctr = reg(ctr, start) | name("ctr");
+
+		valid(out) = '1';
+		*out = ctr;
+		HCL_NAMED(out);
+		return out;
+
+	}
 }
 
 namespace gtry::scl::strm
@@ -767,7 +790,7 @@ namespace gtry::scl::strm
 	}
 
 	template<StreamSignal StreamT>
-	StreamT synchronizeStreamReqAck(StreamT& in, const Clock& inClock, const Clock& outClock)
+	StreamT synchronizeStreamReqAck(StreamT in, const Clock& inClock, const Clock& outClock)
 	{
 		Area area("synchronizeStreamReqAck", true);
 		ClockScope csIn{ inClock };
