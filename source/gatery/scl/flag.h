@@ -53,7 +53,7 @@ namespace gtry::scl
 		ret |= set;
 		ret &= !reset;
 		ret = reg(ret, resetValue);
-		return ret;
+		return final(ret);
 	}
 
 	Bit flagInstantSet(const Bit& set, const Bit& reset, char resetValue)
@@ -62,7 +62,7 @@ namespace gtry::scl
 		ret &= !reset;
 		ret = reg(ret, resetValue);
 		ret |= set;
-		return ret;
+		return final(ret);
 	}
 
 	Bit flagInstantReset(const Bit& set, const Bit& reset, char resetValue)
@@ -71,7 +71,7 @@ namespace gtry::scl
 		ret |= set;
 		ret = reg(ret, resetValue);
 		ret &= !reset;
-		return ret;
+		return final(ret);
 	}
 
 	template<Signal T>
@@ -81,7 +81,7 @@ namespace gtry::scl
 		value = reg(value);
 		IF(condition)
 			value = in;
-		return value;
+		return final(value);
 	}
 
 	template<Signal T>
@@ -91,6 +91,6 @@ namespace gtry::scl
 		value = reg(value, resetValue);
 		IF(condition)
 			value = in;
-		return value;
+		return final(value);
 	}
 }
