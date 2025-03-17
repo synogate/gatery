@@ -425,23 +425,21 @@ namespace gtry::scl::strm
 		return [&](auto&& s1) { return join(std::forward<decltype(s1)>(s1), std::forward<decltype(s2)>(s2), move(joinOp), move(metaJoinOp)); };
 	};
 
+
+	/**
+	 * @brief Generates values from start in steps of inc. For example numbers counting upwards from 0.
+	 */
 	template<Signal T, class IncT>
-	RvStream<T> iota(T start, IncT inc = 1u)
-	{
-		Area ent{ "scl_iota", true };
-		scl::RvStream<T> out;
+	RvStream<T> iota(T start, IncT inc = 1u);
 
-		T ctr = constructFrom(start);
-		IF(transfer(out))
-			ctr += inc;
-		ctr = reg(ctr, start) | name("ctr");
-
-		valid(out) = '1';
-		*out = ctr;
-		HCL_NAMED(out);
-		return out;
-
-	}
+	/**
+	 * @brief Generates a linear feedback shift register (lfsr). For example lfsr(8_b, 0x12000, UInt{ "20d1337" }) for a usable random number generator.
+	 * @param resultW Number of lower bits used for the output. 
+	 * @param taps Bitmap of lfsr bits that influence the next msb.
+	 * @param seed The lfsr reset state and width.
+	 */
+	template<BitVectorSignal T>
+	scl::RvStream<T> lfsr(BitWidth resultW, uint64_t taps, T seed);
 }
 
 namespace gtry::scl::strm
@@ -1142,5 +1140,45 @@ namespace gtry::scl::strm
 			Operators<JoinBeat, MetaJoinOp>{},
 			Operators<JoinBeat, MergeTakeFirst>{}
 		);
+	}
+
+	template<Signal T, class IncT>
+	RvStream<T> iota(T start, IncT inc)
+	{
+		Area ent{ "scl_iota", true };
+		scl::RvStream<T> out;
+
+		T ctr = constructFrom(start);
+		IF(transfer(out))
+			ctr += inc;
+		ctr = reg(ctr, start) | name("ctr");
+
+		valid(out) = '1';
+		*out = ctr;
+		HCL_NAMED(out);
+		return out;
+	}
+
+	template<BitVectorSignal T>
+	scl::RvStream<T> lfsr(BitWidth resultW, uint64_t taps, T seed)
+	{
+		Area ent{ "scl_lfsr", true };
+		scl::RvStream<T> out;
+
+		T lfsr = seed.width();
+		IF(transfer(out))
+		{
+			Bit next = '0';
+			for (size_t i = 0; i < lfsr.size(); ++i)
+				if ((taps & (1ull << i)) != 0)
+					next ^= lfsr[lfsr.size() - 1 - i];
+			lfsr = (T)cat(next, lfsr.upper(-1_b));
+		}
+		lfsr = reg(lfsr, seed) | name("lfsr");
+
+		valid(out) = '1';
+		*out = (T)lfsr.lower(resultW);
+		HCL_NAMED(out);
+		return out;
 	}
 }
