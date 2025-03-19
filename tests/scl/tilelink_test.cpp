@@ -1138,6 +1138,19 @@ public:
 			while (openRequests == 2)
 				co_await OnClk(clock);
 
+			while (issueWrites && rng() % 2 == 0)
+			{
+				size_t wrAddr = rng();
+				wrAddr %= memoryState.size() / 8;
+				wrAddr &= ~1;
+
+				size_t wrData = rng() & 0xFFFF;
+				memoryState.insert(sim::DefaultConfig::VALUE, wrAddr * 8, 16, wrData);
+				memoryState.insert(sim::DefaultConfig::DEFINED, wrAddr * 8, 16, 0xFFFF);
+
+				fork(mm.put(wrAddr, 1, wrData, clock));
+			}
+
 			addr += 2;
 			if (rng() % 5 == 0)
 				addr -= 6; // branch back (loop)
@@ -1179,6 +1192,7 @@ protected:
 	gtry::sim::DefaultBitVectorState memoryState;
 	scl::TileLinkMasterModel mm;
 	size_t checkedRequests = 0;
+	bool issueWrites = false;
 
 	scl::TileLinkUB generateTestMemory()
 	{
@@ -1204,6 +1218,23 @@ BOOST_FIXTURE_TEST_CASE(tilelink_cache_dmrob_test, TileLinkInstructionCacheTest)
 
 	addSimulationProcess(std::bind(&TileLinkInstructionCacheTest::performCpuAccessTest, this));
 	addSimulationProcess(std::bind(&TileLinkInstructionCacheTest::checkProgress, this, 8));
+
+	design.postprocess();
+	runHitsTimeout({ 10, 1'000'000 });
+}
+
+BOOST_FIXTURE_TEST_CASE(tilelink_cache_dmv_test, TileLinkInstructionCacheTest)
+{
+	issueWrites = true;
+	{
+		ClockScope clkScp(clock);
+		scl::TileLinkUB memory = generateTestMemory();
+		scl::TileLinkUL cached = scl::tileLinkCacheDirectMappedVictim(move((scl::TileLinkUL&)memory), 4_b);
+		mm.initAndDrive("tl", move(cached));
+	}
+
+	addSimulationProcess(std::bind(&TileLinkInstructionCacheTest::performCpuAccessTest, this));
+	addSimulationProcess(std::bind(&TileLinkInstructionCacheTest::checkProgress, this, 128));
 
 	design.postprocess();
 	runHitsTimeout({ 10, 1'000'000 });

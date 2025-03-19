@@ -963,7 +963,7 @@ BOOST_FIXTURE_TEST_CASE(ReqAckSync_1_10, StreamTransferFixture)
 	simulateSendData(in, 0);
 	groups(1);
 
-	scl::RvStream<UInt> out = gtry::scl::strm::synchronizeStreamReqAck(in, m_clock, outClk);
+	scl::RvStream<UInt> out = gtry::scl::strm::synchronizeStreamReqAck(move(in), m_clock, outClk);
 	{
 		ClockScope clock(outClk);
 		Out(out);
@@ -987,7 +987,7 @@ BOOST_FIXTURE_TEST_CASE(ReqAckSync_1_1, StreamTransferFixture)
 	simulateSendData(in, 0);
 	groups(1);
 
-	scl::RvStream<UInt> out = gtry::scl::strm::synchronizeStreamReqAck(in, m_clock, outClk);
+	scl::RvStream<UInt> out = gtry::scl::strm::synchronizeStreamReqAck(move(in), m_clock, outClk);
 	{
 		ClockScope clock(outClk);
 		Out(out);
@@ -1011,7 +1011,7 @@ BOOST_FIXTURE_TEST_CASE(ReqAckSync_10_1, StreamTransferFixture)
 	simulateSendData(in, 0);
 	groups(1);
 
-	scl::RvStream<UInt> out = gtry::scl::strm::synchronizeStreamReqAck(in, m_clock, outClk);
+	scl::RvStream<UInt> out = gtry::scl::strm::synchronizeStreamReqAck(move(in), m_clock, outClk);
 	{
 		ClockScope clock(outClk);
 		Out(out);

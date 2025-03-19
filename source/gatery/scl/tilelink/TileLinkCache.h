@@ -44,6 +44,8 @@ namespace gtry::scl
 	 */
 	TileLinkUL tileLinkCacheDirectMappedReadOnlyBurst(TileLinkUL&& slave, gtry::BitWidth addrW, std::function<void(TileLinkChannelA&)> selectBurst = {});
 	inline auto tileLinkCacheDirectMappedReadOnlyBurst(BitWidth addrW, std::function<void(TileLinkChannelA&)> selectBurst = {}) { return [=](auto&& in) { return tileLinkAddBurst(std::forward<decltype(in)>(in), addrW, move(selectBurst)); }; }
+
+	TileLinkUL tileLinkCacheDirectMappedVictim(TileLinkUL&& ram, BitWidth addrW);
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::internal::RoCacheData, tag, value, valid);

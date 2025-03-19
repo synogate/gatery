@@ -62,7 +62,7 @@ namespace gtry::scl::arch::colognechip
 		CC_PLL& refClkFreq(hlim::ClockRational freq);
 	};
 
-	Clock pll(const ClockConfig& cfg);
+	Clock pll(const Clock& src, const ClockConfig& cfg, bool userClk = false);
 	Clock clkdiv(const Clock& src, ClockConfig cfg);
 
 	Bit serdes(BVec data, const Clock& slowClk, const Clock& fastClk);

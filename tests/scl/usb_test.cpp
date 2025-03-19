@@ -440,7 +440,7 @@ public:
 		vhdl::VHDLExport vhdl("synthesis_projects/usb_loopback_gatemate/usb_loopback_gatemate.vhd");
 		vhdl(design.getCircuit());
 
-		//BOOST_TEST(!runHitsTimeout({ 1, 1'000 }));
+		BOOST_TEST(!runHitsTimeout({ 1, 1'000 }));
 	}
 };
 

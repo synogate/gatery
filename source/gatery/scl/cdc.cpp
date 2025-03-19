@@ -36,7 +36,7 @@ gtry::UInt gtry::scl::grayDecode(BVec val)
 	return ret;
 }
 
-gtry::Bit gtry::scl::synchronizeEvent(Bit eventIn, const Clock& inClock, const Clock& outClock)
+gtry::Bit gtry::scl::synchronizeEvent(Bit eventIn, const Clock& inClock, const Clock& outClock, const SynchronizeParams& params)
 {
 	Area area("synchronizeEvent", true);
 	ClockScope csIn{ inClock };
@@ -46,7 +46,7 @@ gtry::Bit gtry::scl::synchronizeEvent(Bit eventIn, const Clock& inClock, const C
 
 	ClockScope csOut{ outClock };
 
-	return edge(synchronize(state, '0', inClock, outClock, {.outStages = 3, .inStage = false}));
+	return edge(synchronize(state, '0', inClock, outClock, params));
 }
 
 gtry::Bit gtry::scl::synchronizeRelease(Bit reset, const Clock& inClock, const Clock& outClock, ClockConfig::ResetActive resetActive)

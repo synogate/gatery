@@ -39,6 +39,7 @@ namespace gtry::scl::usb
 		virtual PhyRxStream& rx() override;
 
 		virtual bool supportCrc() const override { return true; }
+		virtual size_t cyclesPerTransfer() const override { return 8; }
 
 		// simulation helper
 

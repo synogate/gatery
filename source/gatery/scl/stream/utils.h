@@ -152,7 +152,17 @@ namespace gtry::scl::strm
 	{
 		return [=](auto&& source) { return allowanceStall(std::forward<decltype(source)>(source), allow, allowanceW, initialAllowance); };
 	}
+
+	/**
+	 * @brief Stalls a stream for a given number of cycles after a condition is met during transfer or after reset.  
+	 * @param rate The rate in cycles at which the stream is passed.
+	 * @param condition Can be used to insert gaps between packets by passing eop(source). Or to disable gap insertion conditionally.
+	 */
+	template<StreamSignal T>
+	T insertGap(T source, UInt rate, Bit condition = '1');
 		
+	inline auto insertGap(UInt rate, Bit condition = '1') { return [=](auto&& source) { return insertGap(std::forward<decltype(source)>(source), rate, condition); }; }
+
 	/**
 	 * @brief stalls a packet stream using a stall condition. This function ensures a stream is backpressured without losing any data. It will not interrupt an ongoing packet
 	 * @param source source stream
@@ -203,7 +213,12 @@ namespace gtry::scl::strm
 	* @param outClock clock domain of returned stream
 	*/
 	template<StreamSignal StreamT>
-	StreamT synchronizeStreamReqAck(StreamT& in, const Clock& inClock, const Clock& outClock);
+	StreamT synchronizeStreamReqAck(StreamT in, const Clock& inClock, const Clock& outClock);
+
+	inline auto synchronizeStreamReqAck(const Clock& inClock, const Clock& outClock)
+	{
+		return [=](auto&& in) { return synchronizeStreamReqAck(std::forward<decltype(in)>(in), inClock, outClock); };
+	}
 
 	/**
 	 * @brief This helper creates a stream whose payload is SignalT, a metaSignal of the original stream
@@ -409,6 +424,24 @@ namespace gtry::scl::strm
 	{
 		return [&](auto&& s1) { return join(std::forward<decltype(s1)>(s1), std::forward<decltype(s2)>(s2), move(joinOp), move(metaJoinOp)); };
 	};
+
+	template<Signal T, class IncT>
+	RvStream<T> iota(T start, IncT inc = 1u)
+	{
+		Area ent{ "scl_iota", true };
+		scl::RvStream<T> out;
+
+		T ctr = constructFrom(start);
+		IF(transfer(out))
+			ctr += inc;
+		ctr = reg(ctr, start) | name("ctr");
+
+		valid(out) = '1';
+		*out = ctr;
+		HCL_NAMED(out);
+		return out;
+
+	}
 }
 
 namespace gtry::scl::strm
@@ -660,7 +693,7 @@ namespace gtry::scl::strm
 		T out;
 		out <<= source;
 
-		IF(stallCondition)
+		IF(stallCondition | name("stallCondition"))
 		{
 			valid(out) = '0';
 			ready(source) = '0';
@@ -688,6 +721,27 @@ namespace gtry::scl::strm
 		return stalledSource;
 	}
 
+	template<StreamSignal T>
+	T insertGap(T source, UInt rate, Bit condition)
+	{
+		Area ent{ "scl_insertGap", true };
+		HCL_NAMED(rate);
+		HCL_NAMED(condition);
+
+		Counter counter{ rate };
+		IF(!counter.isLast())
+			counter.inc();
+
+		Stream out = move(source)
+			| name("in")
+			| stall(!counter.isLast())
+			| name("out");
+
+		IF(transfer(out) & condition)
+			counter.reset();
+
+		return out;
+	}
 
 	template<StreamSignal T>
 		requires (T::template has<Ready>() and T::template has<Valid>())
@@ -736,7 +790,7 @@ namespace gtry::scl::strm
 	}
 
 	template<StreamSignal StreamT>
-	StreamT synchronizeStreamReqAck(StreamT& in, const Clock& inClock, const Clock& outClock)
+	StreamT synchronizeStreamReqAck(StreamT in, const Clock& inClock, const Clock& outClock)
 	{
 		Area area("synchronizeStreamReqAck", true);
 		ClockScope csIn{ inClock };
