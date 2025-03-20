@@ -1310,12 +1310,12 @@ bool Memory2VHDLPattern::attemptApply(Circuit &circuit, hlim::NodeGroup *nodeGro
 	}
 	size_t writePortIdx = 0;
 	for (auto &wp : memoryGroup->getWritePorts()) {
-		c.insertSignalBefore({.node = wp.node.get(), .port = (size_t)Node_MemPort::Inputs::address })->setName((boost::format("write_port_%d_addr") % readPortIdx).str());
-		c.insertSignalBefore({.node = wp.node.get(), .port = (size_t)Node_MemPort::Inputs::wrData })->setName((boost::format("write_port_%d_data") % readPortIdx).str());
+		c.insertSignalBefore({.node = wp.node.get(), .port = (size_t)Node_MemPort::Inputs::address })->setName((boost::format("write_port_%d_addr") % writePortIdx).str());
+		c.insertSignalBefore({.node = wp.node.get(), .port = (size_t)Node_MemPort::Inputs::wrData })->setName((boost::format("write_port_%d_data") % writePortIdx).str());
 		if (wp.node->getDriver((size_t)Node_MemPort::Inputs::wrEnable).node != nullptr)
-			c.insertSignalBefore({.node = wp.node.get(), .port = (size_t)Node_MemPort::Inputs::wrEnable })->setName((boost::format("write_port_%d_enable") % readPortIdx).str());
+			c.insertSignalBefore({.node = wp.node.get(), .port = (size_t)Node_MemPort::Inputs::wrEnable })->setName((boost::format("write_port_%d_enable") % writePortIdx).str());
 		if (wp.node->getDriver((size_t)Node_MemPort::Inputs::wrWordEnable).node != nullptr)
-			c.insertSignalBefore({.node = wp.node.get(), .port = (size_t)Node_MemPort::Inputs::wrWordEnable })->setName((boost::format("write_port_%d_word_enable") % readPortIdx).str());
+			c.insertSignalBefore({.node = wp.node.get(), .port = (size_t)Node_MemPort::Inputs::wrWordEnable })->setName((boost::format("write_port_%d_word_enable") % writePortIdx).str());
 		
 		writePortIdx++;
 	}
