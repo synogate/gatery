@@ -17,6 +17,8 @@
 */
 #include "scl/pch.h"
 
+#include <gatery/hlim/postprocessing/MemoryStorage.h>
+
 #include "MappingTests_Memory.h"
 
 #include <boost/test/unit_test.hpp>
@@ -419,3 +421,120 @@ void Test_ReadEnable::execute()
 
 	runTest(Seconds{100, 1} / clock.absoluteFrequency());
 }
+
+
+
+
+void Test_CrossPortOrdering::execute()
+{
+	Clock clock({
+			.absoluteFrequency = {{125'000'000,1}},
+			.memoryResetType = ClockConfig::ResetType::NONE,
+	});
+	HCL_NAMED(clock);
+	ClockScope scp(clock);
+
+	Bit wrEn = pinIn().setName("wrEn");
+	UInt wrAddr = pinIn(BitWidth::count(numElements)).setName("wrAddr");
+	UInt wrData = pinIn(elementWidth).setName("wrData");
+
+	UInt rdAddr = pinIn(BitWidth::count(numElements)).setName("rdAddr");
+	
+	Memory<UInt> memory(numElements, elementWidth);
+	if (declareNoConflict)
+		memory.noConflicts();
+	memory.setType(memType, latency);
+
+	if (!readFirst)
+		IF (wrEn)
+			memory[wrAddr] = wrData;
+
+	UInt rdValue = memory[rdAddr];
+	for ([[maybe_unused]] auto i : utils::Range(latency))
+		rdValue = reg(rdValue, {.allowRetimingBackward=true});
+
+	if (readFirst)
+		IF (wrEn)
+			memory[wrAddr] = wrData;
+
+
+	pinOut(rdValue).setName("rdValue");
+
+
+	addSimulationProcess([&,this]()->SimProcess {
+
+		std::mt19937 rng(1337);
+		std::uniform_int_distribution<size_t> addrDist(0, numElements-1);
+		std::uniform_int_distribution<size_t> writeDataDist(0, elementWidth.last());
+		std::bernoulli_distribution doWriteDist(0.5f);
+
+		hlim::MemoryStorageDense refMemory(numElements * elementWidth.bits());
+
+		struct Read {
+			size_t readAddr;
+			sim::DefaultBitVectorState expected;
+		};
+		std::queue<Read> readQueue;
+		for ([[maybe_unused]] auto i : utils::Range(latency))
+			readQueue.push({});
+
+		simu(wrEn) = '0';
+		for ([[maybe_unused]] auto iter : utils::Range(1000)) {
+			co_await AfterClk(clock);
+
+			size_t writeAddr = addrDist(rng);
+			size_t writeData = writeDataDist(rng);
+			bool doWrite = doWriteDist(rng);
+
+			size_t readAddr = addrDist(rng);
+
+
+			simu(wrEn) = doWrite;
+			simu(wrAddr) = writeAddr;
+			simu(wrData) = writeData;
+			simu(rdAddr) = readAddr;
+
+			co_await WaitStable();
+
+			auto performWrite = [&]{
+				if (doWrite) {
+					refMemory.write(
+						writeAddr * elementWidth.bits(), 
+						sim::parseBitVector(writeData, elementWidth.bits()),
+						false, {});
+				}
+			};
+			
+			if (!readFirst)
+				performWrite();
+
+			if (declareNoConflict && readAddr == writeAddr)
+				readQueue.push({});
+			else
+				readQueue.push(Read{ .readAddr = readAddr, .expected = refMemory.read(readAddr * elementWidth.bits(), elementWidth.bits())});
+
+			auto read = std::move(readQueue.front());
+			readQueue.pop();
+
+			if (read.expected.size() != 0) {
+				BOOST_TEST_MESSAGE("In cycle " << iter);
+				BOOST_TEST_MESSAGE("Read from " << read.readAddr << " expected " << read.expected);
+				if (readFirst)
+					BOOST_TEST_MESSAGE("Writing to " << writeAddr << " with data " << writeData << " after");
+				else
+					BOOST_TEST_MESSAGE("Wrote to " << writeAddr << " with data " << writeData << " before");
+				BOOST_TEST(simu(rdValue) == read.expected);
+			}
+
+			if (readFirst)
+				performWrite();
+		}
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+		stopTest();
+	});
+
+	runTest(Seconds{2000, 1} / clock.absoluteFrequency());
+}
+

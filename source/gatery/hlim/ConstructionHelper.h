@@ -53,6 +53,9 @@ namespace gtry::hlim {
 			Node_Signal* appendSignal(NodePort& nodePort);
 			Node_Signal* appendSignal(RefCtdNodePort& nodePort);
 
+			Node_Signal* insertSignalBefore(NodePort inputPort);
+			Node_Signal* insertSignalAfter(NodePort outputPort);
+
 			NodePort isInReset(Clock &clock);
 
 			Node_Logic *land(const NodePort &lhs, const NodePort &rhs);

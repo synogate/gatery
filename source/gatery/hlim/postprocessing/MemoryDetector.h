@@ -65,6 +65,10 @@ class MemoryGroup : public NodeGroupMetaInfo
 		const std::vector<WritePort> &getWritePorts() { return m_writePorts; }
 		const std::vector<ReadPort> &getReadPorts() { return m_readPorts; }
 
+		bool canReadBeforeAllOthersWrite(const ReadPort &rdPort) const;
+		bool canReadAfterAllOthersWrite(const ReadPort &rdPort) const;
+		bool readUnorderedToAllOthersWrite(const ReadPort &rdPort) const;
+
 		const ReadPort &findReadPort(Node_MemPort *memPort);
 		const WritePort &findWritePort(Node_MemPort *memPort);
 

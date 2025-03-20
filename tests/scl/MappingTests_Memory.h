@@ -59,9 +59,25 @@ struct Test_ReadEnable : public gtry::GHDLTestFixture
 {
 	size_t numElements = 32;
 	gtry::BitWidth elementWidth = gtry::BitWidth(8);
-	size_t iterationFactor = 8;
 	bool highLatencyExternal = false;
 	bool twoCycleLatencyBRam = false;
 	void execute();
 };
+
+
+
+
+struct Test_CrossPortOrdering : public gtry::GHDLTestFixture
+{
+	size_t numElements = 8;
+	gtry::BitWidth elementWidth = gtry::BitWidth(8);
+	size_t latency = 0;
+	gtry::MemType memType = gtry::MemType::DONT_CARE;
+
+	bool readFirst = true;
+	bool declareNoConflict = false;
+
+	void execute();
+};
+
 

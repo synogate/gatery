@@ -152,11 +152,7 @@ void Entity::allocateNames()
 	for (auto &constant : m_constants)
 		m_namespaceScope.allocateName(constant, findNearestDesiredName(constant, m_nodeGroup), chooseDataTypeFromOutput(constant), CodeFormatting::SIG_CONSTANT);
 
-	for (auto &input : m_inputs)
-		m_namespaceScope.allocateName(input, findNearestDesiredName(input, m_nodeGroup), chooseDataTypeFromOutput(input), CodeFormatting::SIG_ENTITY_INPUT);
-
-	for (auto &output : m_outputs)
-		m_namespaceScope.allocateName(output, findNearestDesiredName(output, m_nodeGroup), chooseDataTypeFromOutput(output), CodeFormatting::SIG_ENTITY_OUTPUT);
+	allocateInputAndOutputNames();
 
 	for (auto &clock : m_inputClocks)
 		m_namespaceScope.allocateName(clock, clock->getName());
@@ -179,6 +175,15 @@ void Entity::allocateNames()
 	BasicBlock::allocateNames();
 	for (auto &block : m_blocks)
 		block->allocateNames();
+}
+
+void Entity::allocateInputAndOutputNames()
+{
+	for (auto &input : m_inputs)
+		m_namespaceScope.allocateName(input, findNearestDesiredName(input, m_nodeGroup), chooseDataTypeFromOutput(input), CodeFormatting::SIG_ENTITY_INPUT);
+
+	for (auto &output : m_outputs)
+		m_namespaceScope.allocateName(output, findNearestDesiredName(output, m_nodeGroup), chooseDataTypeFromOutput(output), CodeFormatting::SIG_ENTITY_OUTPUT);
 }
 
 std::map<std::string, std::set<std::string>> Entity::collectNeededLibraries()

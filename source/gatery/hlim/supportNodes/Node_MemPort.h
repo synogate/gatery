@@ -72,8 +72,8 @@ class Node_MemPort : public Node<Node_MemPort>
 		void connectWrData(const NodePort &output);
 		void connectWrWordEnable(const NodePort &output);
 		void orderAfter(Node_MemPort *port);
-		bool isOrderedAfter(Node_MemPort *port) const;
-		bool isOrderedBefore(Node_MemPort *port) const;
+		bool isOrderedAfter(const Node_MemPort *port) const;
+		bool isOrderedBefore(const Node_MemPort *port) const;
 
 		void setClock(Clock* clk);
 

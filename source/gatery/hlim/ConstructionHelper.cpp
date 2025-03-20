@@ -198,6 +198,23 @@ namespace gtry::hlim {
 		return sig;
 	}
 
+	Node_Signal* ConstructionHelper::insertSignalBefore(NodePort inputPort)
+	{
+		auto driver = inputPort.node->getDriver(inputPort.port);
+		auto *sig = appendSignal(driver);
+		inputPort.node->rewireInput(inputPort.port, p0(sig));
+		return sig;
+	}
+
+	Node_Signal* ConstructionHelper::insertSignalAfter(NodePort outputPort)
+	{
+		auto allDriven = outputPort.node->getDirectlyDriven(outputPort.port);
+		auto *sig = appendSignal(outputPort);
+		for (auto np : allDriven)
+			np.node->rewireInput(np.port, p0(sig));
+		return sig;
+	}
+
 	NodePort ConstructionHelper::isInReset(Clock &clock)
 	{
 		if (clock.getRegAttribs().resetType == RegisterAttributes::ResetType::NONE) {

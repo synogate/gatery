@@ -166,6 +166,31 @@ MemoryGroup::MemoryGroup(NodeGroup *group) : m_nodeGroup(group)
 	m_nodeGroup->setGroupType(NodeGroupType::SFU);
 }
 
+bool MemoryGroup::canReadBeforeAllOthersWrite(const ReadPort &rdPort) const
+{
+	for (const auto &wp : m_writePorts)
+		if (rdPort.node->isOrderedAfter(wp.node))
+			return false;
+	return true;
+}
+
+bool MemoryGroup::canReadAfterAllOthersWrite(const ReadPort &rdPort) const
+{
+	for (const auto &wp : m_writePorts)
+		if (rdPort.node->isOrderedBefore(wp.node))
+			return false;
+	return true;
+}
+
+bool MemoryGroup::readUnorderedToAllOthersWrite(const ReadPort &rdPort) const
+{
+	for (const auto &wp : m_writePorts)
+		if (rdPort.node->isOrderedAfter(wp.node) || rdPort.node->isOrderedBefore(wp.node))
+			return false;
+	return true;
+}
+
+
 const MemoryGroup::ReadPort &MemoryGroup::findReadPort(Node_MemPort *memPort)
 {
 	for (auto &rp : m_readPorts)
@@ -1269,6 +1294,30 @@ bool Memory2VHDLPattern::attemptApply(Circuit &circuit, hlim::NodeGroup *nodeGro
 		memoryGroup->replaceWithIOPins(circuit);
 	} else {
 		nodeGroup->getParent()->properties()["primitive"] = "vhdl";
+	}
+
+	hlim::ConstructionHelper c(circuit);
+	c.constructInGroup(*nodeGroup->getParent());
+	size_t readPortIdx = 0;
+	for (auto &rp : memoryGroup->getReadPorts()) {
+		c.insertSignalBefore({.node = rp.node.get(), .port = (size_t)Node_MemPort::Inputs::address })->setName((boost::format("read_port_%d_addr") % readPortIdx).str());
+		if (rp.node->getDriver((size_t)Node_MemPort::Inputs::enable).node != nullptr)
+			c.insertSignalBefore({.node = rp.node.get(), .port = (size_t)Node_MemPort::Inputs::enable })->setName((boost::format("read_port_%d_enable") % readPortIdx).str());
+
+		c.insertSignalAfter({.node = rp.dataOutput.node, .port = rp.dataOutput.port })->setName((boost::format("read_port_%d_data") % readPortIdx).str());
+
+		readPortIdx++;
+	}
+	size_t writePortIdx = 0;
+	for (auto &wp : memoryGroup->getWritePorts()) {
+		c.insertSignalBefore({.node = wp.node.get(), .port = (size_t)Node_MemPort::Inputs::address })->setName((boost::format("write_port_%d_addr") % readPortIdx).str());
+		c.insertSignalBefore({.node = wp.node.get(), .port = (size_t)Node_MemPort::Inputs::wrData })->setName((boost::format("write_port_%d_data") % readPortIdx).str());
+		if (wp.node->getDriver((size_t)Node_MemPort::Inputs::wrEnable).node != nullptr)
+			c.insertSignalBefore({.node = wp.node.get(), .port = (size_t)Node_MemPort::Inputs::wrEnable })->setName((boost::format("write_port_%d_enable") % readPortIdx).str());
+		if (wp.node->getDriver((size_t)Node_MemPort::Inputs::wrWordEnable).node != nullptr)
+			c.insertSignalBefore({.node = wp.node.get(), .port = (size_t)Node_MemPort::Inputs::wrWordEnable })->setName((boost::format("write_port_%d_word_enable") % readPortIdx).str());
+		
+		writePortIdx++;
 	}
 
 	return true;

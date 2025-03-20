@@ -70,6 +70,8 @@ class Entity : public BasicBlock
 		virtual void writeLibrariesVHDL(std::ostream &stream);
 		virtual std::vector<std::string> getPortsVHDL();
 		virtual void writeLocalSignalsVHDL(std::ostream &stream);
+
+		virtual void allocateInputAndOutputNames();
 };
 
 }

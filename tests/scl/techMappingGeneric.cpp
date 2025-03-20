@@ -186,4 +186,291 @@ BOOST_FIXTURE_TEST_CASE(readEnable_bram_2Cycle, TestWithDefaultDevice<Test_ReadE
 	execute();
 }
 
+
+
+
+BOOST_FIXTURE_TEST_CASE(crossport_readfirst_bram, TestWithDefaultDevice<Test_CrossPortOrdering>)
+{
+	using namespace gtry;
+
+	readFirst = true;
+	declareNoConflict = false;
+	latency = 1;
+	memType = MemType::MEDIUM;
+
+
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(crossport_writefirst_bram, TestWithDefaultDevice<Test_CrossPortOrdering>)
+{
+	using namespace gtry;
+
+	readFirst = false;
+	declareNoConflict = false;
+	latency = 1;
+	memType = MemType::MEDIUM;
+
+
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(crossport_dontcare_bram_1, TestWithDefaultDevice<Test_CrossPortOrdering>)
+{
+	using namespace gtry;
+
+	readFirst = true;
+	declareNoConflict = true;
+	latency = 1;
+	memType = MemType::MEDIUM;
+
+
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"out_readPort_0_data <= \\(others => 'X'\\);"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(crossport_dontcare_bram_2, TestWithDefaultDevice<Test_CrossPortOrdering>)
+{
+	using namespace gtry;
+
+	readFirst = false;
+	declareNoConflict = true;
+	latency = 1;
+	memType = MemType::MEDIUM;
+
+
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"out_readPort_0_data <= \\(others => 'X'\\);"}));
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(crossport_readfirst_lutram, TestWithDefaultDevice<Test_CrossPortOrdering>)
+{
+	using namespace gtry;
+
+	readFirst = true;
+	declareNoConflict = false;
+	latency = 0;
+	memType = MemType::SMALL;
+
+
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(crossport_writefirst_lutram, TestWithDefaultDevice<Test_CrossPortOrdering>)
+{
+	using namespace gtry;
+
+	readFirst = false;
+	declareNoConflict = false;
+	latency = 0;
+	memType = MemType::SMALL;
+
+
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(crossport_dontcare_lutram_1, TestWithDefaultDevice<Test_CrossPortOrdering>)
+{
+	using namespace gtry;
+
+	readFirst = true;
+	declareNoConflict = true;
+	latency = 0;
+	memType = MemType::SMALL;
+
+
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(crossport_dontcare_lutram_2, TestWithDefaultDevice<Test_CrossPortOrdering>)
+{
+	using namespace gtry;
+
+	readFirst = false;
+	declareNoConflict = true;
+	latency = 0;
+	memType = MemType::SMALL;
+
+
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+
+
+
+
+
+
+BOOST_FIXTURE_TEST_CASE(crossport_readfirst_bram_3cycle, TestWithDefaultDevice<Test_CrossPortOrdering>)
+{
+	using namespace gtry;
+
+	readFirst = true;
+	declareNoConflict = false;
+	latency = 3;
+	memType = MemType::MEDIUM;
+
+
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(crossport_writefirst_bram_3cycle, TestWithDefaultDevice<Test_CrossPortOrdering>)
+{
+	using namespace gtry;
+
+	readFirst = false;
+	declareNoConflict = false;
+	latency = 3;
+	memType = MemType::MEDIUM;
+
+
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(crossport_dontcare_bram_1_3cycle, TestWithDefaultDevice<Test_CrossPortOrdering>)
+{
+	using namespace gtry;
+
+	readFirst = true;
+	declareNoConflict = true;
+	latency = 3;
+	memType = MemType::MEDIUM;
+
+
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(crossport_dontcare_bram_2_3cycle, TestWithDefaultDevice<Test_CrossPortOrdering>)
+{
+	using namespace gtry;
+
+	readFirst = false;
+	declareNoConflict = true;
+	latency = 3;
+	memType = MemType::MEDIUM;
+
+
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(crossport_readfirst_lutram_3cycle, TestWithDefaultDevice<Test_CrossPortOrdering>)
+{
+	using namespace gtry;
+
+	readFirst = true;
+	declareNoConflict = false;
+	latency = 3;
+	memType = MemType::SMALL;
+
+
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(crossport_writefirst_lutram_3cycle, TestWithDefaultDevice<Test_CrossPortOrdering>)
+{
+	using namespace gtry;
+
+	readFirst = false;
+	declareNoConflict = false;
+	latency = 3;
+	memType = MemType::SMALL;
+
+
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(crossport_dontcare_lutram_1_3cycle, TestWithDefaultDevice<Test_CrossPortOrdering>)
+{
+	using namespace gtry;
+
+	readFirst = true;
+	declareNoConflict = true;
+	latency = 3;
+	memType = MemType::SMALL;
+
+
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(crossport_dontcare_lutram_2_3cycle, TestWithDefaultDevice<Test_CrossPortOrdering>)
+{
+	using namespace gtry;
+
+	readFirst = false;
+	declareNoConflict = true;
+	latency = 3;
+	memType = MemType::SMALL;
+
+
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+
+BOOST_FIXTURE_TEST_CASE(crossport_fifo, gtry::GHDLTestFixture)
+{
+	using namespace gtry;
+
+	Clock clock({
+			.absoluteFrequency = {{125'000'000,1}},
+			.memoryResetType = ClockConfig::ResetType::NONE,
+	});
+	HCL_NAMED(clock);
+	ClockScope scp(clock);
+
+	Bit wrEn = pinIn().setName("wrEn");
+	UInt wrData = pinIn(8_b).setName("wrData");
+
+	Bit rdEn = pinIn().setName("rdEn");
+
+	scl::Fifo<UInt> fifo(8, 8_b);
+
+	IF (wrEn)
+		fifo.push(wrData);
+
+	IF (rdEn)
+		fifo.pop();
+
+	UInt rdValue = fifo.peek();
+	pinOut(rdValue).setName("rdValue");
+
+	fifo.generate();
+
+	addSimulationProcess([&,this]()->SimProcess {
+		simu(wrEn) = '0';
+		simu(rdEn) = '0';
+		co_await AfterClk(clock);
+		simu(wrEn) = '1';
+		simu(wrData) = 42;
+		co_await AfterClk(clock);
+		co_await AfterClk(clock);
+
+		stopTest();
+	});
+
+	runTest(Seconds{2000, 1} / clock.absoluteFrequency());
+
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+
 BOOST_AUTO_TEST_SUITE_END()

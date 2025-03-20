@@ -34,15 +34,90 @@
 
 namespace gtry::vhdl {
 
-struct GenericMemoryPorts {
-	std::vector<std::pair<hlim::MemoryGroup::ReadPort, size_t>> readPortRegs;
-	std::vector<hlim::MemoryGroup::WritePort> writePorts;
+struct ClockedInstructions
+{
+	using PortRegisters = std::vector<std::pair<hlim::MemoryGroup::ReadPort, size_t>>;
+	PortRegisters readOutputRegisters;
+	std::vector<hlim::MemoryGroup::ReadPort> reads;
+	std::vector<hlim::MemoryGroup::ReadPort> readInputRegs;
+	std::vector<hlim::MemoryGroup::ReadPort> readConflictOverrides;
+
+	std::vector<hlim::MemoryGroup::WritePort> writes;
+};
+
+struct AsyncReadInstruction
+{
+	hlim::MemoryGroup::ReadPort readPort;
+	bool registeredInputs;
+};
+
+struct GenericMemoryPorts
+{
+	utils::StableMap<RegisterConfig, ClockedInstructions> clockedInstructions;
+	std::vector<AsyncReadInstruction> asyncReads;
 };
 
 
 
 GenericMemoryEntity::GenericMemoryEntity(AST &ast, const std::string &desiredName, BasicBlock *parent) : Entity(ast, desiredName, parent)
 {
+}
+
+void GenericMemoryEntity::allocateInputAndOutputNames()
+{
+	std::set<hlim::NodePort> alreadyAllocated;
+	size_t writePortIdx = 0;
+	for (auto &wp : m_memGrp->getWritePorts()) {
+		auto addrInput = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
+		auto enInput = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
+		auto wrEnInput = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrEnable);
+		auto dataInput = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrData);
+
+		HCL_ASSERT_HINT(enInput.node == nullptr || enInput == wrEnInput, "For now I don't want to mix read and write ports, so wrEn == en always.");
+
+		if (addrInput.node != nullptr && hlim::getOutputConnectionType(addrInput).width > 0) {
+			m_namespaceScope.allocateName(addrInput, (boost::format("writePort_%d_address") % writePortIdx).str(), chooseDataTypeFromOutput(addrInput), CodeFormatting::SIG_ENTITY_INPUT);
+			alreadyAllocated.insert(addrInput);
+		}
+		if (wrEnInput.node != nullptr){ 
+			m_namespaceScope.allocateName(wrEnInput, (boost::format("writePort_%d_wrEn") % writePortIdx).str(), chooseDataTypeFromOutput(wrEnInput), CodeFormatting::SIG_ENTITY_INPUT);
+			alreadyAllocated.insert(wrEnInput);
+		}
+		if (dataInput.node != nullptr && hlim::getOutputConnectionType(dataInput).width > 0) {
+			m_namespaceScope.allocateName(dataInput, (boost::format("writePort_%d_data") % writePortIdx).str(), chooseDataTypeFromOutput(dataInput), CodeFormatting::SIG_ENTITY_INPUT);
+			alreadyAllocated.insert(dataInput);
+		}
+
+		writePortIdx++;
+	}
+
+	size_t readPortIdx = 0;
+	for (auto &rp : m_memGrp->getReadPorts()) {
+		auto addrInput = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
+		auto enInput = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
+		auto dataOutput = rp.dataOutput;
+
+		if (addrInput.node != nullptr && hlim::getOutputConnectionType(addrInput).width > 0) {
+			m_namespaceScope.allocateName(addrInput, (boost::format("readPort_%d_addr") % readPortIdx).str(), chooseDataTypeFromOutput(addrInput), CodeFormatting::SIG_ENTITY_INPUT);
+			alreadyAllocated.insert(addrInput);
+		}
+		if (enInput.node != nullptr) {
+			m_namespaceScope.allocateName(enInput, (boost::format("readPort_%d_en") % readPortIdx).str(), chooseDataTypeFromOutput(enInput), CodeFormatting::SIG_ENTITY_INPUT);
+			alreadyAllocated.insert(enInput);
+		}
+
+		m_namespaceScope.allocateName(dataOutput, (boost::format("readPort_%d_data") % readPortIdx).str(), chooseDataTypeFromOutput(dataOutput), CodeFormatting::SIG_ENTITY_OUTPUT);
+		alreadyAllocated.insert(dataOutput);
+		readPortIdx++;
+	}
+
+	for (auto &input : m_inputs)
+		if (!alreadyAllocated.contains(input))
+			m_namespaceScope.allocateName(input, findNearestDesiredName(input, m_nodeGroup), chooseDataTypeFromOutput(input), CodeFormatting::SIG_ENTITY_INPUT);
+
+	for (auto &output : m_outputs)
+		if (!alreadyAllocated.contains(output))
+			m_namespaceScope.allocateName(output, findNearestDesiredName(output, m_nodeGroup), chooseDataTypeFromOutput(output), CodeFormatting::SIG_ENTITY_OUTPUT);
 }
 
 void GenericMemoryEntity::buildFrom(hlim::NodeGroup *memNodeGrp)
@@ -103,6 +178,22 @@ void GenericMemoryEntity::buildFrom(hlim::NodeGroup *memNodeGrp)
 	}
 }
 
+
+void GenericMemoryEntity::formatReadPortOutputSignalName(std::ostream &stream, const hlim::MemoryGroup::ReadPort &readPort, size_t regIndex) const
+{
+	const auto &outputDecl = m_namespaceScope.get(readPort.dataOutput);
+	if (regIndex+1 >= readPort.dedicatedReadLatencyRegisters.size())
+		stream << outputDecl.name;
+	else
+		stream << outputDecl.name << "_outputReg_" << regIndex;
+}
+
+
+void GenericMemoryEntity::formatReadPortInputRegisterSignalName(std::ostream &stream, const hlim::NodePort &driver) const
+{
+	const auto &outputDecl = m_namespaceScope.get(driver);
+	stream << outputDecl.name << "_inputReg";
+}
 
 void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
 {
@@ -238,7 +329,9 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
 				const auto &decl = m_namespaceScope.get(rp.dataOutput);
 
 				cf.indent(stream, 1);
-				stream << "SIGNAL " << decl.name << "_outputReg_" << i << " : ";
+				stream << "SIGNAL ";
+				formatReadPortOutputSignalName(stream, rp, i);
+				stream << " : ";
 				cf.formatConnectionType(stream, decl);
 
 				auto& reg = rp.dedicatedReadLatencyRegisters[i];
@@ -261,261 +354,398 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
 
 				stream << "; "<< std::endl;
 			}
+
+		if (!m_memGrp->readUnorderedToAllOthersWrite(rp) && m_memGrp->canReadAfterAllOthersWrite(rp)) {
+			auto addrInput = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
+			const auto &decl = m_namespaceScope.get(addrInput);
+
+			cf.indent(stream, 1);
+			stream << "SIGNAL ";
+			formatReadPortInputRegisterSignalName(stream, addrInput);
+			stream << " : ";
+			cf.formatConnectionType(stream, decl);
+			stream << "; "<< std::endl;
+		}
 	}
 }
 
 
-void GenericMemoryEntity::writeResets(std::ostream &stream, unsigned indent, const std::string_view resetName, const std::pair<RegisterConfig, GenericMemoryPorts> &clockReset)
+void GenericMemoryEntity::generateReadPortConflictDetectionExpression(std::ostream &stream, const hlim::MemoryGroup::ReadPort &readPort)
+{
+	CodeFormatting &cf = m_ast.getCodeFormatting();
+
+	auto addrPort = readPort.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
+	auto addrWidth = hlim::getOutputConnectionType(addrPort).width;
+	auto addr = m_namespaceScope.get(addrPort).name;
+
+	hlim::NodePort enablePort = {};
+	if (!readPort.dedicatedReadLatencyRegisters.empty())
+		enablePort = readPort.dedicatedReadLatencyRegisters[0]->getDriver((unsigned)hlim::Node_Register::Input::ENABLE);
+
+	if (enablePort.node) {
+		auto enable = m_namespaceScope.get(enablePort).name;
+		stream << enable << " = '1' AND (";
+	}
+
+	bool firstCondition = true;
+	for (const auto &wp : m_memGrp->getWritePorts()) {
+		auto wrEnablePort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrEnable);
+		auto wrAddrPort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
+
+		auto wrAddrWidth = hlim::getOutputConnectionType(wrAddrPort).width;
+		auto wrAddr = m_namespaceScope.get(wrAddrPort).name;
+
+		if (!firstCondition)
+			stream << " OR ";
+		firstCondition = false;
+
+		stream << '(';
+		if (wrEnablePort.node != nullptr)
+			stream << m_namespaceScope.get(wrEnablePort).name << " = '1' AND ";
+
+		stream << addr << " = " << wrAddr << ')';
+	}
+
+	if (enablePort.node)
+		stream << ')';
+}
+
+void GenericMemoryEntity::openResetCondition(std::ostream &stream, unsigned indent, const std::string_view resetName, const RegisterConfig &reset)
 {
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 
 	cf.indent(stream, indent);
-	const char resetValue = clockReset.first.resetHighActive ? '1' : '0';
+	const char resetValue = reset.resetHighActive ? '1' : '0';
 	stream << "IF ("<< resetName << " = '" << resetValue << "') THEN\n";
+}
+
+
+void GenericMemoryEntity::exportResetOutputReg(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::ReadPort &readPort, size_t regIndex)
+{
+	CodeFormatting &cf = m_ast.getCodeFormatting();
+
+	auto &regNode = readPort.dedicatedReadLatencyRegisters[regIndex];
+	auto reset = regNode->getNonSignalDriver((unsigned)hlim::Node_Register::Input::RESET_VALUE);
+
+	if (reset.node != nullptr) {
+		auto *constReset = dynamic_cast<hlim::Node_Constant*>(reset.node);
+		HCL_DESIGNCHECK_HINT(constReset, "Resets of registers must be constants upon export!");
+
+		const auto &outputDecl = m_namespaceScope.get(readPort.dataOutput);
+
+		cf.indent(stream, indent);
+		formatReadPortOutputSignalName(stream, readPort, regIndex);
+		stream << " <= ";
+		formatConstant(stream, constReset, outputDecl.dataType);
+		stream << ";" << std::endl;
+	}
+}
+
+
+void GenericMemoryEntity::exportWrite(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::WritePort &writePort)
+{
+	CodeFormatting &cf = m_ast.getCodeFormatting();
+
+	auto wrEnablePort = writePort.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrEnable);
+	if (wrEnablePort.node != nullptr) {
+		cf.indent(stream, indent);
+		stream << "IF ("<< m_namespaceScope.get(wrEnablePort).name << " = '1') THEN\n";
+		indent++;
+	}
+
+	auto addrPort = writePort.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
+	auto dataPort = writePort.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrData);
+
+	const auto &dataDecl = m_namespaceScope.get(dataPort);
+
+	cf.indent(stream, indent);
+	if (hlim::getOutputConnectionType(addrPort).width > 0)
+		stream << "memory(to_integer(" << m_namespaceScope.get(addrPort).name << ")) <= ";
+	else
+		stream << "memory(0) <= ";
+	if (dataDecl.dataType != VHDLDataType::UNSIGNED) {
+		cf.formatDataType(stream, VHDLDataType::UNSIGNED);
+		stream << '(' << dataDecl.name << ";\n";
+	} else
+		stream << dataDecl.name << ";\n";
+
+	if (wrEnablePort.node != nullptr) {
+		indent--;
+		cf.indent(stream, indent);
+		stream << "END IF;\n";
+	}
+}
+
+void GenericMemoryEntity::exportRead(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::ReadPort &readPort, bool registeredInputs, bool useEnablePort)
+{
+	CodeFormatting &cf = m_ast.getCodeFormatting();
+	auto addrPort = readPort.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
+	auto dataPort = readPort.dataOutput;
+
+	bool openedEnableScope = false;
+	if (useEnablePort && !readPort.dedicatedReadLatencyRegisters.empty()) {
+		auto enablePort = readPort.dedicatedReadLatencyRegisters[0]->getDriver((unsigned)hlim::Node_Register::Input::ENABLE);
+		if (enablePort.node != nullptr) {
+			cf.indent(stream, indent);
+			stream << "IF ("<< m_namespaceScope.get(enablePort).name << " = '1') THEN\n";
+			indent++;
+			openedEnableScope = true;
+		}
+	}
+
+	const auto &outputDecl = m_namespaceScope.get(dataPort);
+
+	cf.indent(stream, indent);
+	formatReadPortOutputSignalName(stream, readPort, 0);
+
+	stream << " <= ";
+
+	if (outputDecl.dataType != VHDLDataType::UNSIGNED) {
+		cf.formatDataType(stream, outputDecl.dataType);
+		stream << '(';
+	}
+
+	if (hlim::getOutputConnectionType(addrPort).width > 0) {
+		stream << "memory(to_integer(";
+		if (registeredInputs)
+			formatReadPortInputRegisterSignalName(stream, addrPort);
+		else
+			stream << m_namespaceScope.get(addrPort).name;
+		stream << "));\n";
+	} else
+		stream << "memory(0);\n";
+
+	if (outputDecl.dataType != VHDLDataType::UNSIGNED) {
+		stream << ')';
+	}
+
+	if (openedEnableScope) {
+		indent--;
+		cf.indent(stream, indent);
+		stream << "END IF;\n";
+	}
+}
+
+void GenericMemoryEntity::exportReadInputReg(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::ReadPort &readPort)
+{
+	CodeFormatting &cf = m_ast.getCodeFormatting();
+
+	auto addrPort = readPort.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
+	const auto &outputDecl = m_namespaceScope.get(addrPort);
+
+	cf.indent(stream, indent);
+	formatReadPortInputRegisterSignalName(stream, addrPort);
+	stream << " <= " << outputDecl.name << ";\n";
+}
+
+void GenericMemoryEntity::exportReadOutputReg(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::ReadPort &readPort, size_t regIndex)
+{
+	CodeFormatting &cf = m_ast.getCodeFormatting();
+	auto addrPort = readPort.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
+	auto dataPort = readPort.dataOutput;
+
+	bool openedEnableScope = false;
+	auto enablePort = readPort.dedicatedReadLatencyRegisters[regIndex]->getDriver((unsigned)hlim::Node_Register::Input::ENABLE);
+	if (enablePort.node != nullptr) {
+		cf.indent(stream, indent);
+		stream << "IF ("<< m_namespaceScope.get(enablePort).name << " = '1') THEN\n";
+		indent++;
+		openedEnableScope = true;
+	}
+
+	const auto &outputDecl = m_namespaceScope.get(dataPort);
+
+	cf.indent(stream, indent);
+	formatReadPortOutputSignalName(stream, readPort, regIndex);
+
+	stream << " <= ";
+
+	formatReadPortOutputSignalName(stream, readPort, regIndex-1);
+
+	stream << ';' << std::endl;
+
+	if (openedEnableScope) {
+		indent--;
+		cf.indent(stream, indent);
+		stream << "END IF;\n";
+	}
+}
+
+void GenericMemoryEntity::exportReadConflictOverride(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::ReadPort &readPort)
+{
+	CodeFormatting &cf = m_ast.getCodeFormatting();
+
+	cf.indent(stream, indent);
+	stream << "IF (";
+	generateReadPortConflictDetectionExpression(stream, readPort);
+	stream << ") THEN\n";
 	indent++;
 
-	for (const auto &rp_idx : clockReset.second.readPortRegs) {
-		auto& [rp, idx] = rp_idx;
-		auto &regNode = rp.dedicatedReadLatencyRegisters[idx];
-		auto reset = regNode->getNonSignalDriver((unsigned)hlim::Node_Register::Input::RESET_VALUE);
+	cf.indent(stream, indent);
+	formatReadPortOutputSignalName(stream, readPort, 0);
+	stream << " <= (others => 'X');" << std::endl;
 
-		if (reset.node != nullptr) {
-			auto *constReset = dynamic_cast<hlim::Node_Constant*>(reset.node);
-			HCL_DESIGNCHECK_HINT(constReset, "Resets of registers must be constants upon export!");
-
-			const auto &outputDecl = m_namespaceScope.get(rp.dataOutput);
-
-			cf.indent(stream, indent);
-			if (idx+1 == rp.dedicatedReadLatencyRegisters.size()) {
-				stream << outputDecl.name;
-			} else {
-				stream << outputDecl.name << "_outputReg_" << idx;
-			}
-			stream << " <= ";
-			formatConstant(stream, constReset, outputDecl.dataType);
-			stream << ";" << std::endl;
-		}
-	}
+	indent--;
+	cf.indent(stream, indent);
+	stream << "END IF;\n";
 }
-
-
-void GenericMemoryEntity::writeWritePorts(std::ostream &stream, unsigned indent, const std::pair<RegisterConfig, GenericMemoryPorts> &clockReset)
-{
-	CodeFormatting &cf = m_ast.getCodeFormatting();
-
-	for (auto &wp : clockReset.second.writePorts) {
-		auto wrEnablePort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrEnable);
-		if (wrEnablePort.node != nullptr) {
-			cf.indent(stream, indent);
-			stream << "IF ("<< m_namespaceScope.get(wrEnablePort).name << " = '1') THEN\n";
-			indent++;
-		}
-
-		auto addrPort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
-		auto dataPort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrData);
-
-		const auto &dataDecl = m_namespaceScope.get(dataPort);
-
-		cf.indent(stream, indent);
-		if (hlim::getOutputConnectionType(addrPort).width > 0)
-			stream << "memory(to_integer(" << m_namespaceScope.get(addrPort).name << ")) <= ";
-		else
-			stream << "memory(0) <= ";
-		if (dataDecl.dataType != VHDLDataType::UNSIGNED) {
-			cf.formatDataType(stream, VHDLDataType::UNSIGNED);
-			stream << '(' << dataDecl.name << ";\n";
-		} else
-			stream << dataDecl.name << ";\n";
-
-		if (wrEnablePort.node != nullptr) {
-			indent--;
-			cf.indent(stream, indent);
-			stream << "END IF;\n";
-		}
-	}
-}
-
-void GenericMemoryEntity::writeReadPorts(std::ostream &stream, unsigned indent, const std::pair<RegisterConfig, GenericMemoryPorts> &clockReset, bool asyncMode)
-{
-	CodeFormatting &cf = m_ast.getCodeFormatting();
-
-	for (auto &rp_idx : clockReset.second.readPortRegs) {
-		auto& [rp, idx] = rp_idx;
-
-		HCL_ASSERT(idx == ~0ull || !asyncMode);
-
-		auto addrPort = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
-		auto dataPort = rp.dataOutput;
-
-		bool openedEnableScope = false;
-		if (!asyncMode) {
-			HCL_ASSERT(rp.dedicatedReadLatencyRegisters.size() > idx);
-
-			auto enablePort = rp.dedicatedReadLatencyRegisters[idx]->getDriver((unsigned)hlim::Node_Register::Input::ENABLE);
-			if (enablePort.node != nullptr) {
-				cf.indent(stream, indent);
-				stream << "IF ("<< m_namespaceScope.get(enablePort).name << " = '1') THEN\n";
-				indent++;
-				openedEnableScope = true;
-			}
-		}
-
-		const auto &outputDecl = m_namespaceScope.get(dataPort);
-
-		cf.indent(stream, indent);
-		if (asyncMode || idx+1 == rp.dedicatedReadLatencyRegisters.size()) {
-			stream << outputDecl.name;
-		} else {
-			stream << outputDecl.name << "_outputReg_" << idx;
-		}
-
-		stream << " <= ";
-
-		if (outputDecl.dataType != VHDLDataType::UNSIGNED) {
-			cf.formatDataType(stream, outputDecl.dataType);
-			stream << '(';
-		}
-
-		if (asyncMode || idx == 0) {
-			if (hlim::getOutputConnectionType(addrPort).width > 0)
-				stream << "memory(to_integer(" << m_namespaceScope.get(addrPort).name << "));\n";
-			else
-				stream << "memory(0);\n";
-		} else {
-			stream  << outputDecl.name << "_outputReg_" << idx-1 << ";\n";
-		}
-
-		if (outputDecl.dataType != VHDLDataType::UNSIGNED) {
-			stream << ')';
-		}
-
-		if (openedEnableScope) {
-			indent--;
-			cf.indent(stream, indent);
-			stream << "END IF;\n";
-		}	
-	}
-}
-
-
 
 
 void GenericMemoryEntity::writeStatementsVHDL(std::ostream &stream, unsigned indent)
 {
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 
-	utils::StableMap<RegisterConfig, GenericMemoryPorts> clockResetPairs;
+	GenericMemoryPorts memoryPorts = groupPorts();
 
-	for (auto &wp : m_memGrp->getWritePorts()) {
-		auto &c = wp.node->getClocks()[0];
-		clockResetPairs[RegisterConfig::fromClock(c, false)].writePorts.push_back(wp);
-	}
+	for (auto &[regConfig, clockedInstructions] : memoryPorts.clockedInstructions) {
+		std::string clockName = m_namespaceScope.getClock(regConfig.clock).name;
+		std::string resetName;
+		if (regConfig.reset != nullptr)
+			resetName = m_namespaceScope.getReset(regConfig.reset).name;
 
-	for (auto &rp : m_memGrp->getReadPorts())
-		if (!rp.dedicatedReadLatencyRegisters.empty()) {
-			for (auto i : utils::Range(rp.dedicatedReadLatencyRegisters.size())) {
-				auto &regNode = rp.dedicatedReadLatencyRegisters[i];
-				auto &c = regNode->getClocks()[0];
-				bool hasReset = regNode->getNonSignalDriver(hlim::Node_Register::RESET_VALUE).node != nullptr;
-				clockResetPairs[RegisterConfig::fromClock(c, hasReset)].readPortRegs.push_back({rp, i});
-			}
-		} else
-			clockResetPairs[{.clock = nullptr, .reset = nullptr}].readPortRegs.push_back({rp, ~0ull});
+		unsigned indent = 1;
+		cf.indent(stream, indent);
+		if (regConfig.resetType == hlim::RegisterAttributes::ResetType::ASYNCHRONOUS)
+			stream << "PROCESS(" << clockName << ", " << resetName << ")" << std::endl;
+		else
+			stream << "PROCESS(" << clockName << ")" << std::endl;
 
-	for (auto clockReset : clockResetPairs) {
-		if (clockReset.first.clock != nullptr) {
+		cf.indent(stream, indent);
+		stream << "BEGIN\n";
 
-			std::string clockName = m_namespaceScope.getClock(clockReset.first.clock).name;
-			std::string resetName;
-			if (clockReset.first.reset != nullptr)
-				resetName = m_namespaceScope.getReset(clockReset.first.reset).name;
+		indent++;
 
-			unsigned indent = 1;
+		if (regConfig.resetType == hlim::RegisterAttributes::ResetType::ASYNCHRONOUS) {
+
+			openResetCondition(stream, indent, resetName, regConfig);
+
+			for (auto &rp : clockedInstructions.reads)
+				exportResetOutputReg(stream, indent+1, rp, 0);
+
+			for (auto &outRegs : clockedInstructions.readOutputRegisters)
+				exportResetOutputReg(stream, indent+1, outRegs.first, outRegs.second);
+			
 			cf.indent(stream, indent);
-			if (clockReset.first.resetType == hlim::RegisterAttributes::ResetType::ASYNCHRONOUS)
-				stream << "PROCESS(" << clockName << ", " << resetName << ")" << std::endl;
-			else
-				stream << "PROCESS(" << clockName << ")" << std::endl;
-
+			stream << "ELSIF";
+		} else {
 			cf.indent(stream, indent);
-			stream << "BEGIN\n";
+			stream << "IF";
+		}
+
+		switch (regConfig.triggerEvent) {
+			case hlim::Clock::TriggerEvent::RISING:
+				stream << " (rising_edge(" << clockName << ")) THEN\n";
+			break;
+			case hlim::Clock::TriggerEvent::FALLING:
+				stream << " (falling_edge(" << clockName << ")) THEN\n";
+			break;
+			case hlim::Clock::TriggerEvent::RISING_AND_FALLING:
+				stream << " (" << clockName << "'event) THEN\n";
+			break;
+			default:
+				HCL_ASSERT_HINT(false, "Unhandled case");
+		}
+		indent++;
+
+		for (auto &wp : clockedInstructions.writes)
+			exportWrite(stream, indent, wp);
+
+		if (regConfig.resetType == hlim::RegisterAttributes::ResetType::SYNCHRONOUS) {
+
+			openResetCondition(stream, indent, resetName, regConfig);
+
+			for (auto &rp : clockedInstructions.reads)
+				exportResetOutputReg(stream, indent+1, rp, 0);
+
+			for (auto &outRegs : clockedInstructions.readOutputRegisters)
+				exportResetOutputReg(stream, indent+1, outRegs.first, outRegs.second);
+			
+			cf.indent(stream, indent);
+			stream << "ELSE" << std::endl;
 
 			indent++;
+		}
 
-			if (clockReset.first.resetType == hlim::RegisterAttributes::ResetType::ASYNCHRONOUS) {
+		for (auto &rp : clockedInstructions.readInputRegs)
+			exportReadInputReg(stream, indent, rp);
 
-				writeResets(stream, indent, resetName, clockReset);
-				
-				cf.indent(stream, indent);
-				stream << "ELSIF";
-			} else {
-				cf.indent(stream, indent);
-				stream << "IF";
-			}
+		for (auto &rp : clockedInstructions.reads)
+			exportRead(stream, indent, rp, false, true);
 
-			switch (clockReset.first.triggerEvent) {
-				case hlim::Clock::TriggerEvent::RISING:
-					stream << " (rising_edge(" << clockName << ")) THEN\n";
-				break;
-				case hlim::Clock::TriggerEvent::FALLING:
-					stream << " (falling_edge(" << clockName << ")) THEN\n";
-				break;
-				case hlim::Clock::TriggerEvent::RISING_AND_FALLING:
-					stream << " (" << clockName << "'event) THEN\n";
-				break;
-				default:
-					HCL_ASSERT_HINT(false, "Unhandled case");
-			}
-			indent++;
+		for (auto &rp : clockedInstructions.readConflictOverrides)
+			exportReadConflictOverride(stream, indent, rp);
 
-			writeWritePorts(stream, indent, clockReset);
+		for (auto &outRegs : clockedInstructions.readOutputRegisters)
+			exportReadOutputReg(stream, indent, outRegs.first, outRegs.second);
 
-
-			if (clockReset.first.resetType == hlim::RegisterAttributes::ResetType::SYNCHRONOUS) {
-
-				writeResets(stream, indent, resetName, clockReset);
-				
-				cf.indent(stream, indent);
-				stream << "ELSE" << std::endl;
-
-				indent++;
-			}
-
-
-			writeReadPorts(stream, indent, clockReset, false);
-
-
-			if (clockReset.first.resetType == hlim::RegisterAttributes::ResetType::SYNCHRONOUS) {
-				indent--;
-				cf.indent(stream, indent);
-				stream << "END IF;\n";
-			}
-
+		if (regConfig.resetType == hlim::RegisterAttributes::ResetType::SYNCHRONOUS) {
 			indent--;
 			cf.indent(stream, indent);
 			stream << "END IF;\n";
-
-			indent--;
-			cf.indent(stream, indent);
-			stream << "END PROCESS;\n\n";
-		} else {
-			unsigned indent = 1;
-			cf.indent(stream, indent);
-			stream << "PROCESS(all)\n";
-			cf.indent(stream, indent);
-			stream << "BEGIN\n";
-
-			indent++;
-
-			writeReadPorts(stream, indent, clockReset, true);
-
-			indent--;
-			cf.indent(stream, indent);
-			stream << "END PROCESS;\n\n";
 		}
+
+		indent--;
+		cf.indent(stream, indent);
+		stream << "END IF;\n";
+
+		indent--;
+		cf.indent(stream, indent);
+		stream << "END PROCESS;\n\n";
+	}
+
+	if (!memoryPorts.asyncReads.empty()) {
+		cf.indent(stream, indent);
+		stream << "PROCESS(all)\n";
+		cf.indent(stream, indent);
+		stream << "BEGIN\n";
+
+		for (auto &r : memoryPorts.asyncReads)
+			exportRead(stream, indent+1, r.readPort, r.registeredInputs, false);
+
+		cf.indent(stream, indent);
+		stream << "END PROCESS;\n\n";
 	}
 }
 
+GenericMemoryPorts GenericMemoryEntity::groupPorts() const
+{
+	GenericMemoryPorts memPorts;
+
+	for (auto &wp : m_memGrp->getWritePorts()) {
+		auto &c = wp.node->getClocks()[0];
+		memPorts.clockedInstructions[RegisterConfig::fromClock(c, false)].writes.push_back(wp);
+	}
+
+
+	for (auto &rp : m_memGrp->getReadPorts())
+		if (!rp.dedicatedReadLatencyRegisters.empty()) {
+			auto &regNode = rp.dedicatedReadLatencyRegisters[0];
+			auto &c = regNode->getClocks()[0];
+			bool hasReset = regNode->getNonSignalDriver(hlim::Node_Register::RESET_VALUE).node != nullptr;
+			auto &clockedInstructions = memPorts.clockedInstructions[RegisterConfig::fromClock(c, hasReset)];
+
+			if (m_memGrp->readUnorderedToAllOthersWrite(rp)) {
+				clockedInstructions.reads.push_back(rp);
+				clockedInstructions.readConflictOverrides.push_back(rp);
+			} else if (m_memGrp->canReadBeforeAllOthersWrite(rp)) {
+				clockedInstructions.reads.push_back(rp);
+			} else if (m_memGrp->canReadAfterAllOthersWrite(rp)) {
+				clockedInstructions.readInputRegs.push_back(rp);
+				memPorts.asyncReads.push_back({.readPort = rp, .registeredInputs = true});
+			} else 
+				HCL_ASSERT_HINT(false, "Can't express memories with reads happening after some writes but before others!");
+
+			for (auto i : utils::Range<size_t>(1, rp.dedicatedReadLatencyRegisters.size())) {
+				auto &regNode = rp.dedicatedReadLatencyRegisters[i];
+				auto &c = regNode->getClocks()[0];
+				bool hasReset = regNode->getNonSignalDriver(hlim::Node_Register::RESET_VALUE).node != nullptr;
+				memPorts.clockedInstructions[RegisterConfig::fromClock(c, hasReset)].readOutputRegisters.push_back({rp, i});
+			}
+		} else
+			memPorts.asyncReads.push_back({.readPort = rp, .registeredInputs = false});
+
+	return memPorts;
+}
 
 
 

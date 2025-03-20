@@ -117,7 +117,7 @@ void Node_MemPort::orderAfter(Node_MemPort *writePort)
 	connectInput((size_t)Inputs::orderAfter, {.node=writePort, .port=(size_t)Node_MemPort::Outputs::orderBefore});
 }
 
-bool Node_MemPort::isOrderedAfter(Node_MemPort *port) const
+bool Node_MemPort::isOrderedAfter(const Node_MemPort *port) const
 {
 	auto *p = (Node_MemPort *)getDriver((size_t)Inputs::orderAfter).node;
 	while (p != nullptr) {
@@ -127,14 +127,9 @@ bool Node_MemPort::isOrderedAfter(Node_MemPort *port) const
 	return false;
 }
 
-bool Node_MemPort::isOrderedBefore(Node_MemPort *port) const
+bool Node_MemPort::isOrderedBefore(const Node_MemPort *port) const
 {
-	auto *p = (Node_MemPort *)port->getDriver((size_t)Inputs::orderAfter).node;
-	while (p != nullptr) {
-		if (p == this) return true;
-		p = (Node_MemPort *)p->getDriver((size_t)Inputs::orderAfter).node;
-	}
-	return false;
+	return port->isOrderedAfter(this);
 }
 
 
