@@ -1,5 +1,5 @@
 PRFLAGS += -ccf $(TOP).ccf -cCP ++time_pathes 50
-TOP = physical_memory_2
+TOP = top
 
 YOSYS = yosys
 PR    = p_r

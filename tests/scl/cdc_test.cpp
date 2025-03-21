@@ -126,7 +126,7 @@ protected:
 
 	scl::RvStream<UInt> generator(BitWidth dataW = 8_b) const
 	{
-		return scl::strm::iota(ConstUInt(0, dataW), incBy);
+		return scl::strm::lfsr(dataW, 0x12000, UInt{ "20d1337" });
 	}
 
 	Bit checker(scl::RvStream<UInt> in) const
@@ -148,14 +148,15 @@ protected:
 		scl::Counter aliveSignalCtr(12_b);
 		errorLatch ^= aliveSignalCtr.isLast();
 
-		pinOut(reg(error, '0'), "UART0_TX");
+		Bit errorReg = reg(error, '0');
+		pinOut(errorReg, "UART0_TX");
 		pinOut(reg(errorLatch, '0'), "UART0_RX");
 
-		addSimulationProcess([error, clk = ClockScope::getClk()]() -> SimProcess {
+		addSimulationProcess([errorReg, clk = ClockScope::getClk()]() -> SimProcess {
 			while (true)
 			{
 				co_await OnClk(clk);
-				BOOST_TEST(simu(error) == '0');
+				BOOST_TEST(simu(errorReg) == '0');
 			}
 		});
 	}
@@ -168,9 +169,10 @@ protected:
 		std::filesystem::path cwd = std::filesystem::path{ "export" } / testName;
 
 		std::future<int> flow;
+		vhdl::VHDLExport vhdl(cwd / "top.vhd");
 		if (std::filesystem::is_directory(cwd))
 		{
-			vhdl::VHDLExport vhdl(cwd / "top.vhd");
+			vhdl.addTestbenchRecorder(*m_simulator, "tb", true);
 			vhdl(design.getCircuit());
 
 			flow = std::async([=]() {
@@ -190,8 +192,8 @@ protected:
 		.resetType = hlim::RegisterAttributes::ResetType::NONE
 	} };
 
-	Clock clkFast = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = {4 * 30'000'000}, .resetType = ClockConfig::ResetType::NONE });
-	Clock clkSlow = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = {4 * 29'666'000}, .resetType = ClockConfig::ResetType::NONE });
+	Clock clkFast = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = {2 * 30'000'000}, .resetType = ClockConfig::ResetType::NONE });
+	Clock clkSlow = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = {2 * 29'666'000}, .resetType = ClockConfig::ResetType::NONE });
 };
 
 BOOST_FIXTURE_TEST_CASE(cdc_gatemate_reqack_hw_test, GateMateStreamCdcTest, *boost::unit_test::disabled())
