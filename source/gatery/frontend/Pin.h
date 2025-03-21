@@ -169,6 +169,15 @@ namespace gtry {
 	template<BitVectorValue T>
 	inline BidirPins bidirPin(const T &bitVector) { return BidirPins((ValueToBaseSignal<T>)bitVector); }
 
+	template<BaseSignal T>
+	struct Bidir
+	{
+		BOOST_HANA_DEFINE_STRUCT(Bidir,
+			(T, in),
+			(T, out),
+			(Bit, en)
+		);
+	};
 }
 
 namespace gtry
