@@ -82,6 +82,8 @@ public:
 	{
 		if (m_useSimuPhy)
 			m_host = &func.setup<usb::SimuPhy>();
+		else if (m_useUlpiPhy)
+			&func.setup<usb::Ulpi>();
 		else
 			m_host = &func.setup<usb::GpioPhy>();
 	}
@@ -118,6 +120,7 @@ public:
 
 protected:
 	bool m_useSimuPhy = true;
+	bool m_useUlpiPhy = false;
 	bool m_pinApplicationInterface = true;
 	bool m_pinStatusRegister = true;
 	uint8_t m_maxPacketLength = 64;
