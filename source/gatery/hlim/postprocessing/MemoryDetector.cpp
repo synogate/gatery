@@ -274,7 +274,7 @@ NodeGroup *MemoryGroup::lazyCreateFixupNodeGroup()
 	return m_fixupNodeGroup;
 }
 
-void MemoryGroup::convertToReadBeforeWrite(Circuit &circuit)
+void MemoryGroup::resolveReadAfterWrite(Circuit &circuit)
 {
 	// If an async read happens after a write, it must
 	// check if an address collision ocurred and if so directly forward the new value.
@@ -1281,7 +1281,9 @@ bool Memory2VHDLPattern::attemptApply(Circuit &circuit, hlim::NodeGroup *nodeGro
 
 	dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Preparing memory in " << nodeGroup << " for vhdl export");
 
-	memoryGroup->convertToReadBeforeWrite(circuit);
+	//todo: retiming so far expects non-write-first so I have to always convert.
+	// if (memoryGroup->getMemory()->getRequiredReadLatency() == 0)
+		memoryGroup->resolveReadAfterWrite(circuit);
 	memoryGroup->attemptRegisterRetiming(circuit);
 	memoryGroup->resolveWriteOrder(circuit);
 	memoryGroup->updateNoConflictsAttrib();

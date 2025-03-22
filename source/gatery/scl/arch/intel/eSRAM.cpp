@@ -74,7 +74,7 @@ bool eSRAM::apply(hlim::NodeGroup *nodeGroup) const
 
 	auto &circuit = DesignScope::get()->getCircuit();
 
-	memGrp->convertToReadBeforeWrite(circuit);
+	memGrp->resolveReadAfterWrite(circuit);
 	memGrp->attemptRegisterRetiming(circuit);
 
 	auto *readClock = rp.dedicatedReadLatencyRegisters.front()->getClocks()[0];

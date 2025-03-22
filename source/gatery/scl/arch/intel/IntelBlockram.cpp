@@ -83,7 +83,7 @@ bool IntelBlockram::apply(hlim::NodeGroup *nodeGroup) const
 
 	auto &circuit = DesignScope::get()->getCircuit();
 //DesignScope::get()->visualize(std::string("intelBRam")+std::to_string(__LINE__));
-	memGrp->convertToReadBeforeWrite(circuit);
+	memGrp->resolveReadAfterWrite(circuit);
 //DesignScope::get()->visualize(std::string("intelBRam")+std::to_string(__LINE__));
 	memGrp->attemptRegisterRetiming(circuit);
 //DesignScope::get()->visualize(std::string("intelBRam")+std::to_string(__LINE__));

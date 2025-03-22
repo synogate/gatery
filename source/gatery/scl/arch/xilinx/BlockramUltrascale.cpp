@@ -98,7 +98,7 @@ bool BlockramUltrascale::apply(hlim::NodeGroup *nodeGroup) const
 	// Everything else needs this, so do it first. Also we want rmw logic as far outside as possible
 	// The reset could potentially be delayed for shorter resets (but with more reset logic).
 	auto &circuit = DesignScope::get()->getCircuit();
-	memGrp->convertToReadBeforeWrite(circuit);
+	memGrp->resolveReadAfterWrite(circuit);
 	memGrp->attemptRegisterRetiming(circuit);
 
 
@@ -350,7 +350,7 @@ void BlockramUltrascale::hookUpSingleBRamSDP(RAMBxE2 *bram, size_t addrSize, siz
 /*
 	auto &circuit = DesignScope::get()->getCircuit();
 
-	memGrp->convertToReadBeforeWrite(circuit);
+	memGrp->resolveReadAfterWrite(circuit);
 	memGrp->attemptRegisterRetiming(circuit);
 */
 

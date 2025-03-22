@@ -236,7 +236,7 @@ struct Test_GenericMemoryExport : public gtry::GHDLTestFixture
 
 		Memory<UInt> mem(depth, width);
 		mem.setType(MemType::DONT_CARE, latency);
-		mem.noConflicts();
+		//mem.noConflicts();
 
 		UInt addr = pinIn(8_b).setName("addr");
 		UInt output = mem[addr];
