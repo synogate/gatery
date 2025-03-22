@@ -255,6 +255,52 @@ BOOST_FIXTURE_TEST_CASE(usb_loopback_cyc10, SingleEndpointUsbFixture, *boost::un
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000 }));
 }
 
+BOOST_FIXTURE_TEST_CASE(usb_loopback_deca, SingleEndpointUsbFixture, *boost::unit_test::disabled())
+{
+	m_useSimuPhy = false;
+	m_pinApplicationInterface = false;
+	m_pinStatusRegister = false;
+
+	auto device = std::make_unique<scl::IntelDevice>();
+	device->setupDevice("10M50DAF484C6GES");
+	design.setTargetTechnology(std::move(device));
+
+	Clock clk50{ ClockConfig{
+		.absoluteFrequency = 50'000'000,
+		.name = "MAX10_CLK1_50",
+		.resetType = ClockConfig::ResetType::NONE
+	} };
+	
+	auto* pll2 = DesignScope::get()->createNode<scl::arch::intel::ALTPLL>();
+	pll2->setClock(0, clk50);
+	Clock clock = pll2->generateOutClock(0, 18, 25, 50, 0);		// 36 MHz
+	//Clock clock = pll2->generateOutClock(0, 24, 25, 50, 0);	// 48 MHz
+	ClockScope clkScp(clock);
+
+	setupFunction();
+	{
+		scl::TransactionalFifo<scl::usb::Function::StreamData> loopbackFifo{ 256 };
+		m_func->attachRxFifo(loopbackFifo, 1 << 1);
+		m_func->attachTxFifo(loopbackFifo, 1 << 1);
+		loopbackFifo.generate();
+	}
+
+	addSimulationProcess([&]() -> SimProcess {
+		co_await OnClk(clock);
+		co_await m_controller->testWindowsDeviceDiscovery();
+
+		stopTest();
+	});
+
+	design.postprocess();
+
+	vhdl::VHDLExport vhdl("export/usb_loopback_deca/usb_loopback_deca.vhd");
+	vhdl.targetSynthesisTool(new IntelQuartus());
+	vhdl(design.getCircuit());
+
+	//BOOST_TEST(!runHitsTimeout({ 1, 1'000 }));
+}
+
 class WindowsDiscoveryLoopbackUsbFixture : public SingleEndpointUsbFixture {
 public:
 	size_t samplingRatio = 4;
