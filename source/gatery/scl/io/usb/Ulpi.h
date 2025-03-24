@@ -24,6 +24,7 @@ namespace gtry::scl::usb
 	{
 		Clock clock = ClockConfig{
 			.absoluteFrequency = 60'000'000,
+			.resetType = ClockConfig::ResetType::NONE,
 		};
 
 		Bit dataEn;

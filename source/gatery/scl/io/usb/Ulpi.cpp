@@ -130,7 +130,7 @@ void gtry::scl::usb::Ulpi::generateRegFSM()
 	{
 		IF(m_io.dir == '0')
 			m_state = State::setRegAddress;
-	}
+		}
 	IF(m_state.current() == State::setRegAddress)
 	{
 		m_io.dataOut = m_regAddr;
@@ -251,6 +251,7 @@ void gtry::scl::usb::UlpiIo::pin(std::string_view prefix)
 {
 	clock.setName(std::string(prefix) + "CLKIN");
 
+	ClockScope clkScope{ clock };
 	dataIn = tristatePin(dataOut, dataEn).setName(std::string(prefix) + "DATA");
 	dir = pinIn().setName(std::string(prefix) + "DIR");
 	nxt = pinIn().setName(std::string(prefix) + "NXT");
@@ -262,7 +263,7 @@ void gtry::scl::usb::UlpiIo::pin(std::string_view prefix)
 	reset = '0';
 	cs = '1';
 	stp = '0';
-	dataEn = dir == '0' & reg(dir, {.clock = clock}) == '0';
+	dataEn = dir == '0' & reg(dir) == '0';
 	dataOut = 0;
 }
 
