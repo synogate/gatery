@@ -48,6 +48,13 @@ namespace gtry::scl
 		m_area.leave();
 	}
 
+	Counter::Counter(std::chrono::nanoseconds duration) :
+		Counter(hlim::ceil(
+			hlim::ClockRational{ duration.count(), 1'000'000'000 } *
+			ClockScope::getClk().absoluteFrequency()
+		))
+	{}
+
 	Counter& Counter::inc() { 
 		m_inc = '1';
 		if (gtry::ConditionalScope ___condScope{'1', true})

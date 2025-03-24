@@ -26,6 +26,7 @@ namespace gtry::scl
 		Counter(size_t end, size_t startupValue = 0);
 		Counter(UInt end, size_t startupValue = 0);
 		Counter(BitWidth ctrW, size_t startupValue = 0);
+		Counter(std::chrono::nanoseconds duration);
 
 		Counter& inc();
 		Counter& dec();
