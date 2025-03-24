@@ -455,8 +455,7 @@ void gtry::scl::usb::Function::generateInitialFsm()
 	m_configuration = reg(m_configuration, 0);
 	HCL_NAMED(m_configuration);
 
-	Bit descLengthPipeStageValid = reg(m_state.next() == State::sendDataPid, '0') | name("descLengthPipeStageValid");
-	IF(descLengthPipeStageValid)
+	IF(m_state.next() == State::sendDataPid)
 	{
 		m_descAddressActive = m_descAddress;
 		m_descLengthActive = m_descLength;
