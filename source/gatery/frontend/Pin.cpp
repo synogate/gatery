@@ -151,7 +151,7 @@ namespace gtry
 		}
 
 		node->setName(makeName());
-		node->setPinNodeParameter(*params);
+		node->setPinNodeParameter(params);
 		if (ClockScope::anyActive())
 			node->setClockDomain(ClockScope::getClk().getClk());
 	}

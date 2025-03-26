@@ -184,12 +184,31 @@ namespace gtry
 {
 	namespace internal
 	{
+		
+
 		struct PinVisitor : CompoundNameVisitor
 		{
 			void reverse();
 			virtual void elementaryOnly(ElementarySignal& vec) override final;
 
-			const PinNodeParameter* params = nullptr;
+			template<typename T>
+			void operator () (T& a) {
+				if constexpr (std::derived_from<T, ElementarySignal>)
+					elementaryOnly((ElementarySignal&)a);
+			}
+
+			template<typename T>
+			void operator () (Bidir<T>& a) {
+				a.in = (T)tristatePin(a.out, a.en).setName(makeName());
+			}
+
+			template<typename T>
+			bool enterPackStruct(const T& t) { return true; }
+
+			template<typename T>
+			bool enterPackStruct(const Bidir<T>& t) { return false; }
+
+			PinNodeParameter params;
 			bool isReverse = false;
 		};
 	}
@@ -197,14 +216,14 @@ namespace gtry
 	void pinIn(Signal auto&& signal, std::string prefix, const PinNodeParameter& params)
 	{
 		internal::PinVisitor v;
-		v.params = &params;
+		v.params = params;
 		reccurseCompoundMembers(signal, v, prefix);
 	}
 
 	void pinOut(Signal auto&& signal, std::string prefix, const PinNodeParameter& params)
 	{
 		internal::PinVisitor v;
-		v.params = &params;
+		v.params = params;
 		v.reverse();
 		reccurseCompoundMembers(signal, v, prefix);
 	}
