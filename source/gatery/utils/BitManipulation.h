@@ -48,6 +48,22 @@ namespace gtry::utils
 {
 	using ::std::popcount;
 
+	inline uint8_t reverseBits(uint8_t val)
+	{
+		// source: https://graphics.stanford.edu/~seander/bithacks.html#ReverseByteWith64Bits
+		// Devised by Sean Anderson, July 13, 2001.
+		return uint8_t(((val * 0x0802LU & 0x22110LU) | (val * 0x8020LU & 0x88440LU)) * 0x10101LU >> 16);
+	}
+
+	template<typename T>
+	T reverseBits(T val)
+	{
+		T ret = 0;
+		for (size_t i = 0; i < sizeof(T); ++i)
+			ret |= reverseBits(uint8_t(val >> i * 8)) << (sizeof(T) - 1 - i) * 8;
+		return ret;
+	}
+
 template<typename T>
 bool isPow2(T v) { return popcount(v) == 1; }
 
