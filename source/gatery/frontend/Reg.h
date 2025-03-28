@@ -183,6 +183,11 @@ namespace gtry
 			return m_set; 
 		}
 
+		void reset() {
+			HCL_DESIGNCHECK_HINT(m_initialized, "Register class must be initialized before use.");
+			m_set = m_resetValue;
+		}
+
 		void setName(std::string _name)
 		{
 			HCL_DESIGNCHECK_HINT(m_initialized, "Register class must be initialized before use.");
