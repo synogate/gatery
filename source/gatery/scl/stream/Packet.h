@@ -795,11 +795,11 @@ namespace gtry::scl::strm
 
 	template<PacketStreamSignal StreamT> requires std::is_base_of_v<BaseBitVector, typename StreamT::Payload>
 	StreamT matchWidth(StreamT&& in, BitWidth desiredWidth) {
-		if (desiredWidth > in.width())
+		if (desiredWidth > in->width())
 			return widthExtend(move(in), desiredWidth);
-		else if (desiredWidth < in.width())
+		else if (desiredWidth < in->width())
 			return widthReduce(move(in), desiredWidth);
-		else if (desiredWidth == in.width())
+		else if (desiredWidth == in->width())
 			return move(in);
 		else
 			HCL_DESIGNCHECK_HINT(false, "something went terribly wrong if this failed");
