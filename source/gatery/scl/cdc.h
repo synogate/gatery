@@ -76,8 +76,6 @@ namespace gtry::scl
 	template<Signal T>
 	T synchronize(T val, const Clock& inClock, const Clock& outClock, const SynchronizeParams &params)
 	{
-		HCL_DESIGNCHECK_HINT(params.outStages > 1, "Building a synchronizer chain with zero synchronization registers is probably a mistake!");
-
 		if (params.inStage)
 			val = reg(val, { .clock = inClock });
 
