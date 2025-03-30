@@ -206,7 +206,7 @@ namespace gtry
 			bool enterPackStruct(const T& t) { return true; }
 
 			template<typename T>
-			bool enterPackStruct(const Bidir<T>& t) { return false; }
+			bool enterPackStruct(const Bidir<T>& t) { return params.simulationOnlyPin; }
 
 			PinNodeParameter params;
 			bool isReverse = false;
