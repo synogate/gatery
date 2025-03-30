@@ -64,6 +64,12 @@ class Node_Memory : public Node<Node_Memory>
 			EXTERNAL,
 		};
 
+		enum class ReadDuringWrite {
+			READ_FIRST,
+			WRITE_FIRST,
+			DONT_CARE
+		};		
+
 		enum class UndefinedReadAddrBehavior {
 			UNDEFINED,  ///< Always read undefined. Faster, but pessimistic.
 			EXACT	 	///< Correctly compute the output based on memory content. Potentially much slower.
@@ -133,6 +139,12 @@ class Node_Memory : public Node<Node_Memory>
 
 		UndefinedReadAddrBehavior undefinedReadAddrBehavior() const { return m_undefinedReadAddrBehavior; }
 		void undefinedReadAddrBehavior(UndefinedReadAddrBehavior behavior) { m_undefinedReadAddrBehavior = behavior; }
+
+		void forceFinalMemorySamePortRDW(std::optional<ReadDuringWrite> rdw) { m_forceFinalMemorySamePortRDW = rdw; }
+		std::optional<ReadDuringWrite> forceFinalMemorySamePortRDW() const { return m_forceFinalMemorySamePortRDW; }
+
+		void forceFinalMemoryCrossPortRDW(std::optional<ReadDuringWrite> rdw) { m_forceFinalMemoryCrossPortRDW = rdw; }
+		std::optional<ReadDuringWrite> forceFinalMemoryCrossPortRDW() const { return m_forceFinalMemoryCrossPortRDW; }
 	protected:
 		sim::DefaultBitVectorState m_powerOnState;
 
@@ -141,6 +153,8 @@ class Node_Memory : public Node<Node_Memory>
 		size_t m_initializationDataWidth = 0ul;
 		size_t m_requiredReadLatency = 0;
 		UndefinedReadAddrBehavior m_undefinedReadAddrBehavior = UndefinedReadAddrBehavior::UNDEFINED;
+		std::optional<ReadDuringWrite> m_forceFinalMemorySamePortRDW;
+		std::optional<ReadDuringWrite> m_forceFinalMemoryCrossPortRDW;
 };
 
 }

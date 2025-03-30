@@ -45,6 +45,11 @@ namespace gtry {
 		else
 			setType(memType);
 
+		if (utils::ConfigTree rdw = ent.config("samePortReadDuringWrite"))
+			forceFinalMemorySamePortRDW(rdw.as<MemoryCapabilities::ReadDuringWrite>());
+		if (utils::ConfigTree rdw = ent.config("crossPortReadDuringWrite"))
+			forceFinalMemoryCrossPortRDW(rdw.as<MemoryCapabilities::ReadDuringWrite>());
+
 		m_memoryNode->loadConfig();
 	}
 

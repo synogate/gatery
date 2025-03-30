@@ -274,6 +274,67 @@ NodeGroup *MemoryGroup::lazyCreateFixupNodeGroup()
 	return m_fixupNodeGroup;
 }
 
+void MemoryGroup::convertReadFirstToDelayedWriteFirst(Circuit &circuit)
+{
+	if (m_writePorts.empty()) return;
+
+	bool anyMustReadFirst = false;
+	bool allCanReadFirst = true;
+	for (auto &rp : m_readPorts) {
+		bool canReadFirst = canReadBeforeAllOthersWrite(rp);
+		bool mustReadFirst = canReadFirst && !readUnorderedToAllOthersWrite(rp);
+
+		allCanReadFirst &= canReadFirst;
+		anyMustReadFirst |= mustReadFirst;
+	}
+	if (!anyMustReadFirst)
+		return;
+	HCL_ASSERT_HINT(allCanReadFirst, "This implementation can only convert read-first to don't care if all read ports are read first!");
+
+	// Find last write port
+	NodePort lastWritePort;
+	for (auto &wp : m_writePorts) {
+		HCL_ASSERT_HINT(!wp.node->isReadPort(), "Not implemented for already fused memory ports");
+		if (lastWritePort.node == nullptr)
+			lastWritePort = {.node = wp.node, .port = (size_t)Node_MemPort::Outputs::orderBefore};
+		else {
+			if (wp.node->isOrderedAfter((hlim::Node_MemPort*) lastWritePort.node))
+				lastWritePort = {.node = wp.node, .port = (size_t)Node_MemPort::Outputs::orderBefore};
+			else
+				HCL_ASSERT_HINT(wp.node->isOrderedBefore((hlim::Node_MemPort*) lastWritePort.node), "Can not yet deal with unordered write ports");
+		}
+	}
+
+	// Make all read ports write-first, i.e. independent and after the last write port
+	for (auto &rp : m_readPorts) {
+		auto orderedAfter = rp.node->getDirectlyDriven((size_t)Node_MemPort::Outputs::orderBefore);
+		for (auto np : orderedAfter)
+			np.node->rewireInput(np.port, rp.node->getDriver((size_t)Node_MemPort::Inputs::orderAfter));
+		
+		rp.node->rewireInput((size_t)Node_MemPort::Inputs::orderAfter, lastWritePort);
+	}
+
+	// Delay write ports
+	lazyCreateFixupNodeGroup();
+	ConstructionHelper c(circuit);
+	c.constructInGroup(*m_fixupNodeGroup);
+	for (auto &wp : m_writePorts) {
+		for (auto in : { hlim::Node_MemPort::Inputs::address, hlim::Node_MemPort::Inputs::wrData, hlim::Node_MemPort::Inputs::wrWordEnable }) {
+			if (wp.node->getDriver((size_t)in).node != nullptr) {
+				auto r = c.reg(*wp.node->getClocks()[0], wp.node->getDriver((size_t)in));
+				wp.node->rewireInput((size_t)in, p0(r));
+			}
+		}
+		for (auto in : { hlim::Node_MemPort::Inputs::enable, hlim::Node_MemPort::Inputs::wrEnable }) {
+			if (wp.node->getDriver((size_t)in).node != nullptr) {
+				auto r = c.reg(*wp.node->getClocks()[0], wp.node->getDriver((size_t)in), p0(c.constBoolean(false)));
+				wp.node->rewireInput((size_t)in, p0(r));
+			}
+		}
+	}
+
+}
+
 void MemoryGroup::resolveReadAfterWrite(Circuit &circuit)
 {
 	// If an async read happens after a write, it must
@@ -1283,6 +1344,7 @@ bool Memory2VHDLPattern::attemptApply(Circuit &circuit, hlim::NodeGroup *nodeGro
 
 	//todo: retiming so far expects non-write-first so I have to always convert.
 	// if (memoryGroup->getMemory()->getRequiredReadLatency() == 0)
+		memoryGroup->convertReadFirstToDelayedWriteFirst(circuit);
 		memoryGroup->resolveReadAfterWrite(circuit);
 	memoryGroup->attemptRegisterRetiming(circuit);
 	memoryGroup->resolveWriteOrder(circuit);

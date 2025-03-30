@@ -50,6 +50,7 @@ class MemoryGroup : public NodeGroupMetaInfo
 		
 		void pullInPorts(Node_Memory *memory);
 
+		void convertReadFirstToDelayedWriteFirst(Circuit &circuit);
 		void resolveReadAfterWrite(Circuit &circuit);
 		void resolveWriteOrder(Circuit &circuit);
 		void findRegisters();

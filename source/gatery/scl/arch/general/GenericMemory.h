@@ -50,6 +50,9 @@ class EmbeddedMemory {
 			bool supportsDualClock;
 			bool supportsPowerOnInitialization;
 
+			utils::BitFlags<MemoryCapabilities::ReadDuringWrite> supportedSamePortRDW = utils::BitFlags<MemoryCapabilities::ReadDuringWrite>::ALL;
+			utils::BitFlags<MemoryCapabilities::ReadDuringWrite> supportedCrossPortRDW = utils::BitFlags<MemoryCapabilities::ReadDuringWrite>::ALL;
+
 			// More in git history!
 		};
 

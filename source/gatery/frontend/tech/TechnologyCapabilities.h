@@ -124,6 +124,11 @@ class MemoryCapabilities : public Capabilities {
 			TRUE_DUAL_PORT
 		};
 
+		enum class ReadDuringWrite {
+			READ_FIRST,
+			WRITE_FIRST,
+			DONT_CARE
+		};
 
 		struct Request {
 			uint64_t size = 0;
@@ -132,12 +137,16 @@ class MemoryCapabilities : public Capabilities {
 			Mode mode = Mode::SIMPLE_DUAL_PORT;
 			bool dualClock = false;
 			bool powerOnInitialized = false;
+			ReadDuringWrite samePortReadDuringWrite = ReadDuringWrite::DONT_CARE;
+			ReadDuringWrite crossPortReadDuringWrite = ReadDuringWrite::DONT_CARE;
 		};
 
 		struct Choice {
 			bool inputRegs;
 			size_t outputRegs;
 			size_t totalReadLatency;
+			ReadDuringWrite samePortReadDuringWrite;
+			ReadDuringWrite crossPortReadDuringWrite;
 		};
 
 		Choice select(const Request &request) const;

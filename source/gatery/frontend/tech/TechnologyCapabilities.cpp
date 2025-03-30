@@ -30,6 +30,15 @@ MemoryCapabilities::Choice MemoryCapabilities::select(const Request &request) co
 	return select(GroupScope::getCurrentNodeGroup(), request);
 }
 
+MemoryCapabilities::ReadDuringWrite cantDoWriteFirst(MemoryCapabilities::ReadDuringWrite input)
+{
+	if (input == MemoryCapabilities::ReadDuringWrite::WRITE_FIRST)
+		// If we can't do write first we have to convert it to a hazard logic. In that case, we no longer care what the read port does.
+		return MemoryCapabilities::ReadDuringWrite::DONT_CARE;
+	else
+		return input;
+}
+
 MemoryCapabilities::Choice MemoryCapabilities::select(hlim::NodeGroup *group, const Request &request) const
 {
 	/*
@@ -47,11 +56,19 @@ MemoryCapabilities::Choice MemoryCapabilities::select(hlim::NodeGroup *group, co
 		result.inputRegs = false;
 		result.outputRegs = 0;
 		result.totalReadLatency = 0;
+
+		// Lutrams read immediately but write in the next cycle.
+		// In order for the write not to affect the next read, the memory has to be read first.
+		result.samePortReadDuringWrite = ReadDuringWrite::READ_FIRST;
+		result.crossPortReadDuringWrite = ReadDuringWrite::READ_FIRST;
 	} else if (request.sizeCategory.contains(SizeCategory::MEDIUM)) {
 		// SizeCategory::MEDIUM;
 		result.inputRegs = true;
 		result.outputRegs = 0;
 		result.totalReadLatency = 1;
+
+		result.samePortReadDuringWrite = request.samePortReadDuringWrite;
+		result.crossPortReadDuringWrite = cantDoWriteFirst(request.crossPortReadDuringWrite);
 	} else
 		HCL_DESIGNCHECK_HINT(false, "No suitable memory configuration could be found. The default technology capabilities are limited to SMALL and MEDIUM memories!");
 

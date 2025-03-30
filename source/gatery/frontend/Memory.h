@@ -130,6 +130,7 @@ namespace gtry
 
 	using MemType = hlim::Node_Memory::MemType;
 	using UndefinedReadAddrBehavior = hlim::Node_Memory::UndefinedReadAddrBehavior;
+	using ReadDuringWrite = hlim::Node_Memory::ReadDuringWrite;
 
 	class BaseMemory {
 		public:
@@ -157,8 +158,24 @@ namespace gtry
 			BitWidth addressWidth() const;
 			std::size_t numWords() const;
 
+			/// Returns the accuracy, with which reads from undefined addresses are simulated.
 			inline UndefinedReadAddrBehavior undefinedReadAddrBehavior() const { return m_memoryNode->undefinedReadAddrBehavior(); }
+			/// @brief Sets the accuracy, with which reads from undefined addresses are simulated.
+			/// @details The tradeof is between always returning undefined (which is fast) and actually merging the memory content of all possibly addressed memory locations.
 			inline void undefinedReadAddrBehavior(UndefinedReadAddrBehavior behavior) { m_memoryNode->undefinedReadAddrBehavior(behavior); }
+
+			/// @brief Sets (or clears) a preference for the same port read during write behavior of the final memory(s) that this memory is converted to.
+			/// @details The behavior modeled through the usage of memory ports on this memory can be different and will be retained, through extra logic if necessary.
+			void forceFinalMemorySamePortRDW(std::optional<ReadDuringWrite> rdw) { m_memoryNode->forceFinalMemorySamePortRDW(rdw); }
+			/// Returns the preference for the same port read during write behavior of the final memory(s) that this memory is converted to.
+			std::optional<ReadDuringWrite> forceFinalMemorySamePortRDW() const { return m_memoryNode->forceFinalMemorySamePortRDW(); }
+
+			/// @brief Sets (or clears) a preference for the cross port read during write behavior of the final memory(s) that this memory is converted to.
+			/// @details The behavior modeled through the usage of memory ports on this memory can be different and will be retained, through extra logic if necessary.
+			void forceFinalMemoryCrossPortRDW(std::optional<ReadDuringWrite> rdw) { m_memoryNode->forceFinalMemoryCrossPortRDW(rdw); }
+			/// Returns the preference for the cross port read during write behavior of the final memory(s) that this memory is converted to.
+			std::optional<ReadDuringWrite> forceFinalMemoryCrossPortRDW() const { return m_memoryNode->forceFinalMemoryCrossPortRDW(); }
+
 		protected:
 			hlim::NodePtr<hlim::Node_Memory> m_memoryNode;
 			uint64_t m_numWords = 0;
