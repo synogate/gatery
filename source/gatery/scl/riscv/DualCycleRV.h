@@ -17,6 +17,7 @@
 */
 #pragma once
 #include "riscv.h"
+#include "ElfLoader.h"
 
 namespace gtry::scl::riscv
 {
@@ -28,7 +29,8 @@ namespace gtry::scl::riscv
 
 		virtual Memory<UInt>& fetch(uint64_t entryPoint = 0);
 		virtual TileLinkUL fetchTileLink(uint64_t entryPoint = 0);
-
+		virtual void fetchElf(const ElfLoader& elf);
+		virtual void fetchElf(std::filesystem::path elfPath, std::optional<std::filesystem::path> makeDir);
 
 	protected:
 		virtual void generate(const UInt& instruction, const Bit& instructionValid);

@@ -142,6 +142,25 @@ TileLinkUL gtry::scl::riscv::DualCycleRV::fetchTileLink(uint64_t entryPoint)
 	return link;
 }
 
+void gtry::scl::riscv::DualCycleRV::fetchElf(const ElfLoader& elf)
+{
+	HCL_DESIGNCHECK_HINT(elf.segments().size() == 1, "firmware is limitted to one relocatable executable segment");
+
+	const scl::riscv::ElfLoader::Segment& text = elf.segments().front();
+
+	// m_IP is used internally by fetch to size instructio memory
+	m_IP.resetNode();
+	m_IP = BitWidth::count(text.data.size());
+
+	Memory<UInt>& mem = fetch(elf.entryPoint() - text.offset);
+	mem.fillPowerOnState(sim::createDefaultBitVectorState(as_bytes(text.data)));
+}
+
+void gtry::scl::riscv::DualCycleRV::fetchElf(std::filesystem::path elfPath, std::optional<std::filesystem::path> makeDir)
+{
+	fetchElf(makeElf(move(elfPath), move(makeDir)));
+}
+
 void gtry::scl::riscv::DualCycleRV::writeCallReturnTrace(std::string filename)
 {
 	auto clk = ClockScope::getClk();

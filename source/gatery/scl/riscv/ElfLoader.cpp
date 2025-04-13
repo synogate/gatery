@@ -18,6 +18,8 @@
 #include "gatery/scl_pch.h"
 #include "ElfLoader.h"
 
+#include <boost/process.hpp>
+
 using namespace gtry::scl::riscv;
 
 template<typename T>
@@ -256,4 +258,20 @@ gtry::sim::DefaultBitVectorState gtry::scl::riscv::ElfLoader::MegaSegment::memor
 		}
 	}
 	return ret;
+}
+
+ElfLoader gtry::scl::riscv::makeElf(std::filesystem::path elfName, std::optional<std::filesystem::path> makeDir)
+{
+	if(makeDir)
+	{
+		auto makeBin = boost::process::search_path("make");
+		if (makeBin.empty())
+			std::cerr << "warning: make not found. skip firmware build.\n";
+		else
+			boost::process::system(makeBin, elfName.string(), boost::process::start_dir(makeDir->string()));
+
+		elfName = *makeDir / elfName;
+	}
+
+	return{ elfName.string() };
 }

@@ -98,4 +98,6 @@ namespace gtry::scl::riscv
 
 
 	};
+
+	ElfLoader makeElf(std::filesystem::path elfName, std::optional<std::filesystem::path> makeDir);
 }
