@@ -160,7 +160,7 @@ namespace gtry::scl
 
 	template<typename T>
 	struct CustomMemoryMapHandler<Memory<T>> {
-		static void memoryMap(MemoryMapRegistrationVisitor &v, T &memory, bool isReverse, std::string_view name, const CompoundMemberAnnotation *annotation) {
+		static void memoryMap(MemoryMapRegistrationVisitor &v, Memory<T>&memory, bool isReverse, std::string_view name, const CompoundMemberAnnotation *annotation) {
 
 			struct Cmd {
 				BOOST_HANA_DEFINE_STRUCT(Cmd,
@@ -174,7 +174,7 @@ namespace gtry::scl
 			HCL_NAMED(cmdTrigger);
 			HCL_NAMED(cmd);
 
-			auto&& port = memory[cmd.address];
+			auto&& port = memory[(UInt)cmd.address];
 
 			T memContent = port.read();
 			T stage = constructFrom(memContent);
@@ -198,7 +198,7 @@ namespace gtry::scl
 				T readData = memContent;
 				for (auto i : utils::Range(memory.readLatencyHint())) {
 					readCmd = reg(readCmd, '0');
-					readData = reg(readData, { .allowRetimingBackwards = true });
+					readData = reg(readData, RegisterSettings{ .allowRetimingBackward = true });
 				}
 				HCL_NAMED(readCmd);
 				HCL_NAMED(readData);
