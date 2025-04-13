@@ -69,6 +69,8 @@ namespace gtry::scl
 		Bit isPut() const;
 		Bit isBurst() const;
 
+		UInt& wordAddress();
+
 		void setupGet(UInt address, UInt source = 0, std::optional<UInt> size = {});
 		void setupPut(UInt address, BVec data, UInt source = 0, std::optional<UInt> size = {});
 		void setupPutPartial(UInt address, BVec data, BVec mask, UInt source = 0, std::optional<UInt> size = {});

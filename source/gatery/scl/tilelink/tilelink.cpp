@@ -44,6 +44,11 @@ namespace gtry::scl
 		return size > bytePerBeat & hasData();
 	}
 
+	UInt& TileLinkA::wordAddress()
+	{
+		return address.upper(-BitWidth::count(data.width().bytes()));
+	}
+
 	void TileLinkA::setupGet(UInt address, UInt source, std::optional<UInt> size)
 	{
 		this->opcode = (size_t)Get;
