@@ -66,8 +66,8 @@ namespace gtry::scl
 	}
 
 	/*
-    std::size_t hash_value(AddressSpaceDescription const& d)
-    {
+	std::size_t hash_value(AddressSpaceDescription const& d)
+	{
 		std::size_t hash = 31337;
 		boost::hash_combine(hash, d.size.bits());
 		//boost::hash_combine(hash, d.flags);
@@ -78,8 +78,8 @@ namespace gtry::scl
 			boost::hash_combine(hash, c.offsetInBits);
 			boost::hash_combine(hash, c.desc);
 		}
-        return hash;
-    }
+		return hash;
+	}
 	*/
 
 	void format(std::ostream &stream, const AddressSpaceDescription &desc, size_t indent, std::uint64_t offset)
@@ -182,5 +182,40 @@ namespace gtry::scl
 
 		if (!memoryMap.empty())
 			reccurse("", memoryMap[0]);
+	}
+
+	void formatCppHeader(std::ostream& o, std::string prefix, const AddressSpaceDescription& space, uint64_t offset, std::string parent)
+	{
+		if (!space.descShort.empty() && space.descShort.find('\n') == std::string::npos)
+			o << "// " << space.descShort << "\n";
+
+		std::string name = std::string{ prefix } + space.name;
+		o << "static volatile unsigned* const " << name << " = ";
+
+		if (!parent.empty() && (offset % 32 == 0))
+			o << parent << " + " << std::dec << offset / 32 << ";\n";
+		else
+			o << "(volatile unsigned*)0x" << std::hex << offset << ";\n";
+
+		for (const AddressSpaceDescription::Child& c : space.children)
+		{
+			if (parent.empty())
+				o << '\n';
+
+			formatCppHeader(o, name + "_", *c.desc, c.offsetInBits, name);
+		}
+	}
+
+	void formatCppHeader(std::filesystem::path filename, std::string prefix, const AddressSpaceDescription& space, uint64_t offset)
+	{
+		std::ostringstream os;
+		os << "#pragma once\n\n";
+		formatCppHeader(os, prefix, space, offset, "");
+
+		std::string o = os.str();
+		std::string i = (std::ostringstream{} << std::ifstream{ filename.string(), std::ios::binary }.rdbuf()).str();
+
+		if (o != i)
+			std::ofstream{ filename.string(), std::ios::binary } << o;
 	}
 }
