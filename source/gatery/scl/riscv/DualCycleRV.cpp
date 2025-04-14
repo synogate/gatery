@@ -142,23 +142,23 @@ TileLinkUL gtry::scl::riscv::DualCycleRV::fetchTileLink(uint64_t entryPoint)
 	return link;
 }
 
-void gtry::scl::riscv::DualCycleRV::fetchElf(const ElfLoader& elf)
+void gtry::scl::riscv::DualCycleRV::fetchText(std::span<const std::byte> text, uint64_t entryPoint)
 {
-	HCL_DESIGNCHECK_HINT(elf.segments().size() == 1, "firmware is limitted to one relocatable executable segment");
-
-	const scl::riscv::ElfLoader::Segment& text = elf.segments().front();
-
 	// m_IP is used internally by fetch to size instructio memory
 	m_IP.resetNode();
-	m_IP = BitWidth::count(text.data.size());
+	m_IP = BitWidth::count(text.size());
 
-	Memory<UInt>& mem = fetch(elf.entryPoint() - text.offset);
-	mem.fillPowerOnState(sim::createDefaultBitVectorState(as_bytes(text.data)));
+	Memory<UInt>& mem = fetch(entryPoint);
+	mem.fillPowerOnState(sim::createDefaultBitVectorState(text));
 }
 
 void gtry::scl::riscv::DualCycleRV::fetchElf(std::filesystem::path elfPath, std::optional<std::filesystem::path> makeDir)
 {
-	fetchElf(makeElf(move(elfPath), move(makeDir)));
+	ElfLoader elf = makeElf(move(elfPath), move(makeDir));
+
+	HCL_DESIGNCHECK_HINT(elf.segments().size() == 1, "firmware is limitted to one relocatable executable segment");
+	const ElfLoader::Segment& text = elf.segments().front();
+	fetchText(as_bytes(text.data), elf.entryPoint() - text.offset);
 }
 
 void gtry::scl::riscv::DualCycleRV::writeCallReturnTrace(std::string filename)
@@ -312,4 +312,17 @@ void gtry::scl::riscv::DualCycleRV::genInstructionDecode(UInt instruction)
 	m_instr.decode(instruction_execute);
 	debugVisualizeInstruction(m_instr);
 	HCL_NAMED(m_instr);
+}
+
+void gtry::scl::riscv::embeddedRV32(TileLinkUL&& dataFetch, std::filesystem::path elfPath, std::optional<std::filesystem::path> makeDir)
+{
+	ElfLoader elf = makeElf(move(elfPath), move(makeDir));
+
+	HCL_DESIGNCHECK_HINT(elf.segments().size() == 1, "firmware is limitted to one relocatable executable segment");
+	const ElfLoader::Segment& text = elf.segments().front();
+
+	riscv::DualCycleRV rv(14_b, dataFetch.a->address.width());
+	rv.fetchText(as_bytes(text.data), elf.entryPoint() - text.offset);
+	rv.execute();
+	dataFetch <<= rv.memTLink();
 }

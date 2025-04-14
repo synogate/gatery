@@ -29,7 +29,7 @@ namespace gtry::scl::riscv
 
 		virtual Memory<UInt>& fetch(uint64_t entryPoint = 0);
 		virtual TileLinkUL fetchTileLink(uint64_t entryPoint = 0);
-		virtual void fetchElf(const ElfLoader& elf);
+		virtual void fetchText(std::span<const std::byte> text, uint64_t entryPoint);
 		virtual void fetchElf(std::filesystem::path elfPath, std::optional<std::filesystem::path> makeDir);
 
 	protected:
@@ -49,4 +49,9 @@ namespace gtry::scl::riscv
 		Memory<UInt> m_instructionMem;
 
 	};
+
+	/**
+	 * @brief Utility function to instantiate RV32 based embedded state machines. 
+	 */
+	void embeddedRV32(TileLinkUL&& dataFetch, std::filesystem::path elfPath, std::optional<std::filesystem::path> makeDir = {});
 }
