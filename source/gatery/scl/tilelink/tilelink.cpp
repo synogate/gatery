@@ -206,6 +206,19 @@ namespace gtry::scl
 		return res;
 	}
 
+	TileLinkUL tileLinkSlaveInit(BitWidth addrW, BitWidth dataW, BitWidth sourceW)
+	{
+		TileLinkUL link = tileLinkInit<TileLinkUL>(addrW, dataW, sourceW);
+		HCL_NAMED(link);
+
+		**link.d = tileLinkDefaultResponse(*link.a);
+		(*link.d)->data = dontCare(BVec{ dataW });
+
+		valid(*link.d) = valid(link.a);
+		ready(link.a) = ready(*link.d);
+		return link;
+	}
+
 	void connect(Memory<BVec>& mem, TileLinkUL& link)
 	{
 		BitWidth byteOffsetW = BitWidth::count(link.a->mask.width().bits());
