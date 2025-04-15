@@ -19,6 +19,9 @@
 #include "DualCycleRV.h"
 #include "DebugVis.h"
 #include "../tilelink/tilelink.h"
+#include "../tilelink/TileLinkDemux.h"
+
+#include <gatery/debug/DebugInterface.h>
 
 using namespace gtry;
 using namespace gtry::scl;
@@ -314,15 +317,150 @@ void gtry::scl::riscv::DualCycleRV::genInstructionDecode(UInt instruction)
 	HCL_NAMED(m_instr);
 }
 
-void gtry::scl::riscv::embeddedRV32(TileLinkUL&& dataFetch, std::filesystem::path elfPath, std::optional<std::filesystem::path> makeDir)
+namespace gtry::scl
 {
-	ElfLoader elf = makeElf(move(elfPath), move(makeDir));
+	template<typename T>
+	TileLinkUL tileLinkMemory(Memory<T>& mem, TileLinkMemoryConfig cfg)
+	{
+		BitWidth wordAddrW = BitWidth::count(mem.wordSize().bytes());
+		TileLinkUL link = tileLinkSlaveInit(mem.addressWidth() + wordAddrW, mem.wordSize(), cfg.sourceW);
 
-	HCL_DESIGNCHECK_HINT(elf.segments().size() == 1, "firmware is limitted to one relocatable executable segment");
-	const ElfLoader::Segment& text = elf.segments().front();
+		auto port = mem[link.a->address.upper(-wordAddrW)];
 
-	riscv::DualCycleRV rv(14_b, dataFetch.a->address.width());
-	rv.fetchText(as_bytes(text.data), elf.entryPoint() - text.offset);
+		if (cfg.writePort)
+		{
+			IF(transfer(link.a) & link.a->isPut())
+			{
+				BVec newData = (BVec)pack(port.read());
+				for (size_t i = 0; i < link.a->mask.size(); ++i)
+					IF(link.a->mask[i])
+						newData.part(link.a->mask.size(), i) = link.a->data.part(link.a->mask.size(), i);
+
+				T writeData = constructFrom(mem.defaultValue());
+				unpack(newData, writeData);
+				port = writeData;
+			}
+		}
+
+		if (cfg.readPort)
+		{
+			(*link.d)->data = (BVec)pack(port.read());
+		}
+
+		size_t latency = cfg.readPort ? mem.readLatencyHint() : 0;
+		for (size_t i = 0; i < latency; ++i)
+			*link.d = strm::regDownstream(move(*link.d), { .allowRetimingBackward = true });
+		return link;
+	}
+}
+
+void gtry::scl::riscv::embeddedRV32(TileLinkUL&& dataFetch, std::filesystem::path elfPath, EmbeddedRV32Config cfg)
+{
+	Area ent{ "scl_embeddedRV32", true };
+	using namespace gtry::dbg;
+
+	{
+		std::ostringstream msg;
+		msg << "Data bus address width is " << dataFetch.a->address.width().bits() << "b";
+		log(LogMessage() << LogMessage::Anchor(ent.getNodeGroup()) << msg.str());
+	}
+
+	ElfLoader elf = makeElf(move(elfPath), move(cfg.makeDir));
+
+	// we need to take special care to map text section to instruction fetch and rodata to data fetch
+	const ElfLoader::Section* text = elf.section(".text");
+	const ElfLoader::Section* rodata = elf.section(".rodata");
+	HCL_DESIGNCHECK_HINT(text, "no text section in embedded rv32 elf");
+
+	// find segment that contains bss, data, got, ...
+	const ElfLoader::Segment* data = nullptr;
+	for (const ElfLoader::Segment& s : elf.segments())
+	{
+		if (s.flags == 6) // read write no execute segment
+		{
+			data = &s;
+			break;
+		}
+		HCL_DESIGNCHECK_HINT(s.flags == 5, "unhandled segment in embedded rv32 elf");
+	}
+
+	auto sectionMapOffset = [](size_t offset, size_t size) {
+		size_t mask = gtry::utils::nextPow2(offset ^ (offset + size)) - 1;
+		return offset & ~mask;
+	};
+
+	BitWidth dataAddrW = BitWidth::count(cfg.dataBusOffset + dataFetch.a->address.width().count());
+	if(rodata)
+		dataAddrW = std::max(dataAddrW, BitWidth::count(rodata->offset + rodata->data.size()));
+	if (data)
+		dataAddrW = std::max(dataAddrW, BitWidth::count(data->offset + data->size.bytes()));
+	if (cfg.stackByteSize)
+		dataAddrW = std::max(dataAddrW, BitWidth::count(cfg.stackOffset + cfg.stackByteSize));
+
+	size_t virtTextOffset = sectionMapOffset(text->offset, text->data.size());
+	BitWidth instructionMemAddrW = BitWidth::count(text->offset - virtTextOffset + text->data.size());
+	riscv::DualCycleRV rv(instructionMemAddrW, dataAddrW);
+
+	{
+		std::ostringstream msg;
+		msg << "Instructions size " << text->data.size() << " Byte, virtual offset 0x" << std::hex << virtTextOffset << ", physical offset 0x" << std::hex << (text->offset - virtTextOffset);
+		log(LogMessage() << LogMessage::Anchor(ent.getNodeGroup()) << msg.str());
+	}
+
+	rv.ipOffset(uint32_t(virtTextOffset));
+	Memory<UInt>& mem = rv.fetch(elf.entryPoint() - virtTextOffset);
+
+	sim::DefaultBitVectorState content;
+	content.resize(mem.size());
+	content.insert(sim::createDefaultBitVectorState(as_bytes(text->data)), (text->offset - virtTextOffset) * 8);
+	mem.fillPowerOnState(content);
+
 	rv.execute();
-	dataFetch <<= rv.memTLink();
+
+	if(rodata || data || cfg.stackByteSize)
+	{
+		TileLinkDemux<TileLinkUL> tileLinkBridge;
+		TileLinkUL internalDataFetch = tileLinkInit<TileLinkUL>(dataAddrW, dataFetch.a->data.width());
+		tileLinkBridge.attachSource(internalDataFetch);
+		tileLinkBridge.attachSink(move(dataFetch), cfg.dataBusOffset);
+
+		auto mapSection = [&](std::string name, size_t offset, std::span<const std::byte> data, size_t size, bool writePort) {
+			Area section_ent{ "elfsection_" + name, true };
+
+			std::ostringstream msg;
+			msg << "Map section at range 0x" << std::hex << offset << "-0x" << (offset + size) << " size " << std::dec << size;
+			log(LogMessage() << LogMessage::Anchor(section_ent.getNodeGroup()) << msg.str());
+
+			size_t virtOffset = sectionMapOffset(offset, size);
+
+			BitWidth memAddrW = BitWidth::count(offset - virtOffset + size);
+			Memory<BVec> dataMem((memAddrW - 2).count(), 32_b);
+			dataMem.noConflicts();
+			dataMem.setName(name);
+
+			sim::DefaultBitVectorState content;
+			content.resize(dataMem.size());
+			// section is initialized to zero in places where data is not present
+			content.setRange(sim::DefaultConfig::VALUE, (offset - virtOffset) * 8, size * 8, false);
+			content.setRange(sim::DefaultConfig::DEFINED, (offset - virtOffset) * 8, size * 8, true);
+			content.insert(sim::createDefaultBitVectorState(data), (offset - virtOffset) * 8);
+			dataMem.fillPowerOnState(content);
+
+			tileLinkBridge.attachSink(tileLinkMemory(dataMem, { .writePort = writePort }), virtOffset);
+		};
+
+		if (cfg.stackByteSize)
+			mapSection("stack", cfg.stackOffset, {}, cfg.stackByteSize, true);
+		if (rodata)
+			mapSection("rodata", rodata->offset, as_bytes(rodata->data), rodata->data.size(), false);
+		if (data)
+			mapSection("data", data->offset, as_bytes(data->data), data->size.bytes(), true);
+
+		tileLinkBridge.generate();
+		internalDataFetch <<= rv.memTLink();
+	}
+	else
+	{
+		dataFetch <<= rv.memTLink();
+	}
 }
