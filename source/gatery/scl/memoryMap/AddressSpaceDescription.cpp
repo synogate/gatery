@@ -206,11 +206,17 @@ namespace gtry::scl
 		}
 	}
 
-	void formatCppHeader(std::filesystem::path filename, std::string prefix, const AddressSpaceDescription& space, uint64_t offset)
+	void formatCppHeader(std::filesystem::path filename, const AddressSpaceDescription& space, uint64_t offset, std::string prefix)
 	{
+		std::string includeGuard = "MMAP_" + prefix + space.name + "_H_INCLUDE";
+
 		std::ostringstream os;
-		os << "#pragma once\n\n";
+		os << "#ifndef " << includeGuard << '\n';
+		os << "#define " << includeGuard << '\n';
+		os << '\n';
 		formatCppHeader(os, prefix, space, offset, "");
+		os << '\n';
+		os << "#endif // " << includeGuard << '\n';
 
 		std::string o = os.str();
 		std::string i = (std::ostringstream{} << std::ifstream{ filename.string(), std::ios::binary }.rdbuf()).str();

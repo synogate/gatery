@@ -88,8 +88,8 @@ namespace gtry::scl
 	void format(std::ostream &stream, std::string_view name, std::span<const driver::MemoryMapEntry> memoryMap);
 	void writeGTKWaveFilterFile(std::ostream &stream, std::span<const driver::MemoryMapEntry> memoryMap);
 
+	void formatCppHeader(std::filesystem::path filename, const AddressSpaceDescription& space, uint64_t offset = 0, std::string prefix = "");
 	void formatCppHeader(std::ostream& o, std::string prefix, const AddressSpaceDescription& space, uint64_t offset, std::string parent);
-	void formatCppHeader(std::filesystem::path filename, std::string prefix, const AddressSpaceDescription& space, uint64_t offset = 0);
 
 /**@}*/
 }
