@@ -1376,6 +1376,9 @@ BOOST_FIXTURE_TEST_CASE(PhaseShiftedClocks, gtry::GHDLTestFixture)
 			auto b = simu(outA) == '0';
 			auto c = simu(outB) == '0';
 		}
+		co_await AfterClk(rootClock);
+		co_await AfterClk(rootClock);
+		co_await AfterClk(rootClock);
 
 		stopTest();
 	});
