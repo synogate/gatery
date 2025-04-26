@@ -94,10 +94,6 @@ gtry::scl::SpiMaster& gtry::scl::SpiMaster::pin(std::string clock, std::string m
 	pinOut(m_out).setName(mosi);
 	m_in = pinIn().setName(miso);
 
-	DesignScope::get()->getCircuit().addSimulationProcess([in = m_in]() -> SimProcess {
-		simu(in) = '1';
-		co_return;
-	});
 	return *this;
 }
 
@@ -117,5 +113,58 @@ gtry::scl::SpiMaster& gtry::scl::SpiMaster::clockDiv(UInt value)
 gtry::scl::SpiMaster& gtry::scl::SpiMaster::outIdle(bool value)
 {
 	m_outIdle = value;
+	return *this;
+}
+
+gtry::scl::SpiMaster& gtry::scl::SpiMaster::simulateDevice(std::shared_ptr<SpiDeviceModel> model, std::optional<Bit> csn)
+{
+	DesignScope::get()->getCircuit().addSimulationProcess([
+		in = m_in,
+		out = m_out,
+		clk = m_clk,
+		csn,
+		model
+	]() -> SimProcess {
+		simu(in) = '1';
+
+		sim::SensitivityList clkevent;
+		clkevent.add(clk.readPort());
+
+		uint8_t receiveData = 0;
+		uint8_t receiveCnt = 0;
+		uint8_t sendData = 0xFF;
+
+		while (true)
+		{
+			co_await sim::WaitChange(clkevent);
+
+			if (!csn || simu(*csn) == '0')
+			{
+				receiveData <<= 1;
+				if (simu(out) == '1')
+					receiveData |= 1;
+
+				if (++receiveCnt == 8)
+				{
+					//sim::SimulationContext* ctx = sim::SimulationContext::current();
+					//ctx->onDebugMessage(nullptr, "SPI: " + std::to_string(receiveData));
+
+					receiveCnt = 0;
+					sendData = 0xFF;
+					if (model)
+						sendData = model->data(receiveData);
+				}
+			}
+
+			co_await sim::WaitChange(clkevent);
+
+			if (!csn || simu(*csn) == '0')
+			{
+				simu(in) = sendData & 0x80 ? '1' : '0';
+				sendData <<= 1;
+			}
+		}
+	});
+
 	return *this;
 }
