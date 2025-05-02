@@ -43,7 +43,6 @@ namespace gtry::sim {
 
 struct ClockState {
 	bool high;
-	//hlim::ClockRational nextTrigger;
 };
 
 struct ResetState {
@@ -137,6 +136,8 @@ struct ClockPin
 	size_t srcSignalIdx = ~0ull; 
 	/// All the domains affected by this source.
 	std::vector<ClockDomain*> domains;
+
+	inline bool isSignalDriven() const { return srcSignalIdx != ~0ull; }
 };
 
 struct Program
@@ -156,6 +157,8 @@ struct Program
 	protected:
 		void allocateSignals(const hlim::Circuit &circuit, const hlim::Subnet &nodes);
 		void allocateClocks(const hlim::Circuit &circuit, const hlim::Subnet &nodes);
+		/// Finds the clocks' (and resets') signal states in the state vector after signal allocation.
+		void bindLogicDrivenClocks(const hlim::Circuit &circuit, const hlim::Subnet &nodes);
 };
 
 struct Event {
@@ -337,6 +340,10 @@ class ReferenceSimulator : public Simulator
 		void advanceMicroTick();
 		void checkSignalWatches();
 		void handleCurrentTimeStep();
+
+		void checkSignalDrivenClocksChanged();
+		void checkSignalDrivenResetsChanged();
+		void scheduleClockAwaitingSimulationProcesses(const ClockPin &clkPin, bool risingEdge);
 
 		virtual void startCoroutine(SimulationFunction<void> coroutine) override;
 };

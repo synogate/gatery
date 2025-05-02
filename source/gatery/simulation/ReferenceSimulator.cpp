@@ -118,15 +118,11 @@ void Program::allocateClocks(const hlim::Circuit &circuit, const hlim::Subnet &n
 	m_clockSources.resize(m_stateMapping.clockPinAllocation.clockPins.size());
 	m_resetSources.resize(m_stateMapping.clockPinAllocation.resetPins.size());
 
-	for (auto i : utils::Range(m_clockSources.size())) {
+	for (auto i : utils::Range(m_clockSources.size()))
 		m_clockSources[i].pin = m_stateMapping.clockPinAllocation.clockPins[i].source;
-		HCL_ASSERT_HINT(m_clockSources[i].pin->isSelfDriven(true, true), "Simulating logic driven clocks is not yet implemented!");
-	}
 
-	for (auto i : utils::Range(m_resetSources.size())) {
+	for (auto i : utils::Range(m_resetSources.size()))
 		m_resetSources[i].pin = m_stateMapping.clockPinAllocation.resetPins[i].source;
-		HCL_ASSERT_HINT(m_resetSources[i].pin->isSelfDriven(true, false), "Simulating logic driven clock resets is not yet implemented!");
-	}
 
 	for (const auto &p : m_stateMapping.clockPinAllocation.clock2ClockPinIdx) {
 		auto clk = p.first;
@@ -144,6 +140,24 @@ void Program::allocateClocks(const hlim::Circuit &circuit, const hlim::Subnet &n
 	}
 }
 
+void Program::bindLogicDrivenClocks(const hlim::Circuit &circuit, const hlim::Subnet &nodes)
+{
+	for (auto &cs : m_clockSources) {
+		if (!cs.pin->isSelfDriven(true, true)) {
+			auto driver = cs.pin->getLogicDriver(true, true);
+			cs.srcSignalIdx = m_stateMapping.outputToOffset.find(driver)->second;
+		}
+	}
+
+	for (auto &cs : m_resetSources) {
+		if (!cs.pin->isSelfDriven(true, false)) {
+			auto driver = cs.pin->getLogicDriver(true, false);
+			cs.srcSignalIdx = m_stateMapping.outputToOffset.find(driver)->second;
+		}
+	}
+
+}
+
 void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &nodes, SimulatorPerformanceCounters &performanceCounters)
 {
 	auto perfHandle = performanceCounters.processOther(SimulatorPerformanceCounters::Other::COMPILATION);
@@ -156,6 +170,19 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 	utils::UnstableSet<hlim::NodePort> outputsReady;
 	   
 	utils::StableSet<hlim::BaseNode*> nodesRemaining;
+
+	for (auto &cs : m_clockSources) {
+		auto driver = cs.pin->getLogicDriver(true, true);
+		if (driver.node != nullptr)
+			nodesRemaining.insert(driver.node);
+	}
+
+	for (auto &cs : m_resetSources) {
+		auto driver = cs.pin->getLogicDriver(true, false);
+		if (driver.node != nullptr)
+			nodesRemaining.insert(driver.node);
+	}
+
 
 	for (auto node : nodes) {
 		if (node->allOutputsForwarded() && !node->hasSideEffects()) continue;
@@ -385,6 +412,8 @@ void Program::compileProgram(const hlim::Circuit &circuit, const hlim::Subnet &n
 			outputsReady.insert(driver);
 		}
 	}
+
+	bindLogicDrivenClocks(circuit, nodes);
 
 }
 
@@ -764,6 +793,7 @@ void ReferenceSimulator::powerOn()
 	for (auto i : utils::Range(m_dataState.clockState.size())) {
 		auto &clkSource = m_program.m_clockSources[i];
 		auto clock = m_program.m_clockSources[i].pin;
+		if (!clock->isSelfDriven(true, true)) continue;
 		auto &cs = m_dataState.clockState[i];
 		// The pin defines the starting state of the clock signal
 		auto trigType = clock->getTriggerEvent();
@@ -787,6 +817,7 @@ void ReferenceSimulator::powerOn()
 	m_dataState.resetState.resize(m_program.m_resetSources.size());
 	for (auto i : utils::Range(m_dataState.resetState.size())) {
 		auto clock = m_program.m_resetSources[i].pin;
+		if (!clock->isSelfDriven(true, false)) continue;
 
 		auto &rs = m_dataState.resetState[i];
 		// The pin defines the starting state
@@ -890,6 +921,56 @@ void ReferenceSimulator::reevaluate()
 	m_stateNeedsReevaluating = false;
 }
 
+
+void ReferenceSimulator::checkSignalDrivenClocksChanged()
+{
+	for (auto i : utils::Range(m_dataState.clockState.size())) {
+		auto &clkSource = m_program.m_clockSources[i];
+
+		if (clkSource.isSignalDriven()) {
+			auto &cs = m_dataState.clockState[i];
+			auto clock = clkSource.pin;
+
+			bool newValue = m_dataState.signalState.extractNonStraddling(DefaultConfig::VALUE, clkSource.srcSignalIdx, 1) != 0;
+			bool newDefined = m_dataState.signalState.extractNonStraddling(DefaultConfig::DEFINED, clkSource.srcSignalIdx, 1) != 0;
+
+			if (!newDefined) {
+				m_callbackDispatcher.onWarning(nullptr, std::string("Clock signal is not defined: ") + clock->getName());
+				continue;
+			}
+
+			if (newValue != cs.high) {
+				cs.high = newValue;
+	
+				auto trigType = clock->getTriggerEvent();
+				if (trigType == hlim::Clock::TriggerEvent::RISING_AND_FALLING ||
+					(trigType == hlim::Clock::TriggerEvent::RISING && cs.high) ||
+					(trigType == hlim::Clock::TriggerEvent::FALLING && !cs.high)) {
+
+					scheduleClockAwaitingSimulationProcesses(clkSource, cs.high);
+
+					Event e;
+					e.type = Event::Type::clockValueChange;
+					e.data = Event::ClockValueChangeEvt{
+						.clockPinIdx = i,
+						.risingEdge = cs.high,
+					};
+					e.timeOfEvent = m_simulationTime;
+					//e.microTick = m_microTick+1;
+					e.microTick = 0;
+
+					m_nextEvents.push(e);
+				}
+			}
+		}
+	}
+}
+
+void ReferenceSimulator::checkSignalDrivenResetsChanged()
+{
+}
+
+
 void ReferenceSimulator::commitState()
 {
 	m_readOnlyMode = true;
@@ -915,6 +996,47 @@ void ReferenceSimulator::commitState()
 	}
 
 	m_readOnlyMode = false;
+
+	checkSignalDrivenResetsChanged();
+	checkSignalDrivenClocksChanged();
+}
+
+void ReferenceSimulator::scheduleClockAwaitingSimulationProcesses(const ClockPin &clkPin, bool risingEdge)
+{
+	// Check if any clock domain driven by this clk pin has an activation
+	for (auto domain : clkPin.domains) {
+		auto trigType = domain->clock->getTriggerEvent();
+
+		bool clockInReset = false;
+		if (domain->resetSourceIdx != ~0ull) {
+			auto resetType = domain->clock->getRegAttribs().resetActive;
+			clockInReset = m_dataState.resetState[domain->resetSourceIdx].resetHigh == (resetType == hlim::RegisterAttributes::Active::HIGH);
+		}
+
+		// only release simulation processes waiting on clock if the clock is not in reset.
+		if (!clockInReset) {
+			// only release simulation processes waiting on clock if the clock actually activates on the current edge
+			if (trigType == hlim::Clock::TriggerEvent::RISING_AND_FALLING ||
+				(trigType == hlim::Clock::TriggerEvent::RISING && risingEdge) ||
+				(trigType == hlim::Clock::TriggerEvent::FALLING && !risingEdge)) {
+
+				// Schedule resuming simulation processes
+				Event e;
+				e.timeOfEvent = m_simulationTime;
+				e.microTick = m_microTick;
+				e.type = Event::Type::simProcResume;
+				e.data = Event::SimProcResumeEvt{};
+				for (auto &simProc : domain->awaitingSimProcs) {
+					e.evt<Event::SimProcResumeEvt>().handle = simProc.handle;
+					e.evt<Event::SimProcResumeEvt>().insertionId = simProc.sortId;
+					e.timingPhase = simProc.timingPhase;
+					m_nextEvents.push(e);
+				}
+				domain->awaitingSimProcs.clear();
+			}
+		}
+	}
+
 }
 
 void ReferenceSimulator::advanceMicroTick()
@@ -932,38 +1054,9 @@ void ReferenceSimulator::advanceMicroTick()
 			case Event::Type::clockPinTrigger: {
 				auto &clkEvent = event.evt<Event::ClockValueChangeEvt>();
 				auto &clkPin = m_program.m_clockSources[clkEvent.clockPinIdx];
-				// Check if any clock domain driven by this clk pin has an activation
-				for (auto domain : clkPin.domains) {
-					auto trigType = domain->clock->getTriggerEvent();
 
-					bool clockInReset = false;
-					if (domain->resetSourceIdx != ~0ull) {
-						auto resetType = domain->clock->getRegAttribs().resetActive;
-						clockInReset = m_dataState.resetState[domain->resetSourceIdx].resetHigh == (resetType == hlim::RegisterAttributes::Active::HIGH);
-					}
+				scheduleClockAwaitingSimulationProcesses(clkPin, clkEvent.risingEdge);
 
-					// only release simulation processes waiting on clock if the clock is not in reset.
-					if (!clockInReset) {
-						// only release simulation processes waiting on clock if the clock actually activates on the current edge
-						if (trigType == hlim::Clock::TriggerEvent::RISING_AND_FALLING ||
-							(trigType == hlim::Clock::TriggerEvent::RISING && clkEvent.risingEdge) ||
-							(trigType == hlim::Clock::TriggerEvent::FALLING && !clkEvent.risingEdge)) {
-
-							// Schedule resuming simulation processes
-							Event e = event;
-							e.type = Event::Type::simProcResume;
-							e.data = Event::SimProcResumeEvt{};
-							for (auto &simProc : domain->awaitingSimProcs) {
-								e.evt<Event::SimProcResumeEvt>().handle = simProc.handle;
-								e.evt<Event::SimProcResumeEvt>().insertionId = simProc.sortId;
-								e.timingPhase = simProc.timingPhase;
-								m_nextEvents.push(e);
-							}
-							domain->awaitingSimProcs.clear();
-						}
-					}
-				}
-				
 				// schedule the actual value change and clocked node activation.
 				// This potentially needs to happen after some simulation processes have resumed that were just scheduled.
 				Event e = event;
