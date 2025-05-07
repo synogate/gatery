@@ -30,6 +30,18 @@ namespace gtry::scl{
 		return result;
 	}
 
+	UInt popcount(BVec input)
+	{
+		Area ent{ "scl_popcount", true };
+		HCL_NAMED(input);
+
+		UInt out = ConstUInt(0, BitWidth::last(input.width().bits()));
+		for (const Bit& it : input)
+			IF(it)
+				out += 1;
+
+		return out | name("out");
+	}
 
 	UInt longDivision(const UInt& numerator, const UInt& denominator, size_t stepsPerPipelineReg) {
 		const BitWidth numW = numerator.width();
