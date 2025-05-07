@@ -793,15 +793,11 @@ void ReferenceSimulator::powerOn()
 	for (auto i : utils::Range(m_dataState.clockState.size())) {
 		auto &clkSource = m_program.m_clockSources[i];
 		auto clock = m_program.m_clockSources[i].pin;
-		if (!clock->isSelfDriven(true, true)) continue;
 		auto &cs = m_dataState.clockState[i];
+		if (!clock->isSelfDriven(true, true)) continue;
 		// The pin defines the starting state of the clock signal
 		auto trigType = clock->getTriggerEvent();
 		cs.high = trigType == hlim::Clock::TriggerEvent::RISING;
-
-		for (auto &dom : clkSource.domains)
-			for (auto &cn : dom->clockedNodes)
-				cn.clockValueChanged(m_callbackDispatcher, m_dataState, cs.high, true, m_performanceCounters);
 
 		Event e;
 		e.type = Event::Type::clockPinTrigger;
@@ -812,6 +808,10 @@ void ReferenceSimulator::powerOn()
 		e.timeOfEvent = m_simulationTime + hlim::ClockRational(1,2) / clock->absoluteFrequency() + clock->absolutePhaseShift().shift;
 
 		m_nextEvents.push(e);
+
+		for (auto &dom : clkSource.domains)
+			for (auto &cn : dom->clockedNodes)
+				cn.clockValueChanged(m_callbackDispatcher, m_dataState, cs.high, true, m_performanceCounters);
 	}
 
 	m_dataState.resetState.resize(m_program.m_resetSources.size());
@@ -867,6 +867,56 @@ void ReferenceSimulator::powerOn()
 
 	// reevaluate, to provide fibers with power-on state
 	reevaluate();
+
+	for (auto i : utils::Range(m_dataState.clockState.size())) {
+		auto &clkSource = m_program.m_clockSources[i];
+		auto clock = m_program.m_clockSources[i].pin;
+		auto &cs = m_dataState.clockState[i];
+		if (!clock->isSelfDriven(true, true)) {
+			bool newValue = m_dataState.signalState.extractNonStraddling(DefaultConfig::VALUE, clkSource.srcSignalIdx, 1) != 0;
+			bool newDefined = m_dataState.signalState.extractNonStraddling(DefaultConfig::DEFINED, clkSource.srcSignalIdx, 1) != 0;
+
+			if (!newDefined) {
+				//m_callbackDispatcher.onWarning(nullptr, std::string("Clock signal is not defined: ") + clock->getName());
+				continue;
+			}
+			cs.high = newValue;
+			for (auto &dom : clkSource.domains)
+				for (auto &cn : dom->clockedNodes)
+					cn.clockValueChanged(m_callbackDispatcher, m_dataState, cs.high, true, m_performanceCounters);
+		}
+	}	
+
+	for (auto i : utils::Range(m_dataState.resetState.size())) {
+		auto clock = m_program.m_resetSources[i].pin;
+		if (!clock->isSelfDriven(true, false)) {
+
+			auto &rs = m_dataState.resetState[i];
+			// The pin defines the starting state
+			auto &rstSource = m_program.m_resetSources[i];
+
+			bool newValue = m_dataState.signalState.extractNonStraddling(DefaultConfig::VALUE, rstSource.srcSignalIdx, 1) != 0;
+			bool newDefined = m_dataState.signalState.extractNonStraddling(DefaultConfig::DEFINED, rstSource.srcSignalIdx, 1) != 0;
+
+			if (!newDefined) {
+				//m_callbackDispatcher.onWarning(nullptr, std::string("Clock reset signal is not defined: ") + clock->getName());
+				continue;
+			}
+
+			rs.resetHigh = newValue;
+
+			for (auto &dom : rstSource.domains)
+				for (auto &cn : dom->clockedNodes)
+					cn.changeReset(m_callbackDispatcher, m_dataState, rs.resetHigh, m_performanceCounters);
+			
+			{
+				auto perfHandle = m_performanceCounters.processOther(SimulatorPerformanceCounters::Other::EVENT_CALLBACKS);
+				m_callbackDispatcher.onReset(clock, rs.resetHigh);
+			}
+		}
+	}	
+
+	
 
 	{
 		auto perfHandle = m_performanceCounters.processOther(SimulatorPerformanceCounters::Other::EVENT_CALLBACKS);
@@ -948,19 +998,17 @@ void ReferenceSimulator::checkSignalDrivenClocksChanged()
 					(trigType == hlim::Clock::TriggerEvent::FALLING && !cs.high)) {
 
 					scheduleClockAwaitingSimulationProcesses(clkSource, cs.high);
-
-					Event e;
-					e.type = Event::Type::clockValueChange;
-					e.data = Event::ClockValueChangeEvt{
-						.clockPinIdx = i,
-						.risingEdge = cs.high,
-					};
-					e.timeOfEvent = m_simulationTime;
-					//e.microTick = m_microTick+1;
-					e.microTick = 0;
-
-					m_nextEvents.push(e);
 				}
+
+				Event e;
+				e.type = Event::Type::clockValueChange;
+				e.data = Event::ClockValueChangeEvt{
+					.clockPinIdx = i,
+					.risingEdge = cs.high,
+				};
+				e.timeOfEvent = m_simulationTime;
+				e.microTick = m_microTick+1;
+				m_nextEvents.push(e);
 			}
 		}
 	}
@@ -968,6 +1016,34 @@ void ReferenceSimulator::checkSignalDrivenClocksChanged()
 
 void ReferenceSimulator::checkSignalDrivenResetsChanged()
 {
+	for (auto i : utils::Range(m_dataState.resetState.size())) {
+		auto &rstSource = m_program.m_resetSources[i];
+		if (rstSource.isSignalDriven()) {
+			auto &rs = m_dataState.resetState[i];
+			auto reset = m_program.m_resetSources[i].pin;
+
+			bool newValue = m_dataState.signalState.extractNonStraddling(DefaultConfig::VALUE, rstSource.srcSignalIdx, 1) != 0;
+			bool newDefined = m_dataState.signalState.extractNonStraddling(DefaultConfig::DEFINED, rstSource.srcSignalIdx, 1) != 0;
+
+			if (!newDefined) {
+				m_callbackDispatcher.onWarning(nullptr, std::string("Clock reset signal is not defined: ") + reset->getName());
+				continue;
+			}
+
+			if (rs.resetHigh != newValue) {
+				rs.resetHigh = newValue;
+
+				for (auto &dom : rstSource.domains)
+					for (auto &cn : dom->clockedNodes)
+						cn.changeReset(m_callbackDispatcher, m_dataState, rs.resetHigh, m_performanceCounters);
+				
+				{
+					auto perfHandle = m_performanceCounters.processOther(SimulatorPerformanceCounters::Other::EVENT_CALLBACKS);
+					m_callbackDispatcher.onReset(reset, rs.resetHigh);
+				}
+			}
+		}
+	}	
 }
 
 
@@ -1179,7 +1255,7 @@ void ReferenceSimulator::handleCurrentTimeStep()
 					m_nextEvents.top().timeOfEvent == m_simulationTime && 
 				   	m_nextEvents.top().timingPhase == m_timingPhase) {
 
-				HCL_ASSERT(m_microTick == 0 || m_timingPhase != WaitClock::DURING);
+//				HCL_ASSERT(m_microTick == 0 || m_timingPhase != WaitClock::DURING);
 
 				advanceMicroTick();
 

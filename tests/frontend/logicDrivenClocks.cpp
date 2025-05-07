@@ -61,6 +61,58 @@ BOOST_FIXTURE_TEST_CASE(not_running_clock, BoostUnitTestSimulationFixture)
 }
 
 
+
+BOOST_FIXTURE_TEST_CASE(reset, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000, .resetType = Clock::ResetType::SYNCHRONOUS, .initializeRegs = false });
+	Bit rstSignal = pinIn().setName("rstSignal");
+	clock.overrideRstWith(rstSignal);
+
+	ClockScope clockScope(clock);
+
+	UInt counter(4_b);
+	counter = reg(counter+1, 0);
+
+	pinOut(counter, "counter");
+
+
+	addSimulationProcess([=, this, &clock]()->SimProcess {
+		simu(rstSignal) = '0';
+
+		// This is currently not working because of a retiming workaround
+		// BOOST_TEST(!simu(counter).defined());
+
+		for (auto i : Range(500)) {
+			co_await WaitFor(Seconds{1, 5} / clock.getClk()->absoluteFrequency());
+			// This is currently not working because of a retiming workaround
+			// BOOST_TEST(!simu(counter).defined());
+		}
+
+		co_await WaitFor(Seconds{1, 5} / clock.getClk()->absoluteFrequency());
+
+		simu(rstSignal) = '1';
+		// co_await OnClk(clock); // These are not releasing in reset!
+		co_await WaitFor(Seconds{1, 1} / clock.getClk()->absoluteFrequency());
+		simu(rstSignal) = '0';
+		
+		for (auto i : Range(500)) {
+			co_await OnClk(clock);
+			BOOST_TEST(simu(counter).defined());
+		}
+
+
+		stopTest();
+	});
+
+
+	runTest(1000u / clock.getClk()->absoluteFrequency());
+}
+
+
+
+
 BOOST_FIXTURE_TEST_CASE(counter, BoostUnitTestSimulationFixture)
 {
 	using namespace gtry;
@@ -76,7 +128,7 @@ BOOST_FIXTURE_TEST_CASE(counter, BoostUnitTestSimulationFixture)
 
 	counter = reg(counter, 0);
 
-	Clock logicDrivenClock({ .absoluteFrequency = 100'000 });
+	Clock logicDrivenClock({ .absoluteFrequency = 100'000, .name = "logicClock" });
 	logicDrivenClock.overrideClkWith(counter.msb());
 
 	UInt counter2(4_b);
@@ -131,7 +183,7 @@ BOOST_FIXTURE_TEST_CASE(waitOnClk, BoostUnitTestSimulationFixture)
 
 	counter = reg(counter, 0);
 
-	Clock logicDrivenClock({ .absoluteFrequency = 100'000 });
+	Clock logicDrivenClock({ .absoluteFrequency = 100'000, .name = "logicClock" });
 	logicDrivenClock.overrideClkWith(counter.msb());
 
 	UInt counter2(4_b);
@@ -144,8 +196,6 @@ BOOST_FIXTURE_TEST_CASE(waitOnClk, BoostUnitTestSimulationFixture)
 	pinOut(counter2, "counter2");
 
 
-
-
 	addSimulationProcess([=, this, &clock]()->SimProcess {
 
 		size_t clockCyclesExpected = 0;
@@ -155,13 +205,15 @@ BOOST_FIXTURE_TEST_CASE(waitOnClk, BoostUnitTestSimulationFixture)
 			size_t expectedCounter2Value = 0;
 			while (true) {
 				co_await OnClk(logicDrivenClock);
-				BOOST_ASSERT(simu(counter2) == expectedCounter2Value);// Should see the old value from before the clock triggered because of OnClk.
+				// Should see the old value from before the clock triggered because of OnClk and counter2 is increment in the logicDrivenClock clock domain.
+				BOOST_TEST(simu(counter2) == expectedCounter2Value);
 				expectedCounter2Value++;
 
-				BOOST_ASSERT(simu(counter) == 7); // Should see the old value from before the clock triggered because of OnClk.
+				// We should already see the new value of `counter` because we trigger after the completion of the `clock` clock domain
+				BOOST_TEST(simu(counter) == 8);
 
 				clockCyclesSeen++;
-				BOOST_ASSERT(clockCyclesSeen == clockCyclesExpected);
+				BOOST_TEST(clockCyclesSeen == clockCyclesExpected);
 			}
 		});
 
@@ -173,7 +225,8 @@ BOOST_FIXTURE_TEST_CASE(waitOnClk, BoostUnitTestSimulationFixture)
 		simu(clockEnable) = '1';
 
 		for (auto i : Range(64)) {
-			clockCyclesExpected++;
+			if (i % 16 == 8)
+				clockCyclesExpected++;
 			co_await AfterClk(clock);
 		}
 
@@ -183,6 +236,127 @@ BOOST_FIXTURE_TEST_CASE(waitOnClk, BoostUnitTestSimulationFixture)
 
 	runTest(1000u / clock.getClk()->absoluteFrequency());
 }
+
+
+BOOST_FIXTURE_TEST_CASE(signal2clk2signal, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+
+	UInt counter(4_b);
+
+	Bit clockEnable = pinIn().setName("clockEnable");
+	IF (clockEnable)
+		counter += 1;
+
+	counter = reg(counter, 0);
+
+	Bit counterMsb = counter.msb();
+
+	Clock logicDrivenClock({ .absoluteFrequency = 100'000, .name = "logicClock" });
+	logicDrivenClock.overrideClkWith(counter.msb());
+	Bit clkSignal = logicDrivenClock.clkSignal();
+
+	pinOut(counter, "counter");
+	pinOut(counterMsb, "counterMsb");
+	pinOut(clkSignal, "clkSignal");
+
+
+	addSimulationProcess([=, this, &clock]()->SimProcess {
+
+		fork([&]()->SimProcess {
+			while (true) {
+				co_await AfterClk(clock);
+				// At this point, logicDrivenClock has not yet triggered, so we expect to still see the old value.
+
+				co_await WaitFor(Seconds{1, 4} / clock.getClk()->absoluteFrequency());
+				{
+					size_t counterValue = simu(counter);
+					bool msb = counterValue & 8;
+					BOOST_TEST(simu(clkSignal) == msb);
+				}
+			}
+		});
+
+		fork([&]()->SimProcess {
+			while (true) {
+				co_await AfterClk(logicDrivenClock);
+				{
+					size_t counterValue = simu(counter);
+					bool msb = counterValue & 8;
+					BOOST_TEST(simu(clkSignal) == msb);
+				}
+			}
+		});
+
+
+		simu(clockEnable) = '0';
+
+		for (auto i : Range(64))
+			co_await AfterClk(clock);
+
+		simu(clockEnable) = '1';
+
+		for (auto i : Range(64))
+			co_await AfterClk(clock);
+
+		stopTest();
+	});
+
+
+	runTest(1000u / clock.getClk()->absoluteFrequency());
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(cdcFailureTest, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+
+	UInt counter(4_b);
+	counter = reg(counter, 0);
+
+	Clock logicDrivenClock({ .absoluteFrequency = 100'000, .name = "logicClock" });
+	logicDrivenClock.overrideClkWith(counter.msb());
+	Bit clkSignal = logicDrivenClock.clkSignal();
+
+	Bit mixedClockDomains = counter.lsb() ^ clkSignal;
+
+	pinOut(mixedClockDomains, "mixedClockDomains");
+
+	BOOST_CHECK_THROW(design.postprocess(), std::runtime_error);
+}
+
+BOOST_FIXTURE_TEST_CASE(cdcFailureTest2, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	ClockScope clockScope(clock);
+
+	UInt counter(4_b);
+	counter = reg(counter, 0);
+
+	Clock logicDrivenClock({ .absoluteFrequency = 100'000, .name = "logicClock" });
+	logicDrivenClock.overrideClkWith(counter.msb());
+	Bit clkSignal;
+	{
+		ClockScope clockScope(logicDrivenClock);
+		clkSignal = reg(~clkSignal, '0');
+	}
+
+	Bit mixedClockDomains = counter.lsb() ^ clkSignal;
+
+	pinOut(mixedClockDomains, "mixedClockDomains");
+
+	BOOST_CHECK_THROW(design.postprocess(), std::runtime_error);
+}
+
 
 
 BOOST_AUTO_TEST_SUITE_END();
