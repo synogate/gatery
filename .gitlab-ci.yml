@@ -74,7 +74,8 @@ test-windows-scl:
   tags:
     - windows
   script:
-    - .\bin\windows-x86_64-Debug\gatery-scl-test.exe
+    - cd tests
+    - ..\bin\windows-x86_64-Debug\gatery-scl-test.exe
 
 test-linux-coverage:
   stage: coverage
