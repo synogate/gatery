@@ -113,6 +113,17 @@ Seconds getCurrentSimulationTime()
 	return sim->getCurrentSimulationTime();
 }
 
+void raiseSimulationError(hlim::BaseNode *node, std::string msg)
+{
+	auto* sim = sim::SimulationContext::current()->getSimulator();
+	sim->onAssert(node, std::move(msg));
+}
+
+void raiseSimulationError(ElementarySignal& signal, std::string msg)
+{
+	raiseSimulationError(signal.readPort().node, std::move(msg));
+}
+
 bool simulationIsShuttingDown()
 {
 	auto *sim = sim::SimulationContext::current()->getSimulator();

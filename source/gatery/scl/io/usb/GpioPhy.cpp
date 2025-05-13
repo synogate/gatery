@@ -212,7 +212,9 @@ gtry::SimFunction<std::vector<std::byte>> gtry::scl::usb::GpioPhy::receive(size_
 		{
 			co_await WaitFor(baudRate);
 			current = lineState();
-			HCL_ASSERT_HINT(current != last, "stuff error");
+			if (current == last)
+				raiseSimulationError(nullptr, "stuff error");
+	//			HCL_ASSERT_HINT(current != last, "stuff error");
 		}
 		if(current != last)
 			stuffBitCounter = 0;

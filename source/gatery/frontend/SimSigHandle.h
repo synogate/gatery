@@ -356,6 +356,9 @@ namespace gtry {
 	constexpr auto toNanoseconds = hlim::toNanoseconds;
 
 	Seconds getCurrentSimulationTime();
+	void raiseSimulationError(hlim::BaseNode* node, std::string msg);
+	void raiseSimulationError(ElementarySignal& signal, std::string msg);
+
 	inline double nowNs() { return toNanoseconds(getCurrentSimulationTime()); }
 
 	/// @brief Returns true in the time period where the simulator is pulling down all the simulation coroutines on reseting or closing the simulation.

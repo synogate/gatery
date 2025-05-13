@@ -129,7 +129,7 @@ void IntelQuartus::resolveAttributes(const hlim::SignalAttributes &attribs, hlim
 		resolvedAttribs.insert({ "keep", {"boolean", *attribs.optimizationBarrier ? "true" : "false"}});
 
 	if (attribs.hardwareDebugSignal)
-		resolvedAttribs.insert({ "preserve", {"boolean", *attribs.hardwareDebugSignal ? "true" : "false"}});
+		resolvedAttribs.insert({ "keep", {"boolean", *attribs.hardwareDebugSignal ? "true" : "false"}});
 
 	addUserDefinedAttributes(attribs, resolvedAttribs);
 }
