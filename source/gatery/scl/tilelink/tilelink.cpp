@@ -44,6 +44,11 @@ namespace gtry::scl
 		return size > bytePerBeat & hasData();
 	}
 
+	UInt& TileLinkA::wordAddress()
+	{
+		return address.upper(-BitWidth::count(data.width().bytes()));
+	}
+
 	void TileLinkA::setupGet(UInt address, UInt source, std::optional<UInt> size)
 	{
 		this->opcode = (size_t)Get;
@@ -199,6 +204,19 @@ namespace gtry::scl
 		res.error = '0';
 
 		return res;
+	}
+
+	TileLinkUL tileLinkSlaveInit(BitWidth addrW, BitWidth dataW, BitWidth sourceW)
+	{
+		TileLinkUL link = tileLinkInit<TileLinkUL>(addrW, dataW, sourceW);
+		HCL_NAMED(link);
+
+		**link.d = tileLinkDefaultResponse(*link.a);
+		(*link.d)->data = dontCare(BVec{ dataW });
+
+		valid(*link.d) = valid(link.a);
+		ready(link.a) = ready(*link.d);
+		return link;
 	}
 
 	void connect(Memory<BVec>& mem, TileLinkUL& link)

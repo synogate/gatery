@@ -729,8 +729,10 @@ void ReferenceSimulator::powerOn()
 		}
 	}
 
-	if (m_stateNeedsReevaluating)
+	if (m_stateNeedsReevaluating) {
 		reevaluate();
+		checkSignalWatches();
+	}
 
 	handleCurrentTimeStep();
 

@@ -301,6 +301,64 @@ BOOST_FIXTURE_TEST_CASE(SimProc_AsyncProcs, BoostUnitTestSimulationFixture)
 }
 
 
+
+
+
+BOOST_FIXTURE_TEST_CASE(SimProc_AsyncProcsSetInPowerOn, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000 });
+	{
+		UInt a = 8_b;
+		UInt b = 8_b;
+
+		a = pinIn(8_b).setName("a");
+		b = pinIn(8_b).setName("b_in");
+		pinOut(b).setName("b_out");
+
+		addSimulationProcess([=]()->SimProcess{
+			while (true) {
+				ReadSignalList allInputs;
+
+				simu(b) = simu(a);
+
+				co_await allInputs.anyInputChange();
+			}
+		});
+	
+		addSimulationProcess([=]()->SimProcess{
+
+			simu(a) = 0; // This was causing issues.
+
+			while(true) {
+				co_await WaitFor(Seconds(1,2)/clock.absoluteFrequency());
+				simu(a) = 1;
+				co_await WaitFor(Seconds(1,2)/clock.absoluteFrequency());
+				simu(a) = 0;
+			}
+		});
+
+		addSimulationProcess([=]()->SimProcess{
+
+			co_await WaitFor(Seconds(1,4)/clock.absoluteFrequency());
+			BOOST_TEST(simu(b) == 0);
+
+			while(true) {
+				co_await WaitFor(Seconds(1,2)/clock.absoluteFrequency());
+				BOOST_TEST(simu(b) == 1);
+				co_await WaitFor(Seconds(1,2)/clock.absoluteFrequency());
+				BOOST_TEST(simu(b) == 0);
+			}
+		});
+	}
+
+	design.postprocess();
+	runTicks(clock.getClk(), 100);
+}
+
+
+
 unsigned depth = 0;
 
 class StackDepthCounter {

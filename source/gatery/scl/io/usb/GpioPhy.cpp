@@ -40,10 +40,10 @@ static gtry::scl::RvPacketStream<gtry::Bit> bitStuff(gtry::scl::RvPacketStream<g
 	RvPacketStream<Bit> out;
 	IF(transfer(out))
 	{
-		IF(*source)
-			c.inc();
-		ELSE
+		IF(!*source | eop(out))
 			c.reset();
+		ELSE
+			c.inc();
 	}
 
 	out <<= source;

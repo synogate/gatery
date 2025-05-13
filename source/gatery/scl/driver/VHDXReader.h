@@ -144,16 +144,30 @@ namespace gtry::scl
 			);
 		}
 
-		std::span<const char> block(size_t _index) const
+		bool blockPresent(size_t _index) const
 		{
 			_index += _index / m_meta.chunkRatio; // skip sector block entries
 
 			if (_index >= m_BAT.size())
-				throw std::runtime_error("block index out of range");
+				return false;
 
 			if ((m_BAT[_index] & 0x7) != 6)
+				return false;
+
+			return true;
+		}
+
+		bool sectorPresent(size_t _lba) const
+		{
+			return blockPresent(_lba / m_meta.sectorsPerBlock);
+		}
+
+		std::span<const char> block(size_t _index) const
+		{
+			if (!blockPresent(_index))
 				throw std::runtime_error("block not present");
 
+			_index += _index / m_meta.chunkRatio; // skip sector block entries
 			size_t blockoffset = (m_BAT[_index] >> 20) * (1024 * 1024);
 			if (blockoffset + m_meta.blockSize > m_mm.size())
 				throw std::runtime_error("block offset out of bounds");

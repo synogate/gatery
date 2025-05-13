@@ -22,6 +22,21 @@
 
 namespace gtry::scl 
 {
+	class SpiDeviceModel
+	{
+	public:
+		virtual ~SpiDeviceModel() = default;
+
+		// push new bytes received during chip select here. returns the next byte to transfer back.
+		virtual uint8_t data(uint8_t data) = 0;
+
+		// notify chip deselected signal
+		virtual void deselect() = 0;
+
+		// notify power cycle
+		virtual void reset() = 0;
+	};
+
 	class SpiMaster
 	{
 	public:
@@ -30,6 +45,7 @@ namespace gtry::scl
 		SpiMaster& pinTestLoop();
 		SpiMaster& clockDiv(UInt value);
 		SpiMaster& outIdle(bool value);
+		SpiMaster& simulateDevice(std::shared_ptr<SpiDeviceModel> model = {}, std::optional<Bit> csn = {});
 
 		const Bit& scl() const { return m_clk; }
 		const Bit& miso() const { return m_in; }
@@ -37,6 +53,7 @@ namespace gtry::scl
 		Bit& miso() { return m_in; }
 
 		virtual RvStream<BVec> generate(RvStream<BVec>& in);
+
 
 	private:
 		Bit m_clk;

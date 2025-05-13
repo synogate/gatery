@@ -17,6 +17,7 @@
 */
 #pragma once
 #include "riscv.h"
+#include "ElfLoader.h"
 
 namespace gtry::scl::riscv
 {
@@ -28,7 +29,8 @@ namespace gtry::scl::riscv
 
 		virtual Memory<UInt>& fetch(uint64_t entryPoint = 0);
 		virtual TileLinkUL fetchTileLink(uint64_t entryPoint = 0);
-
+		virtual void fetchText(std::span<const std::byte> text, uint64_t entryPoint);
+		virtual void fetchElf(std::filesystem::path elfPath, std::optional<std::filesystem::path> makeDir);
 
 	protected:
 		virtual void generate(const UInt& instruction, const Bit& instructionValid);
@@ -47,4 +49,26 @@ namespace gtry::scl::riscv
 		Memory<UInt> m_instructionMem;
 
 	};
+
+	struct EmbeddedRV32Config
+	{
+		std::optional<std::filesystem::path> makeDir = {}; // directory to invoke make in. no make invocation if not set.
+
+		size_t stackOffset = 0; // base address of stack
+		size_t stackByteSize = 1024; // no stack is attached if set to zero
+
+		size_t dataBusOffset = 0;
+	};
+
+	/**
+	 * @brief Utility function to instantiate RV32 based embedded state machines. The following sections are mapped:
+	 *			- text section onto instruction bus (not accessable through data fetch)
+	 *			- rodata section as read only memory onto data bus
+	 *			- stack memory according to stackOffset and stackByteSize onto data bus
+	 *			- data segment (data, bss, got, ... sections) onto data bus
+	 *			- dataFetch bus is mapped at dataBusOffset
+	 *			Note that address allocation is user responsibility. Make sure there is no relevant overlap between sections and dataFetch 
+	 *			by using the "-Wl,--section-start=.text=0xZZZZZZ" compiler flag and stackOffset parameter.
+	 */
+	void embeddedRV32(TileLinkUL&& dataFetch, std::filesystem::path elfPath, EmbeddedRV32Config cfg = {});
 }

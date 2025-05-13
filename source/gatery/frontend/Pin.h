@@ -21,6 +21,7 @@
 
 #include "Signal.h"
 #include "Compound.h"
+#include "ConditionalScope.h"
 
 #include <gatery/hlim/coreNodes/Node_Pin.h>
 #include <gatery/hlim/coreNodes/Node_Signal.h>
@@ -178,6 +179,9 @@ namespace gtry {
 			(Bit, en)
 		);
 	};
+
+	template<BaseSignal T>
+	void connect(Bidir<T>& lhs, Bidir<T>& rhs);
 }
 
 namespace gtry
@@ -227,4 +231,19 @@ namespace gtry
 		v.reverse();
 		reccurseCompoundMembers(signal, v, prefix);
 	}
+
+	template<BaseSignal T>
+	void connect(Bidir<T>& lhs, Bidir<T>& rhs)
+	{
+		T data = undefined(lhs.out);
+		IF(lhs.en & !rhs.en)
+			data = lhs.out;
+		IF(rhs.en & !lhs.en)
+			data = rhs.out;
+
+		rhs.in = data;
+		lhs.in = data;
+	}
+
+
 }

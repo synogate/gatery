@@ -37,18 +37,19 @@ namespace gtry
 		Reverse() = default;
 		Reverse(const Reverse&) = delete;
 		Reverse(Reverse&& rhs);
-		
+
 		template<class TArg>
 #ifdef __clang__
-		requires (!std::same_as<TArg, std::tuple<const scl::strm::Ready&>&>)
+			requires (!std::same_as<TArg, std::tuple<const scl::strm::Ready&>&>)
 #endif
 		Reverse(TArg&& arg) : m_obj{std::forward<TArg>(arg)} {}
 
 		Reverse& operator = (const Reverse&) = delete;
 		Reverse& operator = (Reverse&&);
 
-		T& operator * () { return m_obj; }
-		const T& operator * () const { return m_obj; }
+		T&& operator * () && { return move(m_obj); }
+		T& operator * () & { return m_obj; }
+		const T& operator * () const & { return m_obj; }
 
 		std::remove_reference_t<T>* operator ->() { return &m_obj; }
 		const std::remove_reference_t<T>* operator ->() const { return &m_obj; }

@@ -427,14 +427,14 @@ void gtry::scl::riscv::RV32I::mem(AvalonMM& mem, bool byte, bool halfword)
 gtry::scl::TileLinkUL gtry::scl::riscv::RV32I::memTLink(bool byte, bool halfword)
 {
 	auto entRV = m_area.enter("mem");
-	auto mem = tileLinkInit<TileLinkUL>(32_b, 32_b);
+	auto mem = tileLinkInit<TileLinkUL>(m_dataAddrWidth, 32_b);
 
 	setFullByteEnableMask(mem.a); // set mask according to size and address
 	valid(mem.a) = '0';
 	mem.a->opcode = (size_t)TileLinkA::Get;
 	mem.a->param = 0;
 	mem.a->source = 0;
-	mem.a->address = m_aluResult.sum;
+	mem.a->address = m_aluResult.sum.lower(m_dataAddrWidth);
 
 	mem.a->data = (BVec)m_r2;
 	mem.a->size = 2;

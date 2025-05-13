@@ -18,7 +18,40 @@
 #include "gatery/scl_pch.h"
 #include "cdc.h"
 #include "flag.h"
+#include "math.h"
+
 #include <gatery/hlim/supportNodes/Node_CDC.h>
+
+namespace gtry::scl
+{
+	Bit debounce(Bit signal, std::chrono::nanoseconds timeStable)
+	{
+		Area ent{ "debounce", true };
+		size_t filterLen = hlim::ceil(ClockScope::getClk().absoluteFrequency() * hlim::ClockRational{ timeStable.count(), std::nano::den });
+		BVec shiftReg = BitWidth(filterLen);
+		shiftReg = (BVec)cat(shiftReg.lower(-1_b), signal);
+
+		Bit out;
+		IF(shiftReg == shiftReg.width().mask())
+			out = '1';
+		IF(shiftReg == 0)
+			out = '0';
+		shiftReg = reg(shiftReg, BVec{ shiftReg.width().mask() }) | name("shiftreg");
+		out = reg(out, '1') | name("out");
+		return (out);
+	}
+
+	Bit debounceMajority(Bit signal, size_t samples)
+	{
+		Area ent{ "debounceMajority", true };
+		BVec shiftReg = BitWidth(samples);
+		shiftReg = (BVec)cat(shiftReg.lower(-1_b), signal);
+		shiftReg = reg(shiftReg, BVec{ shiftReg.width().mask() }) | name("shiftreg");
+
+		Bit out = popcount(shiftReg) >= samples / 2;
+		return out | name("out");
+	}
+}
 
 gtry::BVec gtry::scl::grayEncode(UInt val)
 {
@@ -35,6 +68,8 @@ gtry::UInt gtry::scl::grayDecode(BVec val)
 
 	return ret;
 }
+
+
 
 gtry::Bit gtry::scl::synchronizeEvent(Bit eventIn, const Clock& inClock, const Clock& outClock, const SynchronizeParams& params)
 {

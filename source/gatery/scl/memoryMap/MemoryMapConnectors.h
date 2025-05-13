@@ -160,7 +160,9 @@ namespace gtry::scl
 
 	template<typename T>
 	struct CustomMemoryMapHandler<Memory<T>> {
-		static void memoryMap(MemoryMapRegistrationVisitor &v, T &memory, bool isReverse, std::string_view name, const CompoundMemberAnnotation *annotation) {
+		static void memoryMap(MemoryMapRegistrationVisitor &v, Memory<T>&memory, bool isReverse, std::string_view name, const CompoundMemberAnnotation *annotation) 
+		{
+			v.memoryMap.enterScope(name);
 
 			struct Cmd {
 				BOOST_HANA_DEFINE_STRUCT(Cmd,
@@ -174,16 +176,13 @@ namespace gtry::scl
 			HCL_NAMED(cmdTrigger);
 			HCL_NAMED(cmd);
 
-			auto&& port = memory[cmd.address];
-
-			T memContent = port.read();
-			T stage = constructFrom(memContent);
-
+			T stage = constructFrom(memory.defaultValue());
 			if (v.memoryMap.readEnabled())
 				mapOut(v.memoryMap, stage, "stage");
 			if (v.memoryMap.writeEnabled())
 				mapIn(v.memoryMap, stage, "stage");
 
+			auto&& port = memory[(UInt)cmd.address];
 			IF(v.memoryMap.writeEnabled() & cmdTrigger & cmd.write)
 				port = stage;
 
@@ -195,10 +194,10 @@ namespace gtry::scl
 				Bit readCmd = cmdTrigger & !cmd.write;
 				IF (readCmd)
 					dataAvailable = '0';
-				T readData = memContent;
+				T readData = port.read();
 				for (auto i : utils::Range(memory.readLatencyHint())) {
 					readCmd = reg(readCmd, '0');
-					readData = reg(readData, { .allowRetimingBackwards = true });
+					readData = reg(readData, RegisterSettings{ .allowRetimingBackward = true });
 				}
 				HCL_NAMED(readCmd);
 				HCL_NAMED(readData);
@@ -211,6 +210,8 @@ namespace gtry::scl
 				HCL_NAMED(dataAvailable);
 				mapOut(v.memoryMap, dataAvailable, "dataAvailable");
 			}
+
+			v.memoryMap.leaveScope();
 		}
 	};
 

@@ -24,6 +24,11 @@ namespace gtry::scl {
 	UInt biggestPowerOfTwo(const UInt& input);
 
 	/**
+	 * @brief counts the number of bits set to 1 in the input
+	 */
+	UInt popcount(BVec input);
+
+	/**
 	 * @brief implements long division, division by 0 is undefined
 	 * @param numerator the number that will be divided
 	 * @param denominator the number by which you divide

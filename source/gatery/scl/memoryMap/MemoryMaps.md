@@ -85,7 +85,7 @@ struct MyStruct {
 	mapOut(memoryMap, myStruct, "myStruct");
 
 	toTileLinkUL(memoryMap, 8_b);
-	std::cout << memoryMap.getTree().physicalDescription << std::endl;
+	std::cout << *memoryMap.getTree().physicalDescription << std::endl;
 ```
 produces the following layout (all offsets in bits):
 ```

@@ -69,6 +69,8 @@ namespace gtry::scl
 		Bit isPut() const;
 		Bit isBurst() const;
 
+		UInt& wordAddress();
+
 		void setupGet(UInt address, UInt source = 0, std::optional<UInt> size = {});
 		void setupPut(UInt address, BVec data, UInt source = 0, std::optional<UInt> size = {});
 		void setupPutPartial(UInt address, BVec data, BVec mask, UInt source = 0, std::optional<UInt> size = {});
@@ -164,12 +166,33 @@ namespace gtry::scl
 	template<TileLinkSignal TLink>
 	void tileLinkInit(TLink& link, BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth);
 
+	/**
+	 * @brief Generate a basic default responder:
+	 *			- d channel set to default response and dontCare data
+	 *			- ready/valid is forwarded between a and d channel
+	 */
+	TileLinkUL tileLinkSlaveInit(BitWidth addrW, BitWidth dataW, BitWidth sourceW = 0_b);
+
 	TileLinkD tileLinkDefaultResponse(const TileLinkA& request);
 
 	using gtry::connect;
 	void connect(Memory<BVec>& mem, TileLinkUL& link);
 
 	TileLinkUL tileLinkMemory(BitWidth addrW, BitWidth dataW, BitWidth sourceW = 0_b);
+
+	struct TileLinkMemoryConfig
+	{
+		BitWidth sourceW = 0_b;
+		bool readPort = true;
+		bool writePort = true;
+		std::optional<size_t> latency;
+	};
+
+	/**
+	 * @brief Attach a new port to the memory and connect it to a tile link bus.
+	 */
+	template<typename T>
+	TileLinkUL tileLinkMemory(Memory<T>& mem, TileLinkMemoryConfig cfg = {});
 
 	template<TileLinkSignal TLink> TLink regDecouple(TLink&& link);
 	/**

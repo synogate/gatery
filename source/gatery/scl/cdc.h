@@ -28,6 +28,12 @@ namespace gtry::scl
 	/// Converts a grey coded integer number back to normal binary
 	UInt grayDecode(BVec val);
 
+	/// Waits for signal to be stable for a certain amount of time before forwarding it to the output.
+	Bit debounce(Bit signal, std::chrono::nanoseconds timeStable);
+
+	/// Outputs the majority state of the last N samples of the input signal.
+	Bit debounceMajority(Bit signal, size_t samples);
+
 	using CdcParameter = hlim::Node_CDC::CdcNodeParameter;
 
 	struct SynchronizeParams {
