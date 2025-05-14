@@ -22,6 +22,7 @@
 #include "Signal.h"
 #include "Compound.h"
 #include "ConditionalScope.h"
+#include "Reverse.h"
 
 #include <gatery/hlim/coreNodes/Node_Pin.h>
 #include <gatery/hlim/coreNodes/Node_Signal.h>
@@ -174,14 +175,12 @@ namespace gtry {
 	struct Bidir
 	{
 		BOOST_HANA_DEFINE_STRUCT(Bidir,
-			(T, in),
-			(T, out),
-			(Bit, en)
+			(T, f),
+			(Reverse<T>, r),
+			(Bit, fen),
+			(Reverse<Bit>, ren)
 		);
 	};
-
-	template<BaseSignal T>
-	void connect(Bidir<T>& lhs, Bidir<T>& rhs);
 }
 
 namespace gtry
@@ -203,7 +202,16 @@ namespace gtry
 
 			template<typename T>
 			void operator () (Bidir<T>& a) {
-				a.in = (T)tristatePin(a.out, a.en).setName(makeName());
+				if (isReverse)
+				{
+					*a.r = (T)tristatePin(a.f, a.fen, params).setName(makeName());
+					*a.ren = 'X';
+				}
+				else
+				{
+					a.f = (T)tristatePin(*a.r, *a.ren, params).setName(makeName());
+					a.fen = 'X';
+				}
 			}
 
 			template<typename T>
@@ -231,19 +239,4 @@ namespace gtry
 		v.reverse();
 		reccurseCompoundMembers(signal, v, prefix);
 	}
-
-	template<BaseSignal T>
-	void connect(Bidir<T>& lhs, Bidir<T>& rhs)
-	{
-		T data = undefined(lhs.out);
-		IF(lhs.en & !rhs.en)
-			data = lhs.out;
-		IF(rhs.en & !lhs.en)
-			data = rhs.out;
-
-		rhs.in = data;
-		lhs.in = data;
-	}
-
-
 }
