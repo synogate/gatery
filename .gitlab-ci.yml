@@ -78,46 +78,6 @@ test-windows-scl:
     - cd tests
     - ..\bin\windows-x86_64-Debug\gatery-scl-test.exe
 
-test-linux-coverage:
-  stage: coverage
-  needs: ["linux-gcc-build"]
-  tags:
-    - linux
-  script:
-    - mkdir cov
-    - cd cov
-    - python3 -m venv env
-    - source env/bin/activate
-    - pip install anybadge
-    - cmake .. -DCMAKE_BUILD_TYPE=Debug -DTEST_COVERAGE=true
-    - /usr/bin/time -o buildLog.txt -v make -j20 config=coverage
-    - mkdir badges
-    - anybadge -l "Build time (seconds)" -v $(cat buildLog.txt | grep "User time (seconds):" | cut -d' ' -f 4) --file badges/buildTime.svg
-    - anybadge -l "Build max RSS (kB)" -v $(cat buildLog.txt | grep "Maximum resident set size (kbytes)" | cut -d' ' -f 6) --file badges/buildMaxRSS.svg
-    - anybadge -l "Lines of Code" -v $(find ../ -type f \( -iname \*.cpp -o -iname \*.h -o -iname \*.hpp \) | xargs wc -l | tail -1 | cut -d' ' -f 2) --file badges/linesOfCode.svg
-    - lcov --directory . --zerocounters
-    - cd tests
-    - ../bin/unittest_frontend -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/ --intelQuartus /opt/intelFPGA_pro/24.1/quartus/bin
-    - ../bin/unittest_scl -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/ --intelQuartus /opt/intelFPGA_pro/24.1/quartus/bin
-    - ../bin/unittest_tutorial -- --intel /opt/simModels/intel/ --xilinx /opt/simModels/xilinx/ --intelQuartus /opt/intelFPGA_pro/24.1/quartus/binz
-    - cd ..
-    - lcov --directory tests --capture --output-file unittest_coverage.info --ignore-errors mismatch
-    - lcov --remove unittest_coverage.info '/usr/*' --output-file unittest_coverage.info
-    - lcov --remove unittest_coverage.info '*/source/external/*' --output-file unittest_coverage.info
-    - anybadge --value=$(lcov --summary unittest_coverage.info | grep lines | cut -d' ' -f 4 | cut -d'%' -f 1) --file badges/coverage.svg coverage
-    - mkdir coverageInfo
-    - genhtml unittest_coverage.info -o coverageInfo/
-#    - rm -rf /mnt/doxygenDocu/gateryCov/*
-#    - cp -r cov/ /mnt/doxygenDocu/gateryCov
-  artifacts:
-    expire_in: 4 weeks
-    paths:
-        - cov/badges/
-        - cov/coverageInfo/
-        - doc/gen/
-  only:
-    - master
-
 documentation-job:
   stage: deploy
   needs: ["test-linux-coverage"]
