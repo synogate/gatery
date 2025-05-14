@@ -80,7 +80,6 @@ test-windows-scl:
 
 documentation-job:
   stage: deploy
-  needs: ["test-linux-coverage"]
   tags:
     - documount
   script:
