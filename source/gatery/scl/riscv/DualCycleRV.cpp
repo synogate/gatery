@@ -266,7 +266,7 @@ void gtry::scl::riscv::DualCycleRV::genRegisterFile(UInt rs1, UInt rs2, UInt)
 	HCL_NAMED(m_r1);
 	HCL_NAMED(m_r2);
 
-	debugVisualizeRiscVRegisterFile(writeRf, m_instr.rd, m_resultData, rs1, rs2);
+	//debugVisualizeRiscVRegisterFile(writeRf, m_instr.rd, m_resultData, rs1, rs2);
 }
 
 UInt gtry::scl::riscv::DualCycleRV::genInstructionPointer(uint64_t entryPoint, const Bit& instructionValid)
