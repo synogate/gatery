@@ -25,7 +25,7 @@
 #include <gatery/utils.h>
 
 #include <gatery/hlim/supportNodes/Node_SignalGenerator.h>
-
+#include <gatery/scl/interrupt.h>
 
 using namespace gtry;
 using namespace gtry::scl;
@@ -449,6 +449,68 @@ BOOST_FIXTURE_TEST_CASE(counter_updown_test, BoostUnitTestSimulationFixture)
 		stopTest();
 
 		}); 
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(interruptLogic_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ .absoluteFrequency = 36_mhz });
+	ClockScope clkScp(clk);
+
+	BVec req = (BVec)pinIn(8_b).setName("req");
+	BVec ack = (BVec)pinIn(8_b).setName("ack");
+	BVec state = interruptLogic(req, ack);
+	pinOut(state, "state");
+
+	addSimulationProcess([&, this]()->SimProcess {
+		simu(req) = 0;
+		simu(ack) = 0;
+		co_await AfterClk(clk);
+		BOOST_TEST(simu(state) == 0);
+
+		// issue two interrupts
+		simu(req) = 6;
+		co_await AfterClk(clk);
+		BOOST_TEST(simu(state) == 6);
+
+		// release one interrupt
+		simu(req) = 2;
+		co_await AfterClk(clk);
+		BOOST_TEST(simu(state) == 6);
+
+		// ack pending interrupt
+		simu(ack) = 2;
+		co_await AfterClk(clk);
+		BOOST_TEST(simu(state) == 4);
+
+		// ack finished interrupt
+		simu(ack) = 4;
+		co_await AfterClk(clk);
+		BOOST_TEST(simu(state) == 0);
+
+		// issue again
+		simu(ack) = 0;
+		simu(req) = 6;
+		co_await AfterClk(clk);
+		BOOST_TEST(simu(state) == 4);
+
+		// ack finished interrupt
+		simu(req) = 0;
+		simu(ack) = 4;
+		co_await AfterClk(clk);
+		BOOST_TEST(simu(state) == 0);
+
+		// reissue both
+		simu(req) = 6;
+		simu(ack) = 0;
+		co_await AfterClk(clk);
+		BOOST_TEST(simu(state) == 6);
+
+		co_await AfterClk(clk);
+		stopTest();
+		});
 
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
