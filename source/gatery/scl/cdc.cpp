@@ -28,16 +28,20 @@ namespace gtry::scl
 	{
 		Area ent{ "debounce", true };
 		size_t filterLen = hlim::ceil(ClockScope::getClk().absoluteFrequency() * hlim::ClockRational{ timeStable.count(), std::nano::den });
-		BVec shiftReg = BitWidth(filterLen);
-		shiftReg = (BVec)cat(shiftReg.lower(-1_b), signal);
 
 		Bit out;
-		IF(shiftReg == shiftReg.width().mask())
-			out = '1';
-		IF(shiftReg == 0)
-			out = '0';
-		shiftReg = reg(shiftReg, BVec{ shiftReg.width().mask() }) | name("shiftreg");
-		out = reg(out, '1') | name("out");
+
+		scl::Counter ctr(filterLen);
+		IF(out != signal)
+		{
+			IF(ctr.isLast())
+				out = signal;
+			ctr.inc();
+		}
+		ELSE
+			ctr.reset();
+
+		out = reg(out, signal.resetValue().value_or(true)) | name("out");
 		return (out);
 	}
 
