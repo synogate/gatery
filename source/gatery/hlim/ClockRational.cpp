@@ -19,7 +19,52 @@
 #include "gatery/pch.h"
 #include "ClockRational.h"
 
-namespace gtry::hlim {
+namespace gtry::hlim 
+{
+	ClockRational operator*(const ClockRational& lhs, const ClockRational& rhs)
+	{
+		return ClockRational((const boost::rational<std::uint64_t>&)lhs * (const boost::rational<std::uint64_t>&)rhs);
+	}
+
+	ClockRational operator/(const ClockRational& lhs, const ClockRational& rhs)
+	{
+		return ClockRational((const boost::rational<std::uint64_t>&)lhs / (const boost::rational<std::uint64_t>&)rhs);
+	}
+
+	ClockRational operator+(const ClockRational& lhs, const ClockRational& rhs)
+	{
+		return ClockRational((const boost::rational<std::uint64_t>&)lhs + (const boost::rational<std::uint64_t>&)rhs);
+	}
+
+	ClockRational operator-(const ClockRational& lhs, const ClockRational& rhs)
+	{
+		return ClockRational((const boost::rational<std::uint64_t>&)lhs - (const boost::rational<std::uint64_t>&)rhs);
+	}
+
+	bool clockLess(const ClockRational& lhs, const ClockRational& rhs) {
+		return lhs.numerator() * rhs.denominator() < rhs.numerator() * lhs.denominator();
+	}
+
+	bool clockMore(const ClockRational& lhs, const ClockRational& rhs) {
+		return lhs.numerator() * rhs.denominator() > rhs.numerator() * lhs.denominator();
+	}
+
+	bool operator<(const ClockRational& lhs, const ClockRational& rhs) {
+		return lhs.numerator() * rhs.denominator() < rhs.numerator() * lhs.denominator();
+	}
+
+	bool operator>(const ClockRational& lhs, const ClockRational& rhs) {
+		return lhs.numerator() * rhs.denominator() > rhs.numerator() * lhs.denominator();
+	}
+
+	bool operator<=(const ClockRational& lhs, const ClockRational& rhs) {
+		return lhs.numerator() * rhs.denominator() <= rhs.numerator() * lhs.denominator();
+	}
+
+	bool operator>=(const ClockRational& lhs, const ClockRational& rhs) {
+		return lhs.numerator() * rhs.denominator() >= rhs.numerator() * lhs.denominator();
+	}
+
 	void formatTime(std::ostream &stream, ClockRational time) {
 		const char *unit = "sec";
 		if (time.denominator() > 1) { unit = "ms"; time *= 1000; }
