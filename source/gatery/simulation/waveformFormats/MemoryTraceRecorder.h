@@ -54,7 +54,7 @@ class MemoryTraceRecorder : public WaveformRecorder
 		utils::UnstableMap<const hlim::Clock*, size_t> m_clock2idx;
 
 		virtual void initialize() override;
-		virtual void signalChanged(size_t id) override;
+		virtual void signalChanged(size_t id, std::tuple<DefaultBitVectorState*, size_t, size_t> newValue) override;
 		virtual void advanceTick(const hlim::ClockRational &simulationTime) override;
 };
 

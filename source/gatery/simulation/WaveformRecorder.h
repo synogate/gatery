@@ -20,6 +20,7 @@
 #include <gatery/utils/StableContainers.h>
 
 #include "SimulatorCallbacks.h"
+#include "Simulator.h"
 #include "BitVectorState.h"
 #include "../hlim/NodePtr.h"
 
@@ -78,9 +79,6 @@ class WaveformRecorder : public SimulatorCallbacks
 			auto operator<=>(const SignalReference&) const = default;
 		};
 
-		struct StateOffsetSize {
-			size_t offset, size;
-		};
 		struct Signal {
 			size_t sortOrder = 0;
 			std::string name;
@@ -94,15 +92,15 @@ class WaveformRecorder : public SimulatorCallbacks
 			bool isPin;
 			bool isTap;
 		};
-		std::vector<StateOffsetSize> m_id2StateOffsetSize;
+		std::vector<std::unique_ptr<Simulator::SignalStateHandle>> m_id2SimulatorHandle;
 		std::vector<Signal> m_id2Signal;
-		sim::DefaultBitVectorState m_trackedState;
+		std::unique_ptr<Simulator::SimulationState> m_referenceState;
 		utils::UnstableMap<SignalReference, size_t> m_alreadyAddedNodePorts;
 		utils::UnstableMap<hlim::Node_Memory *, size_t> m_alreadyAddedMemories;
 
 		void initializeStates();
 		virtual void initialize() = 0;
-		virtual void signalChanged(size_t id) = 0;
+		virtual void signalChanged(size_t id, std::tuple<DefaultBitVectorState*, size_t, size_t> newValue) = 0;
 		virtual void advanceTick(const hlim::ClockRational &simulationTime) = 0;
 };
 

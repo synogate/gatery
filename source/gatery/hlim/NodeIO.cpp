@@ -40,12 +40,6 @@ hlim::ConnectionType NodeIO::getDriverConnType(size_t inputPort) const
 	return driver.node->getOutputConnectionType(driver.port);
 }
 
-NodePort NodeIO::getDriver(size_t inputPort) const
-{
-	HCL_ASSERT(inputPort < m_inputPorts.size());
-	return m_inputPorts[inputPort];
-}
-
 NodePort NodeIO::getNonSignalDriver(size_t inputPort) const
 {
 	NodePort np = m_inputPorts[inputPort];
@@ -172,10 +166,9 @@ void NodeIO::bypassOutputToInput(size_t outputPort, size_t inputPort)
 {
 	NodePort newSource = getDriver(inputPort);
 	
-	while (!getDirectlyDriven(outputPort).empty()) {
-		auto p = getDirectlyDriven(outputPort).front();
+	auto driven = getDirectlyDriven(outputPort);
+	for (const auto &p : driven)
 		p.node->connectInput(p.port, newSource);
-	}
 }
 		
 }

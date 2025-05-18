@@ -522,6 +522,140 @@ bool SignalWatch::anySignalChanged(const sim::DefaultBitVectorState &state) cons
 
 
 
+
+
+void ReferenceSimulator::SimulationState::setAllUndefined()
+{
+	m_dataState.signalState.clearRange(DefaultConfig::DEFINED, 0, m_dataState.signalState.size());
+}
+
+std::unique_ptr<Simulator::SimulationState> ReferenceSimulator::copySimulationState()
+{
+	auto res = std::make_unique<SimulationState>();
+	res->m_dataState = m_dataState;
+	return res;
+}
+
+void ReferenceSimulator::updateSimulationState(Simulator::SimulationState *state)
+{
+	auto *ref = static_cast<ReferenceSimulator::SimulationState*>(state);
+	ref->m_dataState.signalState = m_dataState.signalState;
+}
+
+ReferenceSimulator::SignalStateHandle::SignalStateHandle(DefaultBitVectorState &currentState, size_t offset, size_t size) : 
+		m_currentState(currentState), m_offset(offset), m_size(size)
+{
+	const size_t wordSize = sizeof(DefaultConfig::BaseType) * 8;
+
+	m_firstMask = ~0x0ull << (offset % wordSize);
+	m_lastMask = ~0x0ull >> (wordSize - ((offset + size) % wordSize));
+	if ((offset % wordSize) + size <= wordSize)
+		m_firstMask = m_lastMask = (m_firstMask & m_lastMask);
+}
+
+
+bool ReferenceSimulator::SignalStateHandle::stateChanged(const Simulator::SimulationState *reference) const
+{
+	if (m_size == 0) return false;
+
+	auto *ref = static_cast<const ReferenceSimulator::SimulationState*>(reference);
+
+	auto currentWord = [&](DefaultConfig::Plane plane, size_t word) { return m_currentState.data(plane)[word]; };
+	auto referenceWord = [&](DefaultConfig::Plane plane, size_t word) { return ref->m_dataState.signalState.data(plane)[word]; };
+
+	auto differInWord = [&](size_t word, DefaultConfig::BaseType mask) {
+		if ((currentWord(DefaultConfig::DEFINED, word) ^ referenceWord(DefaultConfig::DEFINED, word)) & mask)
+			return true;
+
+		if (((currentWord(DefaultConfig::DEFINED, word) & currentWord(DefaultConfig::VALUE, word)) ^
+			(referenceWord(DefaultConfig::DEFINED, word) & referenceWord(DefaultConfig::VALUE, word))) & mask)
+			return true;
+
+		return false;
+	};
+
+	const size_t wordSize = sizeof(DefaultConfig::BaseType) * 8;
+
+	size_t firstWord = m_offset / wordSize;
+	if (differInWord(firstWord, m_firstMask))
+		return true;
+
+	size_t lastWord = (m_offset + m_size-1) / wordSize;
+	if (firstWord != lastWord && differInWord(lastWord, m_lastMask))
+		return true;
+
+	for (size_t i = firstWord+1; i+1 < lastWord; i++)
+		if (differInWord(i, ~0ull))
+			return true;
+
+	return false;
+}
+
+void ReferenceSimulator::SignalStateHandle::update(Simulator::SimulationState *reference) const
+{
+	if (m_size == 0) return;
+	auto *ref = static_cast<ReferenceSimulator::SimulationState*>(reference);
+
+	auto currentWord = [&](DefaultConfig::Plane plane, size_t word) -> DefaultConfig::BaseType& { return m_currentState.data(plane)[word]; };
+	auto referenceWord = [&](DefaultConfig::Plane plane, size_t word) -> DefaultConfig::BaseType& { return ref->m_dataState.signalState.data(plane)[word]; };
+
+	auto copyWord = [&](size_t word, DefaultConfig::BaseType mask) {
+		referenceWord(DefaultConfig::DEFINED, word) = currentWord(DefaultConfig::DEFINED, word) & mask 
+			| referenceWord(DefaultConfig::DEFINED, word) & ~mask;
+		referenceWord(DefaultConfig::VALUE, word) = currentWord(DefaultConfig::VALUE, word) & mask
+			| referenceWord(DefaultConfig::VALUE, word) & ~mask;
+	};
+
+	const size_t wordSize = sizeof(DefaultConfig::BaseType) * 8;
+
+	size_t firstWord = m_offset / wordSize;
+	copyWord(firstWord, m_firstMask);
+
+	size_t lastWord = (m_offset + m_size-1) / wordSize;
+	if (firstWord != lastWord)
+		copyWord(lastWord, m_lastMask);
+
+	for (size_t i = firstWord+1; i+1 < lastWord; i++)
+		copyWord(i, ~0ull);
+}
+
+std::tuple<DefaultBitVectorState*, size_t, size_t> ReferenceSimulator::SignalStateHandle::getState() const
+{
+	return { &m_currentState, m_offset, m_size };
+}
+
+std::unique_ptr<Simulator::SignalStateHandle> ReferenceSimulator::getSignalStateHandleOfOutput(const hlim::NodePort &nodePort)
+{
+	size_t width = nodePort.node->getOutputConnectionType(nodePort.port).width;
+
+	auto it = m_program.m_stateMapping.outputToOffset.find(nodePort);
+	if (it == m_program.m_stateMapping.outputToOffset.end())
+		return nullptr;
+
+	return std::make_unique<SignalStateHandle>(m_dataState.signalState, it->second, width);
+}
+
+std::unique_ptr<Simulator::SignalStateHandle> ReferenceSimulator::getSignalStateHandleOfInternalState(const hlim::BaseNode *node, size_t idx, size_t offset, size_t size)
+{
+	size_t width = node->getInternalStateSizes()[idx];
+
+	auto it = m_program.m_stateMapping.nodeToInternalOffset.find((hlim::BaseNode *) node);
+	if (it == m_program.m_stateMapping.nodeToInternalOffset.end())
+		return nullptr;
+
+	HCL_ASSERT(offset < width);
+	width = std::min(width - offset, size);
+	offset += it->second[idx];
+	
+	return std::make_unique<SignalStateHandle>(m_dataState.signalState, offset, width);
+}
+
+
+
+
+
+
+
 ReferenceSimulator::ReferenceSimulator(bool enableConsoleOutput)
 {
 	if (enableConsoleOutput) {

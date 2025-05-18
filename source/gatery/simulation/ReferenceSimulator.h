@@ -228,6 +228,35 @@ struct SignalWatch {
 class ReferenceSimulator : public Simulator
 {
 	public:
+		class SimulationState : public Simulator::SimulationState {
+			public:
+				DataState m_dataState;
+				virtual void setAllUndefined() override;
+		};
+
+		virtual std::unique_ptr<Simulator::SimulationState> copySimulationState() override;
+		virtual void updateSimulationState(Simulator::SimulationState *state) override;
+
+		class SignalStateHandle : public Simulator::SignalStateHandle {
+			public:
+				SignalStateHandle(DefaultBitVectorState &currentState, size_t offset, size_t size);
+
+				virtual bool stateChanged(const Simulator::SimulationState *reference) const override;
+				virtual void update(Simulator::SimulationState *reference) const override;
+				virtual std::tuple<DefaultBitVectorState*, size_t, size_t> getState() const override;
+			protected:
+				DefaultBitVectorState &m_currentState;
+				size_t m_offset;
+				size_t m_size;
+
+				DefaultConfig::BaseType m_firstMask;
+				DefaultConfig::BaseType m_lastMask;
+		};
+
+		virtual std::unique_ptr<Simulator::SignalStateHandle> getSignalStateHandleOfOutput(const hlim::NodePort &nodePort) override;
+		virtual std::unique_ptr<Simulator::SignalStateHandle> getSignalStateHandleOfInternalState(const hlim::BaseNode *node, size_t idx, size_t offset = 0, size_t size = ~0ull) override;
+
+
 		ReferenceSimulator(bool enableConsoleOutput = true);
 		virtual ~ReferenceSimulator();
 		virtual void compileProgram(const hlim::Circuit &circuit, const utils::StableSet<hlim::NodePort> &outputs = {}, const CompileOptions &options = {}) override;

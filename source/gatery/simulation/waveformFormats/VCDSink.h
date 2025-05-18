@@ -70,7 +70,7 @@ class VCDSink : public WaveformRecorder
 		std::string m_assertsID;
 
 		virtual void initialize() override;
-		virtual void signalChanged(size_t id) override;
+		virtual void signalChanged(size_t id, std::tuple<DefaultBitVectorState*, size_t, size_t> newValue) override;
 		virtual void advanceTick(const hlim::ClockRational &simulationTime) override;
 
 		void stateToFile(size_t offset, size_t size);

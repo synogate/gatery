@@ -50,16 +50,20 @@ void SimulatorPerformanceCounters::reset(const hlim::Circuit &circuit)
 
 SimulatorPerformanceCounters::NodeHandle::NodeHandle(SimulatorPerformanceCounters &tracker, const hlim::BaseNode *node)
 {
-	m_groupIt = tracker.m_byNodeGroup.find(node->getGroup());
-	m_typeIt = tracker.m_byNodeType.find(std::type_index(typeid(*node)));
-	m_groupIt->second.active++;
-	m_typeIt->second.active++;
+	#ifdef GTRY_TRACK_NODE_PERFORMANCE
+		m_groupIt = tracker.m_byNodeGroup.find(node->getGroup());
+		m_typeIt = tracker.m_byNodeType.find(std::type_index(typeid(*node)));
+		m_groupIt->second.active++;
+		m_typeIt->second.active++;
+	#endif
 }
 
 SimulatorPerformanceCounters::NodeHandle::~NodeHandle()
 {
-	m_groupIt->second.active--;
-	m_typeIt->second.active--;
+	#ifdef GTRY_TRACK_NODE_PERFORMANCE
+		m_groupIt->second.active--;
+		m_typeIt->second.active--;
+	#endif
 }
 
 SimulatorPerformanceCounters::OtherHandle::OtherHandle(SimulatorPerformanceCounters &tracker, Other other)

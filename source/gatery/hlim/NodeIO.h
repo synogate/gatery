@@ -45,7 +45,7 @@ class NodeIO
 		inline size_t getNumOutputPorts() const { return m_outputPorts.size(); }
 
 		ConnectionType getDriverConnType(size_t inputPort) const;
-		NodePort getDriver(size_t inputPort) const;
+		inline NodePort getDriver(size_t inputPort) const { HCL_ASSERT(inputPort < m_inputPorts.size()); return m_inputPorts[inputPort]; }
 		NodePort getNonSignalDriver(size_t inputPort) const;
 		NodePort getNonForwardingDriver(size_t inputPort) const;
 

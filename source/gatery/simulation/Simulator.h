@@ -139,6 +139,31 @@ struct CompileOptions {
 class Simulator
 {
 	public:
+		class SimulationState {
+			public:
+				virtual ~SimulationState() = default;
+				virtual void setAllUndefined() = 0;
+		};
+
+		virtual std::unique_ptr<SimulationState> copySimulationState() = 0;
+		virtual void updateSimulationState(SimulationState *state) = 0;
+
+		class SignalStateHandle {
+			public:
+				virtual ~SignalStateHandle() = default;
+				virtual bool stateChanged(const SimulationState *reference) const = 0;
+				virtual void update(SimulationState *reference) const = 0;
+				virtual std::tuple<DefaultBitVectorState*, size_t, size_t> getState() const = 0;
+		};
+
+		virtual std::unique_ptr<SignalStateHandle> getSignalStateHandleOfOutput(const hlim::NodePort &nodePort) = 0;
+		virtual std::unique_ptr<SignalStateHandle> getSignalStateHandleOfInternalState(const hlim::BaseNode *node, size_t idx, size_t offset = 0, size_t size = ~0ull) = 0;
+
+
+
+
+
+
 		Simulator();
 		virtual ~Simulator();
 

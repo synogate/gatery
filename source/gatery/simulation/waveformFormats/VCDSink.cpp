@@ -259,16 +259,17 @@ namespace gtry::sim
 		writeGtkWaveProjFile();
 	}
 
-	void VCDSink::signalChanged(size_t id)
+	void VCDSink::signalChanged(size_t id, std::tuple<DefaultBitVectorState*, size_t, size_t> newValue)
 	{
-		const auto& offsetSize = m_id2StateOffsetSize[id];
-		if(offsetSize.size == 1 && !m_id2Signal[id].isBVec)
+		auto [state, offset, size] = newValue;
+	
+		if (size == 1 && !m_id2Signal[id].isBVec)
 			m_VCD.writeBitState(m_id2sigCode[id],
-				m_trackedState.get(DefaultConfig::DEFINED, offsetSize.offset),
-				m_trackedState.get(DefaultConfig::VALUE, offsetSize.offset)
+				state->get(DefaultConfig::DEFINED, offset),
+				state->get(DefaultConfig::VALUE, offset)
 			);
 		else
-			m_VCD.writeState(m_id2sigCode[id], m_trackedState, offsetSize.offset, offsetSize.size);
+			m_VCD.writeState(m_id2sigCode[id], *state, offset, size);
 	}
 
 	void VCDSink::advanceTick(const hlim::ClockRational& simulationTime)

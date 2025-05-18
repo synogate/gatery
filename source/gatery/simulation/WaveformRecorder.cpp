@@ -168,20 +168,16 @@ void WaveformRecorder::initializeStates()
 {
 	BitAllocator allocator;
 
-	m_id2StateOffsetSize.resize(m_id2Signal.size());
+	m_id2SimulatorHandle.resize(m_id2Signal.size());
 	for (auto id : utils::Range(m_id2Signal.size())) {
 		auto &signal = m_id2Signal[id];
-		size_t size;
 		if (signal.signalRef.driver.node != nullptr)
-			size = hlim::getOutputWidth(signal.signalRef.driver);
+			m_id2SimulatorHandle[id] = m_simulator.getSignalStateHandleOfOutput(signal.signalRef.driver);
 		else
-			size = signal.memoryWordSize;
-		auto offset = allocator.allocate((unsigned int)size);
-		m_id2StateOffsetSize[id].offset = offset;
-		m_id2StateOffsetSize[id].size = size;
+			m_id2SimulatorHandle[id] = m_simulator.getSignalStateHandleOfInternalState(signal.memory, (size_t) hlim::Node_Memory::Internal::data, signal.memoryWordIdx * signal.memoryWordSize, signal.memoryWordSize);
 	}
-	m_trackedState.resize(allocator.getTotalSize());
-	m_trackedState.clearRange(DefaultConfig::DEFINED, 0, allocator.getTotalSize());
+	m_referenceState = m_simulator.copySimulationState();
+	m_referenceState->setAllUndefined();
 }
 
 
@@ -189,31 +185,14 @@ void WaveformRecorder::onCommitState()
 {
 	for (auto id : utils::Range(m_id2Signal.size())) {
 		auto &signal = m_id2Signal[id];
-		auto offset = m_id2StateOffsetSize[id].offset;
-		auto size = m_id2StateOffsetSize[id].size;
+		auto *handle = m_id2SimulatorHandle[id].get();
 
-		sim::DefaultBitVectorState newState;
-		if (signal.signalRef.driver.node != nullptr)
-			newState = m_simulator.getValueOfOutput(signal.signalRef.driver);
-		else
-			newState = m_simulator.getValueOfInternalState(signal.memory, (size_t) hlim::Node_Memory::Internal::data, signal.memoryWordIdx * signal.memoryWordSize, signal.memoryWordSize);
-		if (newState.size() == 0) continue;
+		if (handle == nullptr) continue;
 
-		bool stateChanged = false;
-		for (auto p : utils::Range(DefaultConfig::NUM_PLANES)) {
-			for (auto i : utils::Range(size))
-				if (newState.get(p, i) != m_trackedState.get(p, offset+i)) {
-					stateChanged = true;
-					break;
-				}
-			if (stateChanged) break;
-		}
-
-		if (stateChanged) {
-			m_trackedState.copyRange(offset, newState, 0, size);
-			signalChanged(id);
-		}
+		if (handle->stateChanged(m_referenceState.get()))
+			signalChanged(id, handle->getState());
 	}
+	m_simulator.updateSimulationState(m_referenceState.get());
 }
 
 void WaveformRecorder::onNewTick(const hlim::ClockRational &simulationTime)

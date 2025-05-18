@@ -110,14 +110,15 @@ void MemoryTraceRecorder::initialize()
 
 }
 
-void MemoryTraceRecorder::signalChanged(size_t id)
+void MemoryTraceRecorder::signalChanged(size_t id, std::tuple<DefaultBitVectorState*, size_t, size_t> newValue)
 {
+	auto [state, offset, size] = newValue;
 	MemoryTrace::SignalChange sigChange;
 	sigChange.sigIdx = id;
 	sigChange.dataOffset = m_bitAllocator.allocate(m_trace.signals[id].width);
 	m_trace.events.back().changes.push_back(sigChange);
 	m_trace.data.resize(m_bitAllocator.getTotalSize());
-	m_trace.data.copyRange(sigChange.dataOffset, m_trackedState, m_id2StateOffsetSize[id].offset, m_id2StateOffsetSize[id].size);
+	m_trace.data.copyRange(sigChange.dataOffset, *state, offset, size);
 }
 
 void MemoryTraceRecorder::advanceTick(const hlim::ClockRational &simulationTime)
