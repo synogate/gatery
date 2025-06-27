@@ -39,8 +39,107 @@ public:
 		simu(phy.dq.f).stopDriving();
 	}
 
+	enum class CommandType
+	{
+		write = 0,
+		read = 1,
+	};
+
+	enum class AddressSpace
+	{
+		memory = 0,
+		reg = 1,
+	};
+
+	enum class BurstType
+	{
+		wrap = 0,
+		linear = 1,
+	};
+
+	SimFunction<bool> driveCommand(const Clock& clk, uint32_t wordAddress, CommandType type, BurstType burst = BurstType::linear, AddressSpace space = AddressSpace::memory)
+	{
+		simu(phy.cs) = '1';
+		simu(phy.cken) = '1';
+
+		uint64_t command = 
+			uint64_t(type) << 47 | 
+			uint64_t(space) << 46 | 
+			uint64_t(burst) << 45 | 
+			uint64_t(wordAddress >> 3) << 16 | 
+			(wordAddress & 0b111);
+
+		bool extraLatency;
+		for (size_t i = 0; i < 6; ++i)
+		{
+			extraLatency = (simu(phy.rwds.f) == '1');
+			simu(phy.dq.f) = (command >> (5 - i) * 8) & 0xFF;
+			co_await OnClk(clk);
+		}
+		simu(phy.dq.f).stopDriving();
+		co_return extraLatency;
+	}
+
+	SimProcess waitLatency(const Clock& clk, bool extraLatency)
+	{
+		size_t l = latency;
+		if (extraLatency)
+			l *= 2;
+		l -= 1; // 1 cycle is part of command sequence
+		l *= 2; // we are in ddr clock mode
+
+		for (size_t i = 0; i < l; ++i)
+			co_await OnClk(clk);
+	}
+
+	SimProcess executeWrite(const Clock& clk, uint32_t byteAddress, uint64_t data, size_t byteSize)
+	{
+		HCL_ASSERT(byteSize % 2 == 0);
+		HCL_ASSERT(byteAddress % 2 == 0);
+
+		bool extraLatecy = co_await driveCommand(clk, 0, CommandType::write);
+		co_await waitLatency(clk, extraLatecy);
+
+		for (size_t i = 0; i < byteSize; ++i)
+		{
+			simu(phy.rwds.f) = '1';
+			simu(phy.dq.f) = (data >> i * 8) & 0xFF;
+			co_await OnClk(clk);
+		}
+
+		driveIdle();
+		co_await OnClk(clk);
+		co_await OnClk(clk);
+	}
+
+	SimFunction<uint64_t> executeRead(const Clock& clk, uint32_t byteAddress, size_t byteSize)
+	{
+		HCL_ASSERT(byteAddress % 2 == 0);
+
+		bool extraLatecy = co_await driveCommand(clk, 0, CommandType::read);
+		co_await waitLatency(clk, extraLatecy);
+
+		co_await OnClk(clk); // protocol
+		co_await OnClk(clk); // tCKD
+
+		uint64_t ret = 0;
+		for (size_t i = 0; i < byteSize; ++i)
+		{
+			BOOST_TEST(simu(phy.rwds.f) == (i % 2 == 0));
+
+			ret |= simu(phy.dq.f) << i * 8;
+			co_await OnClk(clk);
+		}
+
+		driveIdle();
+		for(size_t i = 0; i < 2 + byteSize % 2; ++i)
+			co_await OnClk(clk);
+		co_return ret;
+	}
+
 protected:
 	scl::HyperBusPhy phy = { .cs = 1_b };
+	size_t latency = 7;
 };
 
 BOOST_FIXTURE_TEST_CASE(HyperRAMreadTest, HyperBusMasterTest)
@@ -49,67 +148,21 @@ BOOST_FIXTURE_TEST_CASE(HyperRAMreadTest, HyperBusMasterTest)
 	ClockScope clkScp(clock);
 
 	pinIn(phy, "phy");
-	scl::hyperRAMSimulationModel(phy, { .latencyDefault = 3 });
+	latency = 3;
+	scl::hyperRAMSimulationModel(phy, { .latencyDefault = latency });
 
 	addSimulationProcess([&, this]()->SimProcess {
 		driveIdle();
 		//co_await OnClk(clock);
 		co_await OnClk(clock);
 
+		uint64_t ref_data = 0x0706050403020100ull;
+		co_await executeWrite(clock, 0, ref_data, 8);
+
+		for(size_t i = 0; i < 2; ++i)
 		{
-			simu(phy.cs) = '1';
-			simu(phy.cken) = '1';
-
-			uint64_t command = 0ull << 47 | 1ull << 45 | 0 << 16 | 0;
-			for (size_t i = 0; i < 6; ++i)
-			{
-				simu(phy.dq.f) = (command >> (5 - i) * 8) & 0xFF;
-				co_await OnClk(clock);
-			}
-			simu(phy.dq.f).stopDriving();
-
-			for (size_t i = 0; i < 4 + 6; ++i)
-				co_await OnClk(clock);
-
-			for (size_t i = 0; i < 8; ++i)
-			{
-				simu(phy.rwds.f) = '1';
-				simu(phy.dq.f) = i;
-				co_await OnClk(clock);
-			}
-
-			driveIdle();
-			co_await OnClk(clock);
-			co_await OnClk(clock);
-		}
-
-		{
-			simu(phy.cs) = '1';
-			simu(phy.cken) = '1';
-
-			uint64_t command = 1ull << 47 | 1ull << 45 | 0 << 16 | 0;
-			for (size_t i = 0; i < 6; ++i)
-			{
-				simu(phy.dq.f) = (command >> (5 - i) * 8) & 0xFF;
-				co_await OnClk(clock);
-			}
-			simu(phy.dq.f).stopDriving();
-
-			// initial latency + additional latency + 1 + tCKD
-			for(size_t i = 0; i < 4 + 6 + 2; ++i)
-				co_await OnClk(clock);
-
-			for (size_t i = 0; i < 8; ++i)
-			{
-				BOOST_TEST(simu(phy.rwds.f) == (i % 2 == 0));
-				BOOST_TEST(simu(phy.dq.f) == i);
-				co_await OnClk(clock);
-			}
-
-			simu(phy.cs) = '0';
-			simu(phy.cken) = '0';
-			co_await OnClk(clock);
-			co_await OnClk(clock);
+			uint64_t data = co_await executeRead(clock, 0, 8);
+			BOOST_TEST(data == ref_data);
 		}
 		stopTest();
 	});
