@@ -1,3 +1,4 @@
+#include "Clock.h"
 /*  This file is part of Gatery, a library for circuit design.
 	Copyright (C) 2021 Michael Offel, Andreas Ley
 
@@ -263,6 +264,12 @@ namespace gtry
 		auto *node = DesignScope::createNode<hlim::Node_ClkRst2Signal>();
 		node->setClock(m_clock);
 		return SignalReadPort(node);
+	}
+
+	picoseconds Clock::period() const
+	{
+		ClockRational freq = absoluteFrequency();
+		return picoseconds{ freq.denominator() * picoseconds::period::den / freq.numerator() };
 	}
 
 	void Clock::overrideClkWith(const Bit &clkOverride)

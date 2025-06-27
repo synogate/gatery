@@ -24,7 +24,7 @@
 #include "BVec.h"
 #include "UInt.h"
 #include "SInt.h"
-
+#include "Chrono.h"
 
 #include <gatery/hlim/Clock.h>
 
@@ -120,6 +120,7 @@ namespace gtry {
 
 			hlim::Clock *getClk() const { return m_clock; }
 			hlim::ClockRational absoluteFrequency() const { return m_clock->absoluteFrequency(); }
+			picoseconds period() const;
 
 			void overrideClkWith(const Bit &clkOverride);
 			void overrideRstWith(const Bit &rstOverride);
