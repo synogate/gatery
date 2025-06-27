@@ -116,6 +116,12 @@ T allowClockDomainCrossing(const T& val, const Clock &srcClock, const Clock &dst
 	});
 }
 
+inline auto allowClockDomainCrossing(const Clock& srcClock, const Clock& dstClock, const hlim::Node_CDC::CdcNodeParameter params = {})
+{
+	return [&, params](auto&& in) { return allowClockDomainCrossing(std::forward<decltype(in)>(in), srcClock, dstClock, params); };
+}
+
+
 /**@}*/
 
 }
