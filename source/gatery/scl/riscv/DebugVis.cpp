@@ -293,11 +293,6 @@ void debugVisualizeIP(UInt IP)
 
 void debugVisualizeInstruction(const Instruction &instruction)
 {
-	tap(instruction.opcode);
-	tap(instruction.instruction);
-	tap(instruction.func3);
-	tap(instruction.rd);
-
 	auto visId = dbg::createAreaVisualization(300, 150);
 
 	std::stringstream content;
