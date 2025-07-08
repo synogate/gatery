@@ -66,5 +66,5 @@ namespace gtry::scl::arch::colognechip
 	Clock clkdiv(const Clock& src, ClockConfig cfg);
 
 	Bit serdes(BVec data, const Clock& slowClk, const Clock& fastClk);
-
+	Bit serdes(BVec data, const Clock& slowClk, const Clock& fastClk, Bit syncPulse);
 }

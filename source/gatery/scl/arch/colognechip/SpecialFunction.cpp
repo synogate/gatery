@@ -71,6 +71,10 @@ namespace gtry::scl::arch::colognechip
 		std::string_view portName = user ? "USR_CLK_REF" : "CLK_REF";
 		clockIn(ref, portName, "USR_LOCKED_STDY_RST");
 		refClkFreq(ref.absoluteFrequency());
+
+		std::string_view unusedName = !user ? "USR_CLK_REF" : "CLK_REF";
+		in(unusedName);
+
 		return *this;
 	}
 
@@ -181,6 +185,12 @@ namespace gtry::scl::arch::colognechip
 
 	Bit serdes(BVec data, const Clock& slowClk, const Clock& fastClk)
 	{
+		Area ent{ "scl_serdes_single", true };
+		return serdes(data, slowClk, fastClk, scl::synchronizeEvent('1', slowClk, fastClk));
+	}
+
+	Bit serdes(BVec data, const Clock& slowClk, const Clock& fastClk, Bit syncPulse)
+	{
 		Area ent{ "scl_serdes", true };
 
 		gtry::hlim::ClockRational ratio = fastClk.absoluteFrequency() / slowClk.absoluteFrequency();
@@ -191,13 +201,12 @@ namespace gtry::scl::arch::colognechip
 		if (data.width() == 1_b)
 			return data.lsb();
 
-		Bit slowEdge = scl::synchronizeEvent('1', slowClk, fastClk) | name("slowEdge");
-		BVec inWord = reg(data, { .clock = slowClk }) | name("inWord");
+		BVec inWord = scl::synchronize(data, slowClk, fastClk, { .outStages = 2 }) | name("inWord");
 
 		BVec shiftReg = data.width();
 		shiftReg >>= ddrMode ? 2 : 1;
-		IF(slowEdge)
-			shiftReg = allowClockDomainCrossing(inWord, slowClk, fastClk);
+		IF(syncPulse)
+			shiftReg = inWord;
 		shiftReg = reg(shiftReg, { .clock = fastClk }) | name("shiftReg");
 
 		if (ddrMode)
@@ -209,7 +218,8 @@ namespace gtry::scl::arch::colognechip
 		}
 		else
 		{
-			return shiftReg.lsb();
+			return reg(shiftReg.lsb());
 		}
 	}
+
 }
