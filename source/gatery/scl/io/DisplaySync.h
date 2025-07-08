@@ -57,9 +57,23 @@ namespace gtry::scl
 	std::istream& operator >> (std::istream& s, DisplayModeDimension& dim);
 	std::istream& operator >> (std::istream& s, DisplayMode& dim);
 
+	struct BacklightConfig
+	{
+		ClockRational pwmFreq = 1_khz;
+		milliseconds powerOnSequenceStepTime = 20ms;
+	};
+
+	struct BacklightCtrl
+	{
+		Bit powerEn;
+		Bit ledPwm;
+		Bit ledEn;
+	};
+
+	BacklightCtrl backlightController(UInt level, BacklightConfig cfg = {});
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::DisplayModeDimension, resolution, syncStart, syncEnd, total);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::DisplayMode, w, h);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::DisplaySync, x, y, onScreen, vsync, hsync);
-
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::BacklightCtrl, powerEn, ledPwm, ledEn);

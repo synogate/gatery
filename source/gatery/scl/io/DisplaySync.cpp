@@ -20,6 +20,7 @@
 #include <gatery/scl/Counter.h>
 #include <gatery/scl/flag.h>
 #include "DisplaySync.h"
+#include "modulation.h"
 
 namespace gtry::scl
 {
@@ -77,5 +78,26 @@ namespace gtry::scl
 		HCL_NAMED(hsync);
 		HCL_NAMED(vsync);
 		HCL_NAMED(onScreen);
+	}
+
+	BacklightCtrl backlightController(UInt level, BacklightConfig cfg)
+	{
+		Area ent{ "scl_backlightController", true };
+
+		Counter stepCtr{ cfg.powerOnSequenceStepTime };
+		Counter phase(4);
+		IF(stepCtr.isLast())
+		{
+			IF(!phase.isLast() & (level != 0))
+				phase.inc();
+			IF(!phase.isFirst() & (level == 0))
+				phase.dec();
+		}
+
+		return BacklightCtrl{
+			.powerEn = phase.value() > 0,
+			.ledPwm = (phase.value() > 1) & pwm(level, cfg.pwmFreq),
+			.ledEn = phase.value() > 2
+		};
 	}
 }
