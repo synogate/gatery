@@ -25,9 +25,21 @@
 #include <gatery/scl/io/codingNRZI.h>
 #include <gatery/scl/io/RecoverDataDifferential.h>
 #include <gatery/scl/io/SpiPort.h>
+#include <gatery/scl/io/SpiMaster.h>
+#include <gatery/scl/interrupt.h>
+#include <gatery/scl/riscv/DualCycleRV.h>
+#include <gatery/scl/riscv/EmbeddedSystemBuilder.h>
+#include <gatery/scl/tilelink/tilelink.h>
+#include <gatery/scl/tilelink/TileLinkDemux.h>
+#include <gatery/scl/memoryMap/PackedMemoryMap.h>
+#include <gatery/scl/memoryMap/MemoryMapConnectors.h>
+#include <gatery/scl/memoryMap/TileLinkMemoryMap.h>
+
+#include <gatery/scl/arch/colognechip/SpecialFunction.h>
 
 using namespace boost::unit_test;
 using namespace gtry;
+using namespace gtry::scl;
 using namespace gtry::utils;
 using BoostUnitTestSimulationFixture = gtry::BoostUnitTestSimulationFixture;
 
@@ -400,4 +412,52 @@ BOOST_FIXTURE_TEST_CASE(io_qspi_phy, BoostUnitTestSimulationFixture)
 
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 2, 1'000 }));
+}
+
+BOOST_FIXTURE_TEST_CASE(spi_test_soc, BoostUnitTestSimulationFixture, *boost::unit_test::disabled())
+{
+	Clock clk12{ ClockConfig{
+		.absoluteFrequency = 12_mhz,
+		.name = "CLK12M",
+		.resetType = hlim::RegisterAttributes::ResetType::NONE
+	} };
+
+	Clock clock = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = 24_mhz, .resetType = ClockConfig::ResetType::NONE });
+	ClockScope clkScp(clock);
+
+	PackedMemoryMap mmap("dev");
+	spiMasterDevice(mmap, "spi", SpiMasterConfig::forSdCard());
+	uartDevice(mmap, "uart");
+
+	TileLinkUL dataBus = tileLinkRegDecouple(*toTileLinkUL(mmap, 32_b));
+	formatCppHeader("export/spi_test_soc/firmware/gen_mmap.h", *mmap.getTree().physicalDescription, 0x8000);
+	riscv::embeddedRV32(move(dataBus), "firmware.elf", {
+		.makeDir = "export/spi_test_soc/firmware",
+		.stackByteSize = 4096,
+		.dataBusOffset = 0x8000,
+	});
+
+	addSimulationProcess([&]()->SimProcess {
+		co_return;
+	});
+
+	design.postprocess();
+
+	const std::string& testName = boost::unit_test::framework::current_test_case().p_name.get();
+	std::filesystem::path cwd = std::filesystem::path{ "export" } / testName;
+	std::future<int> flow;
+	vhdl::VHDLExport vhdl(cwd / "top.vhd");
+	if (std::filesystem::is_directory(cwd))
+	{
+		//vhdl.addTestbenchRecorder(*m_simulator, "tb", true);
+		vhdl(design.getCircuit());
+
+		flow = std::async([=]() {
+			return std::system(("make -C " + cwd.string()).c_str());
+			});
+	}
+	runHitsTimeout(200us);
+
+	if (flow.valid())
+		BOOST_TEST(flow.get() == 0);
 }
