@@ -18,10 +18,12 @@
 #pragma once
 
 #include <gatery/frontend.h>
-#include "../stream/strm.h"
+#include "TxRxStream.h"
 
 namespace gtry::scl 
 {
+	class MemoryMap;
+
 	struct UartConfig
 	{
 		// the smallest baud generator step is 2^x which reduces complexity and baud rate precision for very small or non-standard baud rates
@@ -38,25 +40,28 @@ namespace gtry::scl
 
 	Bit baudRateGenerator(Bit setToHalf, UInt baudRate, size_t baudGeneratorLogStepSize);
 
-struct UART
-{
-	unsigned stabilize_rx = 2;
+	Reverse<TxRxStream> uart(UInt baudRate, std::string pinPrefix = "UART0_", UartConfig cfg = {});
+	void uartDevice(MemoryMap& mmap, std::string mmapName, std::string pinPrefix = "UART0_", UartConfig cfg = {});
 
-	bool deriveClock = false;
-	unsigned startBits = 1;
-	unsigned stopBits = 1;
-	unsigned dataBits = 8;
-	unsigned baudRate = 19200;
+	struct UART
+	{
+		unsigned stabilize_rx = 2;
 
-	struct Stream {
-		UInt data;
-		Bit valid;
-		Bit ready;
+		bool deriveClock = false;
+		unsigned startBits = 1;
+		unsigned stopBits = 1;
+		unsigned dataBits = 8;
+		unsigned baudRate = 19200;
+
+		struct Stream {
+			UInt data;
+			Bit valid;
+			Bit ready;
+		};
+
+		Stream receive(Bit rx);
+
+		Bit send(Stream &stream);
 	};
-
-	Stream receive(Bit rx);
-
-	Bit send(Stream &stream);
-};
 
 }

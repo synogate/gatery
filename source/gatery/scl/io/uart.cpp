@@ -19,6 +19,10 @@
 #include "uart.h"
 
 #include "../Adder.h"
+#include "../stream/strm.h"
+
+#include <gatery/scl/memoryMap/PackedMemoryMap.h>
+#include <gatery/scl/memoryMap/MemoryMapConnectors.h>
 
 namespace gtry::scl {
 
@@ -249,6 +253,8 @@ Bit UART::send(Stream &stream)
 	VStream<BVec> uartRx(Bit rx, UInt baudRate, UartConfig cfg)
 	{
 		Area entity("scl_uartRx", true);
+		rx.resetValue('1');
+		rx = scl::synchronize(rx, ClockScope::getClk(), ClockScope::getClk(), { .outStages = 2, .inStage = false });
 		HCL_NAMED(rx);
 
 		Bit baudReset;
@@ -288,10 +294,10 @@ Bit UART::send(Stream &stream)
 				valid(out) = '1';
 			}
 		}
-		out = reg(out);
+		out = regDownstream(move(out));
 		HCL_NAMED(out);
 
-		IF(baud & state.current() == stop)
+		IF(state.current() == stop)
 		{
 			IF(rx == '1')
 				state = wait;
@@ -322,5 +328,54 @@ Bit UART::send(Stream &stream)
 		IF(out)
 			baudCounter -= cyclesPerSecond;
 		return out;
+	}
+
+	Reverse<TxRxStream> uart(UInt baudRate, std::string pinPrefix, UartConfig cfg)
+	{
+		Bit rxPin = pinIn().setName(pinPrefix + "RX");
+
+		DesignScope::get()->getCircuit().addSimulationProcess([rxPin]() -> SimProcess { 
+			simu(rxPin) = '1'; 
+
+			char msg = 'A';
+
+			std::chrono::nanoseconds baudRate = 8681ns;
+			co_await WaitFor(1us);
+			simu(rxPin) = '0';
+			co_await WaitFor(baudRate);
+			for (size_t i = 0; i < 8; ++i)
+			{
+				simu(rxPin) = ((msg >> i) & 1) != 0;
+				co_await WaitFor(baudRate);
+			}
+			simu(rxPin) = '1';
+
+			co_return; 
+		});
+
+		Reverse<TxRxStream> ret(TxRxStream{
+			.tx = { 8_b },
+			.rx = uartRx(rxPin, baudRate, cfg) | strm::attach(Ready{}) | strm::fifo(512),
+		});
+
+		Bit txPin = uartTx(move(ret->tx) | strm::fifo(512), baudRate, cfg);
+		pinOut(txPin, pinPrefix + "TX");
+
+		return ret;
+	}
+
+	void uartDevice(MemoryMap& mmap, std::string mmapName, std::string pinPrefix, UartConfig cfg)
+	{
+		UInt baudRate = 24_b;
+
+		TxRxStream dev = *uart(baudRate, pinPrefix, cfg);
+
+		mmap.enterScope(mmapName);
+		mapIn(mmap, dev, "io");
+		mapOut(mmap, baudRate, "baud");
+		mapIn(mmap, baudRate, "baud");
+		mmap.leaveScope();
+
+		//baudRate = reg(baudRate, 115'200);
 	}
 }
