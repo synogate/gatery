@@ -334,3 +334,154 @@ BOOST_FIXTURE_TEST_CASE(basicGateMateHDMI_test, gtry::BoostUnitTestSimulationFix
 	runHitsTimeout({ 4, 1'000'000 });
 	flowTask.wait();
 }
+
+BOOST_FIXTURE_TEST_CASE(basicGateMateLVDS_test, gtry::BoostUnitTestSimulationFixture, *boost::unit_test::disabled())
+{
+#if 0
+	// typical datasheet values
+	scl::DisplayMode mode = {
+		.pixelFreq = 27_mhz,
+		.w = {
+			.resolution = 1600/2, .syncStart = 1600/2, .syncEnd = 0, .total = 1940/2,
+		},
+		.h = {
+			.resolution = 900, .syncStart = 900, .syncEnd = 0, .total = 926,
+		},
+	};
+#else
+	// min datasheet values
+	scl::DisplayMode mode = {
+		.pixelFreq = 23_mhz,
+		.w = {
+			.resolution = 1600 / 2, .syncStart = 1600 / 2, .syncEnd = 0, .total = 1690 / 2,
+		},
+		.h = {
+			.resolution = 900, .syncStart = 900, .syncEnd = 0, .total = 907,
+		},
+	};
+#endif
+	HCL_NAMED(mode);
+	
+	Clock clk12{ ClockConfig{
+		.absoluteFrequency = 12'000'000,
+		.name = "CLK12M",
+		.resetType = hlim::RegisterAttributes::ResetType::NONE
+	} };
+	
+	hlim::ClockRational bitFreq = mode.pixelFreq * hlim::ClockRational{ 7, 1 };
+	
+	Clock clkFast = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = bitFreq, .resetType = ClockConfig::ResetType::NONE });
+	Clock clkSlow = scl::arch::colognechip::clkdiv(clkFast, { .absoluteFrequency = mode.pixelFreq, .resetType = ClockConfig::ResetType::NONE });
+	ClockScope scope(clkSlow);
+
+	// TODO: move 'modern' stream wrapper into scl
+	scl::VStream<scl::DisplaySync> modeSync;
+	valid(modeSync) = '1';
+	ENIF(transfer(modeSync))
+		modeSync->init(mode);
+
+	HCL_NAMED(modeSync);
+	modeSync = move(modeSync)
+		| scl::strm::regDownstream();
+
+	scl::Stream rgbImage = transform(modeSync, [&](const scl::DisplaySync& sync) {
+		ENIF(transfer(modeSync))
+		{
+			std::array<UInt, 3> rgb{
+				0xFF, 0xFF, 0xFF
+			};
+			UInt grad = modeSync->x.lower(8_b);
+			UInt sel = modeSync->y.upper(3_b);
+
+			IF(sel == 0)
+				rgb[0] = grad;
+			IF(sel == 1)
+				rgb[1] = grad;
+			IF(sel == 2)
+				rgb[2] = grad;
+
+			IF(sel > 3)
+				for (auto& c : rgb) c = 0;
+			IF(sel == 4)
+				rgb[0] = grad;
+			IF(sel == 5)
+				rgb[1] = grad;
+			IF(sel == 6)
+				rgb[2] = grad;
+
+			IF(modeSync->x > 600 & modeSync->x < 640)
+			{
+				rgb[0] = 0;
+				rgb[1] = 0;
+				rgb[2] = 0;
+			}
+			return rgb;
+		}
+		throw;
+	})	| scl::strm::attach(*modeSync) 
+		| scl::strm::regDownstream()
+		| name("rgbImage");
+
+	UInt lvds = cat(
+		get<scl::DisplaySync>(rgbImage).onScreen, get<scl::DisplaySync>(rgbImage).vsync, get<scl::DisplaySync>(rgbImage).hsync,
+		rgbImage->at(2).upper(6_b) & get<scl::DisplaySync>(rgbImage).onScreen,
+		rgbImage->at(1).upper(6_b) & get<scl::DisplaySync>(rgbImage).onScreen,
+		rgbImage->at(0).upper(6_b) & get<scl::DisplaySync>(rgbImage).onScreen
+	) | name("lvds");
+
+	// every group of lvds channels needs to be in lock step
+	Bit syncPulse = scl::synchronizeEvent('1', clkSlow, clkFast) | name("syncPulse");
+
+	ClockScope ioScope{ clkFast };
+	for (size_t i = 0; i < 3; ++i)
+	{
+		for (size_t j = 0; j < 2; ++j)
+		{
+			char channel = j == 0 ? 'O' : 'E';
+			std::string pinName = "DISPLAY_RX" + std::string(1, channel) + std::to_string(i);
+	
+			BVec data = (BVec)swapEndian(lvds.part(3, i), 1_b) | name(pinName);
+	
+			scl::arch::colognechip::CC_LVDS_OBUF buf;
+			buf.pin(pinName + "p", pinName + "n");
+			buf.regOut(true);
+			buf.O() = scl::arch::colognechip::serdes(~data, clkSlow, clkFast, syncPulse);
+		}
+	}
+	for (size_t j = 0; j < 2; ++j)
+	{
+		char channel = j == 0 ? 'O' : 'E';
+		std::string pinName = "DISPLAY_RX" + std::string(1, channel) + "C";
+	
+		scl::arch::colognechip::CC_LVDS_OBUF buf;
+		buf.pin(pinName + "p", pinName + "n");
+		buf.regOut(true);
+		buf.O() = scl::arch::colognechip::serdes(~BVec("7b1100011"), clkSlow, clkFast, syncPulse);
+	}
+
+	{ // back light code
+		ClockScope slowScope{ clkSlow };
+
+		scl::Counter pwmLevel(8_b);
+		IF(scl::Counter{ 20ms }.isLast())
+			pwmLevel.inc();
+
+		scl::BacklightCtrl bl = scl::backlightController(pwmLevel.value(), {.pwmFreq = 40_khz}) | name("backlight");
+		pinOut(bl.powerEn).setName("DISPLAY_EN_12V");
+		pinOut(!bl.ledPwm).setName("DISPLAY_BL_PWM");
+		pinOut(!bl.ledEn).setName("DISPLAY_BL_EN");
+	}
+
+	design.postprocess();
+
+	vhdl::VHDLExport vhdl("export/basicGateMateLVDS_test/top.vhd");
+	vhdl(design.getCircuit());
+
+	auto flowTask = std::async([]() {
+		return std::system("make -C export/basicGateMateLVDS_test");
+		});
+
+	runHitsTimeout({ 17, 1'000'000 });
+	flowTask.wait();
+}
+
