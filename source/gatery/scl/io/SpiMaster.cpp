@@ -19,6 +19,9 @@
 #include "SpiMaster.h"
 #include "../stream/utils.h"
 
+#include <gatery/scl/memoryMap/PackedMemoryMap.h>
+#include <gatery/scl/memoryMap/MemoryMapConnectors.h>
+
 gtry::scl::RvStream<gtry::BVec> gtry::scl::SpiMaster::generate(RvStream<BVec>& in)
 {
 	Area area{ "scl_SpiMaster", true };
@@ -167,4 +170,36 @@ gtry::scl::SpiMaster& gtry::scl::SpiMaster::simulateDevice(std::shared_ptr<SpiDe
 	});
 
 	return *this;
+}
+
+void gtry::scl::spiMasterDevice(MemoryMap& mmap, std::string mmapName, SpiMasterConfig cfg)
+{
+	Area ent{ "scl_SPIMaster", true };
+
+	UInt speedDivider = 8_b;
+	UInt chipSelect = cfg.chipSelectW;
+
+	RvStream<BVec> spiPut{ 8_b };
+	HCL_NAMED(spiPut);
+
+	Bit csn = !chipSelect.lsb();
+	pinOut(csn, cfg.pinPrefix + cfg.pinCsn);
+
+	RvStream<BVec> spiGet = strm::fifo(SpiMaster{}
+		.pin(cfg.pinPrefix + cfg.pinClk, cfg.pinPrefix + cfg.pinMiSo, cfg.pinPrefix + cfg.pinMoSi)
+		.clockDiv(speedDivider)
+		.simulateDevice(cfg.simulationModel, csn)
+		.generate(spiPut),
+		cfg.rxFifoDepth);
+	HCL_NAMED(spiGet);
+
+	for (const std::string& pinName : cfg.pinGrounded)
+		pinOut(Bit{ '0' }, cfg.pinPrefix + pinName);
+
+	mmap.enterScope(mmapName);
+	mapIn(mmap, spiPut, "put");
+	mapOut(mmap, spiGet, "get");
+	mapIn(mmap, speedDivider, "speed");
+	mapIn(mmap, chipSelect, "cs");
+	mmap.leaveScope();
 }

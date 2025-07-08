@@ -18,7 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 
-#include "../stream/Stream.h"
+#include "../stream/strm.h"
 
 namespace gtry::scl 
 {
@@ -63,4 +63,40 @@ namespace gtry::scl
 
 		bool m_outIdle = false;
 	};
+
+	struct SpiMasterConfig
+	{
+		BitWidth sourceW = 0_b;
+		BitWidth chipSelectW = 1_b;
+
+		size_t rxFifoDepth = 64;
+
+		std::string pinPrefix = "SPI_";
+		std::string pinClk = "CLK";
+		std::string pinMiSo = "MISO";
+		std::string pinMoSi = "MOSI";
+		std::string pinCsn = "CSn";
+
+		std::vector<std::string> pinGrounded;
+		std::shared_ptr<SpiDeviceModel> simulationModel;
+
+		/**
+		 * @brief Alternative pin names for SD Cards.
+		 * @return
+		 */
+		static SpiMasterConfig forSdCard() {
+			return {
+				.rxFifoDepth = 1024,
+
+				.pinPrefix = "SD_",
+				.pinMiSo = "DAT0",
+				.pinMoSi = "CMD",
+				.pinCsn = "DAT3",
+				.pinGrounded = { "DAT1", "DAT2" },
+			};
+		};
+	};
+
+	class MemoryMap;
+	void spiMasterDevice(MemoryMap& mmap, std::string mmapName, SpiMasterConfig cfg = {});
 }
