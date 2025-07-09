@@ -23,6 +23,7 @@
 
 #include <gatery/simulation/Simulator.h>
 #include <gatery/scl/io/codingNRZI.h>
+#include <gatery/scl/io/ethernet/EthernetPhy.h>
 #include <gatery/scl/io/RecoverDataDifferential.h>
 #include <gatery/scl/io/SpiPort.h>
 #include <gatery/scl/io/SpiMaster.h>
@@ -35,6 +36,7 @@
 #include <gatery/scl/memoryMap/MemoryMapConnectors.h>
 #include <gatery/scl/memoryMap/TileLinkMemoryMap.h>
 
+#include <gatery/scl/arch/colognechip/io.h>
 #include <gatery/scl/arch/colognechip/SpecialFunction.h>
 
 using namespace boost::unit_test;
@@ -436,6 +438,66 @@ BOOST_FIXTURE_TEST_CASE(spi_test_soc, BoostUnitTestSimulationFixture, *boost::un
 		.stackByteSize = 4096,
 		.dataBusOffset = 0x8000,
 	});
+
+	addSimulationProcess([&]()->SimProcess {
+		co_return;
+	});
+
+	design.postprocess();
+
+	const std::string& testName = boost::unit_test::framework::current_test_case().p_name.get();
+	std::filesystem::path cwd = std::filesystem::path{ "export" } / testName;
+	std::future<int> flow;
+	vhdl::VHDLExport vhdl(cwd / "top.vhd");
+	if (std::filesystem::is_directory(cwd))
+	{
+		//vhdl.addTestbenchRecorder(*m_simulator, "tb", true);
+		vhdl(design.getCircuit());
+
+		flow = std::async([=]() {
+			return std::system(("make -C " + cwd.string()).c_str());
+			});
+	}
+	runHitsTimeout(200us);
+
+	if (flow.valid())
+		BOOST_TEST(flow.get() == 0);
+}
+
+BOOST_FIXTURE_TEST_CASE(rmii_loopback_test_export, BoostUnitTestSimulationFixture, *boost::unit_test::disabled())
+{
+	Clock clk12{ ClockConfig{
+		.absoluteFrequency = 12_mhz,
+		.name = "CLK12M",
+		.resetType = hlim::RegisterAttributes::ResetType::NONE
+	} };
+
+	Clock clock = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = 50_mhz, .resetType = ClockConfig::ResetType::NONE });
+	ClockScope clkScp(clock);
+
+	arch::colognechip::CC_ODDR clkddr;
+	clkddr.D0() = '0';
+	clkddr.D1() = '1';
+	pinOut(clkddr.Q(), "rmii_ref_clk");
+
+	scl::eth::RMII rmii;
+	pinOut(rmii, "rmii");
+	pinOut(Bit{ '0' }, "rmii_rst");
+	pinOut(Bit{ '0' }, "rmii_mdc");
+	pinOut(Bit{ '0' }, "rmii_mdio");
+
+	scl::TxRxStream phy = *eth::phy(rmii);
+
+	TransactionalFifo<BVec> packetBuffer(512, 2_b);
+	// store incoming into fifo
+	move(*phy.rx) | 
+		eth::preambleFilter |
+		strm::push(packetBuffer);
+
+	// send fifo content
+	phy.tx <<= strm::pop(packetBuffer) | eth::preambleInsert;
+
+	packetBuffer.generate();
 
 	addSimulationProcess([&]()->SimProcess {
 		co_return;
