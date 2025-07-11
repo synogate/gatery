@@ -30,6 +30,7 @@
 #include <gatery/scl/interrupt.h>
 #include <gatery/scl/riscv/DualCycleRV.h>
 #include <gatery/scl/riscv/EmbeddedSystemBuilder.h>
+#include <gatery/scl/io/RotaryEncoder.h>
 #include <gatery/scl/tilelink/tilelink.h>
 #include <gatery/scl/tilelink/TileLinkDemux.h>
 #include <gatery/scl/memoryMap/PackedMemoryMap.h>
@@ -522,4 +523,72 @@ BOOST_FIXTURE_TEST_CASE(rmii_loopback_test_export, BoostUnitTestSimulationFixtur
 
 	if (flow.valid())
 		BOOST_TEST(flow.get() == 0);
+}
+
+BOOST_FIXTURE_TEST_CASE(rotary_encoder_test_export, BoostUnitTestSimulationFixture)
+{
+	Clock clock{ ClockConfig{
+		.absoluteFrequency = 12_mhz,
+		.name = "CLK12M",
+		.resetType = hlim::RegisterAttributes::ResetType::NONE
+	} };
+
+	ClockScope clkScp(clock);
+
+	pinOut(Bit{ '0' }, "ROT_V"); // ground connection for A and B
+	Bit A = pinIn().setName("ROT_A");
+	Bit B = pinIn().setName("ROT_B");
+	VStream<Enum<RotaryDirection>> rotary = rotaryEncoder(A, B);
+	pinOut(rotary, "rotary", PinNodeParameter{.simulationOnlyPin = true});
+
+	TxRxStream serial = *uart(230400);
+	serial.tx <<= 
+		transform(rotary, [](auto&& dir) { return (BVec)zext(pack(dir), 8_b); }) |
+		strm::attach(Ready{});
+
+	addSimulationProcess([&]()->SimProcess {
+		std::chrono::microseconds stepTime = 200us;
+
+		simu(A) = '0';
+		simu(B) = '0';
+		co_await WaitFor(stepTime);
+		simu(A) = '1';
+		co_await WaitFor(stepTime);
+		simu(B) = '1';
+		co_await WaitFor(stepTime);
+		simu(B) = '0';
+		co_await WaitFor(stepTime);
+		simu(A) = '0';
+		co_await WaitFor(stepTime);
+	});
+
+	addSimulationProcess([&]()->SimProcess {
+		for (RotaryDirection expected : { RotaryDirection::clockwise, RotaryDirection::counterclockwise })
+		{
+			co_await strm::performTransferWait(rotary, clock);
+			BOOST_TEST((simu(*rotary) == expected));
+		}
+		stopTest();
+	});
+
+	design.postprocess();
+
+	const std::string& testName = boost::unit_test::framework::current_test_case().p_name.get();
+	std::filesystem::path cwd = std::filesystem::path{ "export" } / testName;
+	std::future<int> flow;
+	vhdl::VHDLExport vhdl(cwd / "top.vhd");
+	if (std::filesystem::is_directory(cwd))
+	{
+		//vhdl.addTestbenchRecorder(*m_simulator, "tb", true);
+		vhdl(design.getCircuit());
+
+		flow = std::async([=]() {
+			return std::system(("make -C " + cwd.string()).c_str());
+			});
+	}
+
+	BOOST_TEST(!runHitsTimeout(2ms));
+
+//	if (flow.valid())
+//		BOOST_TEST(flow.get() == 0);
 }
