@@ -44,9 +44,9 @@ namespace gtry::scl::arch::colognechip
 	{
 	public:
 		CC_PIN_IN() {
-			pulldown(false);
-			pullup(false);
-			keeper(false);
+			//pulldown(false);
+			//pullup(false);
+			//keeper(false);
 			schmittTrigger(false);
 			regIn(false);
 			delayIn(0);
