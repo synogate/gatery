@@ -21,10 +21,14 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
+#include <gatery/scl/arch/colognechip/io.h>
+#include <gatery/scl/arch/colognechip/SpecialFunction.h>
 #include <gatery/scl/memory/HyperRAM.h>
+#include <gatery/scl/riscv/EmbeddedSystemBuilder.h>
 
 using namespace boost::unit_test;
 using namespace gtry;
+using namespace gtry::scl;
 
 class HyperBusMasterTest : public BoostUnitTestSimulationFixture
 {
@@ -32,9 +36,7 @@ public:
 
 	void driveIdle()
 	{
-		simu(phy.cs) = 0;
-		simu(phy.cken) = '0';
-		simu(phy.reset) = '0';
+		simu(phy.csn) = 1;
 		simu(phy.rwds.f).stopDriving();
 		simu(phy.dq.f).stopDriving();
 	}
@@ -59,8 +61,7 @@ public:
 
 	SimFunction<bool> driveCommand(const Clock& clk, uint32_t wordAddress, CommandType type, BurstType burst = BurstType::linear, AddressSpace space = AddressSpace::memory)
 	{
-		simu(phy.cs) = '1';
-		simu(phy.cken) = '1';
+		simu(phy.csn) = 0;
 
 		uint64_t command = 
 			uint64_t(type) << 47 | 
@@ -72,7 +73,7 @@ public:
 		bool extraLatency;
 		for (size_t i = 0; i < 6; ++i)
 		{
-			extraLatency = (simu(phy.rwds.f) == '1');
+			extraLatency = (simu(phy.rwds.f) == 3);
 			simu(phy.dq.f) = (command >> (5 - i) * 8) & 0xFF;
 			co_await OnClk(clk);
 		}
@@ -138,7 +139,7 @@ public:
 	}
 
 protected:
-	scl::HyperBusPhy phy = { .cs = 1_b };
+	scl::HyperBusPhy phy = { .csn = 1_b };
 	size_t latency = 7;
 };
 
@@ -169,5 +170,73 @@ BOOST_FIXTURE_TEST_CASE(HyperRAMreadTest, HyperBusMasterTest)
 
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout(1us));
+}
+
+BOOST_FIXTURE_TEST_CASE(HyperRAM_soc_test_export, BoostUnitTestSimulationFixture)
+{
+	const std::string& testName = boost::unit_test::framework::current_test_case().p_name.get();
+
+	Clock clk12{ ClockConfig{
+		.absoluteFrequency = 12_mhz,
+		.name = "CLK12M",
+		.resetType = hlim::RegisterAttributes::ResetType::NONE
+	} };
+
+	Clock clock = scl::arch::colognechip::pll(clk12, { 
+		.absoluteFrequency = 24_mhz, 
+		.resetType = ClockConfig::ResetType::NONE,
+	//	.resetType = ClockConfig::ResetType::SYNCHRONOUS,
+	});
+	ClockScope clkScp(clock);
+
+	Reverse<scl::HyperBusPhy> phy = scl::gateMateHyperBusPhy();
+	Reverse<scl::HyperBusController> controller = scl::hyperBusControllerLowLatency(move(phy));
+
+	UInt latency = 3_b;
+	Bit registerAccess;
+
+	scl::TileLinkUB link16 = scl::hyperBusTileLink(move(controller), { .burstLimit = 2, .latency = latency, .registerAccess = registerAccess });
+	scl::TileLinkUB link32 = scl::tileLinkDoubleWidth(move(link16));
+
+	PackedMemoryMap mmap("dev");
+	uartDevice(mmap, "uart");
+	mapIn(mmap, latency, "latency");
+	mapIn(mmap, registerAccess, "registerAccess");
+	TileLinkUL mmapBus = tileLinkRegDecouple(*toTileLinkUL(mmap, 32_b));
+
+	TileLinkDemux<TileLinkUL> dataBus;
+	TileLinkUL dataFetch = tileLinkInit<TileLinkUL>(31_b, 32_b);
+	dataBus.attachSource(dataFetch);
+	dataBus.attachSink(move(mmapBus), 0x1000'0000);
+	dataBus.attachSink(move((TileLinkUL&)link32), 0x2000'0000);
+	dataBus.generate();
+
+	formatCppHeader("export/" + testName + "/firmware/gen_mmap.h", *mmap.getTree().physicalDescription, 0x1000'0000);
+	riscv::embeddedRV32(move(dataFetch), "firmware.elf", {
+		.makeDir = "export/" + testName + "/firmware",
+		.stackByteSize = 4096,
+		.dataBusOffset = 0x8000,
+	});
+
+	addSimulationProcess([&]()->SimProcess {
+		co_return;
+	});
+
+	design.postprocess();
+
+	std::filesystem::path cwd = std::filesystem::path{ "export" } / testName;
+	std::future<int> flow;
+	vhdl::VHDLExport vhdl(cwd / "top.vhd");
+	if (std::filesystem::is_directory(cwd))
+	{
+		//vhdl.addTestbenchRecorder(*m_simulator, "tb", true);
+		vhdl(design.getCircuit());
+
+		flow = std::async([=]() {
+			return std::system(("make -C " + cwd.string()).c_str());
+			});
+	}
+
+	//BOOST_TEST(!runHitsTimeout(2ms));
 }
 

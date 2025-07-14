@@ -21,43 +21,104 @@
 
 namespace gtry::scl
 {
-	struct HyperBusLink
-	{
-		TileLinkUB data;
-		TileLinkUL ctrl;
-	};
+	////////////////////////////// phy //////////////////////////////
 
 	struct HyperBusPhy
 	{
-		BVec cs;
-		Bit cken;
-		Bit reset;
+		// csn is instant set, delayed reset and also controls clock enable
+		BVec csn;
 
-		Bidir<Bit> rwds;
-		Bidir<BVec> dq = { 8_b, 8_b };
+		// rwds and dq are:
+		//		send upper word at falling edge and lower word on rising edge
+		//		received on rising edge, upper wird first
+		//		see doc/HyperRAM planning 2.json for visuals
+		Bidir<BVec> rwds = { 2_b, 2_b };
+		Bidir<BVec> dq = { 16_b, 16_b };
+	};
 
-		std::vector<std::string> pinCs = { "_CS" };
-		std::string_view pinClk = "_CK";
-		std::string_view pinClkN;
+	struct HyperBusPhyConfig
+	{
+		std::vector<std::string> pinCsn = { "_CSn" };
+		std::string_view pinClk = "_CKp";
+		std::string_view pinClkN = "_CKn";	// set empty for single ended clock
 		std::string_view pinRwds = "_RWDS";
 		std::string_view pinDq = "_DQ";
 	};
 
-	void gateMateHyperBusPhy(HyperBusPhy& phy);
+	Reverse<HyperBusPhy> gateMateHyperBusPhy(std::string pinPrefix = "HYPER", HyperBusPhyConfig cfg = {});
 
-	class HyperBusController
+	////////////////////////////// controller //////////////////////////////
+
+	struct HyperBusCommand
 	{
-	public:
+		enum Type { write = 0, read = 1 };
+		enum Space { mem = 0, reg = 1 };
+		enum Burst { wrapped = 0, linear = 1 };
 
+		Enum<Type> type;
+		Enum<Space> space;
+		Enum<Burst> burst;
 
-		
-		virtual HyperBusLink generate(HyperBusPhy& phy);
-	private:
-
-
-
-
+		UInt wordAddress;
 	};
+
+	struct HyperBusController
+	{
+		// Note that valid, type, space and burst is directly forwarded to the output buffer and therefore require a short timing paths.
+		// Proper output path delay constrants are required on these paths to catch timing problems.
+		RvStream<HyperBusCommand> command;
+
+		// Write data can be given up to three cycles after the write command.
+		// This allows for write data to be buffered in FIFOs or registers.
+		// For memory access it can be delayed by one more cycle.
+		// Not presenting writeData in time will lead to sim_assert and undefined behaviour.
+		RvPacketStream<BVec, ByteEnable> writeData = { 16_b, { Ready{}, Valid{}, Eop{}, ByteEnable{2_b} } };
+
+		// Read data is presented on readData until one cycle after readStop is asserted. 
+		// Keep readStop high to read one word only. Make sure it is low before data arives to read more words.
+		// The bursting behaviour depends on the hyper bus device, burst mode and register settings.
+		// Note that HyperRAM requires a transfer to not exceed tCSM (1-4 us). (4us@50MHz = 384Byte)
+		Bit readStop;
+		Reverse<VPacketStream<BVec>> readData = { 16_b };
+
+		// Initial Latency can be configured using configuration register writes.
+		// Writes to registers are always independent of the Initial Latency setting.
+		// It is therefore possible to recude hw by setting this to a constant, independent of the device default setting.
+		// A typical default is 7 and a typical value for speeds up to 85MHz is 3.
+		UInt latency = 3_b;
+	};
+
+	/**
+	 * @brief Creates a low-latency HyperBus controller. The reduced latency is achieved by not using RWDS to time read data. 
+	 *			Therefore no synchronization between RWDS and controller clock domain is required.
+	 *			The downside is that tCKDS + 2*propagation delay + tSETUP must be less than half clock period. 
+	 *			For common HyperRAM deices this holds true until aprox. 60 MHz. Proper training or synchronization is required for faster speeds.
+	 *			At Initial Latency of 3 the read latency of this controller is 7 or 10 cycles.
+	 *			The controller does not issue any autonomous register accesses. Use 'space = reg' to setup the device as needed.
+	 */
+	Reverse<HyperBusController> hyperBusControllerLowLatency(Reverse<HyperBusPhy> phy);
+
+	////////////////////////////// memory adapter //////////////////////////////
+
+	struct HyperBusTileLinkConfig
+	{
+		BitWidth addrW = 28_b;
+		BitWidth sourceW = 0_b;
+		size_t burstLimit = 64;
+
+		UInt latency = ConstUInt(7, 3_b);
+		Bit registerAccess = '0';
+	};
+
+	/**
+	 * @brief Bridge between HyperBus and TileLink.
+	 *			Note: The d channel needs to be ready to accept any requested response at any time. 
+	 *					You need to attach a credit FIFO to the A and D channel to be TileLink compliant.
+	 *					However, this adds latency and is therefore not part of this module.
+	 */
+	scl::TileLinkUB hyperBusTileLink(Reverse<HyperBusController> controller, HyperBusTileLinkConfig cfg = {});
 }
 
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::HyperBusPhy, cs, cken, reset, rwds, dq, pinCs, pinClk, pinClkN, pinRwds, pinDq);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::HyperBusPhy, csn, rwds, dq);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::HyperBusCommand, type, space, burst, wordAddress);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::HyperBusController, command, writeData, readStop, readData, latency);

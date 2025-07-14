@@ -22,6 +22,7 @@ namespace gtry::scl
 {
 	void hyperRAMSimulationModel(HyperBusPhy& phy, HyperRAMConfig cfg)
 	{
+#if 0
 		const Clock& sysClk = ClockScope::getClk();
 
 		Clock ramClkFree = sysClk.deriveClock({ 
@@ -213,5 +214,6 @@ namespace gtry::scl
 			*phy.rwds.ren = '0';
 			state = State::command_address;
 		}
+#endif
 	}
 }
