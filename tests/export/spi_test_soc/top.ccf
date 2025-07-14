@@ -1,0 +1,87 @@
+## blink.ccf
+#
+# Date: 2022-10-21
+#
+# Format:
+# <pin-direction> "<pin-name>" Loc = "<pin-location>" | <opt.-constraints>;
+#
+# Additional constraints can be appended using the pipe symbol.
+# Files are read line by line. Text after the hash symbol is ignored.
+#
+# Available pin directions:
+#
+# Pin_in
+#   defines an input pin
+# Pin_out
+#   defines an output pin
+# Pin_inout
+#   defines a bidirectional pin
+#
+# Available pin constraints:
+#
+# SCHMITT_TRIGGER={true,false}
+#   enables or disables schmitt trigger (hysteresis) option
+# PULLUP={true,false}
+#   enables or disables I/O pullup resistor of nominal 50kOhm
+# PULLDOWN={true,false}
+#   enables or disables I/O pulldown resistor of nominal 50kOhm
+# KEEPER={true,false}
+#   enables or disables I/O keeper option
+# SLEW={slow,fast}
+#   sets slew rate to slow or fast
+# DRIVE={3,6,9,12}
+#   sets output drive strength to 3mA..12mA
+# DELAY_OBF={0..15}
+#   adds an additional delay of n * nominal 50ps to output signal
+# DELAY_IBF={0..15}
+#   adds an additional delay of n * nominal 50ps to input signal
+# FF_IBF={true,false}
+#   enables or disables placing of FF in input buffer, if possible
+# FF_OBF={true,false}
+#   enables or disables placing of FF in output buffer, if possible
+# LVDS_BOOST={true,false}
+#   enables increased LVDS output current of 6.4mA (default: 3.2mA)
+# LVDS_TERM={true,false}
+#   enables on-chip LVDS termination resistor of nominal 100Ohm, in output mode only
+#
+# Global IO constraints can be set with the default_GPIO statement. It can be
+# overwritten by individual settings for specific GPIOs, e.g.:
+#   default_GPIO | DRIVE=3; # sets all output strengths to 3mA, unless overwritten
+#
+default_GPIO | SLEW = slow;
+
+# Floppy
+Pin_in      "CLK12M"          Loc = "IO_SB_A8";
+Pin_out     "UART0_TX"        Loc = "IO_WB_A3" | SLEW = slow;
+Pin_in      "UART0_RX"        Loc = "IO_WB_B3" | SCHMITT_TRIGGER = true;
+
+# SD0
+#Pin_out     "SD_CLK"           Loc = "IO_EB_A1";
+#Pin_out     "SD_CMD"           Loc = "IO_EB_B1";
+#Pin_in      "SD_DAT0"          Loc = "IO_EB_B2" | PULLUP=true;
+#Pin_out     "SD_DAT1"          Loc = "IO_EB_A2";
+#Pin_out     "SD_DAT2"          Loc = "IO_EB_B3";
+#Pin_out     "SD_DAT3"          Loc = "IO_EB_A3";
+
+# SD1
+#Pin_out     "SD_CLK"           Loc = "IO_EB_A0";
+#Pin_out     "SD_CMD"           Loc = "IO_EB_B0";
+#Pin_in      "SD_DAT0"          Loc = "IO_EA_B7" | PULLUP=true;
+#Pin_out     "SD_DAT1"          Loc = "IO_EA_A7";
+#Pin_out     "SD_DAT2"          Loc = "IO_EA_B8";
+#Pin_out     "SD_DAT3"          Loc = "IO_EA_A8";
+
+# SD2
+Pin_out     "SD_CLK"           Loc = "IO_EA_A6";
+Pin_out     "SD_CMD"           Loc = "IO_EA_B6";
+Pin_in      "SD_DAT0"          Loc = "IO_EA_A2" | PULLUP=true;
+Pin_out     "SD_DAT1"          Loc = "IO_EA_B2";
+Pin_out     "SD_DAT2"          Loc = "IO_EA_A4";
+Pin_out     "SD_DAT3"          Loc = "IO_EA_B4";
+#Pin_in      "SD_WP"            Loc = "IO_EA_A5" | PULLUP=true;
+#Pin_in      "SD_CD"            Loc = "IO_EA_B5" | PULLUP=true;
+
+# pin assignment for BFC rev5
+#Pin_in      "CLK12M"          Loc = "IO_SB_A5";
+#Pin_out     "UART0_TX"        Loc = "IO_WB_A8";
+#Pin_out     "UART0_RX"        Loc = "IO_WB_B8";
