@@ -19,7 +19,8 @@ doc/gen
 *.make
 Makefile
 
-/tests/export
+*.elf
+
 /tests/tmp
 /tests/test*
 /tests/*.vhd
@@ -29,6 +30,7 @@ Makefile
 test_export
 
 source/gen/
+gen_mmap.h
 
 # Quartus
 /tests/**/db
@@ -37,10 +39,18 @@ source/gen/
 /tests/**/*.vhd
 /tests/**/*.mif
 /tests/**/*.qws
-
+# GHDL
+work-obj08.cf
 # GateMate
 /tests/**/impl
 /tests/**/lut*.txt
 /tests/**/*synth.v
 /tests/**/*synth.log
+# GateMate nextpnr
+/tests/**/pnr.json
+/tests/**/synth.json
+/tests/**/bitfile.txt
+/tests/**/bitfile.bit
+/tests/**/top.v
+/tests/**/top.vhd
 !/tests/**/Makefile

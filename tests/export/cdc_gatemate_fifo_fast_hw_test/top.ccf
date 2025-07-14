@@ -50,7 +50,13 @@
 #
 
 # pin assignment for BFC rev5
-Pin_in      "CLK12M"          Loc = "IO_SB_A5";
 
-Pin_out     "UART0_TX"        Loc = "IO_WB_A8";
-Pin_out     "UART0_RX"        Loc = "IO_WB_B8";
+# Floppy
+Pin_in      "CLK12M"          Loc = "IO_SB_A8";
+Pin_out     "UART0_TX"        Loc = "IO_NA_A0";
+Pin_out     "UART0_RX"        Loc = "IO_NA_B0";
+
+# BFC
+#Pin_in      "CLK12M"          Loc = "IO_SB_A5";
+#Pin_out     "UART0_TX"        Loc = "IO_WB_A8";
+#Pin_out     "UART0_RX"        Loc = "IO_WB_B8";
