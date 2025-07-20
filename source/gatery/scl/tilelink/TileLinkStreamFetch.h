@@ -21,6 +21,12 @@
 
 namespace gtry::scl
 {
+	/**
+	 * @brief Provides a mechanism to fetch data streams over a TileLink interface, supporting configurable burst sizes and pause conditions.
+	 *			It supports multiple requests in parallel and a configurable fixed burst size.
+	 *			Note: Parallel requests are not sequentialized and should only be used with in order sources.
+	 *			Note: Number of beats must be a multiple of the burst size. Otherwise, more data is fetched than requested.
+	 */
 	class TileLinkStreamFetch
 	{
 	public:
@@ -36,7 +42,6 @@ namespace gtry::scl
 		TileLinkStreamFetch& pause(Bit condition) { m_pauseFetch = condition; return *this; }
 		TileLinkStreamFetch& enableBursts(size_t maxBurstSizeInBits) { m_maxBurstSizeInBits = maxBurstSizeInBits; return *this; }
 
-		//TODO: it supports multiple requests in parallel, but the responses are not guaranteed to be in order if the slave is not in order
 		virtual TileLinkUB generate(RvStream<Command>& cmdIn, RvStream<BVec>& dataOut, BitWidth sourceW = 0_b);
 
 	private:
@@ -44,8 +49,6 @@ namespace gtry::scl
 		std::optional<Bit> m_pauseFetch;
 		std::optional<size_t> m_maxBurstSizeInBits;
 	};
-
-
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkStreamFetch::Command, address, beats);

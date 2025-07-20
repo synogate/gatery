@@ -32,63 +32,36 @@ namespace gtry::scl
 		auto ent = m_area.enter();
 		HCL_NAMED(cmdIn);
 
-		std::optional<BitWidth> size;
-		UInt logByteSize;
+		HCL_DESIGNCHECK_HINT(!m_maxBurstSizeInBits || *m_maxBurstSizeInBits % 8 == 0, "max burst size must be multiple bytes");
+		HCL_DESIGNCHECK_HINT(!m_maxBurstSizeInBits || utils::isPow2(*m_maxBurstSizeInBits), "TileLink Bursts have to be a power of two amount of bytes");
 
-		if (m_maxBurstSizeInBits) {
+		// calculate burt size
+		std::optional<UInt> size;
+		if(m_maxBurstSizeInBits)
+			size = utils::Log2(*m_maxBurstSizeInBits / 8);
 
-			const UInt bitsPerBeat = dataOut->width().bits();
+		std::optional<BitWidth> sizeW;
+		if (size)
+			sizeW = size->width();
 
-			UInt numBitsTotal = zext(cmdIn->beats) * zext(bitsPerBeat, cmdIn->beats.width() + bitsPerBeat.width());
-			HCL_NAMED(numBitsTotal);
-
-			IF(valid(cmdIn)) {
-				sim_assert(numBitsTotal % 8 == 0) << "not a full amount of bytes";
-				sim_assert(numBitsTotal % *m_maxBurstSizeInBits == 0) << "the specified amount of beats is not a full amount of bursts.";
-			}
-
-			UInt numBytesTotal = numBitsTotal.upper(-3_b);
-			HCL_NAMED(numBytesTotal);
-
-			HCL_DESIGNCHECK_HINT(*m_maxBurstSizeInBits % 8 == 0, "max burst size must be multiple bytes");
-			UInt numBytesBurst = *m_maxBurstSizeInBits / 8;
-
-			IF(valid(cmdIn))
-				sim_assert(bitcount(numBytesBurst) == 1) << "TileLink Bursts have to be a power of two amount of bytes";
-
-			logByteSize = encoder((OneHot) numBytesBurst);
-			HCL_NAMED(logByteSize); 
-			size = logByteSize.width();
-		}
-
-
-		auto link = tileLinkInit<TileLinkUB>(cmdIn->address.width(), dataOut->width(), sourceW, size);
-		link.a->opcode = (size_t)TileLinkA::Get;
-		link.a->param = 0;
-		if (m_maxBurstSizeInBits) {
-			link.a->size = logByteSize;
-		}
-		else {
-			link.a->size = utils::Log2C(link.a->mask.width().bits());
-		}
-
-		//link.a->source = 0;
-		link.a->mask = link.a->mask.width().mask(); //only full bus reads
-		link.a->data = ConstBVec(link.a->data.width());
-
-		//here we calculate the address for the next request.
+		// calculate address
 		UInt addressOffset = cmdIn->beats.width();
 		HCL_NAMED(addressOffset);
 		addressOffset = reg(addressOffset, 0);
-		link.a->address = cmdIn->address + zext(cat(addressOffset, ConstUInt(0, BitWidth::count(dataOut->width().bytes()))));
 
+		// calculate source
 		BVec readySource{ BitWidth{sourceW.count()} };
-		HCL_NAMED(readySource);
-
 		VStream<UInt> nextSource = priorityEncoder((UInt)readySource);
 		HCL_NAMED(nextSource);
+
+		// request
+		auto link = tileLinkInit<TileLinkUB>(cmdIn->address.width(), dataOut->width(), sourceW, sizeW);
+		link.a->setupGet(
+			cmdIn->address + zext(cat(addressOffset, ConstUInt(0, BitWidth::count(dataOut->width().bytes())))),
+			*nextSource,
+			size
+		);
 		
-		link.a->source = *nextSource;
 		valid(link.a) = valid(cmdIn) & valid(nextSource);
 
 		if (m_pauseFetch)
@@ -98,41 +71,30 @@ namespace gtry::scl
 			setName(*m_pauseFetch, "pauseFetch");
 		}
 
-		IF(transfer(*link.d) & eop(*link.d)) {
-			if ((*link.d)->source.width() == 0_b)
-				readySource[0] = '1';
-			else 
-				readySource[(*link.d)->source] = '1';
-		}
-		IF(transfer(link.a)) {
-			if (link.a->source.width() == 0_b)
-				readySource[0] = '0';
-			else 
-				readySource[link.a->source] = '0';
-		}
-
-
-		readySource = reg(readySource, BVec{ readySource.width().mask() });
+		IF(transfer(*link.d) & eop(*link.d))
+			readySource[(*link.d)->source] = '1';
+		IF(transfer(link.a))
+			readySource[link.a->source] = '0';
+		readySource = reg(readySource, BVec{ readySource.width().mask() }) | name("readySource");
 
 		ready(cmdIn) = '0';
 		IF(transfer(link.a))
 		{
-			if (m_maxBurstSizeInBits)
-				addressOffset += (*m_maxBurstSizeInBits / dataOut->width().bits());
-			else
-				addressOffset += 1;
-			IF(addressOffset == cmdIn->beats)
+			UInt nextAddressOffset =
+				zext(addressOffset, +1_b) +
+				m_maxBurstSizeInBits.value_or(dataOut->width().bits()) / dataOut->width().bits()
+				| name("nextAddressOffset");
+
+			addressOffset = nextAddressOffset.lower(-1_b);
+			IF(nextAddressOffset >= zext(cmdIn->beats))
 			{
 				ready(cmdIn) = '1';
 				addressOffset = 0;
 			}
 		}
 
-		*dataOut = (*link.d)->data;
-		valid(dataOut) = valid(*link.d);
-		ready(*link.d) = ready(dataOut);
+		dataOut <<= transform(move(*link.d), &TileLinkD::data);
 		HCL_NAMED(dataOut);
-		
 		HCL_NAMED(link);
 		return link;
 	}
