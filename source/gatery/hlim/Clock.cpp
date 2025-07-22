@@ -66,7 +66,7 @@ std::pair<std::vector<const Clock*>, std::vector<const Clock*>> Clock::getRelati
 	auto myPath = getPathToRoot();
 	auto otherPath = other.getPathToRoot();
 
-	while (myPath.back() == otherPath.back()) {
+	while (!myPath.empty() && !otherPath.empty() && myPath.back() == otherPath.back()) {
 		myPath.pop_back();
 		otherPath.pop_back();
 	}
