@@ -69,6 +69,8 @@ namespace gtry {
 
 		virtual BVec toBVec() const override;
 		virtual void fromBVec(const BVec &bvec) override;
+
+		operator BVec () const;
 	};
 
 	// By far the most common operations!

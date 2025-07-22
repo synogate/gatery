@@ -62,4 +62,8 @@ namespace gtry {
 		(*this) = (SInt) bvec;
 	}
 
+	SInt::operator BVec () const
+	{
+		return readPort();
+	}
 }

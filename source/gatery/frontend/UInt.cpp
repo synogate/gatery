@@ -105,4 +105,8 @@ namespace gtry
 		(*this) = (UInt) bvec;
 	}
 
+	UInt::operator BVec() const
+	{
+		return readPort();
+	}
 }

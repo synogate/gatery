@@ -174,17 +174,19 @@ namespace gtry {
 	template<typename T>
 	concept BitVectorIntegralLiteral = std::integral<T> && !std::same_as<T, char> && !std::same_as<T, bool>;
 
+	class BVec;
+	class UInt;
+	class SInt;
 
 	//// BVec
 
-	class BVec;
 	/// @brief Any type that is or can be converted into a BVec
 	template<typename T>
-	concept BVecValue = std::convertible_to<T, BVec>;
+	concept BVecValue = std::convertible_to<T, BVec> and !std::same_as<T, UInt> and !std::same_as<T, SInt>;
 
 	/// @brief Any type that can be converted into a BVec
 	template<typename T>
-	concept BVecLiteral = BVecValue<T> && (!std::same_as<T, BVec>);
+	concept BVecLiteral = BVecValue<T> && (!std::derived_from<T, BaseBitVector>);
 
 	/// @brief Any integral type that can be converted into a BVec
 	template<typename T>
@@ -197,8 +199,6 @@ namespace gtry {
 
 
 	//// UInt
-
-	class UInt;
 
 	/// @brief Any type that is or can be converted into a UInt
 	template<typename T>
@@ -219,7 +219,6 @@ namespace gtry {
 
 	//// SInt
 
-	class SInt;
 	/// @brief Any type that is or can be converted into a SInt
 	template<typename T>
 	concept SIntValue = std::convertible_to<T, SInt>;
@@ -233,7 +232,7 @@ namespace gtry {
 	concept SIntIntegralLiteral = SIntLiteral<T> && std::integral<T>;
 
 	template<SIntLiteral T> struct is_bitvector_literal<T> : std::true_type { };
-	template<SIntValue T>   struct is_bitvector_value<T> : std::true_type { };
+	template<SIntValue T>   struct is_bitvector_value<T> : std::true_type {};
 	template<SIntValue T>   struct is_arithmetic_value<T> : std::true_type { };
 	template<SIntValue T>   struct is_base_signal_value<T> : std::true_type { using sig_type = SInt; };
 

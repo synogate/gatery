@@ -63,6 +63,8 @@ namespace gtry {
 
 		virtual BVec toBVec() const override;
 		virtual void fromBVec(const BVec &bvec) override;
+
+		operator BVec () const;
 	};
 
 	SInt ext(const SInt& bvec, BitWidth extendedWidth, Expansion policy);
