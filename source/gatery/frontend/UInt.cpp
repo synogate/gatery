@@ -34,14 +34,14 @@ namespace gtry
 	template UInt& SliceableBitVector<UInt, UIntDefault>::lower(BitReduce);
 	template const UInt& SliceableBitVector<UInt, UIntDefault>::lower(BitReduce) const;
 
-	UInt::UInt(UInt&& rhs) : Base(std::move(rhs)) { }
-	UInt::UInt(const UInt &rhs) : Base(rhs) { }
+	UInt::UInt(UInt&& rhs) : Base(std::move(rhs)) { expansionPolicy(Expansion::zero); }
+	UInt::UInt(const UInt &rhs) : Base(rhs) { expansionPolicy(Expansion::zero); }
 	UInt::UInt(const char rhs[]) { assign(std::string_view(rhs), Expansion::zero); }
 	UInt& UInt::operator = (const char rhs[]) { assign(std::string_view(rhs), Expansion::zero); return *this; }
 	UInt& UInt::operator = (const UInt &rhs) { BaseBitVector::operator=(rhs); return *this; }
 	UInt& UInt::operator = (UInt&& rhs) { BaseBitVector::operator=(std::move(rhs)); return *this; }
 
-	UInt::UInt() { }
+	UInt::UInt() { expansionPolicy(Expansion::zero); }
 	UInt::~UInt() { }
 
 	UInt ext(const Bit& bit, BitWidth extendedWidth, Expansion policy)

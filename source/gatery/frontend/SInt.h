@@ -43,8 +43,8 @@ namespace gtry {
 		using Base = SliceableBitVector<SInt, SIntDefault>;
 
 		using Base::Base;
-		SInt(SInt&& rhs) : Base(std::move(rhs)) { }
-		SInt(const SInt &rhs) : Base(rhs) { } // Necessary because otherwise deleted copy ctor takes precedence over templated ctor.
+		SInt(SInt&& rhs) : Base(std::move(rhs)) { expansionPolicy(Expansion::sign); }
+		SInt(const SInt &rhs) : Base(rhs) { expansionPolicy(Expansion::sign); } // Necessary because otherwise deleted copy ctor takes precedence over templated ctor.
 
 		template<BitVectorIntegralLiteral Int>
 		explicit SInt(Int vec) { assign((std::int64_t) vec, Expansion::sign); }

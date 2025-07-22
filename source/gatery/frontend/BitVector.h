@@ -146,7 +146,8 @@ namespace gtry {
 
 		inline hlim::Node_Signal* node() const { return m_node; }
 		inline const std::shared_ptr<BitVectorSlice> &range() const { return m_range; }
-		inline const Expansion &expansionPolicy() const { return m_expansionPolicy; }
+		void expansionPolicy(Expansion policy) { m_expansionPolicy = policy; }
+		const Expansion &expansionPolicy() const { return m_expansionPolicy; }
 
 		/// Needed to derive width from forward declared uint in SliceableBitVector template
 		static size_t getUIntBitWidth(const UInt &uint);
