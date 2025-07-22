@@ -282,12 +282,12 @@ namespace gtry::scl
 		return ctrl;
 	}
 
-	scl::TileLinkUB hyperBusTileLink(Reverse<HyperBusController> controller, HyperBusTileLinkConfig cfg)
+	scl::TileLinkU hyperBusTileLink(Reverse<HyperBusController> controller, HyperBusTileLinkConfig cfg)
 	{
 		Area ent{ "scl_hyperBusTileLink", true };
 		HCL_NAMED(controller);
 
-		scl::TileLinkUB link = scl::tileLinkInit<scl::TileLinkUB>(
+		scl::TileLinkU link = scl::tileLinkInit<scl::TileLinkU>(
 			cfg.addrW, 
 			controller->writeData->width(), 
 			cfg.sourceW, 

@@ -32,8 +32,8 @@ namespace gtry::scl
  */
 
 
-	/// Turns a memory map into a TileLinkUL slave, allowing the registers to be accessed by the tilelink bus.
-	Reverse<TileLinkUL> toTileLinkUL(PackedMemoryMap &memoryMap, BitWidth dataW, BitWidth sourceW = 0_b);
+	/// Turns a memory map into a TileLinkU slave, allowing the registers to be accessed by the tilelink bus.
+	Reverse<TileLinkU> toTileLinkUL(PackedMemoryMap &memoryMap, BitWidth dataW, BitWidth sourceW = 0_b);
 
 
 /**@}*/

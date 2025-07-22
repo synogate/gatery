@@ -432,7 +432,7 @@ BOOST_FIXTURE_TEST_CASE(spi_test_soc, BoostUnitTestSimulationFixture, *boost::un
 	spiMasterDevice(mmap, "spi", SpiMasterConfig::forSdCard());
 	uartDevice(mmap, "uart");
 
-	TileLinkUL dataBus = tileLinkRegDecouple(*toTileLinkUL(mmap, 32_b));
+	TileLinkU dataBus = tileLinkRegDecouple(*toTileLinkUL(mmap, 32_b));
 	formatCppHeader("export/spi_test_soc/firmware/gen_mmap.h", *mmap.getTree().physicalDescription, 0x8000);
 	riscv::embeddedRV32(move(dataBus), "firmware.elf", {
 		.makeDir = "export/spi_test_soc/firmware",

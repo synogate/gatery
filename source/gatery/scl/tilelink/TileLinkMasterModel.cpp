@@ -44,7 +44,7 @@ namespace gtry::scl
 			}
 		});
 	}
-	void TileLinkMasterModel::init(std::string_view prefix, const TileLinkUB& tlub) {
+	void TileLinkMasterModel::init(std::string_view prefix, const TileLinkU& tlub) {
 		init(prefix,
 			tlub.a->address.width(),
 			tlub.a->data.width(),
@@ -53,9 +53,9 @@ namespace gtry::scl
 		);
 	}
 
-	void TileLinkMasterModel::initAndDrive(std::string_view prefix, TileLinkUL&& slave) {
+	void TileLinkMasterModel::initAndDrive(std::string_view prefix, TileLinkU&& slave) {
 		this->init(prefix, slave.a->address.width(), slave.a->data.width(), slave.a->size.width(), slave.a->source.width());
-		auto& master = (TileLinkUL&) this->getLink();
+		auto& master = (TileLinkU&) this->getLink();
 
 		slave <<= master;
 	}

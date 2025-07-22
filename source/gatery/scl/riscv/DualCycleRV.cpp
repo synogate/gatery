@@ -58,7 +58,7 @@ gtry::Memory<gtry::UInt>& gtry::scl::riscv::DualCycleRV::fetch(uint64_t entryPoi
 	return m_instructionMem;
 }
 
-TileLinkUL gtry::scl::riscv::DualCycleRV::fetchTileLink(uint64_t entryPoint)
+TileLinkU gtry::scl::riscv::DualCycleRV::fetchTileLink(uint64_t entryPoint)
 {
 	auto ent = m_area.enter();
 	BVec instruction = 32_b;
@@ -71,7 +71,7 @@ TileLinkUL gtry::scl::riscv::DualCycleRV::fetchTileLink(uint64_t entryPoint)
 
 	generate((UInt)instruction, instructionValid & !discardNextInstruction);
 
-	TileLinkUL link;
+	TileLinkU link;
 	tileLinkInit(link, m_IP.width(), 32_b, 2_b, 0_b);
 
 	Bit requestPending = flag(transfer(link.a), transfer(*link.d) & !transfer(link.a));
@@ -320,10 +320,10 @@ void gtry::scl::riscv::DualCycleRV::genInstructionDecode(UInt instruction)
 namespace gtry::scl
 {
 	template<typename T>
-	TileLinkUL tileLinkMemory(Memory<T>& mem, TileLinkMemoryConfig cfg)
+	TileLinkU tileLinkMemory(Memory<T>& mem, TileLinkMemoryConfig cfg)
 	{
 		BitWidth wordAddrW = BitWidth::count(mem.wordSize().bytes());
-		TileLinkUL link = tileLinkSlaveInit(mem.addressWidth() + wordAddrW, mem.wordSize(), cfg.sourceW);
+		TileLinkU link = tileLinkSlaveInit(mem.addressWidth() + wordAddrW, mem.wordSize(), cfg.sourceW);
 
 		auto port = mem[link.a->address.upper(-wordAddrW)];
 
@@ -354,7 +354,7 @@ namespace gtry::scl
 	}
 }
 
-void gtry::scl::riscv::embeddedRV32(TileLinkUL&& dataFetch, std::filesystem::path elfPath, EmbeddedRV32Config cfg)
+void gtry::scl::riscv::embeddedRV32(TileLinkU&& dataFetch, std::filesystem::path elfPath, EmbeddedRV32Config cfg)
 {
 	Area ent{ "scl_embeddedRV32", true };
 	using namespace gtry::dbg;
@@ -419,8 +419,8 @@ void gtry::scl::riscv::embeddedRV32(TileLinkUL&& dataFetch, std::filesystem::pat
 
 	if(rodata || data || cfg.stackByteSize)
 	{
-		TileLinkDemux<TileLinkUL> tileLinkBridge;
-		TileLinkUL internalDataFetch = tileLinkInit<TileLinkUL>(dataAddrW, dataFetch.a->data.width());
+		TileLinkDemux<TileLinkU> tileLinkBridge;
+		TileLinkU internalDataFetch = tileLinkInit<TileLinkU>(dataAddrW, dataFetch.a->data.width());
 		tileLinkBridge.attachSource(internalDataFetch);
 		tileLinkBridge.attachSink(move(dataFetch), cfg.dataBusOffset);
 

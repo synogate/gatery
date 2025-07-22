@@ -22,7 +22,7 @@
 
 namespace gtry::scl
 {
-	template<TileLinkSignal TLink = TileLinkUL>
+	template<TileLinkSignal TLink = TileLinkU>
 	class TileLinkMux
 	{
 	public:

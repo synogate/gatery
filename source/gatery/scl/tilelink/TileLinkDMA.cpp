@@ -20,7 +20,7 @@
 
 namespace gtry::scl
 {
-	void tileLinkFromStream(RvStream<AxiToStreamCmd>&& cmd, RvStream<BVec>&& data, TileLinkUB&& slave)
+	void tileLinkFromStream(RvStream<AxiToStreamCmd>&& cmd, RvStream<BVec>&& data, TileLinkU&& slave)
 	{
 		Area ent{ "scl_tileLinkFromStream", true };
 

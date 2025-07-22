@@ -69,7 +69,7 @@ namespace gtry::scl::sdram
 		Controller& driveStrength(DriveStrength value);
 		Controller& exportClockPin(bool enable = true);
 
-		virtual void generate(TileLinkUB& link);
+		virtual void generate(TileLinkU& link);
 
 	protected:
 		virtual void initMember();

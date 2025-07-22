@@ -27,7 +27,7 @@ namespace gtry::scl
 		m_area.leave();
 	}
 
-	TileLinkUB TileLinkStreamFetch::generate(RvStream<Command>& cmdIn, RvStream<BVec>& dataOut, BitWidth sourceW)
+	TileLinkU TileLinkStreamFetch::generate(RvStream<Command>& cmdIn, RvStream<BVec>& dataOut, BitWidth sourceW)
 	{
 		auto ent = m_area.enter();
 		HCL_NAMED(cmdIn);
@@ -55,7 +55,7 @@ namespace gtry::scl
 		HCL_NAMED(nextSource);
 
 		// request
-		auto link = tileLinkInit<TileLinkUB>(cmdIn->address.width(), dataOut->width(), sourceW, sizeW);
+		auto link = tileLinkInit<TileLinkU>(cmdIn->address.width(), dataOut->width(), sourceW, sizeW);
 		link.a->setupGet(
 			cmdIn->address + zext(cat(addressOffset, ConstUInt(0, BitWidth::count(dataOut->width().bytes())))),
 			*nextSource,

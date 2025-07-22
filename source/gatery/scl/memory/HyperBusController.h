@@ -116,7 +116,7 @@ namespace gtry::scl
 	 *					You need to attach a credit FIFO to the A and D channel to be TileLink compliant.
 	 *					However, this adds latency and is therefore not part of this module.
 	 */
-	scl::TileLinkUB hyperBusTileLink(Reverse<HyperBusController> controller, HyperBusTileLinkConfig cfg = {});
+	scl::TileLinkU hyperBusTileLink(Reverse<HyperBusController> controller, HyperBusTileLinkConfig cfg = {});
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::HyperBusPhy, csn, rwds, dq);

@@ -252,7 +252,7 @@ BOOST_FIXTURE_TEST_CASE(ptile_hail_mary_completer, BoostUnitTestSimulationFixtur
 
 	Memory<BVec> mem(addW.count(), dataW);
 	mem.initZero();
-	TileLinkUL tl = tileLinkInit<TileLinkUL>(addW, dataW, pack(TlpAnswerInfo{}).width());
+	TileLinkU tl = tileLinkInit<TileLinkU>(addW, dataW, pack(TlpAnswerInfo{}).width());
 	mem <<= tl;
 
 	CompleterInterface complInt = pci::makeTileLinkMaster(move(tl), ptileInstance.settings().dataBusW);

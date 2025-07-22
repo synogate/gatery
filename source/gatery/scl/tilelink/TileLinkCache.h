@@ -42,10 +42,10 @@ namespace gtry::scl
 	 * @param addrW Number of address bits for cache memory. The cache memory will have 2^addrW words.
 	 * @param selectBurst Optional function to select the burst size and conditions. The function is called with the memory request channel and can modify the channel.
 	 */
-	TileLinkUL tileLinkCacheDirectMappedReadOnlyBurst(TileLinkUL&& slave, gtry::BitWidth addrW, std::function<void(TileLinkChannelA&)> selectBurst = {});
+	TileLinkU tileLinkCacheDirectMappedReadOnlyBurst(TileLinkU&& slave, gtry::BitWidth addrW, std::function<void(TileLinkChannelA&)> selectBurst = {});
 	inline auto tileLinkCacheDirectMappedReadOnlyBurst(BitWidth addrW, std::function<void(TileLinkChannelA&)> selectBurst = {}) { return [=](auto&& in) { return tileLinkAddBurst(std::forward<decltype(in)>(in), addrW, move(selectBurst)); }; }
 
-	TileLinkUL tileLinkCacheDirectMappedVictim(TileLinkUL&& ram, BitWidth addrW);
+	TileLinkU tileLinkCacheDirectMappedVictim(TileLinkU&& ram, BitWidth addrW);
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::internal::RoCacheData, tag, value, valid);

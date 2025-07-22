@@ -23,8 +23,7 @@
 
 namespace gtry::scl
 {
-	template<class... Capability> struct TileLinkU;
-	using TileLinkUL = TileLinkU<>;
+	struct TileLinkU;
 }
 
 namespace gtry::scl::riscv
@@ -94,7 +93,7 @@ namespace gtry::scl::riscv
 		virtual void csrInstructionsRetired(BitWidth regW = 64_b);
 
 		virtual void mem(AvalonMM& mem, bool byte = true, bool halfword = true);
-		virtual TileLinkUL memTLink(bool byte = true, bool halfword = true);
+		virtual TileLinkU memTLink(bool byte = true, bool halfword = true);
 
 		void setupAlu();
 

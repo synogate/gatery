@@ -25,6 +25,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  * @brief This file contains helpers to set up dma's across different interfaces
 */
 namespace gtry::scl {
-	void tileLinkToAxiDMA(RvStream<TileLinkStreamFetch::Command>&& fetchCmd, RvStream<AxiToStreamCmd>&& depositCmd, TileLinkUB&& dataSource, Axi4& dataDest);
-	void createDma(MemoryMap& map, TileLinkUB&& dataSource, scl::Axi4& dataDest, BitWidth beatsW, size_t bytesPerBurst);
+	void tileLinkToAxiDMA(RvStream<TileLinkStreamFetch::Command>&& fetchCmd, RvStream<AxiToStreamCmd>&& depositCmd, TileLinkU&& dataSource, Axi4& dataDest);
+	void createDma(MemoryMap& map, TileLinkU&& dataSource, scl::Axi4& dataDest, BitWidth beatsW, size_t bytesPerBurst);
 }

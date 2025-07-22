@@ -22,14 +22,14 @@
 
 namespace gtry::scl {
 
-	TileLinkUL tileLinkBridge(AvalonMM& avmm, BitWidth sourceW)
+	TileLinkU tileLinkBridge(AvalonMM& avmm, BitWidth sourceW)
 	{
 		Area area("tileLinkBridge", true);
 
 		HCL_ASSERT_HINT(!avmm.response, "Avalon MM response not yet implemented");
 		HCL_DESIGNCHECK_HINT(avmm.writeData, "These interfaces are not compatible. There is no writeData field in your AMM interface");
 		BitWidth excessBits = BitWidth::count(avmm.writeData->width().bytes());
-		auto ret = tileLinkInit<TileLinkUL>(avmm.address.width() + excessBits, avmm.writeData->width(), sourceW);
+		auto ret = tileLinkInit<TileLinkU>(avmm.address.width() + excessBits, avmm.writeData->width(), sourceW);
 
 		if (avmm.read)
 			avmm.read = valid(ret.a) & ret.a->isGet();

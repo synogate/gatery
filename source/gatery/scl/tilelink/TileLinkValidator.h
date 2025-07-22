@@ -42,21 +42,10 @@ namespace gtry::scl::internal
 	template<TileLinkSignal TLink> 
 	std::vector<TileLinkA::OpCode> tileLinkValidOps(const TLink& link)
 	{
-		std::vector<TileLinkA::OpCode> ret = {
-			TileLinkA::Get,
-			TileLinkA::PutFullData,
-			TileLinkA::PutPartialData
-		};
-		
-		if constexpr (TLink::template capability<TileLinkCapHint>())
-			ret.push_back(TileLinkA::Intent);
-
-		if constexpr (TLink::template capability<TileLinkCapAtomicArith>())
-			ret.push_back(TileLinkA::ArithmeticData);
-
-		if constexpr (TLink::template capability<TileLinkCapAtomicLogic>())
-			ret.push_back(TileLinkA::LogicalData);
-
+		std::vector<TileLinkA::OpCode> ret;
+		for (size_t i = 0; i < link.cfg.opValid.size(); ++i)
+			if (link.cfg.opValid[i])
+				ret.push_back((TileLinkA::OpCode)i);
 		return ret;
 	}
 }
@@ -68,7 +57,7 @@ namespace gtry::scl
 	{
 		fork(validateTileLink(tileLink.a, *tileLink.d, clk));
 
-		if constexpr (!TileLinkType::template capability<TileLinkCapBurst>())
+		if(tileLink.cfg.burstLimitLog <= tileLink.cfg.burstThresholdLog())
 			fork(validateTileLinkNoBurst(tileLink.a, clk));
 
 		auto ops = internal::tileLinkValidOps(tileLink);

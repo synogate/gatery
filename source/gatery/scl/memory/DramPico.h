@@ -21,5 +21,5 @@
 
 namespace gtry::scl::sdram
 {
-	TileLinkUL dramPico(CommandBus& dram, const BVec& readData, size_t readLatency, BitWidth linkSourceW);
+	TileLinkU dramPico(CommandBus& dram, const BVec& readData, size_t readLatency, BitWidth linkSourceW);
 }

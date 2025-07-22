@@ -479,7 +479,7 @@ BOOST_FIXTURE_TEST_CASE(ultraRamHelper, TestWithDefaultDevice<gtry::GHDLTestFixt
 	for (size_t i = 0; i < m.size(); ++i)
 	{
 		m[i].init("m" + std::to_string(i), ram[i].a->address.width(), 64_b, 2_b, 1_b);
-		(scl::TileLinkUB&)ram[i] <<= regDecouple(move(m[i].getLink()));
+		(scl::TileLinkU&)ram[i] <<= regDecouple(move(m[i].getLink()));
 	}
 
 	testCompilation();

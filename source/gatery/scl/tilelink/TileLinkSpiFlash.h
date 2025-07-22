@@ -43,7 +43,7 @@ namespace gtry::scl
 		bool handleInvalidOpcodes = true;
 	};
 
-	TileLinkUB tileLinkSpiFlash(SpiPort& port, TileLinkSpiFlashConfig config = {})
+	TileLinkU tileLinkSpiFlash(SpiPort& port, TileLinkSpiFlashConfig config = {})
 	{
 		// TODO: adapt to port width
 		// TODO: support SDR phy by sending one command bit per cycle
@@ -52,7 +52,7 @@ namespace gtry::scl
 		// TODO: add ease of use wrapper with input a channel stall and d channel fifo
 
 		Area ent{ "scl_tileLinkSpiFlash", true };
-		TileLinkUB out = tileLinkInit<TileLinkUB>(24_b, port.out->width(), config.sourceW, config.sizeW);
+		TileLinkU out = tileLinkInit<TileLinkU>(24_b, port.out->width(), config.sourceW, config.sizeW);
 
 		uint8_t readCode;
 		const BitWidth busW = port.ddrMode ? port.out->width() / 2 : port.out->width();
@@ -276,13 +276,13 @@ namespace gtry::scl
 
 		HCL_NAMED(out);
 
-		std::function<TileLinkUB(TileLinkUB&&)> incWidth = [&](TileLinkUB&& slave) {
+		std::function<TileLinkU(TileLinkU&&)> incWidth = [&](TileLinkU&& slave) {
 			if (slave.a->data.width() == 8_b)
 				return slave;
 			return incWidth(tileLinkDoubleWidth(move(slave)));
 		};
 
-		TileLinkUB out8b = incWidth(move(out));
+		TileLinkU out8b = incWidth(move(out));
 		(*out8b.d)->data = swapEndian((*out8b.d)->data, port.out->width());
 		HCL_NAMED(out8b);
 		return out8b;

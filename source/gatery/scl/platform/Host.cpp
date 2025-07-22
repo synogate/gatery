@@ -56,7 +56,7 @@ std::tuple<FlatAddressSpaceDescription, AddressSpaceDescriptionHandle, std::uniq
 {
 	auto fromMemoryMap = scl::toTileLinkUL(memoryMap, 32_b, width(scl::pci::TlpAnswerInfo{}));
 
-	scl::TileLinkUL cpuPort = constructFrom(*fromMemoryMap);
+	scl::TileLinkU cpuPort = constructFrom(*fromMemoryMap);
 	HCL_NAMED(cpuPort);
 
 	m_memoryMapTLModels.emplace_back();
@@ -67,8 +67,8 @@ std::tuple<FlatAddressSpaceDescription, AddressSpaceDescriptionHandle, std::uniq
 		fromMemoryMap->a->size.width(), 
 		fromMemoryMap->a->source.width());
 
-	scl::TileLinkUL fromSimulation = constructFrom((scl::TileLinkUL&)linkModel.getLink());
-	fromSimulation <<= (scl::TileLinkUL&)linkModel.getLink();
+	scl::TileLinkU fromSimulation = constructFrom((scl::TileLinkU&)linkModel.getLink());
+	fromSimulation <<= (scl::TileLinkU&)linkModel.getLink();
 
 	HCL_NAMED(fromSimulation);
 
@@ -91,7 +91,7 @@ std::tuple<FlatAddressSpaceDescription, AddressSpaceDescriptionHandle, std::uniq
 			std::make_unique<scl::driver::SimulationFiberMapped32BitTileLink>(linkModel, ClockScope::getClk()));
 }
 
-void Host::exposeMemoryMapTL(scl::TileLinkUL &cpuPort)
+void Host::exposeMemoryMapTL(scl::TileLinkU &cpuPort)
 {
 	pinIn(cpuPort, "cpu_mm_tl");
 }

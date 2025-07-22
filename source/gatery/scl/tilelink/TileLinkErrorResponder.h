@@ -37,28 +37,20 @@ namespace gtry::scl
 		d->sink = 0;
 		d->data = ConstBVec(link.a->data.width());
 
-		if (!link.template capability<TileLinkCapBurst>())
+		UInt len = transferLength(d);
+		HCL_NAMED(len);
+
+		scl::Counter beatCounter{ len };
+
+		d->error = '0';
+		IF(transfer(d))
+			beatCounter.inc();
+			
+		ready(link.a) = '0';
+		IF(beatCounter.isLast())
 		{
 			d->error = '1';
 			ready(link.a) = ready(d);
-		}
-		else
-		{
-			UInt len = transferLength(d);
-			HCL_NAMED(len);
-
-			scl::Counter beatCounter{ len };
-
-			d->error = '0';
-			IF(transfer(d))
-				beatCounter.inc();
-			
-			ready(link.a) = '0';
-			IF(beatCounter.isLast())
-			{
-				d->error = '1';
-				ready(link.a) = ready(d);
-			}
 		}
 
 		HCL_NAMED(link);

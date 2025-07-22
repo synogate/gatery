@@ -20,12 +20,12 @@
 
 namespace gtry::scl::sdram
 {
-	TileLinkUL dramPico(CommandBus& dram, const BVec& readData, size_t readLatency, BitWidth linkSourceW)
+	TileLinkU dramPico(CommandBus& dram, const BVec& readData, size_t readLatency, BitWidth linkSourceW)
 	{
 		Area ent{ "scl_dramPico", true };
 		HCL_DESIGNCHECK(dram.dq.width() == readData.width());
 
-		TileLinkUL link;
+		TileLinkU link;
 		tileLinkInit(link, dram.a.width() + dram.ba.width() + 3, dram.dq.width(), BitWidth::count(dram.dqm.width().bits()), linkSourceW);
 		
 		dram.cke = reg(Bit{ '1' }, '0');

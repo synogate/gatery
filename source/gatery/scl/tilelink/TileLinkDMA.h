@@ -28,5 +28,5 @@ namespace gtry::scl
 				NOTE: This function is not tile link complant in that it does not generate a unique id for each put.
 	 * @param cmd The address generator command as in axi.
 	*/
-	void tileLinkFromStream(RvStream<AxiToStreamCmd>&& cmd, RvStream<BVec>&& data, TileLinkUB&& slave);
+	void tileLinkFromStream(RvStream<AxiToStreamCmd>&& cmd, RvStream<BVec>&& data, TileLinkU&& slave);
 }

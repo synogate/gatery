@@ -22,7 +22,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 
 namespace gtry::scl {
-	void tileLinkToAxiDMA(RvStream<TileLinkStreamFetch::Command>&& fetchCmd, RvStream<AxiToStreamCmd>&& depositCmd, TileLinkUB&& dataSource, Axi4& dataDest)
+	void tileLinkToAxiDMA(RvStream<TileLinkStreamFetch::Command>&& fetchCmd, RvStream<AxiToStreamCmd>&& depositCmd, TileLinkU&& dataSource, Axi4& dataDest)
 	{
 		Area ent{ "scl_tileLink_to_axi_dma", true };
 		RvStream<BVec> dataStream(dataSource.a->data.width());
@@ -41,7 +41,7 @@ namespace gtry::scl {
 		gtry::Reverse<scl::AxiTransferReport> axiReport;
 	};
 
-	void createDma(MemoryMap& map, TileLinkUB&& dataSource, Axi4& dataDest, BitWidth beatsW, size_t bytesPerBurst) {
+	void createDma(MemoryMap& map, TileLinkU&& dataSource, Axi4& dataDest, BitWidth beatsW, size_t bytesPerBurst) {
 		Area ent{ "scl_memory_mapped_dma", true };
 		
 		AxiDmaControl dmaControl;

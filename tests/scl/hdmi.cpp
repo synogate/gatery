@@ -351,12 +351,12 @@ BOOST_FIXTURE_TEST_CASE(basicGateMateLVDS_test, gtry::BoostUnitTestSimulationFix
 #else
 	// min datasheet values
 	scl::DisplayMode mode = {
-		.pixelFreq = 23_mhz,
+		.pixelFreq = 12_mhz,
 		.w = {
-			.resolution = 1600 / 2, .syncStart = 1600 / 2, .syncEnd = 0, .total = 1690 / 2,
+			.resolution = 1600 / 2, .syncStart = 1600 / 2, .syncEnd = 0, .total = 2000 / 2,
 		},
 		.h = {
-			.resolution = 900, .syncStart = 900, .syncEnd = 0, .total = 907,
+			.resolution = 900, .syncStart = 900, .syncEnd = 0, .total = 932,
 		},
 	};
 #endif

@@ -20,10 +20,10 @@
 
 namespace gtry::scl
 {
-	TileLinkUL tileLinkCacheDirectMappedReadOnlyBurst(TileLinkUL&& ram, gtry::BitWidth addrW, std::function<void(TileLinkChannelA&)> selectBurst)
+	TileLinkU tileLinkCacheDirectMappedReadOnlyBurst(TileLinkU&& ram, gtry::BitWidth addrW, std::function<void(TileLinkChannelA&)> selectBurst)
 	{
 		Area ent{ "scl_RoCache", true };
-		scl::TileLinkUL cpu = constructFrom(ram);
+		scl::TileLinkU cpu = constructFrom(ram);
 		HCL_NAMED(ram);
 
 		const size_t bytePerBeatLog = utils::Log2(cpu.a->data.width().bytes());
@@ -96,12 +96,12 @@ namespace gtry::scl
 		return cpu;
 	}
 
-	TileLinkUL tileLinkCacheDirectMappedVictim(TileLinkUL&& ram, BitWidth addrW)
+	TileLinkU tileLinkCacheDirectMappedVictim(TileLinkU&& ram, BitWidth addrW)
 	{
 		Area ent{ "scl_VictimCache", true };
 		HCL_NAMED(ram);
 
-		auto cpu = tileLinkInit<TileLinkUL>(
+		auto cpu = tileLinkInit<TileLinkU>(
 			ram.a->address.width(), 
 			ram.a->data.width(), 
 			ram.a->source.width(), 

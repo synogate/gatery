@@ -31,7 +31,7 @@ namespace gtry::scl {
 	 * Instead, it buffers responses in an internal fifo, the capacity of which can be controlled by 
 	 * meta data in amm.
 	 */
-	TileLinkUL tileLinkBridge(AvalonMM& amm, BitWidth sourceW);
+	TileLinkU tileLinkBridge(AvalonMM& amm, BitWidth sourceW);
 
 }
 

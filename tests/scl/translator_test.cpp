@@ -36,9 +36,9 @@ using namespace boost::unit_test;
 using namespace gtry;
 using namespace gtry::scl;
 
-static gtry::scl::TileLinkUB ul2ub(gtry::scl::TileLinkUL& link)
+static gtry::scl::TileLinkU ul2ub(gtry::scl::TileLinkU& link)
 {
-	scl::TileLinkUB out;
+	scl::TileLinkU out;
 
 	out.a = constructFrom(link.a);
 	link.a <<= out.a;
@@ -49,7 +49,7 @@ static gtry::scl::TileLinkUB ul2ub(gtry::scl::TileLinkUL& link)
 	return out;
 }
 
-SimProcess simuTileLinkMemCoherenceSupervisor(const TileLinkUL& tl, const Clock& clk) {
+SimProcess simuTileLinkMemCoherenceSupervisor(const TileLinkU& tl, const Clock& clk) {
 	using addr_t = uint64_t;
 	using source_t = uint64_t;
 	std::map<addr_t, sim::DefaultBitVectorState> mem;
@@ -140,7 +140,7 @@ SimProcess simuTileLinkMemCoherenceSupervisor(const TileLinkUL& tl, const Clock&
 
 struct TranslatorTextSimulationFixture : public BoostUnitTestSimulationFixture {
 public:
-	void prepareTest(scl::TileLinkUL& in, AvalonMM& avmm, scl::TileLinkMasterModel& linkModel, const Clock& clock) {
+	void prepareTest(scl::TileLinkU& in, AvalonMM& avmm, scl::TileLinkMasterModel& linkModel, const Clock& clock) {
 
 		avmm.read.emplace();
 		avmm.readDataValid.emplace();
@@ -195,7 +195,7 @@ BOOST_FIXTURE_TEST_CASE(tl_to_amm_basic_test, TranslatorTextSimulationFixture) {
 
 	scl::TileLinkMasterModel linkModel;
 
-	scl::TileLinkUL in;
+	scl::TileLinkU in;
 	AvalonMM avmm;
 
 	prepareTest(in, avmm, linkModel, clock);
@@ -228,7 +228,7 @@ BOOST_FIXTURE_TEST_CASE(tl_to_amm_basic_test_chaos_monkey, TranslatorTextSimulat
 
 	scl::TileLinkMasterModel linkModel;
 	linkModel.probability(0.5f, 0.5f); //start rv chaos monkey
-	scl::TileLinkUL in;
+	scl::TileLinkU in;
 	AvalonMM avmm;
 
 	prepareTest(in, avmm, linkModel, clock);
@@ -262,7 +262,7 @@ BOOST_FIXTURE_TEST_CASE(tl_to_amm_partial_basic_test, TranslatorTextSimulationFi
 
 	scl::TileLinkMasterModel linkModel;
 
-	scl::TileLinkUL in;
+	scl::TileLinkU in;
 	AvalonMM avmm;
 
 	prepareTest(in, avmm, linkModel, clock);
@@ -295,7 +295,7 @@ BOOST_FIXTURE_TEST_CASE(tl_to_amm_put_get, TranslatorTextSimulationFixture) {
 
 	scl::TileLinkMasterModel linkModel;
 
-	scl::TileLinkUL in;
+	scl::TileLinkU in;
 	AvalonMM avmm;
 
 	prepareTest(in, avmm, linkModel, clock);
@@ -322,7 +322,7 @@ BOOST_FIXTURE_TEST_CASE(tl_to_amm_fuzzing, TranslatorTextSimulationFixture) {
 	ClockScope clkScp(clock);
 
 	scl::TileLinkMasterModel linkModel;
-	scl::TileLinkUL in;
+	scl::TileLinkU in;
 	AvalonMM avmm;
 	linkModel.probability(0.5f, 0.5f); //start rv chaos monkey
 	prepareTest(in, avmm, linkModel, clock);

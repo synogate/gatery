@@ -24,11 +24,11 @@
 
 namespace gtry::scl::sdram
 {
-	scl::TileLinkUL miniController(PhyInterface& dramIo, MiniControllerConfig cfg)
+	scl::TileLinkU miniController(PhyInterface& dramIo, MiniControllerConfig cfg)
 	{
 		Area ent{ "scl_sdramMiniController", true };
 
-		TileLinkUL tl = tileLinkInit<TileLinkUL>(3_b, dramIo.cmd.dq.width() * 2, cfg.sourceW);
+		TileLinkU tl = tileLinkInit<TileLinkU>(3_b, dramIo.cmd.dq.width() * 2, cfg.sourceW);
 		**tl.d = reg(tileLinkDefaultResponse(*tl.a));
 		valid(*tl.d) = reg(valid(tl.a), '0');
 		ready(tl.a) = ready(*tl.d);
@@ -112,14 +112,14 @@ namespace gtry::scl::sdram
 		return tl;
 	}
 
-	scl::TileLinkUL miniControllerMappedMemory(PhyInterface& dramIo, MiniControllerMMapconfig cfg)
+	scl::TileLinkU miniControllerMappedMemory(PhyInterface& dramIo, MiniControllerMMapconfig cfg)
 	{
 		Area ent{ "scl_miniControllerMappedMemory", true };
 
 		const hlim::ClockRational tREFI{ 7'800, 1'000'000'000 }; // 7.8 us
 		const hlim::ClockRational tRFC{ 128, 1'000'000'000 }; // 127.5 ns
 
-		scl::TileLinkUL tl = tileLinkInit<TileLinkUL>(
+		scl::TileLinkU tl = tileLinkInit<TileLinkU>(
 			dramIo.cmd.a.width() + dramIo.cmd.ba.width() + 10_b,
 			dramIo.cmd.dq.width() * 2,
 			cfg.sourceW, cfg.sizeW

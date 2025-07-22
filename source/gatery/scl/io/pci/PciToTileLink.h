@@ -35,13 +35,13 @@ namespace gtry::scl::pci {
 	TlpPacketStream<EmptyBits, BarInfo> completerRequestToTileLinkA(TileLinkChannelA& a, BitWidth tlpStreamW);
 	TlpPacketStream<EmptyBits> tileLinkDToCompleterCompletion(TileLinkChannelD&& d, BitWidth tlpStreamW);
 
-	CompleterInterface makeTileLinkMaster(scl::TileLinkUL&& tl, BitWidth tlpW);
+	CompleterInterface makeTileLinkMaster(scl::TileLinkU&& tl, BitWidth tlpW);
 
 	TlpPacketStream<EmptyBits> tileLinkAToRequesterRequest(TileLinkChannelA&& a, std::optional<BitWidth> tlpW = {});
 	TileLinkChannelD requesterCompletionToTileLinkD(TlpPacketStream<EmptyBits>&& rc, BitWidth byteAddressW, BitWidth dataW);
 	TileLinkChannelD requesterCompletionToTileLinkDFullW(TlpPacketStream<EmptyBits>&& rc);
 	TileLinkChannelD requesterCompletionToTileLinkDCheapBurst(TlpPacketStream<EmptyBits>&& rc, std::optional<BitWidth> sizeW = {});
-	TileLinkUL makePciMaster(RequesterInterface&& reqInt, BitWidth byteAddressW, BitWidth dataW, BitWidth tagW);
-	TileLinkUL makePciMasterFullW(RequesterInterface&& reqInt);
-	TileLinkUB makePciMasterCheapBurst(RequesterInterface&& reqInt, std::optional<BVec> tag = {}, std::optional<BitWidth> sizeW = {}, BitWidth addressW = 64_b);
+	TileLinkU makePciMaster(RequesterInterface&& reqInt, BitWidth byteAddressW, BitWidth dataW, BitWidth tagW);
+	TileLinkU makePciMasterFullW(RequesterInterface&& reqInt);
+	TileLinkU makePciMasterCheapBurst(RequesterInterface&& reqInt, std::optional<BVec> tag = {}, std::optional<BitWidth> sizeW = {}, BitWidth addressW = 64_b);
 }

@@ -206,9 +206,9 @@ namespace gtry::scl
 		return res;
 	}
 
-	TileLinkUL tileLinkSlaveInit(BitWidth addrW, BitWidth dataW, BitWidth sourceW)
+	TileLinkU tileLinkSlaveInit(BitWidth addrW, BitWidth dataW, BitWidth sourceW)
 	{
-		TileLinkUL link = tileLinkInit<TileLinkUL>(addrW, dataW, sourceW);
+		TileLinkU link = tileLinkInit<TileLinkU>(addrW, dataW, sourceW);
 		HCL_NAMED(link);
 
 		**link.d = tileLinkDefaultResponse(*link.a);
@@ -219,7 +219,7 @@ namespace gtry::scl
 		return link;
 	}
 
-	void connect(Memory<BVec>& mem, TileLinkUL& link)
+	void connect(Memory<BVec>& mem, TileLinkU& link)
 	{
 		BitWidth byteOffsetW = BitWidth::count(link.a->mask.width().bits());
 		HCL_DESIGNCHECK(mem.wordSize() == link.a->data.width());
@@ -260,15 +260,20 @@ namespace gtry::scl
 		connectAddrDesc(link.addrSpaceDesc, desc);
 	}
 
-	TileLinkUL tileLinkMemory(BitWidth addrW, BitWidth dataW, BitWidth sourceW)
+	TileLinkU tileLinkMemory(BitWidth addrW, BitWidth dataW, BitWidth sourceW)
 	{
 		Area ent{ "scl_TLMemory", true };
 
 		BitWidth memAddrW = addrW - BitWidth::count((dataW / 8).bits());
 		Memory<BVec> mem(memAddrW.count(), dataW);
-		auto link = tileLinkInit<TileLinkUL>(addrW, dataW, sourceW);
+		auto link = tileLinkInit<TileLinkU>(addrW, dataW, sourceW);
 		connect(mem, link);
 		return link;
+	}
+
+	size_t TileLinkCfg::burstThresholdLog() const
+	{
+		return utils::Log2C((dataW.bits() + 7) / 8);
 	}
 }
 
@@ -277,11 +282,8 @@ namespace gtry
 	template class Reverse<scl::TileLinkChannelD>;
 }
 
-
 GTRY_INSTANTIATE_TEMPLATE_COMPOUND(gtry::scl::TileLinkD)
 GTRY_INSTANTIATE_TEMPLATE_COMPOUND(gtry::scl::TileLinkA)
 GTRY_INSTANTIATE_TEMPLATE_STREAM(gtry::scl::TileLinkChannelA)
 GTRY_INSTANTIATE_TEMPLATE_STREAM(gtry::scl::TileLinkChannelD)
-GTRY_INSTANTIATE_TEMPLATE_COMPOUND_MINIMAL(gtry::scl::TileLinkUL)
-GTRY_INSTANTIATE_TEMPLATE_COMPOUND_MINIMAL(gtry::scl::TileLinkUB)
-GTRY_INSTANTIATE_TEMPLATE_COMPOUND_MINIMAL(gtry::scl::TileLinkUH)
+GTRY_INSTANTIATE_TEMPLATE_COMPOUND_MINIMAL(gtry::scl::TileLinkU)

@@ -37,8 +37,8 @@ namespace gtry::scl
 	}
 
 
-	/// Turns a memory map into a TileLinkUL slave, allowing the registers to be accessed by the tilelink bus.
-	Reverse<TileLinkUL> toTileLinkUL(PackedMemoryMap &memoryMap, BitWidth dataW, BitWidth sourceW)
+	/// Turns a memory map into a TileLinkU slave, allowing the registers to be accessed by the tilelink bus.
+	Reverse<TileLinkU> toTileLinkUL(PackedMemoryMap &memoryMap, BitWidth dataW, BitWidth sourceW)
 	{
 		Area area("MMtoTileLinkUL", true);
 
@@ -46,7 +46,7 @@ namespace gtry::scl
 		auto& tree = memoryMap.getTree();
 		BitWidth addrWidth = BitWidth::count(tree.physicalDescription->size / 8_b);
 
-		Reverse<TileLinkUL> toMaster = { tileLinkInit<TileLinkUL>(addrWidth, dataW, sourceW) };
+		Reverse<TileLinkU> toMaster = { tileLinkInit<TileLinkU>(addrWidth, dataW, sourceW) };
 		HCL_NAMED(toMaster);
 		toMaster->addrSpaceDesc = memoryMap.getTree().physicalDescription;
 
@@ -115,7 +115,7 @@ namespace gtry::scl
 		ready(toMaster->a) = ready(d);
 		*toMaster->d <<= d;
 
-		Reverse<TileLinkUL> out = { tileLinkInit<TileLinkUL>(addrWidth, dataW, sourceW) };
+		Reverse<TileLinkU> out = { tileLinkInit<TileLinkU>(addrWidth, dataW, sourceW) };
 		HCL_NAMED(out);
 		*toMaster <<= regDecouple(move(*out));
 		return out;

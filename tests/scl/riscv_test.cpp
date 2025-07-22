@@ -24,6 +24,7 @@
 #include <gatery/simulation/waveformFormats/VCDSink.h>
 #include <gatery/export/vhdl/VHDLExport.h>
 
+#include <gatery/scl/arch/colognechip/SpecialFunction.h>
 #include <gatery/scl/riscv/riscv.h>
 #include <gatery/scl/riscv/DualCycleRV.h>
 #include <gatery/scl/algorithm/GCD.h>
@@ -35,11 +36,11 @@
 #include <gatery/scl/tilelink/TileLinkHub.h>
 #include <gatery/scl/tilelink/TileLinkValidator.h>
 
-
 #include <queue>
 
 using namespace boost::unit_test;
 using namespace gtry;
+using namespace gtry::scl;
 
 namespace rv
 {
@@ -288,7 +289,7 @@ public:
 		return m_avmm;
 	}
 
-	scl::TileLinkUL& setupMemTileLink()
+	scl::TileLinkU& setupMemTileLink()
 	{
 		tileLinkInit(m_tlink, 32_b, 32_b, 2_b, 0_b);
 		m_tlink <<= memTLink();
@@ -330,7 +331,7 @@ protected:
 	UInt m_setResult = 32_b;
 	UInt m_setIP = 32_b;
 	scl::AvalonMM m_avmm;
-	scl::TileLinkUL m_tlink;
+	scl::TileLinkU m_tlink;
 
 };
 
@@ -1082,7 +1083,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_store, BoostUnitTestSimulationFixtur
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
-	scl::TileLinkUL& link = rv.setupMemTileLink();
+	scl::TileLinkU& link = rv.setupMemTileLink();
 
 	addSimulationProcess([&]()->SimProcess {
 		while (true)
@@ -1156,7 +1157,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_byte_store, BoostUnitTestSimulationF
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
-	scl::TileLinkUL& link = rv.setupMemTileLink();
+	scl::TileLinkU& link = rv.setupMemTileLink();
 
 	addSimulationProcess([&]()->SimProcess {
 		rv.setupSimu();
@@ -1197,7 +1198,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_half_store, BoostUnitTestSimulationF
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
-	scl::TileLinkUL& link = rv.setupMemTileLink();
+	scl::TileLinkU& link = rv.setupMemTileLink();
 
 	addSimulationProcess([&]()->SimProcess {
 		rv.setupSimu();
@@ -1241,7 +1242,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_byte_load, BoostUnitTestSimulationFi
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
-	scl::TileLinkUL& link = rv.setupMemTileLink();
+	scl::TileLinkU& link = rv.setupMemTileLink();
 
 	addSimulationProcess([&]()->SimProcess {
 		rv.setupSimu();
@@ -1319,7 +1320,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_half_load, BoostUnitTestSimulationFi
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
-	scl::TileLinkUL& link = rv.setupMemTileLink();
+	scl::TileLinkU& link = rv.setupMemTileLink();
 
 	addSimulationProcess([&]()->SimProcess {
 		rv.setupSimu();
@@ -1403,7 +1404,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_exec_tilelink_load, BoostUnitTestSimulationFixture
 	ClockScope clkScp(clock);
 
 	RV32I_stub rv;
-	scl::TileLinkUL& link = rv.setupMemTileLink();
+	scl::TileLinkU& link = rv.setupMemTileLink();
 
 	addSimulationProcess([&]()->SimProcess {
 		co_await WaitFor(0);
@@ -1822,7 +1823,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink, BoostUnitTestSimulationFixture)
 	ClockScope clkScp(clock);
 
 	scl::riscv::DualCycleRV rv(8_b, 32_b);
-	scl::TileLinkUL imem = rv.fetchTileLink();
+	scl::TileLinkU imem = rv.fetchTileLink();
 	pinOut(imem, "imem");
 
 	addSimulationProcess([&]()->SimProcess {
@@ -1948,7 +1949,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink_sharedmem, BoostUnitTestSimulati
 		});
 	ClockScope clkScp(clock);
 
-	scl::TileLinkHub<scl::TileLinkUL> hub;
+	scl::TileLinkHub<scl::TileLinkU> hub;
 
 	size_t instructionMemOffset = 0x1'0000;
 
@@ -1962,7 +1963,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink_sharedmem, BoostUnitTestSimulati
 	size_t opB = (rng() & 0x3F) + 1;
 	//std::cout << "in=" << opA << ',' << opB << '\n';
 
-	scl::TileLinkUL dmemBus;
+	scl::TileLinkU dmemBus;
 	{
 		Memory<BVec> dmem(1024, 32_b);
 		std::vector<unsigned char> dmemData(4096, 0);
@@ -1985,7 +1986,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_dual_cycle_itlink_sharedmem, BoostUnitTestSimulati
 		Memory<BVec> imem(64, 32_b);
 		imem.fillPowerOnState(sim::createDefaultBitVectorState(sizeof(gcd_bin)*8, gcd_bin));
 
-		scl::TileLinkUL imemBus;
+		scl::TileLinkU imemBus;
 		scl::tileLinkInit(imemBus, 8_b, 32_b, 2_b, hub.sourceWidth());
 		HCL_NAMED(imemBus);
 		imem <<= imemBus;
@@ -2170,3 +2171,52 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle_export, BoostUnitTestSimulationFixtur
 }
 
 #endif
+
+
+BOOST_FIXTURE_TEST_CASE(riscv_gdb_soc_export, BoostUnitTestSimulationFixture)
+{
+	Clock clk12{ ClockConfig{
+		.absoluteFrequency = 12_mhz,
+		.name = "CLK12M",
+		.resetType = hlim::RegisterAttributes::ResetType::NONE
+	} };
+
+	Clock clock = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = 24_mhz, .resetType = ClockConfig::ResetType::NONE });
+	ClockScope clkScp(clock);
+
+	PackedMemoryMap mmap("dev");
+	spiMasterDevice(mmap, "spi", SpiMasterConfig::forSdCard());
+	uartDevice(mmap, "uart");
+
+	TileLinkU dataBus = tileLinkRegDecouple(*toTileLinkUL(mmap, 32_b));
+	formatCppHeader("export/riscv_gdb_soc_export/firmware/gen_mmap.h", *mmap.getTree().physicalDescription, 0x8000);
+	riscv::embeddedRV32(move(dataBus), "firmware.elf", {
+		.makeDir = "export/spi_test_soc/firmware",
+		.stackByteSize = 4096,
+		.dataBusOffset = 0x8000,
+		});
+
+	addSimulationProcess([&]()->SimProcess {
+		co_return;
+	});
+
+	design.postprocess();
+
+	const std::string& testName = boost::unit_test::framework::current_test_case().p_name.get();
+	std::filesystem::path cwd = std::filesystem::path{ "export" } / testName;
+	std::future<int> flow;
+	vhdl::VHDLExport vhdl(cwd / "top.vhd");
+	if (std::filesystem::is_directory(cwd))
+	{
+		//vhdl.addTestbenchRecorder(*m_simulator, "tb", true);
+		vhdl(design.getCircuit());
+
+		flow = std::async([=]() {
+			return std::system(("make -C " + cwd.string()).c_str());
+			});
+	}
+	runHitsTimeout(200us);
+
+	if (flow.valid())
+		BOOST_TEST(flow.get() == 0);
+}

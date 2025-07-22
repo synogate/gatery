@@ -195,20 +195,20 @@ BOOST_FIXTURE_TEST_CASE(HyperRAM_soc_test_export, BoostUnitTestSimulationFixture
 	UInt latency = 3_b;
 	Bit registerAccess;
 
-	scl::TileLinkUB link16 = scl::hyperBusTileLink(move(controller), { .burstLimit = 2, .latency = latency, .registerAccess = registerAccess });
-	scl::TileLinkUB link32 = scl::tileLinkDoubleWidth(move(link16));
+	scl::TileLinkU link16 = scl::hyperBusTileLink(move(controller), { .burstLimit = 2, .latency = latency, .registerAccess = registerAccess });
+	scl::TileLinkU link32 = scl::tileLinkDoubleWidth(move(link16));
 
 	PackedMemoryMap mmap("dev");
 	uartDevice(mmap, "uart");
 	mapIn(mmap, latency, "latency");
 	mapIn(mmap, registerAccess, "registerAccess");
-	TileLinkUL mmapBus = tileLinkRegDecouple(*toTileLinkUL(mmap, 32_b));
+	TileLinkU mmapBus = tileLinkRegDecouple(*toTileLinkUL(mmap, 32_b));
 
-	TileLinkDemux<TileLinkUL> dataBus;
-	TileLinkUL dataFetch = tileLinkInit<TileLinkUL>(31_b, 32_b);
+	TileLinkDemux<TileLinkU> dataBus;
+	TileLinkU dataFetch = tileLinkInit<TileLinkU>(31_b, 32_b);
 	dataBus.attachSource(dataFetch);
 	dataBus.attachSink(move(mmapBus), 0x1000'0000);
-	dataBus.attachSink(move((TileLinkUL&)link32), 0x2000'0000);
+	dataBus.attachSink(move((TileLinkU&)link32), 0x2000'0000);
 	dataBus.generate();
 
 	formatCppHeader("export/" + testName + "/firmware/gen_mmap.h", *mmap.getTree().physicalDescription, 0x1000'0000);

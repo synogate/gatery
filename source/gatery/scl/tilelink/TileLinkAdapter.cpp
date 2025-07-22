@@ -22,12 +22,12 @@
 
 namespace gtry::scl
 {
-	scl::TileLinkUL tileLinkHalfWidth(scl::TileLinkUL&& slave)
+	scl::TileLinkU tileLinkHalfWidth(scl::TileLinkU&& slave)
 	{
 		Area ent{ "scl_tileLinkHalfWidth", true };
 		HCL_DESIGNCHECK_HINT(slave.a->source.width() >= 1_b, "tileLinkHalfWidth requires 1 source bit.");
 
-		scl::TileLinkUL master = tileLinkInit<scl::TileLinkUL>(
+		scl::TileLinkU master = tileLinkInit<scl::TileLinkU>(
 			slave.a->address.width(),
 			slave.a->data.width() / 2,
 			slave.a->source.width() - 1_b
@@ -74,12 +74,12 @@ namespace gtry::scl
 		return master;
 	}
 
-	scl::TileLinkUB tileLinkDoubleWidth(scl::TileLinkUB& slave)
+	scl::TileLinkU tileLinkDoubleWidth(scl::TileLinkU& slave)
 	{
 		Area ent{ "scl_tileLinkDoubleWidth", true };
 		HCL_NAMED(slave);
 
-		scl::TileLinkUB master;
+		scl::TileLinkU master;
 		scl::tileLinkInit(master,
 			slave.a->address.width(),
 			slave.a->data.width() * 2,
@@ -297,11 +297,11 @@ namespace gtry::scl
 		}
 	}
 
-	scl::TileLinkUB tileLinkAddBurst(scl::TileLinkUL&& slave, BitWidth sizeW)
+	scl::TileLinkU tileLinkAddBurst(scl::TileLinkU&& slave, BitWidth sizeW)
 	{
 		Area ent{ "scl_tileLinkAddBurst", true };
 
-		scl::TileLinkUB master;
+		scl::TileLinkU master;
 		scl::tileLinkInit(master,
 			slave.a->address.width(),
 			slave.a->data.width(),

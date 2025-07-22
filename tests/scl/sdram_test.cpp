@@ -188,7 +188,7 @@ BOOST_FIXTURE_TEST_CASE(sdram_module_simulation_test, ClockedTest)
 
 BOOST_FIXTURE_TEST_CASE(memory_tester_pass_test, ClockedTest)
 {
-	scl::TileLinkUL link;
+	scl::TileLinkU link;
 	scl::tileLinkInit(link, 6_b, 16_b, 1_b, 2_b);
 
 	Memory<BVec> memory(link.a->address.width().count(), link.a->data.width());
@@ -476,7 +476,7 @@ public:
 	}
 	
 	scl::TileLinkMasterModel linkModel;
-	scl::TileLinkUB& link;
+	scl::TileLinkU& link;
 };
 
 BOOST_FIXTURE_TEST_CASE(sdram_constroller_init_test, SdramControllerTest)

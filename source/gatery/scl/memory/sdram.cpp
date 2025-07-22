@@ -26,12 +26,13 @@
 
 using namespace gtry::scl::sdram;
 
-void Controller::generate(TileLinkUB& link)
+void Controller::generate(TileLinkU& link)
 {
 	HCL_DESIGNCHECK_HINT(link.a->size.width() == BitWidth::last(m_burstLimit), "size width must match burst limit");
 
 	auto scope = m_area.enter();
 	m_sourceW = link.a->source.width();
+	link.cfg.burstLimitLog = m_burstLimit;
 	initMember();
 
 	UInt transferLogSize = link.a->size.width();

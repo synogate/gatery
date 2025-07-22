@@ -22,7 +22,7 @@
 using namespace gtry;
 using namespace gtry::scl;
 
-static void exportOverrideTileLink(TileLinkUL& tl, TileLinkUL& phys)
+static void exportOverrideTileLink(TileLinkU& tl, TileLinkU& phys)
 {
 	downstream(phys) = downstream(tl);
 
@@ -38,7 +38,7 @@ static void exportOverrideTileLink(TileLinkUL& tl, TileLinkUL& phys)
 	(*tl.d)->error.exportOverride((*phys.d)->error);
 }
 
-std::array<TileLinkUL, 2> arch::xilinx::ultraRam(size_t numWords, UltraRamSettings&& cfg)
+std::array<TileLinkU, 2> arch::xilinx::ultraRam(size_t numWords, UltraRamSettings&& cfg)
 {
 	Area ent{ "scl_ultraRam", true };
 	if (!cfg.name.empty())
@@ -82,7 +82,7 @@ std::array<TileLinkUL, 2> arch::xilinx::ultraRam(size_t numWords, UltraRamSettin
 	if (*cfg.latency > 2)
 		ram.back().cascadeReg(true);
 
-	std::array<TileLinkUL, 2> outPhys{
+	std::array<TileLinkU, 2> outPhys{
 		ultraRamPort(BitWidth::count(numWords), ram.front(), ram.back(), URAM288::A, cfg.aSourceW, *cfg.latency),
 		ultraRamPort(BitWidth::count(numWords), ram.front(), ram.back(), URAM288::B, cfg.bSourceW, *cfg.latency)
 	};
@@ -91,7 +91,7 @@ std::array<TileLinkUL, 2> arch::xilinx::ultraRam(size_t numWords, UltraRamSettin
 	Memory<BVec> simMem(numWords, 64_b);
 	simMem.setType(MemType::DONT_CARE, 0);
 	
-	std::array<TileLinkUL, 2> outSim;
+	std::array<TileLinkU, 2> outSim;
 	for (size_t i = 0; i < outSim.size(); ++i)
 	{
 		tileLinkInit(outSim[i], BitWidth::count(numWords) + 3_b, 64_b, 2_b, i ? cfg.bSourceW : cfg.aSourceW);
@@ -108,9 +108,9 @@ std::array<TileLinkUL, 2> arch::xilinx::ultraRam(size_t numWords, UltraRamSettin
 	return outSim;
 }
 
-TileLinkUL gtry::scl::arch::xilinx::ultraRamPort(BitWidth addrW, URAM288& inRam, URAM288& outRam, URAM288::Port port, BitWidth sourceW, size_t latency)
+TileLinkU gtry::scl::arch::xilinx::ultraRamPort(BitWidth addrW, URAM288& inRam, URAM288& outRam, URAM288::Port port, BitWidth sourceW, size_t latency)
 {
-	TileLinkUL out = tileLinkInit<TileLinkUL>(addrW + 3_b, 64_b, sourceW);
+	TileLinkU out = tileLinkInit<TileLinkU>(addrW + 3_b, 64_b, sourceW);
 
 	inRam.port(port, {
 		.din = zext(out.a->data),

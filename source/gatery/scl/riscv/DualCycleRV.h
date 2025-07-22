@@ -28,7 +28,7 @@ namespace gtry::scl::riscv
 		DualCycleRV(BitWidth instructionAddrWidth = 32_b, BitWidth dataAddrWidth = 32_b);
 
 		virtual Memory<UInt>& fetch(uint64_t entryPoint = 0);
-		virtual TileLinkUL fetchTileLink(uint64_t entryPoint = 0);
+		virtual TileLinkU fetchTileLink(uint64_t entryPoint = 0);
 		virtual void fetchText(std::span<const std::byte> text, uint64_t entryPoint);
 		virtual void fetchElf(std::filesystem::path elfPath, std::optional<std::filesystem::path> makeDir);
 
@@ -70,5 +70,5 @@ namespace gtry::scl::riscv
 	 *			Note that address allocation is user responsibility. Make sure there is no relevant overlap between sections and dataFetch 
 	 *			by using the "-Wl,--section-start=.text=0xZZZZZZ" compiler flag and stackOffset parameter.
 	 */
-	void embeddedRV32(TileLinkUL&& dataFetch, std::filesystem::path elfPath, EmbeddedRV32Config cfg = {});
+	void embeddedRV32(TileLinkU&& dataFetch, std::filesystem::path elfPath, EmbeddedRV32Config cfg = {});
 }

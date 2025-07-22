@@ -56,11 +56,11 @@ BOOST_FIXTURE_TEST_CASE(tileLink_requester_test_read_1word, BoostUnitTestSimulat
 	model.defaultHandlers();
 	scl::pci::RequesterInterface reqInt = model.requesterInterface(tlpW);
 
-	TileLinkUL slaveTl = scl::pci::makePciMaster(move(reqInt), 4_b, 32_b, 8_b);
+	TileLinkU slaveTl = scl::pci::makePciMaster(move(reqInt), 4_b, 32_b, 8_b);
 
 	TileLinkMasterModel tlmm;
 	tlmm.init("tlmm", 4_b, 32_b, 2_b, 8_b);
-	auto& masterTl = (TileLinkUL&) tlmm.getLink();
+	auto& masterTl = (TileLinkU&) tlmm.getLink();
 
 	slaveTl <<= masterTl;
 	
@@ -101,11 +101,11 @@ BOOST_FIXTURE_TEST_CASE(tileLink_requester_test_read_any_word_in_256_b_data_beat
 	scl::pci::RequesterInterface reqInt = model.requesterInterface(tlpW);
 	addSimulationProcess([&, this]()->SimProcess { return model.completeRequests(clk, 3); });
 
-	TileLinkUL slaveTl = scl::pci::makePciMaster(move(reqInt), 8_b, 256_b, 8_b);
+	TileLinkU slaveTl = scl::pci::makePciMaster(move(reqInt), 8_b, 256_b, 8_b);
 
 	TileLinkMasterModel tlmm;
 	tlmm.init("tlmm", 8_b, 256_b, 3_b, 8_b);
-	auto& masterTl = (TileLinkUL&) tlmm.getLink();
+	auto& masterTl = (TileLinkU&) tlmm.getLink();
 
 	slaveTl <<= masterTl;
 

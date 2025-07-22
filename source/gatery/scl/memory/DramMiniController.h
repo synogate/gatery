@@ -38,7 +38,7 @@ namespace gtry::scl::sdram
 		BVec dqIn; // captured data on dq lines
 	};
 
-	scl::TileLinkUL miniController(PhyInterface& dramIo, MiniControllerConfig cfg = {});
+	scl::TileLinkU miniController(PhyInterface& dramIo, MiniControllerConfig cfg = {});
 
 	struct MiniControllerMMapconfig
 	{
@@ -46,7 +46,7 @@ namespace gtry::scl::sdram
 		std::optional<BitWidth> sizeW;	//!< size width for the tile link interface. burst support is disabled if not set.
 	};
 
-	scl::TileLinkUL miniControllerMappedMemory(PhyInterface& dramIo, MiniControllerMMapconfig cfg = {});
+	scl::TileLinkU miniControllerMappedMemory(PhyInterface& dramIo, MiniControllerMMapconfig cfg = {});
 	void miniControllerSimulation(PhyInterface& dramIo);
 
 	struct PhyGateMateDDR2Config

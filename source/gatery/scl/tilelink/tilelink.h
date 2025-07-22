@@ -25,6 +25,18 @@
 
 namespace gtry::scl
 {
+	struct TileLinkCfg
+	{
+		BitWidth addrW;
+		BitWidth dataW;
+		BitWidth sourceW;
+		size_t burstLimitLog; // in bytes
+
+		std::bitset<8> opValid;
+
+		size_t burstThresholdLog() const;
+	};
+
 	struct TileLinkA
 	{
 		enum OpCode {
@@ -101,41 +113,27 @@ namespace gtry::scl
 	};
 	using TileLinkChannelD = RvStream<TileLinkD>;
 
-	template<class... Capability>
 	struct TileLinkU
 	{
-		BOOST_HANA_DEFINE_STRUCT(TileLinkU,
-			(TileLinkChannelA, a),
-			(Reverse<TileLinkChannelD>, d),
-		
-			/// Optional, human readable description of the address space to allow interconnects to compose those descriptions.
-			/// Technically this is a Reverse<...> but we handle that with custom code in connect(...)
-			(AddressSpaceDescriptionHandle, addrSpaceDesc)
-		);
+		TileLinkChannelA a;
+		Reverse<TileLinkChannelD> d;
+		TileLinkCfg cfg;
 
-		template<class T>
-		static constexpr bool capability();
+		/// Optional, human readable description of the address space to allow interconnects to compose those descriptions.
+		/// Technically this is a Reverse<...> but we handle that with custom code in connect(...)
+		AddressSpaceDescriptionHandle addrSpaceDesc;
 	};
 
 	namespace internal
 	{
 		template<class T>		struct is_tilelink_signal : std::false_type {};
-		template<class... T>	struct is_tilelink_signal<TileLinkU<T...>> : std::true_type {};
+		template<>				struct is_tilelink_signal<TileLinkU> : std::true_type {};
 	}
 
 	template<class T>
 	concept TileLinkSignal = Signal<T> and internal::is_tilelink_signal<std::remove_cvref_t<T>>::value;
 	template<class T>
 	concept TileLinkChannel = StreamSignal<T> and (std::same_as<T, TileLinkChannelA> or std::same_as<T, TileLinkChannelD>);
-
-	struct TileLinkCapBurst;
-	struct TileLinkCapHint;
-	struct TileLinkCapAtomicArith;
-	struct TileLinkCapAtomicLogic;
-
-	using TileLinkUL = TileLinkU<>;
-	using TileLinkUB = TileLinkU<TileLinkCapBurst>;
-	using TileLinkUH = TileLinkU<TileLinkCapBurst, TileLinkCapHint, TileLinkCapAtomicArith, TileLinkCapAtomicLogic>;
 
 	inline UInt& txid(TileLinkChannelA& stream) { return stream->source; }
 	inline const UInt& txid(const TileLinkChannelA& stream) { return stream->source; }
@@ -166,19 +164,25 @@ namespace gtry::scl
 	template<TileLinkSignal TLink>
 	void tileLinkInit(TLink& link, BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth);
 
+	template<TileLinkSignal TLink>
+	TLink tileLinkInit(BitWidth addrW, BitWidth dataW, BitWidth sourceW = 0_b, std::optional<BitWidth> sizeW = std::nullopt);
+
+	template<TileLinkSignal TLink>
+	TLink tileLinkInit(BitWidth addrW, BitWidth dataW, BitWidth sourceW, size_t burstLimitLogBytes);
+
 	/**
 	 * @brief Generate a basic default responder:
 	 *			- d channel set to default response and dontCare data
 	 *			- ready/valid is forwarded between a and d channel
 	 */
-	TileLinkUL tileLinkSlaveInit(BitWidth addrW, BitWidth dataW, BitWidth sourceW = 0_b);
+	TileLinkU tileLinkSlaveInit(BitWidth addrW, BitWidth dataW, BitWidth sourceW = 0_b);
 
 	TileLinkD tileLinkDefaultResponse(const TileLinkA& request);
 
 	using gtry::connect;
-	void connect(Memory<BVec>& mem, TileLinkUL& link);
+	void connect(Memory<BVec>& mem, TileLinkU& link);
 
-	TileLinkUL tileLinkMemory(BitWidth addrW, BitWidth dataW, BitWidth sourceW = 0_b);
+	TileLinkU tileLinkMemory(BitWidth addrW, BitWidth dataW, BitWidth sourceW = 0_b);
 
 	struct TileLinkMemoryConfig
 	{
@@ -192,7 +196,7 @@ namespace gtry::scl
 	 * @brief Attach a new port to the memory and connect it to a tile link bus.
 	 */
 	template<typename T>
-	TileLinkUL tileLinkMemory(Memory<T>& mem, TileLinkMemoryConfig cfg = {});
+	TileLinkU tileLinkMemory(Memory<T>& mem, TileLinkMemoryConfig cfg = {});
 
 	template<TileLinkSignal TLink> TLink regDecouple(TLink&& link);
 	/**
@@ -217,11 +221,11 @@ namespace gtry
 	// For some reason, the compound constructFrom from ConstructFrom.h does not pick up the constructFrom of AddressSpaceDescriptionHandle
 	// so as a workaround we provide an overload for the entire tilelink struct that picks things up correctly.
 	// It also needs to be defined before the use of constructFrom in tileLinkRegDecouple.
-	template<class... Capability>
-	inline scl::TileLinkU<Capability...> constructFrom(const scl::TileLinkU<Capability...>& val) { 
-		scl::TileLinkU<Capability...> res;
+	inline scl::TileLinkU constructFrom(const scl::TileLinkU& val) {
+		scl::TileLinkU res;
 		res.a = constructFrom(val.a);
 		res.d = constructFrom(val.d);
+		res.cfg = val.cfg;
 		res.addrSpaceDesc = constructFrom(val.addrSpaceDesc);
 		return res;
 	}
@@ -231,15 +235,6 @@ namespace gtry
 // impl
 namespace gtry::scl
 {
-	template<class ...Capability>
-	template<class T>
-	inline constexpr bool gtry::scl::TileLinkU<Capability...>::capability()
-	{
-		if constexpr (sizeof...(Capability) != 0)
-			return (std::is_same_v<T, Capability> | ...);
-		return false;
-	}
-
 	template<StreamSignal T>
 	requires(T::template has<TileLinkA>())
 	UInt transferLength(const T& source)
@@ -276,9 +271,8 @@ namespace gtry::scl
 		IF(link.a->opcode(1, 2_b) == 0) // PutFull & PuPartial
 			op = (size_t)TileLinkD::AccessAck;
 
-		if(TLink::template capability<TileLinkCapHint>())
-			IF(link.a->opcode == (size_t)TileLinkA::Intent)
-				op = (size_t)TileLinkD::HintAck;
+		IF(link.a->opcode == (size_t)TileLinkA::Intent)
+			op = (size_t)TileLinkD::HintAck;
 
 		return op;
 	}
@@ -297,17 +291,34 @@ namespace gtry::scl
 		(*link.d)->source = sourceWidth;
 		(*link.d)->sink = 0_b;
 
+		link.cfg.addrW = addrWidth;
+		link.cfg.dataW = dataWidth;
+		link.cfg.sourceW = sourceWidth;
+		link.cfg.burstLimitLog = link.cfg.burstThresholdLog();
+		link.cfg.opValid[TileLinkA::Get] = true;
+		link.cfg.opValid[TileLinkA::PutFullData] = true;
+		link.cfg.opValid[TileLinkA::PutPartialData] = true;
+
 		link.addrSpaceDesc = std::make_shared<AddressSpaceDescription>();
 	}
 
 	template<TileLinkSignal TLink>
-	TLink tileLinkInit(BitWidth addrW, BitWidth dataW, BitWidth sourceW = 0_b, std::optional<BitWidth> sizeW = std::nullopt)
+	TLink tileLinkInit(BitWidth addrW, BitWidth dataW, BitWidth sourceW, std::optional<BitWidth> sizeW)
 	{
 		if (!sizeW)
 			sizeW = BitWidth::last(utils::Log2C(dataW.bytes()));
 
 		TLink link;
 		tileLinkInit(link, addrW, dataW, *sizeW, sourceW);
+		return link;
+	}
+
+	template<TileLinkSignal TLink>
+	TLink tileLinkInit(BitWidth addrW, BitWidth dataW, BitWidth sourceW, size_t burstLimitLogBytes)
+	{
+		TLink link;
+		tileLinkInit(link, addrW, dataW, BitWidth::last(burstLimitLogBytes), sourceW);
+		link.cfg.burstLimitLog = burstLimitLogBytes;
 		return link;
 	}
 
@@ -357,16 +368,15 @@ namespace gtry::scl
 	extern template Bit eop(const TileLinkChannelD&);
 }
 
-
+//BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkCfg, addrW, dataW, sourceW, burstLimitLog, opValid);
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkA, opcode, param, size, source, address, mask, data);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkD, opcode, param, size, source, sink, data, error);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkU, a, d, cfg, addrSpaceDesc);
 
 GTRY_EXTERN_TEMPLATE_COMPOUND(gtry::scl::TileLinkD);
 GTRY_EXTERN_TEMPLATE_COMPOUND(gtry::scl::TileLinkA);
 
 GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::TileLinkChannelA);
 GTRY_EXTERN_TEMPLATE_STREAM(gtry::scl::TileLinkChannelD);
-GTRY_EXTERN_TEMPLATE_COMPOUND_MINIMAL(gtry::scl::TileLinkUL);
-GTRY_EXTERN_TEMPLATE_COMPOUND_MINIMAL(gtry::scl::TileLinkUB);
-GTRY_EXTERN_TEMPLATE_COMPOUND_MINIMAL(gtry::scl::TileLinkUH);
+GTRY_EXTERN_TEMPLATE_COMPOUND_MINIMAL(gtry::scl::TileLinkU);

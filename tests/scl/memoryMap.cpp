@@ -116,9 +116,9 @@ BOOST_FIXTURE_TEST_CASE(MemoryMapStream, BoostUnitTestSimulationFixture)
 
 namespace {
 
-gtry::scl::TileLinkUB ul2ub(gtry::scl::TileLinkUL& link)
+gtry::scl::TileLinkU ul2ub(gtry::scl::TileLinkU& link)
 {
-	scl::TileLinkUB out;
+	scl::TileLinkU out;
 
 	out.a = constructFrom(link.a);
 	link.a <<= out.a;
@@ -146,7 +146,7 @@ BOOST_FIXTURE_TEST_CASE(MemoryMapStructTileLink, BoostUnitTestSimulationFixture)
 	ClockScope scp(clock);
 
 	MyStruct myStruct{ Bit{}, 4_b, 20_b };
-	TileLinkUL cpuInterface;
+	TileLinkU cpuInterface;
 	pinOut(myStruct, "myStruct");
 	{
 
@@ -224,10 +224,10 @@ BOOST_FIXTURE_TEST_CASE(MemoryMapStructTileLinkTileLinkDemux, BoostUnitTestSimul
 	MyStruct myStruct2{ Bit{}, 4_b, 20_b };
 	pinOut(myStruct2, "myStruct2");
 
-	TileLinkUL cpuInterface;
+	TileLinkU cpuInterface;
 	{
-		TileLinkUL cpuInterface1;
-		TileLinkUL cpuInterface2;
+		TileLinkU cpuInterface1;
+		TileLinkU cpuInterface2;
 		{
 
 			PackedMemoryMap memoryMap("myMemoryMap1");
@@ -252,9 +252,9 @@ BOOST_FIXTURE_TEST_CASE(MemoryMapStructTileLinkTileLinkDemux, BoostUnitTestSimul
 			*tileLink <<= cpuInterface2;
 		}
 
-		scl::TileLinkDemux<TileLinkUL> demux;
+		scl::TileLinkDemux<TileLinkU> demux;
 
-		cpuInterface = scl::tileLinkInit<scl::TileLinkUL>(16_b, 8_b, 0_b);
+		cpuInterface = scl::tileLinkInit<scl::TileLinkU>(16_b, 8_b, 0_b);
 		demux.attachSource(cpuInterface);
 
 		demux.attachSink(cpuInterface1, 0x1000);
@@ -293,7 +293,7 @@ BOOST_FIXTURE_TEST_CASE(MemoryMapStreamOutTileLink, BoostUnitTestSimulationFixtu
 	ClockScope scp(clock);
 
 	RvStream<BVec> myStream{ 4_b };
-	TileLinkUL cpuInterface;
+	TileLinkU cpuInterface;
 	pinOut(myStream, "myStream");
 	{
 
@@ -389,7 +389,7 @@ BOOST_FIXTURE_TEST_CASE(MemoryMapStreamInTileLink, BoostUnitTestSimulationFixtur
 	ClockScope scp(clock);
 
 	RvStream<BVec> myStream{ 4_b };
-	TileLinkUL cpuInterface;
+	TileLinkU cpuInterface;
 	pinIn(myStream, "myStream");
 	{
 		PackedMemoryMap memoryMap("myMemoryMap");

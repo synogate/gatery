@@ -116,7 +116,7 @@ namespace gtry::scl::pci {
 		return complCompl;
 	}
 
-	CompleterInterface makeTileLinkMaster(scl::TileLinkUL&& tl, BitWidth tlpW)
+	CompleterInterface makeTileLinkMaster(scl::TileLinkU&& tl, BitWidth tlpW)
 	{
 		Area area{ "scl_makeTileLinkMaster", true };
 		HCL_NAMED(tl);
@@ -233,7 +233,7 @@ namespace gtry::scl::pci {
 		Area area{ "scl_requester_completion_tlp_to_TL_D", true };
 		const CompletionHeader hdr = CompletionHeader::fromRaw(rc->lower(96_b));
 
-		TileLinkChannelD d = constructFrom(*(tileLinkInit<TileLinkUL>(byteAddressW, dataW, 8_b).d));
+		TileLinkChannelD d = constructFrom(*(tileLinkInit<TileLinkU>(byteAddressW, dataW, 8_b).d));
 
 		d->opcode = (size_t) TileLinkD::OpCode::AccessAckData;
 		d->source = (UInt) hdr.tag;
@@ -272,7 +272,7 @@ namespace gtry::scl::pci {
 		auto rcPayloadStream = scl::strm::streamShiftRight(move(rc), 96);
 
 
-		TileLinkChannelD d = constructFrom(*(tileLinkInit<TileLinkUL>(64_b, rcPayloadStream->width(), 8_b).d));
+		TileLinkChannelD d = constructFrom(*(tileLinkInit<TileLinkU>(64_b, rcPayloadStream->width(), 8_b).d));
 
 		d->data = *rcPayloadStream;
 		d->opcode = (size_t) TileLinkD::OpCode::AccessAckData;
@@ -320,7 +320,7 @@ namespace gtry::scl::pci {
 		setName(hdr.byteCount, "byteCount");
 		auto rcPayloadStream = scl::strm::streamShiftRight(move(rc), 96);
 
-		TileLinkChannelD d = constructFrom(*(tileLinkInit<TileLinkUL>(64_b, rcPayloadStream->width(), 0_b, sizeW).d));
+		TileLinkChannelD d = constructFrom(*(tileLinkInit<TileLinkU>(64_b, rcPayloadStream->width(), 0_b, sizeW).d));
 
 		d->data = *rcPayloadStream; //cannot support smaller than full width requests.
 		d->opcode = (size_t) TileLinkD::OpCode::AccessAckData;
@@ -341,10 +341,10 @@ namespace gtry::scl::pci {
 		return d;
 	}
 
-	TileLinkUL makePciMaster(RequesterInterface&& reqInt, BitWidth byteAddressW, BitWidth dataW, BitWidth tagW)
+	TileLinkU makePciMaster(RequesterInterface&& reqInt, BitWidth byteAddressW, BitWidth dataW, BitWidth tagW)
 	{
 		HCL_DESIGNCHECK_HINT(tagW <= 8_b, "pcie cannot accommodate more than 8 bit tags");
-		TileLinkUL ret = tileLinkInit<TileLinkUL>(byteAddressW, dataW, tagW);
+		TileLinkU ret = tileLinkInit<TileLinkU>(byteAddressW, dataW, tagW);
 
 		TileLinkChannelA a = constructFrom(ret.a);
 		a <<= ret.a;
@@ -355,9 +355,9 @@ namespace gtry::scl::pci {
 		return ret;
 	}
 
-	TileLinkUL makePciMasterFullW(RequesterInterface&& reqInt)
+	TileLinkU makePciMasterFullW(RequesterInterface&& reqInt)
 	{
-		TileLinkUL ret = tileLinkInit<TileLinkUL>(64_b, (*reqInt.request)->width(), 8_b);
+		TileLinkU ret = tileLinkInit<TileLinkU>(64_b, (*reqInt.request)->width(), 8_b);
 
 		TileLinkChannelA a = constructFrom(ret.a);
 		a <<= ret.a;
@@ -368,10 +368,10 @@ namespace gtry::scl::pci {
 		return ret;
 	}
 
-	TileLinkUB makePciMasterCheapBurst(RequesterInterface&& reqInt, std::optional<BVec> tag, std::optional<BitWidth> sizeW, BitWidth addressW) {
+	TileLinkU makePciMasterCheapBurst(RequesterInterface&& reqInt, std::optional<BVec> tag, std::optional<BitWidth> sizeW, BitWidth addressW) {
 		Area area{ "makePciMasterCheapBurst", true };
 
-		TileLinkUB ret = tileLinkInit<TileLinkUB>(addressW, (*reqInt.request)->width(), 0_b, sizeW);
+		TileLinkU ret = tileLinkInit<TileLinkU>(addressW, (*reqInt.request)->width(), 0_b, sizeW);
 
 		TileLinkChannelA a = constructFrom(ret.a);
 		a <<= ret.a;

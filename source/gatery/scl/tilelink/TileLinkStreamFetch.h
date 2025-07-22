@@ -42,7 +42,7 @@ namespace gtry::scl
 		TileLinkStreamFetch& pause(Bit condition) { m_pauseFetch = condition; return *this; }
 		TileLinkStreamFetch& enableBursts(size_t maxBurstSizeInBits) { m_maxBurstSizeInBits = maxBurstSizeInBits; return *this; }
 
-		virtual TileLinkUB generate(RvStream<Command>& cmdIn, RvStream<BVec>& dataOut, BitWidth sourceW = 0_b);
+		virtual TileLinkU generate(RvStream<Command>& cmdIn, RvStream<BVec>& dataOut, BitWidth sourceW = 0_b);
 
 	private:
 		Area m_area = {"scl_TileLinkStreamFetch", true};
