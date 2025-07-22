@@ -22,7 +22,10 @@
 
 namespace gtry::scl
 {
-
+	/**
+	 * @brief Send stream data to selected output based on index. See StreamRouter for an alternative interface.
+	 *			Node: Packet streams are not handled. Beats of one packet might get distributed to multiple outputs based on selector.
+	 */
 	template<StreamSignal T>
 	class StreamDemux
 	{
@@ -74,5 +77,60 @@ namespace gtry::scl
 		Area m_area = { "scl_StreamDemux", true };
 		UInt m_selector;
 		T m_in;
+	};
+
+	/**
+	 * @brief Forward stream data to a selected output. 
+	 *			Every output has an enable signal to flag its availability to handle the incoming data.
+	 *			The first attached and enabled output will receive the data.
+	 *			Packets are forwarded to the same destination independent of changes on the enable signal.
+	 */
+	template<StreamSignal T>
+	class StreamRouter
+	{
+	public:
+		StreamRouter(T&& in) : m_in(move(in)) { init(); }
+
+		StreamRouter& lockPackets(bool val) { m_packetLock = val; return *this; }
+
+		T operator ()(Bit enable)
+		{
+			auto ent = m_area.enter();
+
+			T out = constructFrom(m_in);
+			downstream(out) = downstream(m_in);
+			valid(out) = '0';
+
+			Bit locked = enable & !m_anyLock;
+			if(m_packetLock)
+				locked = flagInstantSet(enable & !m_anyLock & valid(m_in), transfer(m_in) & eop(m_in));
+			m_anyLock |= locked;
+
+			IF(locked)
+			{
+				valid(out) = valid(m_in);
+				upstream(m_in) = upstream(out);
+			}
+
+			setName(out, "out_" + std::to_string(index++));
+			return out;
+		}
+
+	protected:
+		void init()
+		{
+			HCL_NAMED(m_in);
+			HCL_NAMED(m_anyLock);
+
+			ready(m_in) = '1'; // default is to consume everything pointing at unconnected outputs
+			m_anyLock = '0';
+			m_area.leave();
+		}
+
+		Area m_area = { "scl_StreamRouter", true };
+		Bit m_anyLock;
+		T m_in;
+		bool m_packetLock = true;
+		size_t index = 0;
 	};
 }
