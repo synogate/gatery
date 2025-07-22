@@ -33,7 +33,7 @@
 #include <gatery/scl/tilelink/TileLinkCache.h>
 #include <gatery/scl/tilelink/TileLinkDMA.h>
 #include <gatery/scl/tilelink/TileLinkHub.h>
-#include <gatery/scl/tilelink/TileLinkErrorResponder.h>
+#include <gatery/scl/tilelink/TileLinkInterconnect.h>
 #include <gatery/scl/tilelink/TileLinkFiFo.h>
 #include <gatery/scl/tilelink/TileLinkStreamFetch.h>
 #include <gatery/scl/tilelink/TileLinkMasterModel.h>
@@ -48,10 +48,16 @@ template<TileLinkSignal TLink = TileLinkU>
 class TileLinkSimuInitiator : public std::enable_shared_from_this<TileLinkSimuInitiator<TLink>>
 {
 public:
-	TileLinkSimuInitiator(BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeWidth, BitWidth sourceWidth, std::string prefix = "initiator")
+	TileLinkSimuInitiator(BitWidth addrWidth, BitWidth dataWidth, size_t burstLimitLog, BitWidth sourceWidth, std::string prefix = "initiator")
 	{
-		tileLinkInit(m_link, addrWidth, dataWidth, sizeWidth, sourceWidth);
+		tileLinkInit(m_link, addrWidth, dataWidth, BitWidth::last(burstLimitLog), sourceWidth);
+		m_link.cfg.burstLimitLog = burstLimitLog;
 		pinIn(m_link, prefix);
+	}
+
+	TileLinkSimuInitiator(BitWidth addrWidth, BitWidth dataWidth, BitWidth sizeW, BitWidth sourceWidth, std::string prefix = "initiator") :
+		TileLinkSimuInitiator(addrWidth, dataWidth, sizeW.last(), sourceWidth, prefix)
+	{
 	}
 
 	void issueIdle()
@@ -300,14 +306,171 @@ BOOST_FIXTURE_TEST_CASE(tilelink_demux_chanA_routing_test, BoostUnitTestSimulati
 	runTicks(clock.getClk(), 16);
 }
 
+BOOST_FIXTURE_TEST_CASE(tilelink_addressdecoder_chanA_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	auto initiator = std::make_shared<TileLinkSimuInitiator<>>(4_b, 16_b, 1_b, 4_b);
+	auto target = std::make_shared<TileLinkSimuTarget<>>(4_b, 16_b, 4_b, 4_b);
+
+	TileLinkAddressDecoder{}
+		(0, move(target->link()))
+		.generate() <<= initiator->link();
+
+	addSimulationProcess([=, this]()->SimProcess {
+		auto& iniA = initiator->link().a;
+		auto& iniD = *initiator->link().d;
+		auto& tgtA = target->link().a;
+		auto& tgtD = *target->link().d;
+
+		simu(valid(iniA)) = '0';
+		simu(ready(iniD)) = '0';
+		simu(ready(tgtA)) = '0';
+		simu(valid(tgtD)) = '0';
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(valid(tgtA)) == '0');
+
+		initiator->issueCommand(TileLinkA::PutFullData, 0, 0, 1);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(valid(tgtA)) == '0');
+
+		simu(valid(initiator->link().a)) = '1';
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(valid(tgtA)) == '1');
+		BOOST_TEST(simu(ready(iniA)) == '0');
+
+		simu(ready(tgtA)) = '1';
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(valid(tgtA)) == '1');
+		BOOST_TEST(simu(ready(iniA)) == '1');
+
+		stopTest();
+	});
+
+	design.postprocess();
+	runTicks(clock.getClk(), 16);
+}
+
+BOOST_FIXTURE_TEST_CASE(tilelink_addressdecoder_chanD_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	auto initiator = std::make_shared<TileLinkSimuInitiator<>>(4_b, 16_b, 1_b, 4_b);
+	auto target = std::make_shared<TileLinkSimuTarget<>>(4_b, 16_b, 4_b, 4_b);
+
+	TileLinkAddressDecoder{}
+		(0, move(target->link()))
+		.generate() <<= initiator->link();
+
+	addSimulationProcess([=, this]()->SimProcess {
+
+		auto& iniA = initiator->link().a;
+		auto& iniD = *initiator->link().d;
+		auto& tgtA = target->link().a;
+		auto& tgtD = *target->link().d;
+
+		simu(valid(iniA)) = '0';
+		simu(ready(iniD)) = '0';
+		simu(ready(tgtA)) = '0';
+		simu(valid(tgtD)) = '0';
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(valid(iniD)) == '0');
+		BOOST_TEST(simu(ready(tgtD)) == '0');
+
+		initiator->issueCommand(TileLinkA::PutFullData, 0, 0, 1);
+		target->issueResponse(TileLinkD::AccessAck, 1337);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(valid(iniD)) == '0');
+		BOOST_TEST(simu(ready(tgtD)) == '0');
+
+		simu(valid(tgtD)) = '1';
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(valid(iniD)) == '1');
+		BOOST_TEST(simu(ready(tgtD)) == '0');
+
+		simu(ready(iniD)) = '1';
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(valid(iniD)) == '1');
+		BOOST_TEST(simu(ready(tgtD)) == '1');
+
+		stopTest();
+		});
+
+	design.postprocess();
+	runTicks(clock.getClk(), 16);
+}
+
+BOOST_FIXTURE_TEST_CASE(tilelink_addressdecoder_chanA_routing_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScp(clock);
+
+	auto initiator = std::make_shared<TileLinkSimuInitiator<>>(9_b, 16_b, 1_b, 4_b);
+	auto target0 = std::make_shared<TileLinkSimuTarget<>>(4_b, 16_b, 4_b, 4_b, "target0");
+	auto target1 = std::make_shared<TileLinkSimuTarget<>>(8_b, 16_b, 4_b, 4_b, "target1");
+	auto target2 = std::make_shared<TileLinkSimuTarget<>>(2_b, 16_b, 4_b, 4_b, "target2");
+
+	TileLinkAddressDecoder{}
+		(0x000, move(target0->link()))
+		(0x000, move(target2->link()))
+		(0x100, move(target1->link()))
+		.generate() <<= initiator->link();
+
+	addSimulationProcess([=, this]()->SimProcess {
+
+		simu(valid(initiator->link().a)) = '0';
+		simu(ready(*initiator->link().d)) = '1';
+		simu(ready(target0->link().a)) = '1';
+		simu(ready(target1->link().a)) = '1';
+		simu(ready(target2->link().a)) = '1';
+		simu(valid(*target0->link().d)) = '0';
+		simu(valid(*target1->link().d)) = '0';
+		simu(valid(*target2->link().d)) = '0';
+		co_await AfterClk(clock);
+
+		simu(valid(initiator->link().a)) = '1';
+		initiator->issueCommand(TileLinkA::PutFullData, 0, 0, 1);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(valid(target0->link().a)) == '0');
+		BOOST_TEST(simu(valid(target1->link().a)) == '0');
+		BOOST_TEST(simu(valid(target2->link().a)) == '1');
+
+		initiator->issueCommand(TileLinkA::PutFullData, 4, 0, 1);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(valid(target0->link().a)) == '1');
+		BOOST_TEST(simu(valid(target1->link().a)) == '0');
+		BOOST_TEST(simu(valid(target2->link().a)) == '0');
+
+		initiator->issueCommand(TileLinkA::PutFullData, 16, 0, 1);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(valid(target0->link().a)) == '0');
+		BOOST_TEST(simu(valid(target1->link().a)) == '0');
+		BOOST_TEST(simu(valid(target2->link().a)) == '0');
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(valid(*initiator->link().d)) == '1');
+		BOOST_TEST(simu((*initiator->link().d)->error) == '1');
+
+		initiator->issueCommand(TileLinkA::PutFullData, 256, 0, 1);
+		co_await AfterClk(clock);
+		BOOST_TEST(simu(valid(target0->link().a)) == '0');
+		BOOST_TEST(simu(valid(target1->link().a)) == '1');
+		BOOST_TEST(simu(valid(target2->link().a)) == '0');
+
+		stopTest();
+		});
+
+	design.postprocess();
+	runTicks(clock.getClk(), 16);
+}
 BOOST_FIXTURE_TEST_CASE(tilelink_errorResponder_test, BoostUnitTestSimulationFixture)
 {
 	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
-	auto initiator = std::make_shared<TileLinkSimuInitiator<>>(12_b, 16_b, 4_b, 4_b);
-
-	scl::tileLinkErrorResponder(initiator->link());
+	auto initiator = std::make_shared<TileLinkSimuInitiator<>>(12_b, 16_b, 1, 4_b);
+	scl::tileLinkErrorResponder(initiator->link().cfg) <<= initiator->link();
 
 	addSimulationProcess([=, this]()->SimProcess {
 
@@ -360,8 +523,8 @@ BOOST_FIXTURE_TEST_CASE(tilelink_errorResponder_burst_test, BoostUnitTestSimulat
 	Clock clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScp(clock);
 
-	auto initiator = std::make_shared<TileLinkSimuInitiator<TileLinkU>>(12_b, 16_b, 4_b, 4_b);
-	scl::tileLinkErrorResponder(initiator->link());
+	auto initiator = std::make_shared<TileLinkSimuInitiator<TileLinkU>>(12_b, 16_b, 3, 4_b);
+	scl::tileLinkErrorResponder(initiator->link().cfg) <<= initiator->link();
 
 	addSimulationProcess([=, this]()->SimProcess {
 

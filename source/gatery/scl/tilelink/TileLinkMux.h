@@ -89,6 +89,7 @@ namespace gtry::scl
 		TLink sink;
 		generateChanA(sink.a);
 		generateChanD(*sink.d);
+		sink.cfg = sink.a->defaultCfg();
 
 		connectAddrDesc(m_addrSpaceDescription, sink.addrSpaceDesc);
 		HCL_NAMED(sink);

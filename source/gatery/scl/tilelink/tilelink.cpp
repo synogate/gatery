@@ -107,6 +107,29 @@ namespace gtry::scl
 		this->data = data;
 	}
 
+	TileLinkCfg TileLinkA::defaultCfg() const
+	{
+		TileLinkCfg cfg{
+			.addrW = address.width(),
+			.dataW = data.width(),
+			.sourceW = source.width(),
+			.burstLimitLog = size.width().last(),
+		};
+		cfg.opValid[TileLinkA::Get] = true;
+		cfg.opValid[TileLinkA::PutFullData] = true;
+		cfg.opValid[TileLinkA::PutPartialData] = true;
+		return cfg;
+	}
+
+	TileLinkU tileLinkRegDecouple(TileLinkU&& slave)
+	{
+		TileLinkU master = constructFrom(slave);
+		TileLinkU masterTemp = constructFrom(master);
+		masterTemp <<= master;
+		slave <<= regDecouple(move(masterTemp));
+		return master;
+	}
+
 	Bit TileLinkD::hasData() const
 	{ 
 		return opcode.lsb(); 
@@ -204,6 +227,13 @@ namespace gtry::scl
 		res.error = '0';
 
 		return res;
+	}
+
+	TileLinkU tileLinkInit(const TileLinkCfg& cfg)
+	{
+		TileLinkU link = tileLinkInit<TileLinkU>(cfg.addrW, cfg.dataW, cfg.sourceW, BitWidth::last(cfg.burstLimitLog));
+		link.cfg = cfg;
+		return link;
 	}
 
 	TileLinkU tileLinkSlaveInit(BitWidth addrW, BitWidth dataW, BitWidth sourceW)

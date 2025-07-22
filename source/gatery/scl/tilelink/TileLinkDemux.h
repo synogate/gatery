@@ -18,7 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 #include "tilelink.h"
-#include "TileLinkErrorResponder.h"
+#include "TileLinkInterconnect.h"
 #include "../stream/StreamArbiter.h"
 
 namespace gtry::scl
@@ -142,14 +142,12 @@ namespace gtry::scl
 
 		// handle access to unmapped areas
 		// TODO: check if there are any unmapped areas first
-		TLink unmapped = constructFrom(m_source);
+		TLink unmapped = scl::tileLinkErrorResponder(m_source.cfg);
 		downstream(unmapped.a) = downstream(m_source.a);
 		IF(!handled)
-			upstream(m_source.a) = upstream(unmapped.a);
+			ready(m_source.a) = ready(unmapped.a);
 		ELSE
 			valid(unmapped.a) = '0';
-
-		tileLinkErrorResponder(unmapped);
 		HCL_NAMED(unmapped);
 
 		// connect channel D

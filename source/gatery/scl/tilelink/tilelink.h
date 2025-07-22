@@ -35,6 +35,7 @@ namespace gtry::scl
 		std::bitset<8> opValid;
 
 		size_t burstThresholdLog() const;
+		bool burstSupport() const { return burstLimitLog > burstThresholdLog(); }
 	};
 
 	struct TileLinkA
@@ -86,6 +87,7 @@ namespace gtry::scl
 		void setupGet(UInt address, UInt source = 0, std::optional<UInt> size = {});
 		void setupPut(UInt address, BVec data, UInt source = 0, std::optional<UInt> size = {});
 		void setupPutPartial(UInt address, BVec data, BVec mask, UInt source = 0, std::optional<UInt> size = {});
+		TileLinkCfg defaultCfg() const;
 	};
 	using TileLinkChannelA = RvStream<TileLinkA>;
 
@@ -167,8 +169,7 @@ namespace gtry::scl
 	template<TileLinkSignal TLink>
 	TLink tileLinkInit(BitWidth addrW, BitWidth dataW, BitWidth sourceW = 0_b, std::optional<BitWidth> sizeW = std::nullopt);
 
-	template<TileLinkSignal TLink>
-	TLink tileLinkInit(BitWidth addrW, BitWidth dataW, BitWidth sourceW, size_t burstLimitLogBytes);
+	TileLinkU tileLinkInit(const TileLinkCfg& cfg);
 
 	/**
 	 * @brief Generate a basic default responder:
@@ -205,7 +206,7 @@ namespace gtry::scl
 	 * @param slave the slave-side tileLink
 	 * @return the slave-side tileLink handle, where decoupling registers have been inserted in both directions.
 	*/
-	template <TileLinkSignal TLink> TLink tileLinkRegDecouple(TLink&& slave);
+	TileLinkU tileLinkRegDecouple(TileLinkU&& slave);
 
 	/// Overload to correctly forward addr space description
 	template<TileLinkSignal T>
@@ -314,15 +315,6 @@ namespace gtry::scl
 	}
 
 	template<TileLinkSignal TLink>
-	TLink tileLinkInit(BitWidth addrW, BitWidth dataW, BitWidth sourceW, size_t burstLimitLogBytes)
-	{
-		TLink link;
-		tileLinkInit(link, addrW, dataW, BitWidth::last(burstLimitLogBytes), sourceW);
-		link.cfg.burstLimitLog = burstLimitLogBytes;
-		return link;
-	}
-
-	template<TileLinkSignal TLink>
 	TLink regDecouple(TLink&& link)
 	{
 		TLink out{
@@ -333,17 +325,6 @@ namespace gtry::scl
 		
 		out.addrSpaceDesc = link.addrSpaceDesc;
 		return out;
-	}
-
-
-	template <TileLinkSignal TLink>
-	TLink tileLinkRegDecouple(TLink&& slave)
-	{
-		TLink master = constructFrom(slave);
-		TLink masterTemp = constructFrom(master);
-		masterTemp <<= master;
-		slave <<= regDecouple(move(masterTemp));
-		return master;
 	}
 
 	template<TileLinkSignal T>

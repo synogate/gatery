@@ -18,41 +18,28 @@
 #pragma once
 #include <gatery/frontend.h>
 #include "tilelink.h"
-#include "../Counter.h"
 
 namespace gtry::scl
 {
-	template<TileLinkSignal TLink>
-	void tileLinkErrorResponder(TLink& link)
+	class TileLinkAddressDecoder
 	{
-		Area ent{ "scl_tileLinkErrorResponder", true };
-		HCL_NAMED(link);
-
-		auto& d = *link.d;
-		valid(d) = valid(link.a);
-		d->opcode = responseOpCode(link);
-		d->param = 0;
-		d->size = link.a->size;
-		d->source = link.a->source;
-		d->sink = 0;
-		d->data = ConstBVec(link.a->data.width());
-
-		UInt len = transferLength(d);
-		HCL_NAMED(len);
-
-		scl::Counter beatCounter{ len };
-
-		d->error = '0';
-		IF(transfer(d))
-			beatCounter.inc();
-			
-		ready(link.a) = '0';
-		IF(beatCounter.isLast())
+		struct Slave
 		{
-			d->error = '1';
-			ready(link.a) = ready(d);
-		}
+			TileLinkU link;
+			uint64_t addressOffset;
+			uint32_t responsePriority;
+		};
 
-		HCL_NAMED(link);
-	}
+	public:
+
+		TileLinkAddressDecoder& operator () (uint64_t addressOffset, TileLinkU&& slave);
+		TileLinkAddressDecoder& respondToUnmapped(bool val) { m_useErrorResponder = val; return *this; }
+		TileLinkU generate(std::string instanceName = {});
+
+	protected:
+		std::list<Slave> m_slave;
+		bool m_useErrorResponder = true;
+	};
+
+	TileLinkU tileLinkErrorResponder(const TileLinkCfg& cfg);
 }
