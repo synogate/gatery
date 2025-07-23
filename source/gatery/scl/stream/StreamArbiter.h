@@ -38,11 +38,11 @@ namespace gtry::scl
 			HCL_DESIGNCHECK_HINT(m_generated, "Generate not called.");
 		}
 
-		//void out(const T& blueprint)
-		//{
-		//	HCL_DESIGNCHECK_HINT(!m_generated, "Already generated.");
-		//	m_out.emplace(constructFrom(blueprint));
-		//}
+		void out(const T& blueprint)
+		{
+			HCL_DESIGNCHECK_HINT(!m_generated, "Already generated.");
+			m_out.emplace(constructFrom(blueprint));
+		}
 
 		StreamArbiter& attach(T& stream, uint32_t sortKey = 1u << 31)
 		{

@@ -18,6 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 #include "tilelink.h"
+#include "../stream/StreamDemux.h"
 
 namespace gtry::scl
 {
@@ -39,6 +40,30 @@ namespace gtry::scl
 	protected:
 		std::list<Slave> m_slave;
 		bool m_useErrorResponder = true;
+	};
+
+	class TileLinkArbiter
+	{
+	public:
+		TileLinkArbiter(TileLinkU&& slave, BitWidth arbiterSourceW);
+
+		operator TileLinkU ();
+		TileLinkU out() { return (TileLinkU)*this; }
+
+		void generate();
+
+	protected:
+
+	private:
+		Area m_ent = Area{ "scl_TileLinkArbiter", true };
+
+		BitWidth m_arbiterSourceW;
+		size_t m_portIndex = 0;
+		TileLinkCfg m_cfg;
+		AddressSpaceDescriptionHandle m_addressSpace;
+
+		StreamArbiter<TileLinkChannelA> m_handlerA;
+		StreamRouter<TileLinkChannelD> m_handlerD;
 	};
 
 	TileLinkU tileLinkErrorResponder(const TileLinkCfg& cfg);

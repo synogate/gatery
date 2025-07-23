@@ -146,4 +146,68 @@ namespace gtry::scl
 
 		return link;
 	}
+
+	TileLinkArbiter::TileLinkArbiter(TileLinkU&& slave, BitWidth arbiterSourceW) :
+		m_arbiterSourceW(arbiterSourceW),
+		m_cfg(slave.cfg),
+		m_addressSpace(slave.addrSpaceDesc),
+		m_handlerD(move(*slave.d))
+	{
+		HCL_DESIGNCHECK(m_cfg.sourceW >= arbiterSourceW);
+
+		m_handlerA.out(slave.a);
+		slave.a <<= m_handlerA.out();
+		m_cfg.sourceW -= arbiterSourceW;
+
+		m_ent.leave();
+	}
+
+	TileLinkArbiter::operator TileLinkU()
+	{
+		auto scope = m_ent.enter();
+		HCL_DESIGNCHECK_HINT(m_portIndex < m_arbiterSourceW.count(), "too many master ports for arbiter source width");
+
+		TileLinkU out = tileLinkInit(m_cfg);
+		out.addrSpaceDesc = m_addressSpace;
+
+		TileLinkChannelA expandedA = move(out.a) | strm::transform([this](const TileLinkA& a) { 
+			return TileLinkA{
+				.opcode = a.opcode,
+				.param = a.param,
+				.size = a.size,
+				.source = cat(ConstUInt(m_portIndex, m_arbiterSourceW), a.source),
+				.address = a.address,
+				.mask = a.mask,
+				.data = a.data,
+			};
+		});
+		m_handlerA.attach(move(expandedA));
+
+		Bit enabled;
+		TileLinkChannelD expandedD = m_handlerD(enabled);
+		enabled = expandedD->source.upper(m_arbiterSourceW) == m_portIndex;
+
+		*out.d <<= transform(move(expandedD), [this](const TileLinkD& d) {
+			return TileLinkD{
+				.opcode = d.opcode,
+				.param = d.param,
+				.size = resizeTo(d.size, BitWidth::last(m_cfg.burstLimitLog)),
+				.source = d.source.lower(-m_arbiterSourceW),
+				.sink = d.sink,
+				.data = d.data,
+				.error = d.error,
+			};
+		});
+
+		setName(out, "out" + std::to_string(m_portIndex));
+		m_portIndex++;
+		return out;
+	}
+
+	void TileLinkArbiter::generate()
+	{
+		m_handlerA.generate();
+	}
+
+
 }
