@@ -58,6 +58,8 @@ namespace gtry {
 		SInt& operator = (const SInt &rhs) { BaseBitVector::operator=(rhs); return *this; }
 		SInt& operator = (SInt&& rhs) { BaseBitVector::operator=(std::move(rhs)); return *this; }
 
+		SInt& operator = (BitWidth W);
+
 		Bit& sign() { return msb(); }
 		const Bit& sign() const { return msb(); }
 

@@ -67,6 +67,9 @@ namespace gtry {
 		UInt& operator = (const UInt &rhs);
 		UInt& operator = (UInt&& rhs);
 
+		// for lazy initialization
+		UInt& operator = (BitWidth W);
+
 		virtual BVec toBVec() const override;
 		virtual void fromBVec(const BVec &bvec) override;
 

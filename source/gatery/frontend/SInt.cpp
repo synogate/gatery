@@ -19,7 +19,9 @@
 #include "SInt.h"
 #include "BVec.h"
 
-namespace gtry {
+namespace gtry 
+{
+	SInt& SInt::operator = (BitWidth W) { BaseBitVector::operator=(W); return *this; }
 
 	SInt ext(const SInt& bvec, BitWidth extendedWidth, Expansion policy)
 	{

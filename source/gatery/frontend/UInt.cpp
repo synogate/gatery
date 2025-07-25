@@ -40,6 +40,7 @@ namespace gtry
 	UInt& UInt::operator = (const char rhs[]) { assign(std::string_view(rhs), Expansion::zero); return *this; }
 	UInt& UInt::operator = (const UInt &rhs) { BaseBitVector::operator=(rhs); return *this; }
 	UInt& UInt::operator = (UInt&& rhs) { BaseBitVector::operator=(std::move(rhs)); return *this; }
+	UInt& UInt::operator = (BitWidth W) { BaseBitVector::operator=(W); return *this; }
 
 	UInt::UInt() { expansionPolicy(Expansion::zero); }
 	UInt::~UInt() { }
