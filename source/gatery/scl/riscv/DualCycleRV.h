@@ -28,10 +28,12 @@ namespace gtry::scl::riscv
 		DualCycleRV(BitWidth instructionAddrWidth = 32_b, BitWidth dataAddrWidth = 32_b);
 
 		virtual Memory<UInt>& fetch(uint64_t entryPoint = 0);
-		virtual TileLinkU fetchTileLink(uint64_t entryPoint = 0);
+		virtual void fetch(TileLinkU&& link, uint64_t entryPoint);
 		virtual void fetchText(std::span<const std::byte> text, uint64_t entryPoint);
 		virtual void fetchElf(std::filesystem::path elfPath, std::optional<std::filesystem::path> makeDir);
 
+		// depricated, use fetch(link) instead
+		virtual TileLinkU fetchTileLink(uint64_t entryPoint = 0);
 	protected:
 		virtual void generate(const UInt& instruction, const Bit& instructionValid);
 

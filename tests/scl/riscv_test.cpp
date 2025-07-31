@@ -31,9 +31,11 @@
 #include <gatery/scl/riscv/ElfLoader.h>
 #include <gatery/scl/riscv/EmbeddedSystemBuilder.h>
 #include <gatery/scl/riscv/rvcc.h>
+#include <gatery/scl/memory/HyperBusController.h>
 #include <gatery/scl/io/uart.h>
 #include <gatery/scl/tilelink/tilelink.h>
 #include <gatery/scl/tilelink/TileLinkHub.h>
+#include <gatery/scl/tilelink/TileLinkInterconnect.h>
 #include <gatery/scl/tilelink/TileLinkValidator.h>
 
 #include <queue>
@@ -2172,6 +2174,88 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle_export, BoostUnitTestSimulationFixtur
 
 #endif
 
+struct RoCacheData
+{
+	UInt tag;
+	BVec value;
+	Bit valid;
+};
+BOOST_HANA_ADAPT_STRUCT(RoCacheData, tag, value);
+
+static gtry::scl::TileLinkU readOnlyBurstCache(gtry::scl::TileLinkU&& ram, gtry::BitWidth addrW)
+{
+	Area ent{ "RoCache", true };
+	HCL_NAMED(ram);
+
+	const size_t bytePerBeatLog = gtry::utils::Log2(ram.a->data.width().bytes());
+	const BitWidth tagW = ram.a->address.width() - bytePerBeatLog - addrW;
+	Memory<RoCacheData> cacheMem(addrW.count(), RoCacheData{
+		.tag = tagW,
+		.value = ram.a->data.width()
+		});
+	HCL_NAMED(cacheMem);
+	cacheMem.setType(MemType::DONT_CARE, 1);
+	cacheMem.initZero();
+
+	TileLinkU cpu = constructFrom(ram);
+
+	// buffer request from cpu
+	scl::TileLinkChannelA req = regDownstream(move(cpu.a)) | name("req");
+
+	// the line lookup address is forwarded to skip one wait cycle
+	UInt lineAddr = cpu.a->address(bytePerBeatLog, addrW);
+	IF(valid(req) & !ready(req))
+		lineAddr = req->address(bytePerBeatLog, addrW);
+	HCL_NAMED(lineAddr);
+
+	// count response beats for cache address offset
+	scl::Counter burstOffset{ 4 };
+
+	// write ram response to cache memory
+	UInt ramAddr = ram.a->address.width(); ramAddr = reg(ramAddr) | name("ramAddr");
+	IF(transfer(*ram.d))
+	{
+		UInt writeAddr = ramAddr(bytePerBeatLog, addrW) ^ zext(burstOffset.value()) | name("writeAddr");
+		cacheMem[writeAddr] = RoCacheData{
+			.tag = ramAddr.upper(tagW),
+			.value = (*ram.d)->data,
+			.valid = '1',
+		};
+		burstOffset.inc();
+	}
+
+	// read cache memory and check for hit/miss
+	RoCacheData line = reg(cacheMem[lineAddr], { .allowRetimingBackward = true }) | name("line");
+	Bit cacheHit = (valid(req) & line.valid & line.tag == req->address.upper(tagW)) | name("cacheHit");
+
+	// respond to cpu on cache hit. or wait until cache hit.
+	**cpu.d = tileLinkDefaultResponse(*req);
+	(*cpu.d)->data = line.value;
+	valid(*cpu.d) = cacheHit;
+	ready(req) = transfer(*cpu.d);
+
+	// keep track of outstanding ram requests
+	Bit ramBusy = scl::flag(transfer(ram.a), transfer(*ram.d) & eop(*ram.d)) | name("ramBusy");
+	//sim_assert(!valid(*ram.d) | eop(*ram.d)) << "ram response must be last beat";
+
+	// issue ram request on cache miss
+	*ram.a = *req;
+	// request burst only from dram
+	IF(ram.a->address.msb() == '0' & ram.a->address.lower(3_b) == 0)
+		ram.a->size = 3;
+	valid(ram.a) = !ramBusy & valid(req) & !cacheHit;
+	ready(*ram.d) = '1';
+
+	IF(!ramBusy)
+	{
+		burstOffset.reset();
+		ramAddr = req->address;
+	}
+
+	HCL_NAMED(cpu);
+	return cpu;
+}
+
 
 BOOST_FIXTURE_TEST_CASE(riscv_gdb_soc_export, BoostUnitTestSimulationFixture)
 {
@@ -2184,17 +2268,61 @@ BOOST_FIXTURE_TEST_CASE(riscv_gdb_soc_export, BoostUnitTestSimulationFixture)
 	Clock clock = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = 24_mhz, .resetType = ClockConfig::ResetType::NONE });
 	ClockScope clkScp(clock);
 
-	PackedMemoryMap mmap("dev");
-	spiMasterDevice(mmap, "spi", SpiMasterConfig::forSdCard());
-	uartDevice(mmap, "uart");
+	// 16-bit slow device
+	TileLinkAddressDecoder ioRouter;
 
-	TileLinkU dataBus = tileLinkRegDecouple(*toTileLinkUL(mmap, 32_b));
-	formatCppHeader("export/riscv_gdb_soc_export/firmware/gen_mmap.h", *mmap.getTree().physicalDescription, 0x8000);
-	riscv::embeddedRV32(move(dataBus), "firmware.elf", {
-		.makeDir = "export/spi_test_soc/firmware",
-		.stackByteSize = 4096,
-		.dataBusOffset = 0x8000,
-		});
+	const std::string& testName = boost::unit_test::framework::current_test_case().p_name.get();
+	std::filesystem::path firmwarePath = "export/" + testName + "/firmware";
+
+	Bit hyperRamRegisterAccess;
+	{
+		PackedMemoryMap mmap("dev");
+
+		uartDevice(mmap, "uart");
+		mapIn(mmap, hyperRamRegisterAccess, "hyperram_register_access");
+		
+		SpiMasterConfig sdCfg = SpiMasterConfig::forSdCard();
+		sdCfg.pinPrefix = "SD2_";
+		spiMasterDevice(mmap, "sd0", sdCfg);
+		
+		ioRouter(0x000'0000, *toTileLinkUL(mmap, 32_b, 9_b) | tileLinkRegDecouple);
+		formatCppHeader(firmwarePath / "gen_mmap.h", *mmap.getTree().physicalDescription, 32_b, 0x800'0000);
+	}
+
+	uint32_t entryPoint = 0x900'0000;
+	{
+		riscv::ElfLoader elf = riscv::makeElf(move("firmware.elf"), move(firmwarePath));
+		HCL_DESIGNCHECK_HINT(elf.segments().size() == 1, "firmware is limitted to one relocatable executable segment");
+
+		const riscv::ElfLoader::Segment& segment = elf.segments().front();
+		const riscv::ElfLoader::Section* textSection = elf.section(".text");
+		HCL_DESIGNCHECK_HINT(textSection->offset == entryPoint, "adjust text segment offset to rom location (0x900'0000)");
+		entryPoint = (uint32_t)elf.entryPoint();
+
+		// erase elf header
+		std::span eflContent = segment.data.subspan(textSection->offset - segment.offset);
+
+		Memory<BVec> textRom = memoryFromData(as_bytes(eflContent), 32_b);
+		ioRouter(0x100'0000, tileLinkMemory(textRom, { .sourceW = 9_b, .writePort = false, .latency = 2 }));
+	}
+	
+	// 32-bit central router
+	TileLinkAddressDecoder cpuRouter;
+	cpuRouter(0x800'0000, ioRouter.generate("ioRouter") | tileLinkRegDecouple);
+
+	Reverse<HyperBusController> hyperRamController = hyperBusControllerLowLatency(gateMateHyperBusPhy());
+	TileLinkU hyperRam = hyperBusTileLink(move(hyperRamController), { .addrW = 25_b, .sourceW = 3_b, .latency = 3, .registerAccess = reg(hyperRamRegisterAccess) });
+	cpuRouter(0x000'0000, move(hyperRam) | tileLinkDoubleWidth() | tileLinkRegDecouple);
+	
+	// TODO: hyper RAM
+
+	TileLinkArbiter cpuArbiter(cpuRouter.generate("cpuRouter"), 2_b);
+
+	riscv::DualCycleRV userCpu(28_b, 28_b);
+	userCpu.fetch(readOnlyBurstCache(cpuArbiter, 8_b), entryPoint);
+	userCpu.execute();
+	userCpu.mem(cpuArbiter);
+	cpuArbiter.generate();
 
 	addSimulationProcess([&]()->SimProcess {
 		co_return;
@@ -2202,7 +2330,6 @@ BOOST_FIXTURE_TEST_CASE(riscv_gdb_soc_export, BoostUnitTestSimulationFixture)
 
 	design.postprocess();
 
-	const std::string& testName = boost::unit_test::framework::current_test_case().p_name.get();
 	std::filesystem::path cwd = std::filesystem::path{ "export" } / testName;
 	std::future<int> flow;
 	vhdl::VHDLExport vhdl(cwd / "top.vhd");

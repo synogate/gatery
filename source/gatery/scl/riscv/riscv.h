@@ -93,6 +93,9 @@ namespace gtry::scl::riscv
 		virtual void csrInstructionsRetired(BitWidth regW = 64_b);
 
 		virtual void mem(AvalonMM& mem, bool byte = true, bool halfword = true);
+		virtual void mem(TileLinkU&& link, bool byte = true, bool halfword = true);
+
+		// depricated syntax
 		virtual TileLinkU memTLink(bool byte = true, bool halfword = true);
 
 		void setupAlu();

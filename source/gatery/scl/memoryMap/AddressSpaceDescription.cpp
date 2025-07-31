@@ -184,29 +184,43 @@ namespace gtry::scl
 			reccurse("", memoryMap[0]);
 	}
 
-	void formatCppHeader(std::ostream& o, std::string prefix, const AddressSpaceDescription& space, uint64_t offset, std::string parent)
+	void formatCppHeader(std::ostream& o, std::string prefix, const AddressSpaceDescription& space, BitWidth wordW, uint64_t offset, std::string parent)
 	{
 		if (!space.descShort.empty() && space.descShort.find('\n') == std::string::npos)
 			o << "// " << space.descShort << "\n";
 
-		std::string name = std::string{ prefix } + space.name;
-		o << "static volatile unsigned* const " << name << " = ";
+		const char* type;
+		switch (wordW.bits())
+		{
+		case 64: type = "unsigned long long"; break;
+		case 32: type = "unsigned long"; break;
+		case 16: type = "unsigned short"; break;
+		case  8: type = "unsigned char"; break;
+		default:
+			HCL_DESIGNCHECK(false);
+		}
 
-		if (!parent.empty() && (offset % 32 == 0))
-			o << parent << " + " << std::dec << offset / 32 << ";\n";
+		std::string name = std::string{ prefix } + space.name;
+		o << "static volatile " << type << "* const " << name << " = ";
+
+		if (!parent.empty())
+		{
+			HCL_ASSERT((offset % wordW.bits()) == 0);
+			o << parent << " + " << std::dec << offset / wordW.bits() << ";\n";
+		}
 		else
-			o << "(volatile unsigned*)0x" << std::hex << offset << ";\n";
+			o << "(volatile " << type << "*)0x" << std::hex << offset << ";\n";
 
 		for (const AddressSpaceDescription::Child& c : space.children)
 		{
 			if (parent.empty())
 				o << '\n';
 
-			formatCppHeader(o, name + "_", *c.desc, c.offsetInBits, name);
+			formatCppHeader(o, name + "_", *c.desc, wordW, c.offsetInBits, name);
 		}
 	}
 
-	void formatCppHeader(std::filesystem::path filename, const AddressSpaceDescription& space, uint64_t offset, std::string prefix)
+	void formatCppHeader(std::filesystem::path filename, const AddressSpaceDescription& space, BitWidth wordW, uint64_t offset, std::string prefix)
 	{
 		std::string includeGuard = "MMAP_" + prefix + space.name + "_H_INCLUDE";
 
@@ -214,7 +228,7 @@ namespace gtry::scl
 		os << "#ifndef " << includeGuard << '\n';
 		os << "#define " << includeGuard << '\n';
 		os << '\n';
-		formatCppHeader(os, prefix, space, offset, "");
+		formatCppHeader(os, prefix, space, wordW, offset, "");
 		os << '\n';
 		os << "#endif // " << includeGuard << '\n';
 

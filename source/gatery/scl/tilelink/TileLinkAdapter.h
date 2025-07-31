@@ -22,6 +22,15 @@
 
 namespace gtry::scl
 {
+	/**
+	 * @brief Adapt between two tile link ports if possible by:
+	 *			- reduce BitWidth where allowed
+	 *			- AddBurst
+	 *			- Double/HalfWidth
+	 */
+	void tileLinkAdapt(TileLinkU&& slave, TileLinkU&& master);
+	inline auto tileLinkAdapt(TileLinkU&& master) { return [&](auto&& in) { return tileLinkAdapt(std::forward<decltype(in)>(in), master); }; }
+
 	scl::TileLinkU tileLinkHalfWidth(scl::TileLinkU&& slave);
 	inline auto tileLinkHalfWidth() { return [=](auto&& in) { return tileLinkHalfWidth(std::forward<decltype(in)>(in)); }; }
 
@@ -29,6 +38,9 @@ namespace gtry::scl
 	inline scl::TileLinkU tileLinkDoubleWidth(scl::TileLinkU&& slave) { return tileLinkDoubleWidth(slave); }
 	inline auto tileLinkDoubleWidth() {	return [=](auto&& in) { return tileLinkDoubleWidth(std::forward<decltype(in)>(in)); }; }
 
+	scl::TileLinkU tileLinkAddBurst(scl::TileLinkU&& slave, size_t burstLimitLog);
 	scl::TileLinkU tileLinkAddBurst(scl::TileLinkU&& slave, BitWidth sizeW);
+
+	inline auto tileLinkAddBurst(size_t burstLimitLog) { return [=](auto&& in) { return tileLinkAddBurst(std::forward<decltype(in)>(in), burstLimitLog); }; }
 	inline auto tileLinkAddBurst(BitWidth sizeW) { return [=](auto&& in) { return tileLinkAddBurst(std::forward<decltype(in)>(in), sizeW); }; }
 }

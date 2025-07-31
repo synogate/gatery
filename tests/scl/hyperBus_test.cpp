@@ -211,7 +211,7 @@ BOOST_FIXTURE_TEST_CASE(HyperRAM_soc_test_export, BoostUnitTestSimulationFixture
 	dataBus.attachSink(move((TileLinkU&)link32), 0x2000'0000);
 	dataBus.generate();
 
-	formatCppHeader("export/" + testName + "/firmware/gen_mmap.h", *mmap.getTree().physicalDescription, 0x1000'0000);
+	formatCppHeader("export/" + testName + "/firmware/gen_mmap.h", *mmap.getTree().physicalDescription, 32_b, 0x1000'0000);
 	riscv::embeddedRV32(move(dataFetch), "firmware.elf", {
 		.makeDir = "export/" + testName + "/firmware",
 		.stackByteSize = 4096,

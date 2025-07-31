@@ -1227,17 +1227,13 @@ BOOST_FIXTURE_TEST_CASE(tilelink_addburst2_test, LinkTest)
 
 BOOST_FIXTURE_TEST_CASE(tilelink_doublewidth_test, LinkTest)
 {
-	Memory<BVec> mem(256, 8_b);
-
-	scl::TileLinkU memLink;
-	scl::tileLinkInit(memLink, 8_b, 8_b, 0_b, 6_b);
-	mem <<= memLink;
-
-	scl::TileLinkU memBurst = scl::tileLinkAddBurst(move(memLink), 2_b);
-	scl::TileLinkU memDouble = scl::tileLinkDoubleWidth(memBurst);
-
 	linkModel.init("m", 8_b, 16_b, 2_b);
-	memDouble <<= link;
+
+	tileLinkMemory(8_b, 8_b, 6_b)
+		| scl::tileLinkAddBurst(3)
+		| scl::tileLinkDoubleWidth()
+		<<= link;
+
 	timeout({ 1, 1'000'000 });
 
 	addSimulationProcess([&]()->SimProcess {

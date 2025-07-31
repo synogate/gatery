@@ -52,7 +52,12 @@ namespace gtry::scl
 		// TODO: add ease of use wrapper with input a channel stall and d channel fifo
 
 		Area ent{ "scl_tileLinkSpiFlash", true };
-		TileLinkU out = tileLinkInit<TileLinkU>(24_b, port.out->width(), config.sourceW, config.sizeW);
+		TileLinkU out = tileLinkInit({
+			.addrW = 24_b,
+			.dataW = port.out->width(),
+			.sourceW = config.sourceW,
+			.burstLimitLog = config.sizeW.value_or(0_b).last(),
+		});
 
 		uint8_t readCode;
 		const BitWidth busW = port.ddrMode ? port.out->width() / 2 : port.out->width();

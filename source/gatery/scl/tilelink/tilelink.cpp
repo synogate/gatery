@@ -231,7 +231,12 @@ namespace gtry::scl
 
 	TileLinkU tileLinkInit(const TileLinkCfg& cfg)
 	{
-		TileLinkU link = tileLinkInit<TileLinkU>(cfg.addrW, cfg.dataW, cfg.sourceW, BitWidth::last(cfg.burstLimitLog));
+		const BitWidth sizeW = std::max(
+			BitWidth::last(cfg.burstLimitLog),
+			BitWidth::last(utils::Log2C(cfg.dataW.bytes()))
+		);
+
+		TileLinkU link = tileLinkInit<TileLinkU>(cfg.addrW, cfg.dataW, cfg.sourceW, sizeW);
 		link.cfg = cfg;
 		return link;
 	}

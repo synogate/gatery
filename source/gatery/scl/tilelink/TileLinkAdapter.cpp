@@ -22,6 +22,41 @@
 
 namespace gtry::scl
 {
+	static TileLinkU adaptWidth(TileLinkU&& slave, BitWidth targetW)
+	{
+		if (targetW < slave.cfg.dataW)
+			return adaptWidth(tileLinkHalfWidth(move(slave)), targetW);
+		else if (targetW > slave.cfg.dataW)
+			return adaptWidth(tileLinkDoubleWidth(move(slave)), targetW);
+		return slave;
+	}
+
+	static TileLinkU adaptBurst(TileLinkU&& slave, size_t targetBurst)
+	{
+		if (targetBurst > slave.cfg.burstLimitLog)
+			return tileLinkAddBurst(move(slave), targetBurst);
+		return slave;
+	}
+
+	void tileLinkAdapt(TileLinkU&& slave, TileLinkU&& master)
+	{
+		master.addrSpaceDesc = slave.addrSpaceDesc;
+
+		TileLinkU adapted = adaptBurst(adaptWidth(move(slave), master.cfg.dataW), master.cfg.burstLimitLog);
+		move(adapted.a) <<= move(master.a);
+		move(*master.d) <<= transform(move(*adapted.d), [&](const TileLinkD& d) {
+			return TileLinkD{
+				.opcode = d.opcode,
+				.param = d.param,
+				.size = d.size.lower(master.a->size.width()),
+				.source = d.source.lower(master.a->source.width()),
+				.sink = d.sink,
+				.data = d.data,
+				.error = d.error,
+			};
+		});
+	}
+
 	scl::TileLinkU tileLinkHalfWidth(scl::TileLinkU&& slave)
 	{
 		Area ent{ "scl_tileLinkHalfWidth", true };
@@ -79,13 +114,11 @@ namespace gtry::scl
 		Area ent{ "scl_tileLinkDoubleWidth", true };
 		HCL_NAMED(slave);
 
-		scl::TileLinkU master;
-		scl::tileLinkInit(master,
-			slave.a->address.width(),
-			slave.a->data.width() * 2,
-			slave.a->size.width(),
-			slave.a->source.width()
-		);
+		scl::TileLinkCfg masterCfg = slave.cfg;
+		masterCfg.dataW *= 2;
+
+		scl::TileLinkU master = tileLinkInit(masterCfg);
+		master.addrSpaceDesc = slave.addrSpaceDesc;
 
 		scl::TileLinkChannelA masterA = strm::regReady(move(master.a));
 		HCL_NAMED(masterA);
@@ -94,7 +127,8 @@ namespace gtry::scl
 		valid(slave.a) = valid(masterA);
 		slave.a->opcode = masterA->opcode;
 		slave.a->param = masterA->param;
-		slave.a->size = masterA->size;
+		// in case slave does not support bursts, the sizeW might be smaller than the increased width during doubleing
+		slave.a->size = resizeTo(masterA->size, slave.a->size.width()); 
 		slave.a->source = masterA->source;
 		slave.a->address = masterA->address;
 
@@ -156,7 +190,6 @@ namespace gtry::scl
 			valid(*master.d) = valid(*slave.d) & (secondBeatOfBurst | !sd.isBurst());
 		}
 
-		master.addrSpaceDesc = slave.addrSpaceDesc;
 		HCL_NAMED(master);
 		return master;
 	}
@@ -297,17 +330,18 @@ namespace gtry::scl
 		}
 	}
 
-	scl::TileLinkU tileLinkAddBurst(scl::TileLinkU&& slave, BitWidth sizeW)
+	scl::TileLinkU tileLinkAddBurst(scl::TileLinkU&& slave, size_t burstLimitLog)
 	{
 		Area ent{ "scl_tileLinkAddBurst", true };
+		HCL_DESIGNCHECK_HINT(slave.cfg.burstLimitLog >= slave.a->defaultCfg().burstLimitLog, "generating sub word bursts not implemented, place AddBurst before DoubleWidth");
+		// TODO: implement sub word bursts
+		// TODO: use maximum burst size supported by slave instead of word size
 
-		scl::TileLinkU master;
-		scl::tileLinkInit(master,
-			slave.a->address.width(),
-			slave.a->data.width(),
-			sizeW,
-			internal::addBurstSourceWidth(*slave.a, sizeW)
-		);
+		scl::TileLinkCfg masterCfg = slave.cfg;
+		masterCfg.burstLimitLog = burstLimitLog;
+		masterCfg.sourceW = internal::addBurstSourceWidth(*slave.a, BitWidth::last(masterCfg.burstLimitLog));
+
+		scl::TileLinkU master = scl::tileLinkInit(masterCfg);
 		HCL_NAMED(master);
 		HCL_NAMED(slave);
 
@@ -321,6 +355,11 @@ namespace gtry::scl
 		HCL_NAMED(master);
 		HCL_NAMED(slave);
 		return master;
+	}
+
+	scl::TileLinkU tileLinkAddBurst(scl::TileLinkU&& slave, BitWidth sizeW) 
+	{
+		return tileLinkAddBurst(move(slave), sizeW.last());
 	}
 }
 

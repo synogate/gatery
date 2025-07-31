@@ -20,6 +20,7 @@
 #include "DebugVis.h"
 #include "../tilelink/tilelink.h"
 #include "../tilelink/TileLinkDemux.h"
+#include "../tilelink/TileLinkAdapter.h"
 
 #include <gatery/debug/DebugInterface.h>
 
@@ -56,6 +57,11 @@ gtry::Memory<gtry::UInt>& gtry::scl::riscv::DualCycleRV::fetch(uint64_t entryPoi
 	generate(instruction, '1');
 	addr = genInstructionPointer(entryPoint, '1');
 	return m_instructionMem;
+}
+
+void gtry::scl::riscv::DualCycleRV::fetch(TileLinkU&& link, uint64_t entryPoint)
+{
+	tileLinkAdapt(move(link), fetchTileLink(entryPoint));
 }
 
 TileLinkU gtry::scl::riscv::DualCycleRV::fetchTileLink(uint64_t entryPoint)
@@ -331,14 +337,15 @@ namespace gtry::scl
 		{
 			IF(transfer(link.a) & link.a->isPut())
 			{
-				BVec newData = (BVec)pack(port.read());
-				for (size_t i = 0; i < link.a->mask.size(); ++i)
-					IF(link.a->mask[i])
-						newData.part(link.a->mask.size(), i) = link.a->data.part(link.a->mask.size(), i);
-
-				T writeData = constructFrom(mem.defaultValue());
-				unpack(newData, writeData);
-				port = writeData;
+				//BVec newData = (BVec)pack(port.read());
+				//for (size_t i = 0; i < link.a->mask.size(); ++i)
+				//	IF(link.a->mask[i])
+				//		newData.part(link.a->mask.size(), i) = link.a->data.part(link.a->mask.size(), i);
+				//
+				//T writeData = constructFrom(mem.defaultValue());
+				//unpack(newData, writeData);
+				//port = writeData;
+				port = link.a->data;
 			}
 		}
 

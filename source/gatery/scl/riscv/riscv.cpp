@@ -20,6 +20,7 @@
 #include "../Adder.h"
 #include "../utils/OneHot.h"
 #include "../tilelink/tilelink.h"
+#include "../tilelink/TileLinkAdapter.h"
 #include "../Counter.h"
 
 void gtry::scl::riscv::Instruction::decode(const UInt& inst)
@@ -422,6 +423,11 @@ void gtry::scl::riscv::RV32I::mem(AvalonMM& mem, bool byte, bool halfword)
 
 	store(mem, byte, halfword);
 	load(mem, byte, halfword);
+}
+
+void gtry::scl::riscv::RV32I::mem(TileLinkU&& link, bool byte, bool halfword)
+{
+	tileLinkAdapt(move(link), memTLink(byte, halfword));
 }
 
 gtry::scl::TileLinkU gtry::scl::riscv::RV32I::memTLink(bool byte, bool halfword)

@@ -98,7 +98,20 @@ namespace gtry::scl
 		// handle response channel
 		StreamArbiter<TileLinkChannelD> arbiter;
 		for (Slave& s : m_slave)
-			arbiter.attach(*s.link.d, s.responsePriority);
+		{
+			auto reduced = transform(move(*s.link.d), [&cfg](const TileLinkD& d) {
+				return TileLinkD{
+					.opcode = d.opcode,
+					.param = d.param,
+					.size = resizeTo(d.size, BitWidth::last(cfg.burstLimitLog)),
+					.source = d.source.lower(cfg.sourceW),
+					.sink = d.sink,
+					.data = d.data,
+					.error = d.error,
+				};
+			});
+			arbiter.attach(move(reduced), s.responsePriority);
+		}
 
 		*master.d <<= transform(move(arbiter.out()), [&](const TileLinkD& d) {
 			return TileLinkD{
