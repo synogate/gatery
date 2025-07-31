@@ -80,8 +80,7 @@ T Log2(T v)
 template<typename T>
 T Log2C(T v)
 {
-	HCL_ASSERT(v > 0);
-	if (v == 1)
+	if (v <= 1)
 		return 0;
 
 	return Log2(v - 1) + 1;
