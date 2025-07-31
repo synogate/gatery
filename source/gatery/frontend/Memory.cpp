@@ -162,6 +162,13 @@ namespace gtry {
 		};
 		return TechnologyScope::getCap<MemoryCapabilities>().select(request);
 	}
+
+	Memory<BVec> memoryFromData(std::span<const std::byte> data, BitWidth wordW, bool readOnly)
+	{
+		Memory<BVec> mem((data.size() + wordW.bytes() - 1) / wordW.bytes(), wordW);
+		mem.fillPowerOnState(sim::createDefaultBitVectorState(data));
+		return mem;
+	}
 }
 
 
