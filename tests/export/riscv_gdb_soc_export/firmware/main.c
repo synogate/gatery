@@ -15,29 +15,24 @@ static void stub_msg_put(char c)
 
 static volatile unsigned short* dev_hyperram = (volatile unsigned short*)(2<<11);
 
+void clearInstructionCache()
+{
+	unsigned* mem = (void*)(8*1024*1024);
+	for(unsigned* it = mem; it != mem + 4096; ++it)
+		*it = 0x13; // NOP
+	mem[4096] = 0x8067; // RET
+
+	void (*clearICache)() = (void*)mem;
+	clearICache();
+}
+
 void main()
 {
-#if 0
-	unsigned* mem = (void*)0x1000;
-	for(unsigned i = 0; i < 1024; ++i)
-		mem[i] = i;
-	for(unsigned i = 0; i < 1024; ++i)
-		if(mem[i] != i)
-		{
-			sendNumber(i);
-			sendChar('\n');
-		}
-#endif
-
 	while(1)
 	{
 		t_entry_point entry;
 		stub_enter(&entry);
-
-		// clear instruction cache
-		unsigned* mem = (void*)0x1000;
-		for(unsigned* it = mem; it != mem + 4096; ++it)
-			*it = 0x13; // NOP
+		clearInstructionCache();
 	}
 }
 

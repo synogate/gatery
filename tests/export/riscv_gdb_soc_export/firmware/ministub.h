@@ -8,6 +8,8 @@ load
 restore [filename] binary <offset> <start> <end>
 c
 
+example: riscv64-unknown-elf-gdb .\demo.elf -ex "target remote \\.\COM12" -ex "load"
+
 list of gdbserv commands:           https://ftp.gnu.org/old-gnu/Manuals/gdb/html_node/gdb_129.html
 enable debug output:                set debug remote 1
 compile with:                       riscv64-unknown-elf-gcc -nostdlib -nodefaultlibs -fno-exceptions -nostartfiles -Os -fpic -march=rv32i -mabi=ilp32 .\ministub.c
