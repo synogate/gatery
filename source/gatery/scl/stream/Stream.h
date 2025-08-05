@@ -131,6 +131,12 @@ namespace gtry::scl::strm
 	template<Signal SigT>
 	auto remove();
 
+	template<Signal T, StreamSignal StreamT>
+	auto remove(StreamT&& stream, T&& assignValue);
+
+	template<Signal T>
+	auto remove(T&& assignValue);
+
 	template<StreamSignal StreamT>
 	auto removeUpstream(StreamT&& stream);
 	auto removeUpstream();
@@ -139,9 +145,14 @@ namespace gtry::scl::strm
 	auto removeFlowControl(StreamT&& stream);
 	auto removeFlowControl();
 
+	auto removeReady(StreamSignal auto&& stream, const Bit& readSignal = '1');
+	auto removeReady(const Bit& readySignal = '1');
+
 	template<Signal T, StreamSignal StreamT> constexpr auto&& get(StreamT&& stream);
 	template<Signal T> auto get();
 
+
+	enum class InsertPos { replace_payload, payload, attach };
 	/**
 	 * @brief Transforms the stream payload using a provided function.
 	 *
@@ -149,10 +160,10 @@ namespace gtry::scl::strm
 	 * of the stream's payload. The transformation function should accept the payload
 	 * as an argument and return the new payload.
 	 */
-	template<StreamSignal StreamT, typename FunT>
+	template<InsertPos pos = InsertPos::replace_payload, StreamSignal StreamT, typename FunT>
 	auto transform(StreamT&& stream, FunT&& fun);
 
-	template<typename FunT>
+	template<InsertPos pos = InsertPos::replace_payload, typename FunT>
 	auto transform(FunT&& fun);
 
 	/**
@@ -165,6 +176,70 @@ namespace gtry::scl::strm
 
 	template<StreamSignal SigT>
 	auto reduceTo();
+}
+
+namespace gtry::scl::strm::internal
+{
+	template<typename ...T>
+	struct AutoSelectArg
+	{
+		std::tuple<T...> t;
+
+		template<typename R>
+		operator const R& () const {
+			// on compile error: you probably called generate or transform with a function that requires parameters that are not part of the stream
+			return get<const R&>(t);
+		}
+	};
+
+	struct could_not_call_transform_function_t {};
+
+	template<int I, typename Func, typename ...ArgN>
+	auto tryInvoke(Func&& func, const std::tuple<ArgN...>& argn)
+	{
+		if constexpr (I == sizeof...(ArgN))
+			return could_not_call_transform_function_t{};
+		else if constexpr (requires() {
+			std::invoke(std::forward<Func>(func), get<I>(argn));
+		})
+		{
+			return std::invoke(std::forward<Func>(func), get<I>(argn));
+		}
+		else
+		{
+			return tryInvoke<I + 1, Func, ArgN...>(std::forward<Func>(func), argn);
+		}
+	}
+
+	template<typename Func, typename Arg1, typename ...ArgN>
+	auto callAutoParameter(Func&& func, const Arg1& arg1, const std::tuple<ArgN...>& argn)
+	{
+		auto makeRefTuple = [&](const auto&... e) {
+			AutoSelectArg<const Arg1&, decltype(e)...> autoArg({ arg1, e... });
+			if constexpr (requires() { std::invoke(std::forward<Func>(func), arg1); })
+				// this is a shortcut for single argument templates that deduce the argument type and therefore do not work with AutoSelectArg.
+				return std::invoke(std::forward<Func>(func), arg1);
+			else if constexpr (requires() { func(autoArg, autoArg, autoArg, autoArg, autoArg, autoArg); })
+				return func(autoArg, autoArg, autoArg, autoArg, autoArg, autoArg);
+			else if constexpr (requires() { func(autoArg, autoArg, autoArg, autoArg, autoArg); })
+				return func(autoArg, autoArg, autoArg, autoArg, autoArg);
+			else if constexpr (requires() { func(autoArg, autoArg, autoArg, autoArg); })
+				return func(autoArg, autoArg, autoArg, autoArg);
+			else if constexpr (requires() { func(autoArg, autoArg, autoArg); })
+				return func(autoArg, autoArg, autoArg);
+			else if constexpr (requires() { func(autoArg, autoArg); })
+				return func(autoArg, autoArg);
+			else if constexpr (requires() { func(autoArg); })
+				return func(autoArg);
+			else
+				// the AutoSelectArg trick does not work for member pointers. so we fall back to classical invoke for every single possible argument.
+				return tryInvoke<0>(std::forward<Func>(func), argn);
+			};
+
+		auto ret = std::apply(makeRefTuple, argn);
+		static_assert(!std::is_same_v<decltype(ret), could_not_call_transform_function_t>, "The passed transform function could not be called using stream content. Make sure parameters are const& and the same type as the payload or meta data.");
+		return ret;
+	}
 }
 
 namespace gtry::scl::strm
@@ -320,20 +395,36 @@ namespace gtry::scl::strm
 		};
 	}
 
-	template<StreamSignal StreamT, typename FunT>
+	template<InsertPos pos, StreamSignal StreamT, typename FunT>
 	auto transform(StreamT&& stream, FunT&& fun)
 	{
-		return Stream{
-			std::invoke(std::forward<FunT>(fun), std::forward<StreamT>(stream).data),
-			connect(std::forward<StreamT>(stream)._sig)
-		};
+		EnableScope en{ transfer(stream) };
+
+		if constexpr (pos == InsertPos::replace_payload)
+		{
+			return Stream{
+				internal::callAutoParameter(std::forward<FunT>(fun), stream.data, stream._sig),
+				connect(std::forward<StreamT>(stream)._sig)
+			};
+		}
+		else if constexpr (pos == InsertPos::attach)
+		{
+			return attach(
+				std::forward<StreamT>(stream), 
+				internal::callAutoParameter(std::forward<FunT>(fun), stream.data, stream._sig)
+			);
+		}
+		else if constexpr (pos == InsertPos::payload)
+		{
+			return transform(std::forward<StreamT>(stream), std::forward<FunT>(fun)) | attach(*stream);
+		}
 	}
 
-	template<typename FunT>
+	template<InsertPos pos, typename FunT>
 	auto transform(FunT&& fun)
 	{
 		return [&](StreamSignal auto&& in) {
-			return ::gtry::scl::strm::transform(std::forward<decltype(in)>(in), std::forward<FunT>(fun));
+			return ::gtry::scl::strm::transform<pos>(std::forward<decltype(in)>(in), std::forward<FunT>(fun));
 		};
 	}
 
@@ -483,6 +574,28 @@ namespace gtry::scl::strm
 		};
 	}
 
+	template<Signal T, StreamSignal StreamT>
+	auto remove(StreamT&& stream, T&& assignValue)
+	{
+		if constexpr (StreamT::template has<T>())
+		{
+			get<T>(std::forward<StreamT>(stream)) = std::forward<T>(assignValue);
+			return remove<T>(std::forward<StreamT>(stream));
+		}
+		else
+		{
+			return stream;
+		}
+	}
+
+	template<Signal T>
+	auto remove(T&& assignValue)
+	{
+		return [&](StreamSignal auto&& in) {
+			return ::gtry::scl::strm::remove(std::forward<decltype(in)>(in), std::forward<T>(assignValue));
+		};
+	}
+
 	template<StreamSignal StreamT>
 	auto removeUpstream(StreamT&& stream) { return ::gtry::scl::strm::remove<Ready>(std::forward<StreamT>(stream)); }
 
@@ -500,6 +613,18 @@ namespace gtry::scl::strm
 	{
 		return [&](StreamSignal auto&& in) {
 			return ::gtry::scl::strm::removeFlowControl(std::forward<decltype(in)>(in));
+		};
+	}
+
+	auto removeReady(StreamSignal auto&& stream, const Bit& readySignal)
+	{
+		return remove(move(stream), Ready{ readySignal }) | attach(Valid{ transfer(stream) });
+	}
+
+	inline auto removeReady(const Bit& readySignal)
+	{
+		return [&](StreamSignal auto&& in) {
+			return ::gtry::scl::strm::removeReady(std::forward<decltype(in)>(in), readySignal);
 		};
 	}
 }
