@@ -173,6 +173,7 @@ namespace gtry
 	{
 	public:
 		Memory() = default;
+		Memory(BitWidth addrW, Data def = Data{}) { setup(addrW.count(), std::move(def)); }
 		Memory(std::uint64_t numWords, Data def = Data{}) { setup(numWords, std::move(def)); }
 
 		void setup(std::uint64_t numWords, Data def = Data{}) {
