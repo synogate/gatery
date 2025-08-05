@@ -337,6 +337,7 @@ Bit UART::send(Stream &stream)
 		DesignScope::get()->getCircuit().addSimulationProcess([rxPin]() -> SimProcess { 
 			simu(rxPin) = '1'; 
 
+#if 0 // hack to simulate timing accurate input on uart rx
 			char msg = 'A';
 
 			std::chrono::nanoseconds baudRate = 8681ns;
@@ -349,6 +350,7 @@ Bit UART::send(Stream &stream)
 				co_await WaitFor(baudRate);
 			}
 			simu(rxPin) = '1';
+#endif
 
 			co_return; 
 		});
