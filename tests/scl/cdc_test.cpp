@@ -144,9 +144,7 @@ protected:
 	void pinoutError(Bit error)
 	{
 		Bit errorLatch = scl::flag(error, '0') | name("errorLatch");
-
-		scl::Counter aliveSignalCtr(12_b);
-		errorLatch ^= aliveSignalCtr.isLast();
+		errorLatch ^= scl::Counter(50us).isLast();
 
 		Bit errorReg = reg(error, '0');
 		pinOut(errorReg, "UART0_TX");
@@ -285,13 +283,12 @@ BOOST_FIXTURE_TEST_CASE(cdc_gatemate_fifo_dummy_hw_test, GateMateStreamCdcTest, 
 
 BOOST_FIXTURE_TEST_CASE(cdc_gatemate_fifo_hw_test, GateMateStreamCdcTest, *boost::unit_test::disabled())
 {
-
 	scl::Fifo<UInt> toLoop(256, 8_b);
 	{
 		ClockScope scope(clkSlow);
 		Area sender{ "test_generator", true };
 
-		scl::Counter wait{ 10 };
+		scl::Counter wait{ 2 };
 		IF(!wait.isLast())
 			wait.inc();
 
@@ -308,11 +305,7 @@ BOOST_FIXTURE_TEST_CASE(cdc_gatemate_fifo_hw_test, GateMateStreamCdcTest, *boost
 	{
 		ClockScope scope(clkFast);
 		Area receiver{ "test_feedback", true };
-		IF(!toLoop.empty() & !fromLoop.full())
-		{
-			fromLoop.push(toLoop.peek());
-			toLoop.pop();
-		}
+		scl::strm::pop(toLoop) | scl::strm::push(fromLoop);
 	}
 
 	Bit error;
@@ -328,37 +321,11 @@ BOOST_FIXTURE_TEST_CASE(cdc_gatemate_fifo_hw_test, GateMateStreamCdcTest, *boost
 			value = value.current() + 7;
 		}
 		error = reg(error, '0');
+		pinoutError(error);
 	}
 
 	toLoop.generate();
 	fromLoop.generate();
 
-	ClockScope scope(clkSlow);
-	pinOut(error, "UART0_TX");
-	
-	Bit errorLatch;
-	errorLatch = reg(errorLatch | error, '0') | name("errorLatch");
-	pinOut(errorLatch, "UART0_RX");
-
-	addSimulationProcess([&]()->SimProcess {
-		while (true)
-		{
-			BOOST_TEST(simu(error) == '0');
-			co_await OnClk(clkSlow);
-		}
-	});
-
-	design.postprocess();
-
-	vhdl::VHDLExport vhdl("export/cdc_gatemate_fifo_hw_test/cdc_gatemate_fifo_hw_test.vhd");
-	vhdl(design.getCircuit());
-
-	auto flowTask = std::async([]() {
-		return std::system("make -C export/cdc_gatemate_fifo_hw_test");
-		});
-
-	runHitsTimeout({ 4, 1'000'000 });
-	BOOST_TEST(flowTask.get() == 0);
+	run();
 }
-
-
