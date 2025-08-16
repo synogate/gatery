@@ -174,6 +174,7 @@ void gtry::scl::riscv::RV32I::selectInstructions()
 	logic();
 	setcmp();
 	shift();
+	ecall_ebreak();
 }
 
 void gtry::scl::riscv::RV32I::lui()
@@ -330,6 +331,15 @@ void gtry::scl::riscv::RV32I::shift()
 			number = swapEndian(number, 1_b);
 
 		setResult(number);
+	}
+}
+
+void gtry::scl::riscv::RV32I::ecall_ebreak()
+{
+	if(m_ecallAddress.valid())
+	{
+		IF(m_instr.opcode == "b11100")
+			setIP(m_ecallAddress);
 	}
 }
 

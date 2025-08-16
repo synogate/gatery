@@ -75,6 +75,8 @@ TileLinkU gtry::scl::riscv::DualCycleRV::fetchTileLink(uint64_t entryPoint)
 	Bit discardNextInstruction;
 	HCL_NAMED(discardNextInstruction);
 
+	m_ecallAddress = entryPoint;
+
 	generate((UInt)instruction, instructionValid & !discardNextInstruction);
 
 	TileLinkU link;
@@ -238,7 +240,7 @@ void gtry::scl::riscv::DualCycleRV::setIP(const UInt& ip)
 	IF(!m_discardResult)
 	{
 		m_overrideIPValid = '1';
-		m_overrideIP = ip(0, m_IP.width());
+		m_overrideIP = resizeTo(ip, m_IP.width());
 	}
 }
 

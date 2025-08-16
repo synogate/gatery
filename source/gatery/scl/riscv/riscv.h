@@ -85,6 +85,7 @@ namespace gtry::scl::riscv
 		virtual void logic();
 		virtual void setcmp();
 		virtual void shift();
+		virtual void ecall_ebreak();
 
 		virtual void csr(); // base implementation returns zero for all registers
 		virtual void csrMachineInformation(uint32_t vendorId = 0, uint32_t architectureId = 0, uint32_t implementationId = 0, uint32_t hartId = 0, uint32_t configPtr = 0);
@@ -133,6 +134,7 @@ namespace gtry::scl::riscv
 		BitWidth m_dataAddrWidth;
 		CpuTrace m_trace;
 
+		UInt m_ecallAddress;
 	};
 
 	class SingleCycleI : public RV32I
