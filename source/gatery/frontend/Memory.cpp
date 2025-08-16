@@ -1,3 +1,4 @@
+#include "Memory.h"
 /*  This file is part of Gatery, a library for circuit design.
 	Copyright (C) 2024 Michael Offel, Andreas Ley
 
@@ -163,10 +164,15 @@ namespace gtry {
 		return TechnologyScope::getCap<MemoryCapabilities>().select(request);
 	}
 
-	Memory<BVec> memoryFromData(std::span<const std::byte> data, BitWidth wordW, bool readOnly)
+	Memory<BVec> memoryFromData(std::span<const std::byte> data, BitWidth wordW)
 	{
-		Memory<BVec> mem((data.size() + wordW.bytes() - 1) / wordW.bytes(), wordW);
-		mem.fillPowerOnState(sim::createDefaultBitVectorState(data));
+		return memoryFromData(sim::createDefaultBitVectorState(data), wordW);
+	}
+
+	Memory<BVec> gtry::memoryFromData(sim::DefaultBitVectorState data, BitWidth wordW)
+	{
+		Memory<BVec> mem((data.size() + wordW.bits() - 1) / wordW.bits(), wordW);
+		mem.fillPowerOnState(move(data));
 		return mem;
 	}
 }

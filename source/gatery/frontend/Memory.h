@@ -215,7 +215,8 @@ namespace gtry
 	template<typename DataOld, typename DataNew>
 	Memory<DataNew> view(Memory<DataOld> old, DataNew def = DataNew{}) { return old.view(def); }
 
-	Memory<BVec> memoryFromData(std::span<const std::byte> data, BitWidth wordW, bool readOnly = true);
+	Memory<BVec> memoryFromData(std::span<const std::byte> data, BitWidth wordW);
+	Memory<BVec> memoryFromData(sim::DefaultBitVectorState data, BitWidth wordW);
 /// @}
 
 }
