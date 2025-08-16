@@ -28,4 +28,5 @@ namespace gtry::scl
 	};
 
 	VStream<Enum<RotaryDirection>> rotaryEncoder(Bit a, Bit b);
+	VStream<Enum<RotaryDirection>> rotaryEncoderDoubleStep(Bit a, Bit b);
 }

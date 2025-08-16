@@ -25,19 +25,66 @@ namespace gtry::scl
 {
 	VStream<Enum<RotaryDirection>> rotaryEncoder(Bit a, Bit b)
 	{
-		Area ent{ "scl_rotary_encoder", true };
+		Area ent{ "scl_rotaryEncoder", true };
 		HCL_NAMED(a);
 		HCL_NAMED(b);
 		
 		const Clock& clock = ClockScope::getClk();
-		a.resetValue('0');
-		Bit clk = scl::debounce(scl::synchronize(a, clock, clock), 100us) | name("clk");
+		a.resetValue('1');
+		b.resetValue('1');
+		a = synchronize(a, clock, clock, { .inStage = false });
+		b = synchronize(b, clock, clock, { .inStage = false });
 
-		Enum<RotaryDirection> dir = RotaryDirection::clockwise;
-		b.resetValue('0');
-		IF(clk == scl::synchronize(b, clock, clock))
-			dir = RotaryDirection::counterclockwise;
-		HCL_NAMED(dir);
-		return strm::createVStream(dir, edge(clk)) | name("out");
+		Bit ra, rb;
+		Bit edgea = (a != reg(a)) | name("edgea");
+		Bit edgeb = (b != reg(b)) | name("edgeb");
+
+		Stream out = strm::createVStream(Enum(RotaryDirection::clockwise), '0');
+		IF(edgeb & ra)
+			out = strm::createVStream(Enum(RotaryDirection::counterclockwise), '1');
+		IF(edgea & rb)
+			out = strm::createVStream(Enum(RotaryDirection::clockwise), '1');
+
+		ra ^= edgea;
+		rb ^= edgeb;
+
+		IF((ra & rb))
+		{
+			ra = '0';
+			rb = '0';
+		}
+
+		ra = reg(ra, '0') | name("ra");
+		rb = reg(rb, '0') | name("rb");
+
+		HCL_NAMED(out);
+		return out;
+	}
+
+	VStream<Enum<RotaryDirection>> rotaryEncoderDoubleStep(Bit a, Bit b)
+	{
+		Area ent{ "scl_rotaryEncoderDoubleStep", true };
+		HCL_NAMED(a);
+		HCL_NAMED(b);
+
+		Stream singleStep = rotaryEncoder(a, b);
+		Stream out = strm::createVStream(Enum(RotaryDirection::clockwise), '0');
+
+		SInt ctr = 3_b;
+		IF(valid(singleStep) & *singleStep == RotaryDirection::clockwise)
+			ctr += SInt{ 1 };
+		IF(valid(singleStep) & *singleStep == RotaryDirection::counterclockwise)
+			ctr -= SInt{ 1 };
+
+		IF(ctr == SInt{ 2 })
+			out = strm::createVStream(Enum(RotaryDirection::clockwise), '1');
+		IF(ctr == SInt{ -2 })
+			out = strm::createVStream(Enum(RotaryDirection::counterclockwise), '1');
+		IF(valid(out))
+			ctr = 0;
+
+		ctr = reg(ctr, SInt{ 0 }) | name("ctr");
+		HCL_NAMED(out);
+		return out;
 	}
 }

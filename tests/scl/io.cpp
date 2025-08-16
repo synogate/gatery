@@ -535,10 +535,10 @@ BOOST_FIXTURE_TEST_CASE(rotary_encoder_test_export, BoostUnitTestSimulationFixtu
 
 	ClockScope clkScp(clock);
 
-	pinOut(Bit{ '0' }, "ROT_V"); // ground connection for A and B
 	Bit A = pinIn().setName("ROT_A");
 	Bit B = pinIn().setName("ROT_B");
-	VStream<Enum<RotaryDirection>> rotary = rotaryEncoder(A, B);
+
+	VStream<Enum<RotaryDirection>> rotary = rotaryEncoderDoubleStep(A, B);
 	pinOut(rotary, "rotary", PinNodeParameter{.simulationOnlyPin = true});
 
 	TxRxStream serial = *uart(230400);
@@ -547,18 +547,40 @@ BOOST_FIXTURE_TEST_CASE(rotary_encoder_test_export, BoostUnitTestSimulationFixtu
 		strm::attach(Ready{});
 
 	addSimulationProcess([&]()->SimProcess {
-		std::chrono::microseconds stepTime = 200us;
+		std::chrono::microseconds stepTime = 20us;
+		simu(A) = '1';
+		simu(B) = '1';
 
+		// CW
+		co_await WaitFor(stepTime);
+		simu(B) = '0';
+		co_await WaitFor(stepTime);
 		simu(A) = '0';
+		co_await WaitFor(stepTime);
+		simu(B) = '1';
+		co_await WaitFor(stepTime);
+		simu(A) = '1';
+		co_await WaitFor(stepTime);
+
+		// nothing
+		co_await WaitFor(stepTime);
+		simu(B) = '0';
+		co_await WaitFor(stepTime);
+		simu(B) = '1';
+		co_await WaitFor(stepTime);
+		simu(A) = '0';
+		co_await WaitFor(stepTime);
+		simu(A) = '1';
+
+		// CCW
+		co_await WaitFor(stepTime);
+		simu(A) = '0';
+		co_await WaitFor(stepTime);
 		simu(B) = '0';
 		co_await WaitFor(stepTime);
 		simu(A) = '1';
 		co_await WaitFor(stepTime);
 		simu(B) = '1';
-		co_await WaitFor(stepTime);
-		simu(B) = '0';
-		co_await WaitFor(stepTime);
-		simu(A) = '0';
 		co_await WaitFor(stepTime);
 	});
 
