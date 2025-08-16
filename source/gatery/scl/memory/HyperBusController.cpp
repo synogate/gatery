@@ -82,6 +82,7 @@ namespace gtry::scl
 
 			arch::colognechip::CC_IDDR in(buf);
 			*phy->rwds.r = (BVec)pack(in.Q0(), reg(in.Q1()));
+			*phy->rwds.r = simOverride(*phy->rwds.r, BVec{ "2b00" });
 		}
 
 		// DQ
@@ -134,6 +135,8 @@ namespace gtry::scl
 
 			read_latency,		// wait for data to transfer through phy
 			read,				// transfer read data
+
+			wait,
 		};
 		Reg<Enum<State>> state{ State::write_recover }; // we start in write_recover to allow chip select to be high for 2 cycles after por
 		state.setName("state");
@@ -274,8 +277,14 @@ namespace gtry::scl
 			{
 				valid(*ctrl->readData) = '1';
 				IF(eop(*ctrl->readData))
-					state = State::idle;
+					state = State::wait;
 			}
+		}
+
+		IF(state.current() == State::wait)
+		{
+			csn = '1';
+			state = State::idle;
 		}
 
 		HCL_NAMED(ctrl);
@@ -287,12 +296,12 @@ namespace gtry::scl
 		Area ent{ "scl_hyperBusTileLink", true };
 		HCL_NAMED(controller);
 
-		scl::TileLinkU link = scl::tileLinkInit<scl::TileLinkU>(
-			cfg.addrW, 
-			controller->writeData->width(), 
-			cfg.sourceW, 
-			BitWidth::last(utils::Log2C(cfg.burstLimit) + 1)
-		);
+		scl::TileLinkU link = scl::tileLinkInit({
+			.addrW = cfg.addrW,
+			.dataW = controller->writeData->width(),
+			.sourceW = cfg.sourceW,
+			.burstLimitLog = utils::Log2C(cfg.burstLimit)
+		});
 		ready(link.a) = '0';
 		valid(*link.d) = '0';
 
@@ -381,7 +390,7 @@ namespace gtry::scl
 			IF(state.current() == State::read)
 			{
 				valid(*link.d) = valid(*controller->readData);
-				sim_assert(transfer(*link.d)) << "response stream is not ready for hyper bus read data";
+				sim_assert(!valid(*link.d) | transfer(*link.d)) << "response stream is not ready for hyper bus read data";
 
 				IF(valid(*link.d))
 				{
