@@ -115,11 +115,13 @@ void gtry::scl::SdCardModel::onCommand(uint8_t cmd, uint32_t arg, uint8_t crc)
 		case 17: // read block
 			if (m_cardState != CardState::transfer)
 			{
+				dbgMsg("not in transfer mode", true);
 				respond8(0x41);
 				break;
 			}
 			if (arg >= m_storage->numSectors())
 			{
+				dbgMsg("out of bounds", true);
 				respond8(0x20); // address error
 				break;
 			}
@@ -182,11 +184,13 @@ void gtry::scl::SdCardModel::onCommand(uint8_t cmd, uint32_t arg, uint8_t crc)
 		case 32: // ERASE_WR_BLK_START
 			if (m_cardState != CardState::transfer)
 			{
+				dbgMsg("state error", true);
 				respond8(0x41);
 				break;
 			}
 			if (arg >= m_storage->numSectors())
 			{
+				dbgMsg("address error", true);
 				respond8(0x20); // address error
 				break;
 			}
@@ -199,21 +203,25 @@ void gtry::scl::SdCardModel::onCommand(uint8_t cmd, uint32_t arg, uint8_t crc)
 		case 33: // ERASE_WR_BLK_END
 			if (m_cardState != CardState::transfer)
 			{
+				dbgMsg("state error", true);
 				respond8(0x41);
 				break;
 			}
 			if (arg >= m_storage->numSectors())
 			{
+				dbgMsg("address error " + std::to_string(arg) + " >= " + std::to_string(m_storage->numSectors()), true);
 				respond8(0x20); // address error
 				break;
 			}
 			if (!m_eraseBlockFirst || m_eraseBlockLast)
 			{
+				dbgMsg("erase sequence error", true);
 				respond8(0x10); // erase sequence error
 				break;
 			}
 			if (arg < *m_eraseBlockFirst)
 			{
+				dbgMsg("parameter error", true);
 				respond8(0x40); // parameter error
 				break;
 			}
@@ -225,11 +233,13 @@ void gtry::scl::SdCardModel::onCommand(uint8_t cmd, uint32_t arg, uint8_t crc)
 		case 38: // ERASE
 			if (m_cardState != CardState::transfer)
 			{
+				dbgMsg("state error", true);
 				respond8(0x41);
 				break;
 			}
 			if (!m_eraseBlockFirst || !m_eraseBlockLast)
 			{
+				dbgMsg("erase sequence error", true);
 				respond8(0x10); // erase sequence error
 				break;
 			}
