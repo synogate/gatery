@@ -39,11 +39,15 @@ namespace gtry::scl
 		bool m_slaveConnected = false;
 		bool m_masterConnected = false;
 		
+		TileLinkCfg m_cfg;
 		std::shared_ptr<AddressSpaceDescription> m_addrSpaceDescription = std::make_shared<AddressSpaceDescription>();
 	};
 
 	template<TileLinkSignal TLink>
-	TLink tileLinkFifo(TLink& link, size_t depthMin = 0);
+	TLink tileLinkFifo(TLink&& link, size_t depthMin = 0);
+
+	template<TileLinkSignal TLink = TileLinkU>
+	auto tileLinkFifo(size_t depthMin = 0);
 }
 
 namespace gtry::scl
@@ -58,6 +62,7 @@ namespace gtry::scl
 	{
 		HCL_DESIGNCHECK(!m_slaveConnected);
 		m_slaveConnected = true;
+		m_cfg = link.cfg;
 		auto ent = m_area.enter();
 
 		if(depthMin == 0)
@@ -88,6 +93,7 @@ namespace gtry::scl
 		TLink ret{
 			.a = constructFrom(m_a.peek()),
 			.d = constructFrom(m_d.peek()),
+			.cfg = m_cfg,
 			.addrSpaceDesc = m_addrSpaceDescription
 		};
 
@@ -104,8 +110,14 @@ namespace gtry::scl
 	}
 
 	template<TileLinkSignal TLink>
-	TLink tileLinkFifo(TLink& link, size_t depthMin)
+	TLink tileLinkFifo(TLink&& link, size_t depthMin)
 	{
 		return TileLinkFifo{}.connectSlave(link, depthMin).template connectMaster<TLink>();
+	}
+
+	template<TileLinkSignal TLink>
+	auto tileLinkFifo(size_t depthMin)
+	{
+		return [=](auto&& source) { return tileLinkFifo(std::forward<decltype(source)>(source), depthMin); };
 	}
 }

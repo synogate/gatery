@@ -1,5 +1,12 @@
-rv32cc = riscv64-unknown-elf-gcc -march=rv32i -mabi=ilp32
+rv32cc = riscv64-unknown-elf-g++ -march=rv32i -mabi=ilp32
 
-demo.elf: main.c logging.c gen_mmap.h Makefile
-	$(rv32cc) -nostdlib -nodefaultlibs -fno-exceptions -nostartfiles -Os -flto -fno-pie -o $@ main.c
+MCUFONT_SRC = $(wildcard mcufont/*.c)
+
+OPT = -Os -flto -fno-pie -fno-exceptions -fno-rtti
+#NO_GCCLIBS = -nostdlib -nodefaultlibs -fno-builtin -nostartfiles
+#NO_GCCLIBS = -nostartfiles
+#NO_GCCLIBS = -Wl,-wrap=_exit
+
+demo.elf: main.cpp logging.c ../firmware/gen_mmap.h Makefile $(MCUFONT_SRC)
+	$(rv32cc) $(NO_GCCLIBS) $(OPT) -std=c++20 -o $@ main.cpp
 

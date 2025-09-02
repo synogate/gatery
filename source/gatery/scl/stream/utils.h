@@ -77,7 +77,7 @@ namespace gtry::scl::strm
 
 	inline auto delay(size_t cycles, const RegisterSettings& settings = {})
 	{
-		return [=](auto&& in) { return delay(std::forward<decltype(in)>(in), cycles, settings); };
+		return [=](auto&& in) { return strm::delay(std::forward<decltype(in)>(in), cycles, settings); };
 	}
 
 	/**
@@ -440,6 +440,10 @@ namespace gtry::scl::strm
 	 */
 	template<BitVectorSignal T>
 	scl::RvStream<T> lfsr(BitWidth resultW, uint64_t taps, T seed);
+
+	template<StreamSignal T>
+	auto duplicate(T&& in, UInt duplicates);
+	inline auto duplicate(const UInt& duplicates) { return [&](auto&& s1) { return duplicate(std::forward<decltype(s1)>(s1), duplicate); }; }
 }
 
 namespace gtry::scl::strm
@@ -828,7 +832,7 @@ namespace gtry::scl::strm
 	auto lookup(StreamT&& addr, Memory<Tout>& memory) 
 	{
 		return std::forward<StreamT>(addr) | 
-			transform([&](const auto& address) { return memory[address].read(); }) |
+			transform([&](const UInt& address) { return memory[address].read(); }) |
 			delay(memory.readLatencyHint(), { .allowRetimingBackward = true });
 	}
 
@@ -1178,6 +1182,24 @@ namespace gtry::scl::strm
 
 		valid(out) = '1';
 		*out = (T)lfsr.lower(resultW);
+		HCL_NAMED(out);
+		return out;
+	}
+
+	template<StreamSignal T>
+	auto duplicate(T&& in, UInt duplicates)
+	{
+		Area ent{ "scl_duplicate", true };
+
+		Stream out = attach(move(in), Eop{ '1' });
+
+		Counter ctr(duplicates | name("duplicates"));
+		IF(transfer(out))
+			ctr.inc();
+
+		ready(in) &= ctr.isLast();
+		eop(out) &= ctr.isLast();
+
 		HCL_NAMED(out);
 		return out;
 	}

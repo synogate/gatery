@@ -24,16 +24,22 @@
 #include <gatery/simulation/waveformFormats/VCDSink.h>
 #include <gatery/export/vhdl/VHDLExport.h>
 
-#include <gatery/scl/arch/colognechip/SpecialFunction.h>
-#include <gatery/scl/riscv/riscv.h>
-#include <gatery/scl/riscv/DualCycleRV.h>
 #include <gatery/scl/algorithm/GCD.h>
+#include <gatery/scl/arch/colognechip/SpecialFunction.h>
+#include <gatery/scl/driver/CascadiaCode_Regular25.h>
+#include <gatery/scl/io/DisplayEngine.h>
+#include <gatery/scl/io/ethernet/EthernetPhy.h>
+#include <gatery/scl/io/RotaryEncoder.h>
+#include <gatery/scl/io/uart.h>
+#include <gatery/scl/memory/HyperBusController.h>
+#include <gatery/scl/riscv/DualCycleRV.h>
 #include <gatery/scl/riscv/ElfLoader.h>
 #include <gatery/scl/riscv/EmbeddedSystemBuilder.h>
+#include <gatery/scl/riscv/riscv.h>
 #include <gatery/scl/riscv/rvcc.h>
-#include <gatery/scl/memory/HyperBusController.h>
-#include <gatery/scl/io/uart.h>
 #include <gatery/scl/tilelink/tilelink.h>
+#include <gatery/scl/tilelink/TileLinkCache.h>
+#include <gatery/scl/tilelink/TileLinkFiFo.h>
 #include <gatery/scl/tilelink/TileLinkHub.h>
 #include <gatery/scl/tilelink/TileLinkInterconnect.h>
 #include <gatery/scl/tilelink/TileLinkValidator.h>
@@ -2182,7 +2188,21 @@ struct RoCacheData
 };
 BOOST_HANA_ADAPT_STRUCT(RoCacheData, tag, value);
 
-static gtry::scl::TileLinkU readOnlyBurstCache(gtry::scl::TileLinkU&& ram, gtry::BitWidth addrW)
+static UInt cacheBurstDefaultSize(const UInt& address, size_t logLimit)
+{
+	UInt ret = ConstUInt(2, BitWidth::last(logLimit));
+	IF(address.msb() == '0')
+	{
+		for (size_t limit = 3; limit < logLimit; ++limit)
+		{
+			IF(address.lower(BitWidth{limit}) == 0)
+				ret = limit;
+		}
+	}
+	return ret;
+}
+
+static gtry::scl::TileLinkU readOnlyBurstCache(gtry::scl::TileLinkU&& ram, gtry::BitWidth addrW, std::function<UInt(const UInt&)> burstSize = std::bind(cacheBurstDefaultSize, strm::_1, 5))
 {
 	Area ent{ "RoCache", true };
 	HCL_NAMED(ram);
@@ -2240,9 +2260,7 @@ static gtry::scl::TileLinkU readOnlyBurstCache(gtry::scl::TileLinkU&& ram, gtry:
 
 	// issue ram request on cache miss
 	*ram.a = *req;
-	// request burst only from dram
-	IF(ram.a->address.msb() == '0' & ram.a->address.lower(3_b) == 0)
-		ram.a->size = 3;
+	ram.a->size = burstSize(ram.a->address);
 	valid(ram.a) = !ramBusy & valid(req) & !cacheHit;
 	ready(*ram.d) = '1';
 
@@ -2256,54 +2274,94 @@ static gtry::scl::TileLinkU readOnlyBurstCache(gtry::scl::TileLinkU&& ram, gtry:
 	return cpu;
 }
 
-
 BOOST_FIXTURE_TEST_CASE(riscv_gdb_soc_export, BoostUnitTestSimulationFixture)
 {
+	bool hasDisplay = true;
+	bool hasSdCard = false;
+	bool hasNic = false;
+	bool hasRotaryInput = false;
+
 	Clock clk12{ ClockConfig{
 		.absoluteFrequency = 12_mhz,
 		.name = "CLK12M",
 		.resetType = hlim::RegisterAttributes::ResetType::NONE
 	} };
 
-	Clock clock = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = 24_mhz, .resetType = ClockConfig::ResetType::NONE });
+	hlim::ClockRational sysFreq = 24_mhz;
+	Clock clkFast = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = sysFreq * 7, .resetType = ClockConfig::ResetType::NONE });
+	Clock clock = scl::arch::colognechip::clkdiv(clkFast, { .absoluteFrequency = sysFreq, .resetType = ClockConfig::ResetType::NONE });
 	ClockScope clkScp(clock);
 
-	// 16-bit slow device
 	TileLinkAddressDecoder ioRouter;
 
 	const std::string& testName = boost::unit_test::framework::current_test_case().p_name.get();
 	std::filesystem::path firmwarePath = "export/" + testName + "/firmware";
 
 	Bit hyperRamRegisterAccess;
+	TileLinkU displayDMA = tileLinkInit({ .addrW = 28_b, .dataW = 32_b, .sourceW = 1_b, .burstLimitLog = gtry::utils::Log2C(64u/4) });
 	{
+		Area ent{ "devices", true };
+		ent.setPartition(true);
+
 		PackedMemoryMap mmap("dev");
 
 		uartDevice(mmap, "uart");
 		mapIn(mmap, hyperRamRegisterAccess, "hyperram_register_access");
 		
-		SpiMasterConfig sdCfg = SpiMasterConfig::forSdCard();
-		sdCfg.pinPrefix = "SD2_";
-		spiMasterDevice(mmap, "sd0", sdCfg);
-		
+		if(hasSdCard)
+		{
+			SpiMasterConfig sdCfg = SpiMasterConfig::forSdCard();
+			sdCfg.pinPrefix = "SD2_";
+			spiMasterDevice(mmap, "sd0", sdCfg);
+		}
+		if(hasDisplay)
+		{
+			VStream<std::array<std::deque<BVec>, 2>> oldiChan = scl::DisplayControllerTiled{}
+				.resolution(1600, 900, 112 * 16 - 1600, 30)
+				.tileFormat(mcufontmap_font::width, mcufontmap_font::height, mcufontmap_font::bpp)
+				.tileData(sim::createDefaultBitVectorState(std::as_bytes(std::span(mcufontmap_font::map))))
+				.generate(move(displayDMA), mmap)
+				| strm::removeReady();
+			displayOpenLDIGateMate(clkFast, oldiChan->front(), "DISPLAY_RXO");
+			displayOpenLDIGateMate(clkFast, oldiChan->back(), "DISPLAY_RXE");
+		}
+		if (hasNic)
+		{
+			eth::tinyNIC(mmap, scl::arch::colognechip::pll(clk12, { .absoluteFrequency = 50_mhz, .resetType = ClockConfig::ResetType::NONE }));
+		}
+		if (hasRotaryInput)
+		{
+			Fifo<UInt> eventBuffer(64, width(RotaryInputEvent{}));
+			rotarySwitchInput("ROT_", true) |
+				strm::attach(Ready{}) |
+				name("rotary_input") |
+				strm::transform([](const auto& s) { return gtry::pack(s); }) |
+				strm::push(eventBuffer);
+			mapOut(mmap, eventBuffer, "rotary");
+			eventBuffer.generate();
+		}
+
 		ioRouter(0x000'0000, *toTileLinkUL(mmap, 32_b, 9_b) | tileLinkRegDecouple);
-		formatCppHeader(firmwarePath / "gen_mmap.h", *mmap.getTree().physicalDescription, 32_b, 0x800'0000);
+		formatCppHeaderStructs(firmwarePath / "gen_mmap.h", *mmap.getTree().physicalDescription, 32_b, 0x800'0000);
 	}
 
 	uint32_t entryPoint = 0x900'0000;
 	{
 		riscv::ElfLoader elf = riscv::makeElf(move("firmware.elf"), move(firmwarePath));
-		HCL_DESIGNCHECK_HINT(elf.segments().size() == 1, "firmware is limitted to one relocatable executable segment");
 
-		const riscv::ElfLoader::Segment& segment = elf.segments().front();
+		riscv::ElfLoader::MegaSegment segment = elf.segments(0, 7, 0);
 		const riscv::ElfLoader::Section* textSection = elf.section(".text");
 		HCL_DESIGNCHECK_HINT(textSection->offset == entryPoint, "adjust text segment offset to rom location (0x900'0000)");
 		entryPoint = (uint32_t)elf.entryPoint();
 
+		sim::DefaultBitVectorState segmentContent = segment.memoryState();
 		// erase elf header
-		std::span eflContent = segment.data.subspan(textSection->offset - segment.offset);
+		size_t removeElfBits = (textSection->offset - segment.offset) * 8;
+		segmentContent = segmentContent.extract(removeElfBits, segmentContent.size() - removeElfBits);
 
-		Memory<BVec> textRom = memoryFromData(as_bytes(eflContent), 32_b);
-		ioRouter(0x100'0000, tileLinkMemory(textRom, { .sourceW = 9_b, .writePort = false, .latency = 2 }));
+		Memory<BVec> textMem = memoryFromData(segmentContent, 32_b);
+		bool needWritePort = elf.segments().size() > 1;
+		ioRouter(0x100'0000, tileLinkMemory(textMem, { .sourceW = 9_b, .writePort = needWritePort, .latency = 2 }));
 	}
 	
 	// 32-bit central router
@@ -2312,16 +2370,20 @@ BOOST_FIXTURE_TEST_CASE(riscv_gdb_soc_export, BoostUnitTestSimulationFixture)
 
 	Reverse<HyperBusController> hyperRamController = hyperBusControllerLowLatency(gateMateHyperBusPhy());
 	TileLinkU hyperRam = hyperBusTileLink(move(hyperRamController), { .addrW = 25_b, .sourceW = 3_b, .latency = 3, .registerAccess = reg(hyperRamRegisterAccess) });
-	cpuRouter(0x000'0000, move(hyperRam) | tileLinkDoubleWidth() | tileLinkRegDecouple);
+	cpuRouter(0x000'0000, move(hyperRam) | tileLinkDoubleWidth() | tileLinkFifo());
 	
-	// TODO: hyper RAM
-
 	TileLinkArbiter cpuArbiter(cpuRouter.generate("cpuRouter"), 2_b);
 
 	riscv::DualCycleRV userCpu(28_b, 28_b);
 	userCpu.fetch(readOnlyBurstCache(cpuArbiter, 8_b), entryPoint);
 	userCpu.execute();
 	userCpu.mem(cpuArbiter);
+	
+	if(hasDisplay)
+	{
+		HCL_NAMED(displayDMA);
+		cpuArbiter.out() <<= displayDMA;
+	}
 	cpuArbiter.generate();
 
 	addSimulationProcess([&]()->SimProcess {
@@ -2337,12 +2399,12 @@ BOOST_FIXTURE_TEST_CASE(riscv_gdb_soc_export, BoostUnitTestSimulationFixture)
 	{
 		//vhdl.addTestbenchRecorder(*m_simulator, "tb", true);
 		vhdl(design.getCircuit());
-
+	
 		flow = std::async([=]() {
 			return std::system(("make -C " + cwd.string()).c_str());
 			});
 	}
-	runHitsTimeout(200us);
+	runHitsTimeout(1us);
 
 	if (flow.valid())
 		BOOST_TEST(flow.get() == 0);

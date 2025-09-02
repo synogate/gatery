@@ -1280,7 +1280,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_fifo_test, LinkTest)
 	auto memLink = scl::tileLinkInit<scl::TileLinkU>(8_b, 8_b, 2_b);
 	mem <<= memLink;
 
-	auto memFifo = scl::tileLinkFifo(memLink);
+	auto memFifo = scl::tileLinkFifo(move(memLink));
 
 	linkModel.init("m", 8_b, 8_b, 0_b, 2_b);
 	memFifo.a <<= link.a;

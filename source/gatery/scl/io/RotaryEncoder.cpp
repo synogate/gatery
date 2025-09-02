@@ -87,4 +87,35 @@ namespace gtry::scl
 		HCL_NAMED(out);
 		return out;
 	}
+
+	VStream<RotaryInputEvent> rotarySwitchInput(Bit a, Bit b, Bit sw, bool doubleStep)
+	{
+		Area ent{ "scl_rotarySwitchInput", true };
+
+		VStream<Enum<RotaryDirection>> rotEvent;
+		if (!doubleStep)
+			rotEvent = rotaryEncoder(a, b);
+		else
+			rotEvent = rotaryEncoderDoubleStep(a, b);
+
+		Bit swDebounced = debounce(synchronize(sw, ClockScope::getClk(), ClockScope::getClk(), { .inStage = false }), 1ms);
+		Stream swEvent = strm::createVStream(!swDebounced, edge(swDebounced));
+
+		return strm::createVStream(RotaryInputEvent{
+				.rotor = rotEvent,
+				.sw = swEvent,
+			}, 
+			valid(rotEvent) | valid(swEvent)
+		) | name("out");
+	}
+
+	VStream<RotaryInputEvent> rotarySwitchInput(std::string_view pinPrefix, bool doubleStep)
+	{
+		return rotarySwitchInput(
+			pinIn().setName(std::string{pinPrefix} + "A"),
+			pinIn().setName(std::string{pinPrefix} + "B"),
+			pinIn().setName(std::string{pinPrefix} + "SW"),
+			doubleStep
+		);
+	}
 }

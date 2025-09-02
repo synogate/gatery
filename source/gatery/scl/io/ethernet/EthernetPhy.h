@@ -19,6 +19,11 @@
 #include <gatery/frontend.h>
 #include "../TxRxStream.h"
 
+namespace gtry::scl
+{
+	class MemoryMap;
+}
+
 namespace gtry::scl::eth
 {
 	struct RMII
@@ -33,6 +38,19 @@ namespace gtry::scl::eth
 
 	RvStream<BVec> preambleFilter(RvStream<BVec> in);
 	RvStream<BVec> preambleInsert(RvStream<BVec> in);
+
+	RvPacketStream<BVec,Error> tagInsert(RvPacketStream<BVec, Error> in, BVec tag);
+	RvPacketStream<BVec> tagRemove(RvPacketStream<BVec> in);
+	inline auto tagInsert(BVec tag) { return [=](StreamSignal auto&& in) { return tagInsert(std::forward<decltype(in)>(in), tag); }; }
+
+	RvPacketStream<BVec, Error> crcCheck(RvPacketStream<BVec> in);
+
+	// add eop to last beat when valid goes low
+	RvPacketStream<BVec> eopAdd(RvStream<BVec> in);
+	// remove eop and insert gap of one cycle after eop
+	RvStream<BVec> eopRemove(RvPacketStream<BVec> in);
+
+	void tinyNIC(MemoryMap& mmap, const Clock& refClk50);
 
 }
 

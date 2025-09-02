@@ -29,4 +29,14 @@ namespace gtry::scl
 
 	VStream<Enum<RotaryDirection>> rotaryEncoder(Bit a, Bit b);
 	VStream<Enum<RotaryDirection>> rotaryEncoderDoubleStep(Bit a, Bit b);
+
+	struct RotaryInputEvent
+	{
+		VStream<Enum<RotaryDirection>> rotor;
+		VStream<Bit> sw;
+	};
+	VStream<RotaryInputEvent> rotarySwitchInput(Bit a, Bit b, Bit sw, bool doubleStep);
+	VStream<RotaryInputEvent> rotarySwitchInput(std::string_view pinPrefix, bool doubleStep);
 }
+
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::RotaryInputEvent, rotor, sw);

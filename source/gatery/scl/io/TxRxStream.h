@@ -22,11 +22,15 @@
 
 namespace gtry::scl
 {
-	struct TxRxStream
+	template<Signal T = BVec, Signal... MetaT>
+	struct TxRxStreamBase
 	{
-		RvStream<BVec> tx;
-		Reverse<RvStream<BVec>> rx;
+		BOOST_HANA_DEFINE_STRUCT(TxRxStreamBase,
+			(RvStream<T, MetaT...>, tx), 
+			(Reverse<RvStream<T, MetaT...>>, rx)
+		);
 	};
-}
 
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::TxRxStream, tx, rx);
+	using TxRxStream = TxRxStreamBase<BVec>;
+	using TxRxPacketStream = TxRxStreamBase<BVec, Eop>;
+}

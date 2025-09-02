@@ -30,11 +30,11 @@ static void stub_msg_puts(const char* msg)
         stub_msg_put(*msg++);
 }
 
-static char num2hex(char c)
-{
-    //c &= 0xF;
-    return ((c < 10) ? '0' : 'a' - 10) + c;
-}
+//static char num2hex(char c)
+//{
+//    //c &= 0xF;
+//    return ((c < 10) ? '0' : 'a' - 10) + c;
+//}
 
 static char hex2num(char c)
 {
@@ -119,12 +119,25 @@ static void code_address(volatile t_entry_point* entry)
         (val << 24);
 
     if (reg == 32)
-        *entry = (void*)val;
+        *entry = (t_entry_point)val;
 }
 
-static int stub_enter(volatile t_entry_point* entry)
+static void stub_enter(volatile t_entry_point* entry)
 {
+#if 1
+    while(true)
+    {
+        UartDevice& uart = device<UartDevice, dev::uart_t>();
+        if(!uart.rx.valid())
+            return;
+        char c = (char)uart.rx.payload();
+        uart.rx.pop_unsafe();
+        if(c == '$')
+            break;
+    }
+#else
     while (stub_get() != '$');
+#endif
 
     char cmd = stub_get();
     unsigned char checksum = 0;
@@ -150,7 +163,7 @@ static int stub_enter(volatile t_entry_point* entry)
         break;
     case 'X':
         stub_msg_put('$');
-        access_memory(1);
+        //access_memory(1);
         break;
     case 'm':
         stub_msg_put('$');
@@ -172,6 +185,27 @@ static int stub_enter(volatile t_entry_point* entry)
         checksum = 'O' + 'K';
     }
 
-    stub_msg_end(checksum);
-    return 0;
+
+    if(cmd == 'X')
+    {
+        stub_msg_put('#');
+        stub_msg_put(num2hex(checksum >> 4));
+        stub_msg_put(num2hex(checksum & 0xF));
+
+    
+        access_memory(1);
+        while (1)
+        {
+            char c = stub_get();
+
+            if (c == '+')
+                break;
+            if (c == '-')
+                break;
+        }
+    }
+    else
+    {
+        stub_msg_end(checksum);
+    }
 }

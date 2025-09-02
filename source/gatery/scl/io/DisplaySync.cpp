@@ -32,6 +32,15 @@ namespace gtry::scl
 		std::string_view _720p_50hz = "74.25 1280 1720 1760 1980 720 725 730 750 +hsync +vsync";
 	}
 
+	RvStream<DisplaySync> displaySync(const DisplayMode& mode)
+	{
+		RvStream<scl::DisplaySync> modeSync;
+		valid(modeSync) = '1';
+		ENIF(transfer(modeSync))
+			modeSync->init(mode);
+		return modeSync;
+	}
+
 	std::istream& operator>>(std::istream& s, DisplayModeDimension& dim)
 	{
 		size_t res = 0, start = 0, end = 0, total = 0;

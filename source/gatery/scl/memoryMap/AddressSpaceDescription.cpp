@@ -184,22 +184,25 @@ namespace gtry::scl
 			reccurse("", memoryMap[0]);
 	}
 
+	static std::string_view typeNameFromWidth(BitWidth W)
+	{
+		switch (W.bits())
+		{
+		case 64: return "uint64_t"; break;
+		case 32: return "uint32_t"; break;
+		case 16: return "uint16_t"; break;
+		case  8: return "uint8_t"; break;
+		default:
+			throw;
+		}
+	}
+
 	void formatCppHeader(std::ostream& o, std::string prefix, const AddressSpaceDescription& space, BitWidth wordW, uint64_t offset, std::string parent)
 	{
 		if (!space.descShort.empty() && space.descShort.find('\n') == std::string::npos)
 			o << "// " << space.descShort << "\n";
 
-		const char* type;
-		switch (wordW.bits())
-		{
-		case 64: type = "unsigned long long"; break;
-		case 32: type = "unsigned long"; break;
-		case 16: type = "unsigned short"; break;
-		case  8: type = "unsigned char"; break;
-		default:
-			HCL_DESIGNCHECK(false);
-		}
-
+		std::string_view type = typeNameFromWidth(wordW);
 		std::string name = std::string{ prefix } + space.name;
 		o << "static volatile " << type << "* const " << name << " = ";
 
@@ -218,6 +221,63 @@ namespace gtry::scl
 
 			formatCppHeader(o, name + "_", *c.desc, wordW, c.offsetInBits, name);
 		}
+	}
+
+	void formatCppHeaderStructs(std::ostream& o, std::string name, const AddressSpaceDescription& space, std::string_view atomicType, uint64_t offset)
+	{
+		std::string prefix = name.empty() ? "" : (name + '_');
+		if (name.empty())
+			name = "mmap";
+
+		for (const AddressSpaceDescription::Child& c : space.children)
+			formatCppHeaderStructs(o, prefix + c.desc->name, *c.desc, atomicType, offset + c.offsetInBits / 8);
+
+		if (!space.children.empty())
+		{
+			o << "\tstruct " << name << "_t {\n";
+			o << "\t\tstatic constexpr uintptr_t ADDRESS = 0x" << std::hex << offset << ";\n\n";
+
+			for (const AddressSpaceDescription::Child& c : space.children)
+			{
+				if (c.desc->children.empty())
+					o << "\t\tvolatile " << atomicType << " " << c.desc->name << ";\n";
+				else
+					o << "\t\t" << prefix + c.desc->name + "_t" << " " << c.desc->name << ";\n";
+			}
+			o << "\t};\n\n";
+		}
+	}
+
+	void formatCppHeaderStructRoot(std::ostream& o, std::string name, const AddressSpaceDescription& space, uint64_t offset)
+	{
+		std::string rootName = "MMAP_OFFSET";
+		std::string rootType = "mmap_t";
+
+		o << "\tinline constexpr uintptr_t " << rootName << " = 0x" << std::hex << offset << ";\n";
+		o << "\tinline constexpr " << rootType << "& root() { return *(" << rootType << "*)" << rootName << "; }\n";
+	}
+
+	void formatCppHeaderStructs(std::filesystem::path filename, const AddressSpaceDescription& space, BitWidth wordW, uint64_t offset, std::string prefix)
+	{
+		std::string includeGuard = "MMAP_" + prefix + space.name + "_H_INCLUDE";
+
+		std::ostringstream os;
+		os << "#ifndef " << includeGuard << '\n';
+		os << "#define " << includeGuard << '\n';
+		os << "\n#include <stdint.h>\n";
+		os << '\n';
+		os << "namespace " << space.name << " {\n";
+		formatCppHeaderStructs(os, "", space, typeNameFromWidth(wordW), offset);
+		formatCppHeaderStructRoot(os, space.name, space, offset);
+		os << "}\n";
+		os << '\n';
+		os << "#endif // " << includeGuard << '\n';
+
+		std::string o = os.str();
+		std::string i = (std::ostringstream{} << std::ifstream{ filename.string(), std::ios::binary }.rdbuf()).str();
+
+		if (o != i)
+			std::ofstream{ filename.string(), std::ios::binary } << o;
 	}
 
 	void formatCppHeader(std::filesystem::path filename, const AddressSpaceDescription& space, BitWidth wordW, uint64_t offset, std::string prefix)

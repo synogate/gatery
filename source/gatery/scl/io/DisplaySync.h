@@ -17,6 +17,7 @@
 */
 #pragma once
 #include <gatery/frontend.h>
+#include "../stream/Stream.h"
 
 namespace gtry::scl
 {
@@ -45,6 +46,8 @@ namespace gtry::scl
 		Bit hsync;
 	};
 
+	RvStream<DisplaySync> displaySync(const DisplayMode& mode);
+
 	namespace DisplayModeLines
 	{
 		extern std::string_view _1080p_60hz;
@@ -59,7 +62,7 @@ namespace gtry::scl
 
 	struct BacklightConfig
 	{
-		ClockRational pwmFreq = 1_khz;
+		ClockRational pwmFreq = 880_hz;
 		milliseconds powerOnSequenceStepTime = 20ms;
 	};
 

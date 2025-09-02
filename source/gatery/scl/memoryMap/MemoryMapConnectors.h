@@ -264,18 +264,106 @@ namespace gtry::scl
 					mapIn(v.memoryMap, streamValid, "valid");
 					valid(stream) = streamValid;
 				}
-
-				boost::hana::for_each(stream._sig, [&](auto& elem) {
-					using MetaType = std::remove_cvref_t<decltype(elem)>;
-					if constexpr (std::same_as<MetaType, Valid>) {
-						// skip because it is handled separately
-					} else
-					if constexpr (std::same_as<MetaType, Ready>) {
-						// skip because it is handled separately
-					} else
-						VisitCompound<MetaType>{}(elem, v);
-				});
 			}
+
+			// visit meta signals that are not Ready or Valid
+			boost::hana::for_each(stream._sig, [&](auto& elem) {
+				using MetaType = std::remove_cvref_t<decltype(elem)>;
+				if constexpr (std::same_as<MetaType, Valid>) {
+					// skip because it is handled separately
+				} else
+				if constexpr (std::same_as<MetaType, Ready>) {
+					// skip because it is handled separately
+				} else
+				{
+					std::string_view name = typeid(decltype(elem)).name();
+					name = name.substr(name.find_last_of(" :") + 1);
+					v.enter(elem, name);
+					VisitCompound<MetaType>{}(elem, v);
+					v.leave();
+				}
+			});
+		}
+	};
+
+	template<Signal T>
+	struct CustomMemoryMapHandler<Fifo<T>>
+	{
+		static void mapFifo(MemoryMapRegistrationVisitor& v, Fifo<T>& fifo, bool isReverse, std::string_view _name, const CompoundMemberAnnotation* annotation)
+		{
+			if (isReverse)
+			{
+				mapOut(v.memoryMap, strm::pop(fifo), "pop");
+			}
+			else
+			{
+				RvStream<T> s{ constructFrom(fifo.peek()) };
+				mapIn(v.memoryMap, move(s), "push");
+				strm::push(fifo, move(s));
+			}
+		}
+
+		static void memoryMap(MemoryMapRegistrationVisitor& v, Fifo<T>& fifo, bool isReverse, std::string_view _name, const CompoundMemberAnnotation* annotation) 
+		{
+			v.memoryMap.enterScope(_name);
+			mapFifo(v, fifo, isReverse, _name, annotation);
+			v.memoryMap.leaveScope();
+		}
+	};
+
+	template<Signal T, Signal... Tmeta>
+	struct CustomMemoryMapHandler<Fifo<Stream<T, Tmeta...>>>
+	{
+		static void mapFifo(MemoryMapRegistrationVisitor& v, Fifo<Stream<T, Tmeta...>>& fifo, bool isReverse, std::string_view _name, const CompoundMemberAnnotation* annotation)
+		{
+			if (isReverse)
+			{
+				mapOut(v.memoryMap, strm::pop(fifo), "pop");
+			}
+			else
+			{
+				Stream<T, Ready, Valid, Tmeta...> s = constructFrom(fifo.peek() | strm::attach(Ready{}) | strm::attach(Valid{}) | strm::reduceTo<Stream<T, Ready, Valid, Tmeta...>>());
+				mapIn(v.memoryMap, move(s), "push");
+				strm::push(fifo, move(s));
+			}
+		}
+
+		static void memoryMap(MemoryMapRegistrationVisitor& v, Fifo<Stream<T, Tmeta...>>& fifo, bool isReverse, std::string_view _name, const CompoundMemberAnnotation* annotation)
+		{
+			v.memoryMap.enterScope(_name);
+			mapFifo(v, fifo, isReverse, _name, annotation);
+			v.memoryMap.leaveScope();
+		}
+	};
+
+	template<Signal T>
+	struct CustomMemoryMapHandler<TransactionalFifo<T>>
+	{
+		static void memoryMap(MemoryMapRegistrationVisitor& v, TransactionalFifo<T>& fifo, bool isReverse, std::string_view _name, const CompoundMemberAnnotation* annotation)
+		{
+			v.memoryMap.enterScope(_name);
+			CustomMemoryMapHandler<Fifo<T>>::mapFifo(v, fifo, isReverse, _name, annotation);
+
+			Bit rollback = '0', commit = '0';
+			mapIn(v.memoryMap, rollback, "rollback");
+			mapIn(v.memoryMap, commit, "commit");
+
+			if (isReverse)
+			{
+				IF(rollback)
+					fifo.rollbackPop();
+				IF(commit)
+					fifo.commitPop();
+			}
+			else
+			{
+				IF(rollback)
+					fifo.rollbackPush();
+				IF(commit)
+					fifo.commitPush();
+			}
+
+			v.memoryMap.leaveScope();
 		}
 	};
 

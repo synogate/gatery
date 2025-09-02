@@ -51,10 +51,15 @@
 
 # Floppy
 Pin_in      "CLK12M"          Loc = "IO_SB_A8";
-Pin_out     "UART0_TX"        Loc = "IO_NA_A0";
-Pin_out     "UART0_RX"        Loc = "IO_NA_B0";
+Pin_out     "UART0_TX"        Loc = "IO_WB_A3" | SLEW = slow;
+Pin_in      "UART0_RX"        Loc = "IO_WB_B3" | SCHMITT_TRIGGER = true;
+
+# Test Points
+Pin_out     "RX1"           Loc = "IO_NA_B0";
+Pin_out     "TX1"           Loc = "IO_NA_A0";
+Pin_out     "TP2"           Loc = "IO_NA_B1";
+Pin_out     "TP1"           Loc = "IO_NA_A1";
 
 # rotary encoder
-Pin_out     "ROT_V"     Loc = "IO_WB_B5";
-Pin_in      "ROT_A"     Loc = "IO_WB_A5" | PULLUP=true | SCHMITT_TRIGGER=true;
-Pin_in      "ROT_B"     Loc = "IO_WB_B4" | PULLUP=true | SCHMITT_TRIGGER=true;
+Pin_in      "ROT_A"     Loc = "IO_SB_A7" | PULLUP=true | SCHMITT_TRIGGER=true;
+Pin_in      "ROT_B"     Loc = "IO_SB_B4" | PULLUP=true | SCHMITT_TRIGGER=true;

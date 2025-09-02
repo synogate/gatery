@@ -100,6 +100,9 @@ namespace gtry::scl::strm {
 	template<StreamSignal StreamT>
 	void pushStoreForward(TransactionalFifo<StreamDataNoError<StreamT>>& fifo, StreamT&& in);
 
+	template<StreamSignal StreamT>
+	inline auto pushStoreForward(TransactionalFifo<StreamDataNoError<StreamT>>& fifo) { return [&](auto&& in) { return pushStoreForward(fifo, std::forward<decltype(in)>(in)); }; }
+
 	/**
 	 * @brief puts a store forward fifo in the stream and returns a Ready-Valid-Eop Stream. For information on store-forward FIFOS, 
 	 * see: https://www.synopsys.com/dw/dwtb/dwc_fifo_size/dwc_fifo_size.html#:~:text=%22Store%20and%20Forward%22%20works%20as,system%20or%20a%20DMA%20controller.

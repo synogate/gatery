@@ -86,7 +86,7 @@ namespace gtry::scl
 					return TileLinkA{
 						.opcode = a.opcode,
 						.param = a.param,
-						.size = a.size,
+						.size = resizeTo(a.size, s.link.a->size.width()),
 						.source = a.source,
 						.address = a.address.lower(s.link.cfg.addrW),
 						.mask = a.mask,

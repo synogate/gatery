@@ -176,6 +176,28 @@ namespace gtry::scl::strm
 
 	template<StreamSignal SigT>
 	auto reduceTo();
+
+	/**
+	 * @brief Returns in, except in simulation mode where simIn is returned. 
+				The neccessary simulation pins are also created.
+	 */
+	template<StreamSignal T>
+	T simOverride(T&& in, T&& simIn, std::string_view pinName);
+
+	template<StreamSignal T>
+	auto simOverride(T&& simIn, std::string_view pinName);
+
+	/**
+	 * @brief Like a transform but without any change to the stream. 
+				This is useful to trigger side effects outside of a stream within a stream pipeline.
+	 */
+	template<StreamSignal StreamT, typename FunT>
+	auto then(StreamT&& stream, FunT&& fun);
+
+	template<typename FunT>
+	auto then(FunT&& fun);
+
+	constexpr auto& _1 = std::placeholders::_1;
 }
 
 namespace gtry::scl::strm::internal
@@ -231,14 +253,15 @@ namespace gtry::scl::strm::internal
 				return func(autoArg, autoArg);
 			else if constexpr (requires() { func(autoArg); })
 				return func(autoArg);
+			else if constexpr (requires() { func(); })
+				return func();
 			else
 				// the AutoSelectArg trick does not work for member pointers. so we fall back to classical invoke for every single possible argument.
 				return tryInvoke<0>(std::forward<Func>(func), argn);
 			};
 
-		auto ret = std::apply(makeRefTuple, argn);
-		static_assert(!std::is_same_v<decltype(ret), could_not_call_transform_function_t>, "The passed transform function could not be called using stream content. Make sure parameters are const& and the same type as the payload or meta data.");
-		return ret;
+		static_assert(!std::is_same_v<decltype(std::apply(makeRefTuple, argn)), could_not_call_transform_function_t>, "The passed transform function could not be called using stream content. Make sure parameters are const& and the same type as the payload or meta data.");
+		return std::apply(makeRefTuple, argn);
 	}
 }
 
@@ -314,7 +337,7 @@ namespace gtry::scl::strm
 			{
 				Stream<PayloadT, MetaT..., Tplain> ret;
 				connect(*ret, stream.data);
-				get<Tplain>(ret) <<= signal;
+				connect(get<Tplain>(ret), signal);
 
 				std::apply([&](auto& ...meta) {
 					((get<std::remove_reference_t<decltype(meta)>>(ret) <<= meta), ...);
@@ -626,6 +649,37 @@ namespace gtry::scl::strm
 		return [&](StreamSignal auto&& in) {
 			return ::gtry::scl::strm::removeReady(std::forward<decltype(in)>(in), readySignal);
 		};
+	}
+
+	template<StreamSignal T>
+	T simOverride(T&& in, T&& simIn, std::string_view pinName)
+	{
+		pinIn(simIn, std::string{ pinName }, PinNodeParameter{ .simulationOnlyPin = true });
+		return simOverrideDownstream(move(in), move(simIn));
+	}
+
+	template<StreamSignal T>
+	auto simOverride(T&& simIn, std::string_view pinName)
+	{
+		return [&simIn, pinName](T&& in) {
+			return ::gtry::scl::strm::simOverride(std::forward<decltype(in)>(in), std::forward<T>(simIn), pinName);
+			};
+	}
+
+	template<StreamSignal StreamT, typename FunT>
+	auto then(StreamT&& stream, FunT&& fun)
+	{
+		EnableScope en{ transfer(stream) };
+		internal::callAutoParameter(std::forward<FunT>(fun), stream.data, stream._sig);
+		return std::forward<StreamT>(stream);
+	}
+
+	template<typename FunT>
+	auto then(FunT&& fun)
+	{
+		return [&](StreamSignal auto&& in) {
+			return ::gtry::scl::strm::then(std::forward<decltype(in)>(in), std::forward<FunT>(fun));
+			};
 	}
 }
 

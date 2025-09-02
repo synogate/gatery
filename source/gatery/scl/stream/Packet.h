@@ -87,21 +87,21 @@ namespace gtry::scl::strm
 	/**
 	 * @brief extends the width of a packet stream and takes care of all the metaData signals. Limited to extensions by integer multiples of the original source width
 	*/
-	template<PacketStreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
+	template<StreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
 	auto widthExtend(StreamT&& source, const BitWidth& width);
 	inline auto widthExtend(BitWidth width) { return [=](auto&& source) { return ::gtry::scl::strm::widthExtend(std::forward<decltype(source)>(source), width); }; }
 
 	/**
 	* @brief reduces the width of a packet stream and takes care of all the metaData signals. Limited to reductions by integer multiples of the original source width
 	*/
-	template<PacketStreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
+	template<StreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
 	auto widthReduce(StreamT&& source, const BitWidth& width);
 	inline auto widthReduce(BitWidth width) { return [=](auto&& source) { return ::gtry::scl::strm::widthReduce(std::forward<decltype(source)>(source), width); }; }
 
 	/**
 	 * @brief generic version of widthReduce and widthExtend that will choose the right circuit accordingly
 	*/
-	template<PacketStreamSignal StreamT> requires std::is_base_of_v<BaseBitVector, typename StreamT::Payload>
+	template<StreamSignal StreamT> requires std::is_base_of_v<BaseBitVector, typename StreamT::Payload>
 	StreamT matchWidth(StreamT&& in, BitWidth desiredWidth);
 	inline auto matchWidth(BitWidth width) { return [=](auto&& source) { return ::gtry::scl::strm::matchWidth(std::forward<decltype(source)>(source), width); }; }
 
@@ -525,15 +525,21 @@ namespace gtry::scl::strm
 	Ready extendStreamMeta(Ready& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
 	{
 		Ready out;
-		*in.ready = '1';
-		IF(param.beat.isLast() | eop(inStream))
-			*in.ready = *out.ready;
+		*in.ready = !param.beat.isLast() | *out.ready;
+
+		if constexpr (inStream.has<Eop>())
+			*in.ready |= eop(inStream);
 		return out;
 	}
 
 	Valid extendStreamMeta(Valid& in, StreamSignal auto& inStream, const WidthManipMetaParams& param)
 	{
-		return { in.valid & (param.beat.isLast() | eop(inStream)) };
+		Bit v = in.valid & param.beat.isLast();
+
+		if constexpr (inStream.has<Eop>())
+			v |= (in.valid & eop(inStream));
+
+		return { v };
 	}
 
 	template<BitVectorSignal T>
@@ -626,19 +632,21 @@ namespace gtry::scl::strm
 		return in;
 	}
 
-	template<PacketStreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
+	template<StreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
 	auto widthExtend(StreamT&& source, const BitWidth& width)
 	{
 		HCL_DESIGNCHECK(source->width() <= width);
 		HCL_DESIGNCHECK_HINT((width.bits() % source->width().bits()) == 0, "currently, non-exact-multiple-extends are not supported");
 		const size_t ratio = width / source->width();
 		auto scope = Area{ "scl_extendWidth" }.enter();
+		HCL_NAMED(source);
 
 		Counter counter{ ratio };
 		IF(transfer(source))
 			counter.inc();
-		IF(transfer(source) & eop(source))
-			counter.reset();
+		if constexpr (StreamT::template has<Eop>())
+			IF(transfer(source) & eop(source))
+				counter.reset();
 
 		const WidthManipMetaParams params{
 			.beat = counter,
@@ -756,7 +764,7 @@ namespace gtry::scl::strm
 		return in;
 	}
 
-	template<PacketStreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
+	template<StreamSignal StreamT> requires (std::is_base_of_v<BaseBitVector, typename StreamT::Payload>)
 	auto widthReduce(StreamT&& source, const BitWidth& width)
 	{
 		auto scope = Area{ "scl_reduceWidth" }.enter();
@@ -780,7 +788,11 @@ namespace gtry::scl::strm
 			}, source._sig)
 		};
 
-		params.outEop = eop(ret);
+		if constexpr (StreamT::template has<Eop>())
+			params.outEop = eop(ret);
+		else
+			params.outEop = counter.isLast();
+
 		params.outTransfer = transfer(ret);
 
 		IF(transfer(ret))
@@ -793,7 +805,7 @@ namespace gtry::scl::strm
 		return ret;
 	}
 
-	template<PacketStreamSignal StreamT> requires std::is_base_of_v<BaseBitVector, typename StreamT::Payload>
+	template<StreamSignal StreamT> requires std::is_base_of_v<BaseBitVector, typename StreamT::Payload>
 	StreamT matchWidth(StreamT&& in, BitWidth desiredWidth) {
 		if (desiredWidth > in->width())
 			return widthExtend(move(in), desiredWidth);

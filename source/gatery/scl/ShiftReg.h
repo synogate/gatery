@@ -26,7 +26,7 @@ namespace gtry::scl
 	 * @return Delayed signals.
 	 */
 	template<typename Signal>
-	Signal delay(Signal signal, size_t delay);
+	Signal delay(Signal signal, size_t delay, const RegisterSettings& settings = {});
 
 	/**
 	 * @brief Delay the input Signal by delay cycles. This version allows for combinatorical change of delay.
@@ -34,7 +34,7 @@ namespace gtry::scl
 	 * @return Delayed signals.
 	 */
 	template<typename Signal>
-	Signal delay(Signal signal, const UInt& delay);
+	Signal delay(Signal signal, const UInt& delay, const RegisterSettings& settings = {});
 
 	template<Signal TSig>
 	class ShiftReg
@@ -67,20 +67,20 @@ namespace gtry::scl
 namespace gtry::scl
 {
 	template<typename Signal>
-	Signal delay(Signal signal, size_t delay) {
+	Signal delay(Signal signal, size_t delay, const RegisterSettings& settings) {
 		for ([[maybe_unused]] auto i : utils::Range(delay))
-			signal = reg(signal);
+			signal = reg(signal, settings);
 		return signal;
 	}
 
 	template<typename Signal>
-	Signal delay(Signal signal, const UInt& delay)
+	Signal delay(Signal signal, const UInt& delay, const RegisterSettings& settings)
 	{
 		Area ent{ "scl_delay", true };
 		std::vector<Signal> chain(delay.width().count());
 		chain[0] = signal;
 		for (size_t i = 1; i < chain.size(); ++i)
-			chain[i] = reg(chain[i - 1]);
+			chain[i] = reg(chain[i - 1], settings);
 		return mux(delay, chain);
 	}
 

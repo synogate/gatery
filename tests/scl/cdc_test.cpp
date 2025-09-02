@@ -288,7 +288,7 @@ BOOST_FIXTURE_TEST_CASE(cdc_gatemate_fifo_hw_test, GateMateStreamCdcTest, *boost
 		ClockScope scope(clkSlow);
 		Area sender{ "test_generator", true };
 
-		scl::Counter wait{ 2 };
+		scl::Counter wait{ 1 };
 		IF(!wait.isLast())
 			wait.inc();
 

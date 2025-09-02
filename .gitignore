@@ -55,3 +55,4 @@ work-obj08.cf
 /tests/**/top.vhd
 !/tests/**/Makefile
 /tests/export/ptile
+*.v.tmp

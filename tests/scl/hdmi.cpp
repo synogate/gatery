@@ -29,6 +29,7 @@
 
 #include <gatery/scl/arch/colognechip/io.h>
 #include <gatery/scl/arch/colognechip/SpecialFunction.h>
+#include <gatery/scl/io/DisplayEngine.h>
 #include <gatery/scl/io/DisplaySync.h>
 
 using namespace gtry;
@@ -337,27 +338,27 @@ BOOST_FIXTURE_TEST_CASE(basicGateMateHDMI_test, gtry::BoostUnitTestSimulationFix
 
 BOOST_FIXTURE_TEST_CASE(basicGateMateLVDS_test, gtry::BoostUnitTestSimulationFixture, *boost::unit_test::disabled())
 {
-#if 0
+	BitWidth colorDepth = 8_b;
+
+#if 1
+	scl::DisplayMode mode = {
+		.pixelFreq = 40_mhz,
+		.w = {.resolution = 1920 / 2, .syncStart = 1920 / 2, .syncEnd = 0, .total = 2130 / 2, },
+		.h = {.resolution = 1080, .syncStart = 1080, .syncEnd = 0, .total = 1100, },
+	};
+#elif 0
 	// typical datasheet values
 	scl::DisplayMode mode = {
 		.pixelFreq = 27_mhz,
-		.w = {
-			.resolution = 1600/2, .syncStart = 1600/2, .syncEnd = 0, .total = 1940/2,
-		},
-		.h = {
-			.resolution = 900, .syncStart = 900, .syncEnd = 0, .total = 926,
-		},
+		.w = { .resolution = 1600/2, .syncStart = 1600/2, .syncEnd = 0, .total = 1940/2, },
+		.h = { .resolution = 900, .syncStart = 900, .syncEnd = 0, .total = 926, },
 	};
 #else
 	// min datasheet values
 	scl::DisplayMode mode = {
 		.pixelFreq = 12_mhz,
-		.w = {
-			.resolution = 1600 / 2, .syncStart = 1600 / 2, .syncEnd = 0, .total = 2000 / 2,
-		},
-		.h = {
-			.resolution = 900, .syncStart = 900, .syncEnd = 0, .total = 932,
-		},
+		.w = { .resolution = 1600 / 2, .syncStart = 1600 / 2, .syncEnd = 0, .total = 2000 / 2, },
+		.h = { .resolution = 900, .syncStart = 900, .syncEnd = 0, .total = 932, },
 	};
 #endif
 	HCL_NAMED(mode);
@@ -375,14 +376,12 @@ BOOST_FIXTURE_TEST_CASE(basicGateMateLVDS_test, gtry::BoostUnitTestSimulationFix
 	ClockScope scope(clkSlow);
 
 	// TODO: move 'modern' stream wrapper into scl
-	scl::VStream<scl::DisplaySync> modeSync;
-	valid(modeSync) = '1';
-	ENIF(transfer(modeSync))
-		modeSync->init(mode);
-
-	HCL_NAMED(modeSync);
-	modeSync = move(modeSync)
-		| scl::strm::regDownstream();
+	scl::VStream<scl::DisplaySync> modeSync = 
+		scl::displaySync(mode) 
+		| scl::strm::remove(scl::Ready{ '1' }) 
+		| name("modeSync") 
+		| scl::strm::regDownstream()
+		;
 
 	scl::Stream rgbImage = transform(modeSync, [&](const scl::DisplaySync& sync) {
 		ENIF(transfer(modeSync))
@@ -422,42 +421,15 @@ BOOST_FIXTURE_TEST_CASE(basicGateMateLVDS_test, gtry::BoostUnitTestSimulationFix
 		| scl::strm::regDownstream()
 		| name("rgbImage");
 
-	UInt lvds = cat(
-		get<scl::DisplaySync>(rgbImage).onScreen, get<scl::DisplaySync>(rgbImage).vsync, get<scl::DisplaySync>(rgbImage).hsync,
-		rgbImage->at(2).upper(6_b) & get<scl::DisplaySync>(rgbImage).onScreen,
-		rgbImage->at(1).upper(6_b) & get<scl::DisplaySync>(rgbImage).onScreen,
-		rgbImage->at(0).upper(6_b) & get<scl::DisplaySync>(rgbImage).onScreen
-	) | name("lvds");
+	std::deque<BVec> lvds = scl::displayOpenLDIEncode(
+		{ rgbImage->at(0).upper(colorDepth), rgbImage->at(1).upper(colorDepth), rgbImage->at(2).upper(colorDepth) },
+		get<scl::DisplaySync>(rgbImage).onScreen,
+		get<scl::DisplaySync>(rgbImage).vsync,
+		get<scl::DisplaySync>(rgbImage).hsync
+	);
 
-	// every group of lvds channels needs to be in lock step
-	Bit syncPulse = scl::synchronizeEvent('1', clkSlow, clkFast) | name("syncPulse");
-
-	ClockScope ioScope{ clkFast };
-	for (size_t i = 0; i < 3; ++i)
-	{
-		for (size_t j = 0; j < 2; ++j)
-		{
-			char channel = j == 0 ? 'O' : 'E';
-			std::string pinName = "DISPLAY_RX" + std::string(1, channel) + std::to_string(i);
-	
-			BVec data = (BVec)swapEndian(lvds.part(3, i), 1_b) | name(pinName);
-	
-			scl::arch::colognechip::CC_LVDS_OBUF buf;
-			buf.pin(pinName + "p", pinName + "n");
-			buf.regOut(true);
-			buf.O() = scl::arch::colognechip::serdes(~data, clkSlow, clkFast, syncPulse);
-		}
-	}
-	for (size_t j = 0; j < 2; ++j)
-	{
-		char channel = j == 0 ? 'O' : 'E';
-		std::string pinName = "DISPLAY_RX" + std::string(1, channel) + "C";
-	
-		scl::arch::colognechip::CC_LVDS_OBUF buf;
-		buf.pin(pinName + "p", pinName + "n");
-		buf.regOut(true);
-		buf.O() = scl::arch::colognechip::serdes(~BVec("7b1100011"), clkSlow, clkFast, syncPulse);
-	}
+	scl::displayOpenLDIGateMate(clkFast, lvds, "DISPLAY_RXO");
+	scl::displayOpenLDIGateMate(clkFast, lvds, "DISPLAY_RXE");
 
 	{ // back light code
 		ClockScope slowScope{ clkSlow };
@@ -466,10 +438,10 @@ BOOST_FIXTURE_TEST_CASE(basicGateMateLVDS_test, gtry::BoostUnitTestSimulationFix
 		IF(scl::Counter{ 20ms }.isLast())
 			pwmLevel.inc();
 
-		scl::BacklightCtrl bl = scl::backlightController(pwmLevel.value(), {.pwmFreq = 40_khz}) | name("backlight");
+		scl::BacklightCtrl bl = scl::backlightController(pwmLevel.value(), {.pwmFreq = 20_khz}) | name("backlight");
 		pinOut(bl.powerEn).setName("DISPLAY_EN_12V");
-		pinOut(!bl.ledPwm).setName("DISPLAY_BL_PWM");
-		pinOut(!bl.ledEn).setName("DISPLAY_BL_EN");
+		pinOut(bl.ledPwm).setName("DISPLAY_BL_PWM");
+		pinOut(bl.ledEn).setName("DISPLAY_BL_EN");
 	}
 
 	design.postprocess();
