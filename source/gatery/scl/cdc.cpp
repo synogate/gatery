@@ -88,7 +88,7 @@ gtry::Bit gtry::scl::synchronizeEvent(Bit eventIn, const Clock& inClock, const C
 	return edge(synchronize(state, '0', inClock, outClock, params));
 }
 
-gtry::Bit gtry::scl::synchronizeRelease(Bit reset, const Clock& inClock, const Clock& outClock, ClockConfig::ResetActive resetActive)
+gtry::Bit gtry::scl::synchronizeRelease(Bit reset, const Clock& inClock, const Clock& outClock, ClockConfig::ResetActive resetActive, size_t regStages)
 {
 	Area area("synchronizeRelease", true);
 
@@ -97,12 +97,10 @@ gtry::Bit gtry::scl::synchronizeRelease(Bit reset, const Clock& inClock, const C
 		.resetActive = resetActive,
 		.synchronizationRegister = true
 	});
-	Bit dummyReset;
-	dummyReset.exportOverride(allowClockDomainCrossing(reset, inClock, resetClock));
-	resetClock.overrideRstWith(dummyReset);
+	resetClock.overrideRstWith(allowClockDomainCrossing(reset, inClock, resetClock));
 
 	Bit val = resetActive == ClockConfig::ResetActive::HIGH ? '0' : '1';
-	for (size_t i = 0; i < 3; ++i)
+	for (size_t i = 0; i < regStages; ++i)
 		val = reg(val, resetActive == ClockConfig::ResetActive::HIGH ? '1' : '0', {.clock = resetClock});
 	return val;
 }
