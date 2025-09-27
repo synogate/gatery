@@ -21,24 +21,6 @@
 
 namespace gtry::scl::arch::colognechip
 {
-	class CC_DFF : public ExternalModule
-	{
-	public:
-		CC_DFF();
-
-		Bit& D() { return in("D"); }
-		Bit& EN() { return in("EN"); }
-		Bit& SR() { return in("SR"); }
-		Bit Q() { return out("Q"); }
-
-		CC_DFF& clkInv(bool invert) { generic("CLK_INV") = invert ? 1 : 0; return *this; }
-		CC_DFF& enInv(bool invert) { generic("EN_INV") = invert ? 1 : 0; return *this; }
-		CC_DFF& srInv(bool invert) { generic("SR_INV") = invert ? 1 : 0; return *this; }
-		CC_DFF& srVal(bool value) { generic("SR_VAL") = value ? 1 : 0; return *this; }
-		CC_DFF& init(bool value) { generic("INIT") = value ? 1 : 0; return *this; }
-	};
-
-
 	class CC_DLT : public ExternalModule
 	{
 	public:

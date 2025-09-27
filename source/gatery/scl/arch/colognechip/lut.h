@@ -32,6 +32,8 @@ namespace gtry::scl::arch::colognechip
 			enInversion(false);
 			srInversion(false);
 			srValue(false);
+			requiresComponentDeclaration(true);
+			isEntity(false);
 
 			EN() = '1';
 			SR() = '0';

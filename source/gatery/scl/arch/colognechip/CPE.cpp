@@ -20,25 +20,6 @@
 
 namespace gtry::scl::arch::colognechip
 {
-	CC_DFF::CC_DFF() : ExternalModule("CC_DFF") {
-		requiresComponentDeclaration(true);
-		isEntity(false);
-
-		const Clock& clk = ClockScope::getClk();
-		clockIn(clk, "CLK");
-		clkInv(clk.getClk()->getTriggerEvent() == hlim::Clock::TriggerEvent::FALLING);
-		enInv(false);
-		srInv(false);
-		srVal(false);
-		init(false);
-
-		EN() = '1';
-		SR() = '0';
-		D() = '0';
-		Q();
-
-	}
-
 	CC_DLT::CC_DLT() : ExternalModule("CC_DLT") {
 		requiresComponentDeclaration(true);
 		isEntity(false);

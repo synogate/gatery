@@ -128,6 +128,7 @@ namespace gtry::scl::arch::colognechip
 	{
 		ClockScope c{ src };
 		return CC_PLL{}
+			.lockRequired(true)
 			.clkRef(ClockScope::getClk(), userClk)
 			.clkOut(cfg);
 	}
@@ -201,13 +202,18 @@ namespace gtry::scl::arch::colognechip
 		if (data.width() == 1_b)
 			return data.lsb();
 
-		BVec inWord = scl::synchronize(data, slowClk, fastClk, { .outStages = 2 }) | name("inWord");
+		BVec inWord = scl::synchronize(data, slowClk, fastClk, { .outStages = 2, .inStage = false }) | name("inWord");
 
 		BVec shiftReg = data.width();
 		shiftReg >>= ddrMode ? 2 : 1;
-		IF(syncPulse)
+		IF(reg(syncPulse))
 			shiftReg = inWord;
 		shiftReg = reg(shiftReg, { .clock = fastClk }) | name("shiftReg");
+
+		scl::arch::colognechip::CC_ODDR ddr;
+		ddr.D0() = reg(shiftReg[0]);
+		ddr.D1() = reg(shiftReg[0]);
+		return ddr.Q();
 
 		if (ddrMode)
 		{
