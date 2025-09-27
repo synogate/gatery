@@ -25,6 +25,7 @@
 
 #include <gatery/scl/arch/colognechip/CPE.h>
 #include <gatery/scl/arch/colognechip/io.h>
+#include <gatery/scl/arch/colognechip/lut.h>
 #include <gatery/scl/arch/colognechip/SpecialFunction.h>
 #include <gatery/scl/synthesisTools/IntelQuartus.h>
 
@@ -1658,7 +1659,7 @@ namespace gtry::scl
 			else
 			{
 				CC_DFF inDff;
-				inDff.clkInv(true);
+				inDff.clockInversion(true);
 				inDff.D() = in;
 				return inDff.Q();
 			}
