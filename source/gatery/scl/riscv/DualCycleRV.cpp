@@ -434,7 +434,8 @@ void gtry::scl::riscv::embeddedRV32(TileLinkU&& dataFetch, std::filesystem::path
 	{
 		TileLinkDemux<TileLinkU> tileLinkBridge;
 		TileLinkU internalDataFetch = tileLinkInit<TileLinkU>(dataAddrW, dataFetch.a->data.width());
-		tileLinkBridge.attachSource(internalDataFetch);
+		TileLinkU internalDataFetchRegistered = scl::regDecouple<TileLinkU>(move(internalDataFetch));
+		tileLinkBridge.attachSource(internalDataFetchRegistered);
 		tileLinkBridge.attachSink(move(dataFetch), cfg.dataBusOffset);
 
 		auto mapSection = [&](std::string name, size_t offset, std::span<const std::byte> data, size_t size, bool writePort) {

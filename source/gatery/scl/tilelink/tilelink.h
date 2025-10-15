@@ -319,7 +319,8 @@ namespace gtry::scl
 	{
 		TLink out{
 			.a = regDecouple(link.a),
-			.d = constructFrom(*link.d)
+			.d = constructFrom(*link.d),
+			.cfg = link.cfg,
 		};
 		*link.d <<= regDecouple(*out.d);
 		
