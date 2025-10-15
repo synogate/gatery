@@ -42,7 +42,7 @@
 
 namespace gtry::hlim {
 
-sim::DefaultBitVectorState evaluateStatically(Circuit &circuit, hlim::NodePort output)
+sim::DefaultBitVectorState evaluateStatically(const Circuit &circuit, hlim::NodePort output)
 {
 	sim::SimulatorCallbacks ignoreCallbacks;
 	sim::ReferenceSimulator simulator(false);

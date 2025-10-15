@@ -37,7 +37,7 @@ namespace gtry::hlim {
 	class Node_Constant;
 	class Subnet;
 
-	sim::DefaultBitVectorState evaluateStatically(Circuit &circuit, hlim::NodePort output);
+	sim::DefaultBitVectorState evaluateStatically(const Circuit &circuit, hlim::NodePort output);
 
 	Node_Pin* findInputPin(NodePort output);
 	Node_Pin* findOutputPin(NodePort output);
