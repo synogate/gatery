@@ -33,10 +33,11 @@ namespace gtry::scl
 		void reset();
 		void load(UInt value);
 
-		inline const UInt& value() const { return m_value; }
-		inline const Bit& isLast() const { return m_last; }
-		inline Bit isFirst() const { return m_value == 0; }
-		inline Bit becomesFirst() const { return m_becomesFirst; }
+		const UInt& value() const { return m_value; }
+		const Bit& isLast() const { return m_last; }
+		Bit isFirst() const { return m_value == 0; }
+		Bit becomesFirst() const { return m_becomesFirst; }
+		const UInt& end() const { return m_endValue; }
 	protected:
 		void init(UInt end, BitWidth counterW, bool checkOverflows, size_t resetValue = 0);
 
@@ -48,6 +49,7 @@ namespace gtry::scl
 		Bit m_becomesFirst;
 
 		UInt m_loadValue;
+		UInt m_endValue;
 		size_t m_resetValue = 0;
 		Bit m_load;
 

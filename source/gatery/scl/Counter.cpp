@@ -77,6 +77,7 @@ namespace gtry::scl
 		m_resetValue = resetValue;
 		m_value = counterW;
 		m_loadValue = counterW;
+		m_endValue = end;
 
 		HCL_NAMED(m_inc);
 		HCL_NAMED(m_dec);
