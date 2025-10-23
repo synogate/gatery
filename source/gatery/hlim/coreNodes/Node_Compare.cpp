@@ -308,5 +308,83 @@ void Node_Compare::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_
 	inputBit = maxIB;
 }
 
+bool Node_Compare::generateLutTree(LutTree& tree, std::unordered_map<NodePortBit<Out>, LutTree::NodeId>& portMap) const
+{
+	NodePort a = getNonForwardingDriver(0);
+	NodePort b = getNonForwardingDriver(1);
+	if (!a.node || !b.node)
+		return false;
+
+	bool inverted = false;
+	bool less = false;
+	switch (getOp())
+	{
+	case NEQ:	
+		inverted = true;
+		[[fallthrough]];
+	case EQ:		
+		break;
+
+	case GEQ:
+		inverted = true;
+		[[fallthrough]];
+	case LT:
+		less = true;
+		break;
+
+	case LEQ:
+		inverted = true;
+		[[fallthrough]];
+	case GT:
+		std::swap(a, b);
+		less = true;
+		break;
+	default: HCL_ASSERT(false);
+	}
+
+	LutTree::NodeId result = 0;
+	if (!less)
+	{
+		std::vector<LutTree::NodeId> bitEqual;
+		for (size_t i = 0; i < getOutputWidth(a); ++i)
+		{
+			auto itA = portMap.find(nodePortBit<Out>(a, i));
+			auto itB = portMap.find(nodePortBit<Out>(b, i));
+			if (itA == portMap.end() || itB == portMap.end())
+				return false;
+		
+			bitEqual.push_back(tree.addNode(LutTree::Fun::Xnor, itA->second, itB->second));
+		}
+		result = tree.addNodeTree(LutTree::Fun::And, bitEqual);
+	}
+	else
+	{
+		LutTree::NodeId prevEq = 1;
+		for (size_t i = getOutputWidth(a) - 1; i < getOutputWidth(a); --i)
+		{
+			auto itA = portMap.find(nodePortBit<Out>(a, i));
+			auto itB = portMap.find(nodePortBit<Out>(b, i));
+			if (itA == portMap.end() || itB == portMap.end())
+				return false;
+
+			LutTree::NodeId aLessB = tree.addNode(LutTree::Fun::Cmp2, itA->second, itB->second);
+			LutTree::NodeId aEqB = tree.addNode(LutTree::Fun::Xnor, itA->second, itB->second);
+			LutTree::NodeId resultLess = tree.addAnd(aLessB, prevEq);
+			result = tree.addOr(result, resultLess);
+			
+			if(i != 0)
+				prevEq = tree.addNode(LutTree::Fun::And, prevEq, aEqB);
+		}
+	}
+
+	if (inverted)
+		tree.nodes[result].fun = !tree.nodes[result].fun;
+	
+	portMap.insert({
+		NodePortBit<Out>(this, 0, 0),
+		result
+	});
+	return true;
+}
 
 }

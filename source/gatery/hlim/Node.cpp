@@ -271,6 +271,11 @@ void BaseNode::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t ou
 	HCL_ASSERT_HINT(false, "estimateSignalDelayCriticalInput not implemented for node type " + getTypeName());
 }
 
+bool BaseNode::generateLutTree(LutTree& tree, std::unordered_map<NodePortBit<Out>, LutTree::NodeId>& portMap) const
+{
+	return false;
+}
+
 void BaseNode::forwardSignalDelay(SignalDelay &sigDelay, unsigned input, unsigned output)
 {
 	auto driver = getDriver(input);

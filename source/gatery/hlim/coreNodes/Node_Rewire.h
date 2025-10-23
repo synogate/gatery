@@ -89,7 +89,9 @@ class Node_Rewire : public Node<Node_Rewire>
 		void optimize();
 
 		virtual bool outputIsConstant(size_t port) const override;
-	protected:
+
+		virtual bool generateLutTree(LutTree& tree, std::unordered_map<NodePortBit<Out>, LutTree::NodeId>& portMap) const override;
+protected:
 		ConnectionType m_desiredConnectionType;
 
 		RewireOperation m_rewireOperation;

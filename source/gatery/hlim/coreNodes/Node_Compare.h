@@ -54,7 +54,9 @@ class Node_Compare : public Node<Node_Compare>
 		virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit) override;
 
 		virtual bool outputIsConstant(size_t port) const override;
-	protected:
+
+		virtual bool generateLutTree(LutTree& tree, std::unordered_map<NodePortBit<Out>, LutTree::NodeId>& portMap) const override;
+protected:
 		Op m_op;
 };
 

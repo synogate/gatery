@@ -51,7 +51,9 @@ namespace gtry::hlim {
 			virtual void estimateSignalDelay(SignalDelay &sigDelay) override;
 
 			virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit) override;
-		protected:
+	
+			virtual bool generateLutTree(LutTree& tree, std::unordered_map<NodePortBit<Out>, LutTree::NodeId>& portMap) const override;
+	protected:
 			size_t m_conditionId = 0;
 	};
 

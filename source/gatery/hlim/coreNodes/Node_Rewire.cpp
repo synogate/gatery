@@ -509,4 +509,45 @@ bool Node_Rewire::outputIsConstant(size_t port) const
 	return true;
 }
 
+bool Node_Rewire::generateLutTree(LutTree& tree, std::unordered_map<NodePortBit<Out>, LutTree::NodeId>& portMap) const
+{
+	size_t bit = 0;
+
+	std::vector<NodePort> inputDriver(getNumInputPorts());
+	for (size_t i = 0; i < inputDriver.size(); ++i)
+		inputDriver[i] = getNonForwardingDriver(i);
+
+	for (const OutputRange& op : m_rewireOperation.ranges)
+	{
+		for (size_t i = 0; i < op.subwidth; ++i, ++bit)
+		{
+			LutTree::NodeId srcNode;
+
+			switch (op.source)
+			{
+			case OutputRange::INPUT:
+			{
+				auto it = portMap.find(nodePortBit<Out>(inputDriver[op.inputIdx], op.inputOffset + i));
+				if (it == portMap.end())
+					return false;
+				srcNode = it->second;
+				break;
+			}
+			case OutputRange::CONST_ONE:
+				srcNode = 1;
+				break;
+			case OutputRange::CONST_ZERO:
+			case OutputRange::CONST_UNDEFINED:
+				srcNode = 0;
+				break;
+			default:
+				HCL_ASSERT(false);
+			}
+
+			portMap.insert({ NodePortBit<Out>{this, 0, bit}, srcNode });
+		}
+	}
+	return true;
+}
+
 }

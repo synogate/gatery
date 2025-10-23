@@ -342,5 +342,51 @@ void Node_Logic::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t 
 	}
 }
 
+bool Node_Logic::generateLutTree(LutTree& tree, std::unordered_map<NodePortBit<Out>, LutTree::NodeId>& portMap) const
+{
+	NodePort A = getNonForwardingDriver(0);
+	if (!A.node)
+		return false;
+	
+	NodePort B = getNonForwardingDriver(1);
+	if (getOp() != Op::NOT && !B.node)
+		return false;
+
+	for (size_t i = 0; i < getOutputConnectionType(0).width; ++i)
+	{
+		auto itA = portMap.find(nodePortBit<Out>(A, i));
+		if (itA == portMap.end())
+			return false;
+
+		LutTree::NodeId out;
+		if(getOp() == Op::NOT)
+		{
+			out = tree.addNode(LutTree::Fun::InvA, itA->second);
+		}
+		else
+		{
+			auto itB = portMap.find(nodePortBit<Out>(B, i));
+			if (itB == portMap.end())
+				return false;
+			
+			LutTree::Fun fun;
+			switch (getOp())
+			{
+			case Op::AND:	fun = LutTree::Fun::And;	break;
+			case Op::NAND:	fun = LutTree::Fun::Nand;	break;
+			case Op::OR:	fun = LutTree::Fun::Or;		break;
+			case Op::NOR:	fun = LutTree::Fun::Nor;	break;
+			case Op::XOR:	fun = LutTree::Fun::Xor;	break;
+			case Op::EQ:	fun = LutTree::Fun::Xnor;	break;
+			default: HCL_ASSERT(false);
+			}
+			out = tree.addNode(fun, itA->second, itB->second);
+		}
+
+		portMap.insert({ NodePortBit<Out>{this, 0, i}, out });
+	}
+	return true;
+}
+
 
 }

@@ -259,6 +259,47 @@ void Node_Multiplexer::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, s
 	inputBit = maxIB;
 }
 
+bool Node_Multiplexer::generateLutTree(LutTree& tree, std::unordered_map<NodePortBit<Out>, LutTree::NodeId>& portMap) const
+{
+	NodePort selectorDriver = getNonForwardingDriver(0);
+	if (!selectorDriver.node)
+		return false;
 
+	// TODO refactor to getAllBitsOfNodePort function
+	std::vector<LutTree::NodeId> selector;
+	for (size_t i = 0; i < getOutputWidth(selectorDriver); ++i)
+	{
+		auto it = portMap.find(nodePortBit<Out>(selectorDriver, i));
+		if (it == portMap.end())
+			return false;
+		selector.push_back(it->second);
+	}
+
+	std::vector<NodePort> inDriver;
+	for (size_t i = 1; i < getNumInputPorts(); ++i)
+	{
+		inDriver.push_back(getNonForwardingDriver(i));
+		if (!inDriver.back().node)
+			return false;
+	}
+
+	std::vector<LutTree::NodeId> in(inDriver.size());
+	for (size_t i = 0; i < getOutputConnectionType(0).width; ++i)
+	{
+		for (size_t j = 0; j < in.size(); ++i)
+		{
+			auto it = portMap.find(nodePortBit<Out>(inDriver[j], i));
+			if (it == portMap.end())
+				return false;
+			in[j] = it->second;
+		}
+
+		portMap.insert({
+			NodePortBit<Out>{ this, 0, i },
+			tree.addMux(selector, in)
+		});
+	}
+	return true;
+}
 
 }

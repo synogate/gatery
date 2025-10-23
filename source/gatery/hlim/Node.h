@@ -22,6 +22,7 @@
 
 #include "../utils/StackTrace.h"
 #include "../utils/CppTools.h"
+#include "LutTree.h"
 
 #include <vector>
 #include <string>
@@ -177,6 +178,12 @@ class BaseNode : public NodeIO
 
 		inline std::uint64_t getRevisitColor(utils::RestrictTo<RevisitCheck>) const { return m_revisitCheckColor; }
 		inline void setRevisitColor(std::uint64_t revisitCheckColor, utils::RestrictTo<RevisitCheck>) const { m_revisitCheckColor = revisitCheckColor; }
+
+		// generates a logically equivalent representation of the inner circuit
+		// the result is added to tree and portMap
+		// all outputs of non forwarding drivers of all inputs need to be present in portMap
+		// returns false if not supported
+		virtual bool generateLutTree(LutTree& tree, std::unordered_map<NodePortBit<Out>, LutTree::NodeId>& portMap) const;
 	protected:
 		std::uint64_t m_nodeId = ~0ull;
 

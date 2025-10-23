@@ -23,51 +23,73 @@
 #include <compare>
 #include <stddef.h>
 
-namespace gtry::hlim {
+namespace gtry::hlim 
+{
+	class BaseNode;
+	class NodeIO;
+	class Circuit;
+	struct ConnectionType;
 
-class BaseNode;
-class NodeIO;
-class Circuit;
-struct ConnectionType;
+	constexpr size_t INV_PORT = std::numeric_limits<std::size_t>::max();
 
-constexpr size_t INV_PORT = std::numeric_limits<std::size_t>::max();
+	struct NodePort {
+		BaseNode *node = nullptr;
+		size_t port = INV_PORT;
 
-struct NodePort {
-	BaseNode *node = nullptr;
-	size_t port = INV_PORT;
-/*
-	inline bool operator==(const NodePort &rhs) const { return node == rhs.node && port == rhs.port; }
-	inline bool operator!=(const NodePort &rhs) const { return !operator==(rhs); }
-	inline bool operator<(const NodePort &rhs) const { if (node < rhs.node) return true; if (node > rhs.node) return false; return port < rhs.port; }
-*/
-	auto operator <=> (const NodePort&) const = default;
-};
+		auto operator <=> (const NodePort&) const = default;
+	};
 
-inline NodePort p0(BaseNode *node) { return {.node = node, .port = 0ull}; }
+	inline NodePort p0(BaseNode *node) { return {.node = node, .port = 0ull}; }
 
-struct RefCtdNodePort {
-	NodePtr<BaseNode> node;
-	size_t port = INV_PORT;
+	struct RefCtdNodePort {
+		NodePtr<BaseNode> node;
+		size_t port = INV_PORT;
 
-	RefCtdNodePort() = default;
-	RefCtdNodePort(const NodePort &np);
-	RefCtdNodePort& operator=(const NodePort &np);
+		RefCtdNodePort() = default;
+		RefCtdNodePort(const NodePort &np);
+		RefCtdNodePort& operator=(const NodePort &np);
 
-	operator NodePort () const { return NodePort{.node = node.get(), .port = port}; }
+		operator NodePort () const { return NodePort{.node = node.get(), .port = port}; }
 
-/*
-	inline bool operator==(const RefCtdNodePort &rhs) const { return node == rhs.node && port == rhs.port; }
-	inline bool operator!=(const RefCtdNodePort &rhs) const { return !operator==(rhs); }
-	inline bool operator<(const RefCtdNodePort &rhs) const { if (node < rhs.node) return true; if (node > rhs.node) return false; return port < rhs.port; }
-*/
-	auto operator <=> (const RefCtdNodePort&) const = default;
-};
+		auto operator <=> (const RefCtdNodePort&) const = default;
+	};
 
-bool outputIsBVec(const NodePort &output);
-bool outputIsBool(const NodePort &output);
-bool outputIsDependency(const NodePort &output);
+	bool outputIsBVec(const NodePort &output);
+	bool outputIsBool(const NodePort &output);
+	bool outputIsDependency(const NodePort &output);
 
-size_t getOutputWidth(const NodePort &output);
-const ConnectionType &getOutputConnectionType(const NodePort &output);
+	size_t getOutputWidth(const NodePort &output);
+	const ConnectionType &getOutputConnectionType(const NodePort &output);
 
+	struct In {};
+	struct Out {};
+
+	template<typename DirT>
+	struct NodePortBit
+	{
+		const BaseNode* node = nullptr;
+		size_t port = 0;
+		size_t bit = 0;
+
+		auto operator <=> (const NodePortBit&) const = default;
+	};
+
+	template<typename DirT>
+	NodePort nodePort(const NodePortBit<DirT>& npb) { return NodePort{ npb.node, npb.port }; }
+
+	template<typename DirT>
+	NodePortBit<DirT> nodePortBit(const NodePort& np, size_t bit) { return NodePortBit<DirT>{ np.node, np.port, bit }; }
+}
+
+namespace std
+{
+	template<typename DirT>
+	struct hash<gtry::hlim::NodePortBit<DirT>>
+	{
+		size_t operator ()(const gtry::hlim::NodePortBit<DirT>& port) const {
+			return 
+				hash<const gtry::hlim::BaseNode*>{}(port.node) ^
+				hash<size_t>{}(port.port | (port.bit << 16));
+		}
+	};
 }

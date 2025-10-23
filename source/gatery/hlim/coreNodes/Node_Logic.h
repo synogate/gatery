@@ -57,7 +57,9 @@ class Node_Logic : public Node<Node_Logic>
 		virtual void estimateSignalDelay(SignalDelay &sigDelay) override;
 
 		virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit) override;
-	protected:
+
+		virtual bool generateLutTree(LutTree& tree, std::unordered_map<NodePortBit<Out>, LutTree::NodeId>& portMap) const override;
+protected:
 		Op m_op;
 
 		bool checkIsNoOp(size_t &inputToForward) const;

@@ -106,5 +106,17 @@ void Node_Constant::estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size
 	inputBit = ~0u;
 }
 
+bool Node_Constant::generateLutTree(LutTree& tree, std::unordered_map<NodePortBit<Out>, LutTree::NodeId>& portMap) const
+{
+	for (size_t i = 0; i < getOutputConnectionType(0).width; ++i)
+	{
+		if (m_Value.get(sim::DefaultConfig::DEFINED, i) && m_Value.get(sim::DefaultConfig::VALUE, i))
+			portMap.insert({NodePortBit<Out>{this, 0, i}, 1 });
+		else
+			portMap.insert({ NodePortBit<Out>{this, 0, i}, 0 });
+	}
+	return true;
+}
+
 
 }
