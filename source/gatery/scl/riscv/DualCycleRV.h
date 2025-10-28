@@ -24,8 +24,11 @@ namespace gtry::scl::riscv
 	class DualCycleRV : public RV32I
 	{
 	public:
-
 		DualCycleRV(BitWidth instructionAddrWidth = 32_b, BitWidth dataAddrWidth = 32_b);
+
+		// enable an extra penalty cycle for branch miss predictions for improved Fmax. default is on.
+		// if enabled, pipelineRegister can be used to further improve Fmax at the cost of an additional IP register. default is on.
+		DualCycleRV& extraBranchCycle(bool enable = true, bool pipelineRegister = true);
 
 		virtual Memory<UInt>& fetch(uint64_t entryPoint = 0);
 		virtual void fetch(TileLinkU&& link, uint64_t entryPoint);
@@ -50,6 +53,10 @@ namespace gtry::scl::riscv
 		Memory<UInt> m_rf;
 		Memory<UInt> m_instructionMem;
 
+		// ease timing by adding an extra cycle to the branch miss penalty
+		bool m_extraBranchCycle = true;
+		// add extra pipeline register for next IP for even better timing
+		bool m_extraBranchCyclePipelineRegister = true;
 	};
 
 	struct EmbeddedRV32Config

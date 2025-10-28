@@ -34,6 +34,13 @@ gtry::scl::riscv::DualCycleRV::DualCycleRV(BitWidth instructionAddrWidth, BitWid
 
 }
 
+DualCycleRV& gtry::scl::riscv::DualCycleRV::extraBranchCycle(bool enable, bool pipelineRegister)
+{
+	m_extraBranchCycle = enable;
+	m_extraBranchCyclePipelineRegister = enable && pipelineRegister;
+	return *this;
+}
+
 gtry::Memory<gtry::UInt>& gtry::scl::riscv::DualCycleRV::fetch(uint64_t entryPoint)
 {
 	auto ent = m_area.enter();
@@ -66,6 +73,10 @@ void gtry::scl::riscv::DualCycleRV::fetch(TileLinkU&& link, uint64_t entryPoint)
 
 TileLinkU gtry::scl::riscv::DualCycleRV::fetchTileLink(uint64_t entryPoint)
 {
+	// the extra cycle is not implemented for tilelink as it is probably better to add 
+	// another a channel register instead
+	extraBranchCycle(false);
+
 	auto ent = m_area.enter();
 	BVec instruction = 32_b;
 	HCL_NAMED(instruction);
@@ -222,10 +233,13 @@ void gtry::scl::riscv::DualCycleRV::generate(const UInt& instruction, const Bit&
 	pre_inst.decode(instruction);
 	HCL_NAMED(pre_inst);
 
-	Bit running = reg(Bit{ '1' }, '0');
+	// invalidate pipeline in first cycle and optional branch delay cycle
+	Bit extraDiscard = m_extraBranchCycle ? m_overrideIPValid : Bit{ '0' };
+	ENIF(instructionValid)
+		extraDiscard = reg(extraDiscard, '1') | name("extraDiscard");
 
 	IF(!m_stall)
-		m_discardResult = m_overrideIPValid | !running | !instructionValid;
+		m_discardResult = m_overrideIPValid | extraDiscard | !instructionValid;
 	m_discardResult = reg(m_discardResult, '1');
 	HCL_NAMED(m_discardResult);
 
@@ -280,8 +294,26 @@ void gtry::scl::riscv::DualCycleRV::genRegisterFile(UInt rs1, UInt rs2, UInt)
 UInt gtry::scl::riscv::DualCycleRV::genInstructionPointer(uint64_t entryPoint, const Bit& instructionValid)
 {
 	auto ent = m_area.enter("IP");
-
 	UInt ip = m_IP.width();
+	m_overrideIP = m_IP.width();
+	HCL_NAMED(m_overrideIPValid);
+	HCL_NAMED(m_overrideIP);
+
+	HCL_ASSERT(!m_extraBranchCyclePipelineRegister || m_extraBranchCycle);
+	if (m_extraBranchCyclePipelineRegister)
+	{
+		m_overrideIPValid = reg(m_overrideIPValid, '0') | name("m_overrideIPValidActive");
+		m_overrideIP = reg(m_overrideIP) | name("m_overrideIPActive");
+	}
+
+	Bit incrementIP = '1';
+	if (m_extraBranchCycle && !m_extraBranchCyclePipelineRegister)
+	{
+		IF(m_overrideIPValid)
+			ip = m_overrideIP;
+		incrementIP = reg(!m_overrideIPValid, '1');
+	}
+
 	ip = reg(ip, entryPoint);
 	setName(ip, "ip_reg");
 
@@ -289,23 +321,22 @@ UInt gtry::scl::riscv::DualCycleRV::genInstructionPointer(uint64_t entryPoint, c
 	IF(!m_stall & running & instructionValid)
 	{
 		m_IP = ip;
-		ip += 4;
+		IF(incrementIP | name("incrmentIP"))
+			ip += 4;
 	}
-	m_IP = reg(m_IP, 0);
+	m_IP = reg(m_IP);
 	HCL_NAMED(m_IP);
 
-	m_overrideIP = m_IP.width();
-	IF(m_overrideIPValid)
-		ip = m_overrideIP;
+	if (!m_extraBranchCycle || m_extraBranchCyclePipelineRegister)
+		IF(m_overrideIPValid)
+			ip = m_overrideIP;
 
 	setName(ip, "ip_next");
 	debugVisualizeIP(ip);
 
-	HCL_NAMED(m_overrideIPValid);
-	HCL_NAMED(m_overrideIP);
+	// set defaults
 	m_overrideIPValid = '0';
-	m_overrideIP = 0;
-
+	m_overrideIP = ConstUInt(m_IP.width());
 	return ip;
 }
 
