@@ -338,20 +338,23 @@ Bit UART::send(Stream &stream)
 			simu(rxPin) = '1'; 
 
 #if 0 // hack to simulate timing accurate input on uart rx
-			char msg = 'A';
-
-			std::chrono::nanoseconds baudRate = 8681ns;
-			co_await WaitFor(1us);
-			simu(rxPin) = '0';
-			co_await WaitFor(baudRate);
-			for (size_t i = 0; i < 8; ++i)
+			std::string_view text = "data to send";
+			for (char msg : text)
 			{
-				simu(rxPin) = ((msg >> i) & 1) != 0;
-				co_await WaitFor(baudRate);
-			}
-			simu(rxPin) = '1';
-#endif
+				std::chrono::nanoseconds baudRate = 8681ns / 2;
 
+				co_await WaitFor(baudRate);
+				co_await WaitFor(baudRate);
+				simu(rxPin) = '0';
+				co_await WaitFor(baudRate);
+				for (size_t i = 0; i < 8; ++i)
+				{
+					simu(rxPin) = ((msg >> i) & 1) != 0;
+					co_await WaitFor(baudRate);
+				}
+				simu(rxPin) = '1';
+			}
+#endif
 			co_return; 
 		});
 
