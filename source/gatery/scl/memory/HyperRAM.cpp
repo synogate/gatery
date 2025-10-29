@@ -22,43 +22,9 @@ namespace gtry::scl
 {
 	void hyperRAMSimulationModel(HyperBusPhy& phy, HyperRAMConfig cfg)
 	{
-#if 0
-		const Clock& sysClk = ClockScope::getClk();
-
-		Clock ramClkFree = sysClk.deriveClock({ 
-			.phaseShiftDeg = 90, 
-			.name = "HyperRAMClockFree", 
-			.triggerEvent = ClockConfig::TriggerEvent::RISING_AND_FALLING 
-		});
-		Clock ramClk = ramClkFree.deriveClock({ .name = "HyperRAMClock" });
-		ramClk.overrideClkWith(ramClkFree.clkSignal() & allowClockDomainCrossing(phy.cken, sysClk, ramClkFree));
-
-		ClockScope ramClkScope(ramClk);
-		//HyperBusPhy ramPhy = allowClockDomainCrossing(phy, sysclk, ramClock);
-
-		HyperBusPhy ramPhy = constructFrom(phy);
-		ramPhy.cs = allowClockDomainCrossing(phy.cs, sysClk, ramClk);
-		ramPhy.reset = allowClockDomainCrossing(phy.reset, sysClk, ramClk);
-		ramPhy.cken = '1'; // this is baked into ramClk
-
-		ramPhy.rwds.f = allowClockDomainCrossing(phy.rwds.f, sysClk, ramClk);
-		ramPhy.rwds.fen = allowClockDomainCrossing(phy.rwds.fen, sysClk, ramClk);
-		*phy.rwds.r = allowClockDomainCrossing(*ramPhy.rwds.r, ramClk, sysClk);
-		*phy.rwds.ren = allowClockDomainCrossing(*ramPhy.rwds.ren, ramClk, sysClk);
-
-		ramPhy.dq.f = allowClockDomainCrossing(phy.dq.f, sysClk, ramClk);
-		ramPhy.dq.fen = allowClockDomainCrossing(phy.dq.fen, sysClk, ramClk);
-		*phy.dq.r = allowClockDomainCrossing(*ramPhy.dq.r, ramClk, sysClk);
-		*phy.dq.ren = allowClockDomainCrossing(*ramPhy.dq.ren, ramClk, sysClk);
-
-		hyperRAMSimulationModelClockShifted(ramPhy, cfg);
-	}
-
-	void hyperRAMSimulationModelClockShifted(HyperBusPhy& phy, HyperRAMConfig cfg)
-	{
 		Area ent{ "scl_HyperRAMModel", true };
 
-		*phy.rwds.r = '0';
+		*phy.rwds.r = 0;
 		*phy.rwds.ren = '0';
 		*phy.dq.r = undefined(*phy.dq.r);
 		*phy.dq.ren = '0';
@@ -71,8 +37,6 @@ namespace gtry::scl
 		// stall reads on boundaries
 		// reset
 
-		sim_assert(phy.reset == '0') << "reset not implemented";
-
 		enum class State
 		{
 			command_address,	// wait for command and address transfer
@@ -82,19 +46,19 @@ namespace gtry::scl
 			read,				// send read data
 		};
 
-		Bit chipSelect = phy.cs.at(cfg.csIndex) | name("chipSelect");
+		Bit chipSelectN = phy.csn.at(cfg.csIndex) | name("chipSelect");
 
 		// state and counter need asynchronous reset since clock may stop during !cs
 		Clock ramClk = ClockScope::getClk();
-		Clock frontendClk = ramClk.deriveClock({ .resetType = ClockConfig::ResetType::ASYNCHRONOUS, .resetActive = ClockConfig::ResetActive::LOW });
-		frontendClk.overrideRstWith(chipSelect);
+		Clock frontendClk = ramClk.deriveClock({ .resetType = ClockConfig::ResetType::ASYNCHRONOUS, .resetActive = ClockConfig::ResetActive::HIGH });
+		frontendClk.overrideRstWith(chipSelectN);
 
 		ClockScope frontendScope{ frontendClk };
 		Reg<Enum<State>> state{ State::command_address };
 		state.setName("state");
 
 		scl::Counter ctr{ 16 };
-		IF(state.next() != state.current() | !chipSelect)
+		IF(state.next() != state.current() | chipSelectN)
 			ctr.reset();
 
 		ClockScope ramScope{ ramClk };
@@ -103,24 +67,21 @@ namespace gtry::scl
 		UInt address = cfg.rowAddrW + cfg.colAddrW + 1_b;
 		IF(state.current() == State::command_address)
 		{
-			IF(chipSelect)
+			IF(!chipSelectN)
 			{
-				*phy.rwds.r = '1';
+				*phy.rwds.r = 0b11;
 				*phy.rwds.ren = '1';
 
-				IF(phy.cken)
-				{
-					ctr.inc();
-					command.upper(-8_b) = command.lower(-8_b);
-					command.lower(8_b) = phy.dq.f;
+				ctr.inc();
+				command.upper(-16_b) = command.lower(-16_b);
+				command.lower(16_b) = phy.dq.f;
 
-					IF(ctr.value() == 5)
-					{
-						sim_assert(command[46] == '0') << "register access not implemented";
-						sim_assert(command[45] == '1') << "wrapped bursts not implemented";
+				IF(ctr.value() == 2)
+				{
+					sim_assert(command[46] == '0') << "register access not implemented";
+					sim_assert(command[45] == '1') << "wrapped bursts not implemented";
 						
-						state = State::wait2;
-					}
+					state = State::wait2;
 				}
 			}
 
@@ -157,7 +118,7 @@ namespace gtry::scl
 			}
 		}
 
-		Memory<BVec> memory(address.width().count(), 8_b);
+		Memory<BVec> memory(address.width().count(), 16_b);
 		memory.setType(MemType::DONT_CARE, 0);
 		memory.noConflicts();
 		
@@ -166,10 +127,13 @@ namespace gtry::scl
 
 		IF(state.current() == State::write)
 		{
-			IF(chipSelect & phy.cken)
+			IF(!chipSelectN)
 			{
-				IF(phy.rwds.f)
-					memoryPort.write(phy.dq.f);
+				BVec data = memoryWord;
+				for (size_t i = 0; i < phy.rwds.f.size(); ++i)
+					IF(phy.rwds.f[i])
+						data.part(phy.rwds.f.size(), i) = phy.dq.f.part(phy.rwds.f.size(), i);
+				memoryPort.write(data);
 
 				address += 1;
 			}
@@ -178,14 +142,13 @@ namespace gtry::scl
 		Bit requestReadBus = '0';
 		IF(state.current() == State::read)
 		{
-			IF(chipSelect)
+			IF(!chipSelectN)
 			{
 				requestReadBus = '1';
 				//*phy.rwds.ren = '1';
 				//*phy.dq.ren = '1';
 
-				IF(phy.cken)
-					address += 1;
+				address += 1;
 			}
 		}
 
@@ -204,16 +167,15 @@ namespace gtry::scl
 
 		IF(delayReadSignal(requestReadBus))
 		{
-			*phy.rwds.r = ~allowClockDomainCrossing(outDelayClk.clkSignal(), outDelayClk, ramClk);
+			*phy.rwds.r = 0b10;
 			*phy.dq.ren = '1';
 		}
 
-		IF(!chipSelect)
+		IF(chipSelectN)
 		{
 			*phy.dq.ren = '0';
 			*phy.rwds.ren = '0';
 			state = State::command_address;
 		}
-#endif
 	}
 }

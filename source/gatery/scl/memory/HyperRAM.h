@@ -33,6 +33,6 @@ namespace gtry::scl
 		picoseconds tCKD = 5500_ps;
 	};
 
-	void hyperRAMSimulationModelClockShifted(HyperBusPhy& phy, HyperRAMConfig cfg = {});
+	// This code is WIP and does not work yet
 	void hyperRAMSimulationModel(HyperBusPhy& phy, HyperRAMConfig cfg = {});
 }
