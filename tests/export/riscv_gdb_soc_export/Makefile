@@ -27,7 +27,7 @@ synth.json: $(TOP).v
 	yosys -ql net_$(TOP)_synth.log -p 'synth_gatemate -top $(TOP) -luttree -nomx8 -json $@' $<
 
 bitfile.txt: synth.json top.sdc top.ccf Makefile
-	nextpnr-himbaechel --json $< --device CCGM1A1 --router router2 --seed 3 --sdc .\top.sdc -o ccf=top.ccf -o out=bitfile.txt --write pnr.json
+	nextpnr-himbaechel --json $< --device CCGM1A1 --router router2 --seed 3 --sdc .\top.sdc -o ccf=top.ccf -o out=bitfile.txt --write pnr.json -o fpga_mode=typical -o time_mode=speed
 
 %.bit: %.txt
 	gmpack $< $@

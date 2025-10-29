@@ -235,8 +235,7 @@ void gtry::scl::riscv::DualCycleRV::generate(const UInt& instruction, const Bit&
 
 	// invalidate pipeline in first cycle and optional branch delay cycle
 	Bit extraDiscard = m_extraBranchCycle ? m_overrideIPValid : Bit{ '0' };
-	ENIF(instructionValid)
-		extraDiscard = reg(extraDiscard, '1') | name("extraDiscard");
+	extraDiscard = reg(extraDiscard, '1') | name("extraDiscard");
 
 	IF(!m_stall)
 		m_discardResult = m_overrideIPValid | extraDiscard | !instructionValid;

@@ -20,7 +20,7 @@
 
 namespace gtry::scl
 {
-	TileLinkU tileLinkCacheDirectMappedReadOnlyBurst(TileLinkU&& ram, gtry::BitWidth addrW, std::function<void(TileLinkChannelA&)> selectBurst)
+	TileLinkU tileLinkCacheDirectMappedReadOnlyBurst(TileLinkU&& ram, gtry::BitWidth addrW, std::function<void(TileLinkChannelA&)> selectBurst, const sim::DefaultBitVectorState& initialContent)
 	{
 		Area ent{ "scl_RoCache", true };
 		scl::TileLinkU cpu = constructFrom(ram);
@@ -34,7 +34,39 @@ namespace gtry::scl
 			});
 		HCL_NAMED(cacheMem);
 		cacheMem.setType(MemType::DONT_CARE, 1);
-		cacheMem.initZero();
+
+		if (initialContent.size() == 0)
+		{
+			cacheMem.initZero();
+		}
+		else
+		{
+			size_t elementBits = width(cacheMem.defaultValue()).bits();
+			size_t wordBits = cpu.a->data.width().bits();
+
+			sim::DefaultBitVectorState initContent;
+			initContent.resize(addrW.count() * elementBits);
+			for (size_t i = 0; i < addrW.count(); ++i)
+			{
+				// TAG Value
+				initContent.setRange(sim::DefaultConfig::DEFINED, i * elementBits, tagW.bits());
+				initContent.clearRange(sim::DefaultConfig::VALUE, i * elementBits, tagW.bits());
+
+				// valid bit
+				initContent.set(sim::DefaultConfig::DEFINED, i * elementBits + elementBits - 1);
+
+				if(i * wordBits < initialContent.size())
+				{
+					initContent.set(sim::DefaultConfig::VALUE, i * elementBits + elementBits - 1);
+					initContent.copyRange(i * elementBits + tagW.bits(), initialContent, i * wordBits, wordBits);
+				}
+				else
+				{
+					initContent.clear(sim::DefaultConfig::VALUE, i * elementBits + elementBits - 1);
+				}
+			}
+			cacheMem.fillPowerOnState(move(initContent));
+		}
 
 		// buffer request from cpu
 		scl::TileLinkChannelA req = regDownstream(move(cpu.a)) | name("req");

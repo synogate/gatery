@@ -17,6 +17,7 @@
 */
 #include "gatery/scl_pch.h"
 #include "tilelink.h"
+#include "TileLinkAdapter.h"
 
 namespace gtry::scl
 {
@@ -304,6 +305,35 @@ namespace gtry::scl
 		auto link = tileLinkInit<TileLinkU>(addrW, dataW, sourceW);
 		connect(mem, link);
 		return link;
+	}
+
+	TileLinkU tileLinkSimOverride(TileLinkU&& slave, TileLinkU&& simulationSlave)
+	{
+		TileLinkU master = constructFrom(slave);
+		auto [exp, sim] = simOverrideUpstream(move(master));
+		slave <<= exp;
+		simulationSlave <<= sim;
+
+		// mask all requests during simulation to prevent false errors in slave due to broken flow control
+		valid(slave.a) = simOverride(valid(master.a), Bit{ '0' });
+		return master;
+	}
+
+	TileLinkU tileLinkMemorySimulation(TileLinkU&& slave)
+	{
+		Area ent{ "scl_TLMemorySimulation", true };
+
+		if (slave.cfg.burstSupport())
+		{
+			TileLinkU mem = tileLinkMemory(slave.cfg.addrW, slave.cfg.dataW, slave.cfg.sourceW + 7_b);
+			TileLinkU burst = tileLinkAddBurst(move(mem), slave.cfg.burstLimitLog);
+			return tileLinkSimOverride(move(slave), move(burst));
+		}
+		else
+		{
+			TileLinkU mem = tileLinkMemory(slave.cfg.addrW, slave.cfg.dataW, slave.cfg.sourceW);
+			return tileLinkSimOverride(move(slave), move(mem));
+		}
 	}
 
 	size_t TileLinkCfg::burstThresholdLog() const

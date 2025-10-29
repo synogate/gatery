@@ -26,6 +26,7 @@ int main()
 
 	uart_puts("+$S05#b8");
 
+	t_entry_point entry;
 	unsigned x = 0xC0FFEEu;
 	while(1)
 	{
@@ -52,7 +53,6 @@ int main()
 		}
 		uart_putc(e ? 'e' : '.');
 #else
-		t_entry_point entry;
 		stub_enter(&entry);
 #endif
 	}

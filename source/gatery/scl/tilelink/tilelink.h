@@ -184,6 +184,9 @@ namespace gtry::scl
 	void connect(Memory<BVec>& mem, TileLinkU& link);
 
 	TileLinkU tileLinkMemory(BitWidth addrW, BitWidth dataW, BitWidth sourceW = 0_b);
+	
+	TileLinkU tileLinkSimOverride(TileLinkU&& slave, TileLinkU&& simulationSlave);
+	TileLinkU tileLinkMemorySimulation(TileLinkU&& slave);
 
 	struct TileLinkMemoryConfig
 	{
