@@ -334,13 +334,22 @@ namespace gtry::scl
 	template<TileLinkSignal T>
 	void connect(T& lhs, T& rhs)
 	{
-		using namespace gtry;
-		auto lhsAddrSpaceBefore = lhs.addrSpaceDesc;
-		auto rhsAddrSpaceBefore = rhs.addrSpaceDesc;
-		downstream(lhs) = downstream(rhs);
-		upstream(rhs) = upstream(lhs);
-		lhs.addrSpaceDesc = lhsAddrSpaceBefore;
-		rhs.addrSpaceDesc = rhsAddrSpaceBefore;
+		lhs.a <<= rhs.a;
+
+		// D channel is wired manually as clamping rules are not covered by auto conversion
+		TileLinkChannelD& m = *lhs.d;
+		TileLinkChannelD& s = *rhs.d;
+		valid(s) = valid(m);
+		ready(m) = ready(s);
+		s->opcode = m->opcode;
+		s->param = m->param;
+		s->size = resizeTo(m->size, s->size.width()); // always as most as what we requested
+		s->source = resizeTo(m->source, s->source.width());
+		s->sink = m->sink;
+		s->data = m->data;
+		s->error = m->error;
+
+		lhs.cfg = rhs.cfg;
 		connectAddrDesc(rhs.addrSpaceDesc, lhs.addrSpaceDesc);
 	}
 
