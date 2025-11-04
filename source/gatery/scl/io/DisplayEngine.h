@@ -69,6 +69,16 @@ namespace gtry::scl
 
 	std::list<std::deque<BVec>> displayControllerDualOpenLDI(TileLinkU&& dma, MemoryMap& mmap, size_t w, size_t h);
 
+	// generates an ANSI color table. see https://en.wikipedia.org/wiki/ANSI_escape_code for details.
+	std::vector<std::array<double, 3>> ansiColorTable();
+
+	struct ColorTableCfg
+	{
+		size_t colorDepth = 6;
+		double gammaCorrection = 2.2;
+		std::vector<std::array<double, 3>> colors = ansiColorTable();
+	};
+
 	class DisplayControllerTiled
 	{
 	public:
@@ -83,15 +93,6 @@ namespace gtry::scl
 			Bit eol, eof; // end of line and end of frame
 		};
 
-		// generates an ANSI color table. see https://en.wikipedia.org/wiki/ANSI_escape_code for details.
-		static std::vector<std::array<double, 3>> ansiColorTable();
-
-		struct ColorTableCfg
-		{
-			size_t colorDepth = 6;
-			double gammaCorrection = 2.2;
-			std::vector<std::array<double, 3>> colors = ansiColorTable();
-		};
 
 		static sim::DefaultBitVectorState packColorTable(ColorTableCfg cfg = {});
 	public:

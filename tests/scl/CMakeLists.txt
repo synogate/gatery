@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.20.4)
 
 
-find_package (Boost COMPONENTS system filesystem unit_test_framework REQUIRED)
+find_package (Boost CONFIG COMPONENTS system filesystem unit_test_framework REQUIRED)
 
 file(GLOB_RECURSE srcs_unittest_scl  "*.cpp" "*.h" "*.c")
 

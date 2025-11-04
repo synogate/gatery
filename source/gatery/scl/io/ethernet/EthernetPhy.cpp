@@ -137,7 +137,7 @@ namespace gtry::scl::eth
 		return out;
 	}
 
-	RvPacketStream<BVec, Error> eth::tagInsert(RvPacketStream<BVec, Error> in, BVec tag)
+	RvPacketStream<BVec, Error> tagInsert(RvPacketStream<BVec, Error> in, BVec tag)
 	{
 		Area ent{ "scl_tagInsert", true };
 		HCL_NAMED(in);
@@ -163,7 +163,7 @@ namespace gtry::scl::eth
 		return out;
 	}
 
-	RvPacketStream<BVec> eth::tagRemove(RvPacketStream<BVec> in)
+	RvPacketStream<BVec> tagRemove(RvPacketStream<BVec> in)
 	{
 		Area ent{ "scl_tagRemove", true };
 

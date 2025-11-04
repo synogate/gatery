@@ -527,7 +527,7 @@ namespace gtry::scl::strm
 		Ready out;
 		*in.ready = !param.beat.isLast() | *out.ready;
 
-		if constexpr (inStream.has<Eop>())
+		if constexpr (inStream.template has<Eop>())
 			*in.ready |= eop(inStream);
 		return out;
 	}
@@ -536,7 +536,7 @@ namespace gtry::scl::strm
 	{
 		Bit v = in.valid & param.beat.isLast();
 
-		if constexpr (inStream.has<Eop>())
+		if constexpr (inStream.template has<Eop>())
 			v |= (in.valid & eop(inStream));
 
 		return { v };

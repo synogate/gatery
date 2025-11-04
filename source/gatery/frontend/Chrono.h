@@ -23,7 +23,7 @@ namespace gtry
 	using namespace std::chrono;
 	using picoseconds = std::chrono::duration<long long, std::pico>;
 
-	[[nodiscard]] inline constexpr picoseconds operator"" _ps(unsigned long long _Val) noexcept
+	[[nodiscard]] inline constexpr picoseconds operator""_ps(unsigned long long _Val) noexcept
 	{
 		return picoseconds(_Val);
 	}

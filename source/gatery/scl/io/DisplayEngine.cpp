@@ -258,7 +258,7 @@ namespace gtry::scl
 		return out;
 	}
 
-	std::vector<std::array<double, 3>> DisplayControllerTiled::ansiColorTable()
+	std::vector<std::array<double, 3>> ansiColorTable()
 	{
 		std::vector<std::array<double, 3>> table = {
 			{ .0, .0, .0 },
@@ -355,7 +355,7 @@ namespace gtry::scl
 		const size_t numTilesY = (m_h + m_syncH) / m_tileH;
 		const size_t tileSize = width(Tile{}).bytes();
 		const size_t beatSize = dma.cfg.dataW.bytes();
-		const size_t burstSize = std::min(utils::lowestSetBitMask(numTilesX * numTilesY * tileSize), 64ull);
+		const size_t burstSize = std::min<size_t>(utils::lowestSetBitMask(numTilesX * numTilesY * tileSize), 64ull);
 		HCL_DESIGNCHECK(burstSize >= beatSize);
 
 		// fetch from memory

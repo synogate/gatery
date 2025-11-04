@@ -169,7 +169,7 @@ namespace gtry {
 		return memoryFromData(sim::createDefaultBitVectorState(data), wordW);
 	}
 
-	Memory<BVec> gtry::memoryFromData(sim::DefaultBitVectorState data, BitWidth wordW)
+	Memory<BVec> memoryFromData(sim::DefaultBitVectorState data, BitWidth wordW)
 	{
 		Memory<BVec> mem((data.size() + wordW.bits() - 1) / wordW.bits(), wordW);
 		mem.fillPowerOnState(move(data));

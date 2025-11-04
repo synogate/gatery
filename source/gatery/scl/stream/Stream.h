@@ -197,7 +197,7 @@ namespace gtry::scl::strm
 	template<typename FunT>
 	auto then(FunT&& fun);
 
-	constexpr auto& _1 = std::placeholders::_1;
+	inline constexpr auto& _1 = std::placeholders::_1;
 }
 
 namespace gtry::scl::strm::internal
