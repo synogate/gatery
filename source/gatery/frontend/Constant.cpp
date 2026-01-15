@@ -21,9 +21,6 @@
 #include "BVec.h"
 #include "UInt.h"
 
-#include <optional>
-#include <boost/spirit/home/x3.hpp>
-
 using namespace gtry;
 
 gtry::BVec gtry::ConstBVec(uint64_t value, BitWidth width, std::string_view name)
