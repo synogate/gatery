@@ -245,6 +245,7 @@ namespace gtry::scl
 			*avmm.ready = '1';
 
 		Memory<UInt> mem{ (size_t) avmm.address.width().count(), dataWidth };
+		mem.setType(MemType::DONT_CARE, avmm.readLatency);
 
 		if (avmm.readData)
 		{
