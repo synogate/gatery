@@ -19,17 +19,18 @@
 
 #include <gatery/scl/synthesisTools/IntelQuartusTestFixture.h>
 #include <gatery/scl/arch/intel/IntelDevice.h>
+#include <gatery/scl/arch/intel/UniPhy.h>
+#include <gatery/scl/arch/intel/ALTPLL.h>
 
 #include <gatery/scl/stream/strm.h>
-
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/data/dataset.hpp>
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
-
 using namespace boost::unit_test;
+using namespace gtry;
 
 boost::test_tools::assertion_result canRunQuartus(boost::unit_test::test_unit_id)
 {
@@ -236,3 +237,42 @@ BOOST_FIXTURE_TEST_CASE(fifoBRamLarge, TestWithCycloneDevice<gtry::IntelQuartusT
 
 
 BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_FIXTURE_TEST_CASE(quartus_uniphy_deca_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk1_50{ ClockConfig{
+		.absoluteFrequency = 50'000'000,
+		.name = "MAX10_CLK1_50",
+		.resetType = ClockConfig::ResetType::NONE
+	} };
+
+	auto* pll2 = DesignScope::get()->createNode<scl::arch::intel::ALTPLL>();
+	pll2->setClock(0, clk1_50);
+	// set for 125 MHz
+	Clock refclk = pll2->generateOutClock(0, 10, 4, 50, 0, ClockConfig::ResetType::NONE);
+
+	ClockScope pinScope(clk1_50);
+
+	scl::arch::intel::UniPhy phy(15_b, 16_b, "ddr3_uniphy");
+	phy.refClk(refclk);
+	phy.pin("ddr3_");
+
+	Clock afiClk = phy.afiClk(150_mhz);
+	ClockScope afiScope(afiClk);
+
+	scl::arch::intel::Afi afi = phy.afi(2);
+	afi.setDefaults();
+
+	BVec led = ConstBVec(0, 8_b);
+	led[0] = afi.cal_success;
+	led[1] = scl::Counter(26_b).value().msb();
+	led(2, 6_b) = afi.wlat;
+	led[7] = afi.cal_fail;
+
+	pinOut(~led, "LED");
+
+	design.postprocess();
+
+	vhdl::VHDLExport vhdl("export/quartus_uniphy_deca_test/top.vhd");
+	vhdl(design.getCircuit());
+}

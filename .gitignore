@@ -32,13 +32,25 @@ test_export
 source/gen/
 gen_mmap.h
 
-# Quartus
+# Quartus Pro
 /tests/**/db
 /tests/**/incremental_db
 /tests/**/output_files
 /tests/**/*.vhd
 /tests/**/*.mif
 /tests/**/*.qws
+# Quartus Std
+/tests/export/**/*.rpt
+/tests/export/**/*.summary
+/tests/export/**/*.smsg
+/tests/export/**/*.sof
+/tests/export/**/*.pof
+/tests/export/**/*.sld
+/tests/export/**/*.pin
+/tests/export/**/*.jdi
+/tests/export/**/*.jditmp
+/tests/export/**/*.done
+
 # GHDL
 work-obj08.cf
 # GateMate
@@ -56,3 +68,4 @@ work-obj08.cf
 !/tests/**/Makefile
 /tests/export/ptile
 *.v.tmp
+
