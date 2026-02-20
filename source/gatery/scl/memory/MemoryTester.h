@@ -46,11 +46,18 @@ namespace gtry::scl
 			{
 				availableSourceId[mem.a->source] = '0';
 				mem.a->address += mem.a->data.width().bytes();
-				
-				IF(state.current() == State::write)
+				//IF(mem.a->address > 8)
+				//	mem.a->address = 0;
+
+				IF(state.current() == State::write) // comment for read write interleaving
 				{
 					IF(mem.a->address == 0)
-						state = State::read;
+					{
+						IF(state.current() == State::write)
+							state = State::read;
+						ELSE
+							state = State::write;
+					}
 				}
 			}
 
@@ -71,6 +78,7 @@ namespace gtry::scl
 				mem.a->data.lower(mem.a->address.width()) = (BVec)mem.a->address;
 			else
 				mem.a->data = (BVec)mem.a->address.lower(mem.a->data.width());
+			mem.a->data ^= ConstBVec(std::random_device{}() ^ (uint64_t(std::random_device{}()) << 32ull), mem.a->data.width());
 
 			Memory<BVec> expectedData(mem.a->source.width().count(), mem.a->data.width());
 			IF(transfer(mem.a))
@@ -99,6 +107,7 @@ namespace gtry::scl
 			IF(error)
 				m_errorCount += 1;
 			m_errorCount = reg(m_errorCount, 0);
+			m_readState = reg(state.current() == State::read, '0');
 
 			HCL_NAMED(error);
 			HCL_NAMED(m_errorCount);
@@ -106,10 +115,11 @@ namespace gtry::scl
 		}
 
 		UInt numErrors() const { return m_errorCount; }
+		Bit readPhase() const { return m_readState; }
 
 	private:
 		UInt m_errorCount;
-
+		Bit m_readState;
 
 	};
 

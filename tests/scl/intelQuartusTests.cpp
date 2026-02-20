@@ -23,6 +23,7 @@
 #include <gatery/scl/arch/intel/ALTPLL.h>
 
 #include <gatery/scl/stream/strm.h>
+#include <gatery/scl/memory/MemoryTester.h>
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/data/dataset.hpp>
@@ -242,32 +243,48 @@ BOOST_FIXTURE_TEST_CASE(quartus_uniphy_deca_test, BoostUnitTestSimulationFixture
 {
 	Clock clk1_50{ ClockConfig{
 		.absoluteFrequency = 50'000'000,
-		.name = "MAX10_CLK1_50",
+		.name = "DDR3_CLK_50",
 		.resetType = ClockConfig::ResetType::NONE
 	} };
 
-	auto* pll2 = DesignScope::get()->createNode<scl::arch::intel::ALTPLL>();
-	pll2->setClock(0, clk1_50);
-	// set for 125 MHz
-	Clock refclk = pll2->generateOutClock(0, 10, 4, 50, 0, ClockConfig::ResetType::NONE);
-
-	ClockScope pinScope(clk1_50);
-
 	scl::arch::intel::UniPhy phy(15_b, 16_b, "ddr3_uniphy");
-	phy.refClk(refclk);
+	phy.refClk(clk1_50);
 	phy.pin("ddr3_");
 
 	Clock afiClk = phy.afiClk(150_mhz);
 	ClockScope afiScope(afiClk);
 
 	scl::arch::intel::Afi afi = phy.afi(2);
-	afi.setDefaults();
+
+	scl::arch::intel::Afi2TileLinkConfig cfg{
+		.CL = 5,
+		.WL = 5,
+		.tRCD = 13'750_ps,
+		.tPR = 13'750_ps,
+		.tWR = 15ns,
+		.tRFC = 260ns,
+	};
+	scl::TileLinkU mm = 
+		afi2tilelinkSequentialBridge(afi, scl::Counter(4us).isLast(), cfg) | 
+		scl::tileLinkRegDecouple;
+	HCL_NAMED(mm);
+
+	//mm.a->setupGet(0);
+	//valid(mm.a) = '1';
+	//ready(*mm.d) = '1';
+
+	scl::MemoryTester tester;
+	tester.generate(mm);
+
+	ENIF(transfer(*mm.d))
+		tap(reg((**mm.d).data) | name("readData"));
 
 	BVec led = ConstBVec(0, 8_b);
 	led[0] = afi.cal_success;
 	led[1] = scl::Counter(26_b).value().msb();
-	led(2, 6_b) = afi.wlat;
-	led[7] = afi.cal_fail;
+	led(2, 6_b) = mm.a->address.upper(6_b);
+	led[6] = tester.numErrors() != 0;
+	led[7] = tester.readPhase();
 
 	pinOut(~led, "LED");
 
@@ -275,4 +292,6 @@ BOOST_FIXTURE_TEST_CASE(quartus_uniphy_deca_test, BoostUnitTestSimulationFixture
 
 	vhdl::VHDLExport vhdl("export/quartus_uniphy_deca_test/top.vhd");
 	vhdl(design.getCircuit());
+
+	runHitsTimeout(8us);
 }

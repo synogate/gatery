@@ -150,7 +150,7 @@ parameter SCC_DATA_WIDTH            = 1;
 
 parameter NUM_SUBGROUP_PER_READ_DQS        = 1;
 parameter QVLD_EXTRA_FLOP_STAGES		   = 0;
-parameter QVLD_WR_ADDRESS_OFFSET		   = 6;
+parameter QVLD_WR_ADDRESS_OFFSET		   = 4;
 	
 // Read Datapath parameters, the values should not be changed unless the intention is to change the architecture.
 // Read valid prediction FIFO
@@ -167,7 +167,7 @@ localparam MAX_READ_LATENCY				   = 2**MAX_LATENCY_COUNT_WIDTH;
 // The sequencer uses this value to control write latency during calibration
 parameter MAX_WRITE_LATENCY_COUNT_WIDTH = 4;
 parameter NUM_WRITE_PATH_FLOP_STAGES    = 1;
-parameter NUM_WRITE_FR_CYCLE_SHIFTS = 0;
+parameter NUM_WRITE_FR_CYCLE_SHIFTS = 1;
 
 // Add additional FF stage between core and periphery
 parameter REGISTER_C2P = "false";
@@ -175,12 +175,12 @@ parameter REGISTER_C2P = "false";
 // Address/Command Datapath
 parameter NUM_AC_FR_CYCLE_SHIFTS = 0;
 
-parameter MR1_ODS								= 0;
-parameter MR1_RTT								= 0;
-parameter MR2_RTT_WR							= 0;
-parameter MEM_T_WL								= 6;
+parameter MR1_ODS								= 1;
+parameter MR1_RTT								= 3;
+parameter MR2_RTT_WR							= 1;
+parameter MEM_T_WL								= 5;
 
-localparam MEM_T_RL								= 7;
+localparam MEM_T_RL								= 5;
 
 // The sequencer issues back-to-back reads during calibration, NOPs may need to be inserted depending on the burst length
 parameter SEQ_BURST_COUNT_WIDTH = 1;

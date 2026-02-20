@@ -179,13 +179,13 @@ endmodule
 // Retrieval info: 	<generic name="MEM_ASR" value="Manual" />
 // Retrieval info: 	<generic name="MEM_SRT" value="Normal" />
 // Retrieval info: 	<generic name="MEM_PD" value="DLL off" />
-// Retrieval info: 	<generic name="MEM_DRV_STR" value="RZQ/6" />
+// Retrieval info: 	<generic name="MEM_DRV_STR" value="RZQ/7" />
 // Retrieval info: 	<generic name="MEM_DLL_EN" value="true" />
-// Retrieval info: 	<generic name="MEM_RTT_NOM" value="ODT Disabled" />
-// Retrieval info: 	<generic name="MEM_RTT_WR" value="Dynamic ODT off" />
-// Retrieval info: 	<generic name="MEM_WTCL" value="6" />
+// Retrieval info: 	<generic name="MEM_RTT_NOM" value="RZQ/6" />
+// Retrieval info: 	<generic name="MEM_RTT_WR" value="RZQ/4" />
+// Retrieval info: 	<generic name="MEM_WTCL" value="5" />
 // Retrieval info: 	<generic name="MEM_ATCL" value="Disabled" />
-// Retrieval info: 	<generic name="MEM_TCL" value="7" />
+// Retrieval info: 	<generic name="MEM_TCL" value="5" />
 // Retrieval info: 	<generic name="MEM_AUTO_LEVELING_MODE" value="true" />
 // Retrieval info: 	<generic name="MEM_USER_LEVELING_MODE" value="Leveling" />
 // Retrieval info: 	<generic name="MEM_INIT_EN" value="false" />
@@ -286,7 +286,7 @@ endmodule
 // Retrieval info: 	<generic name="ENABLE_EMIT_BFM_MASTER" value="false" />
 // Retrieval info: 	<generic name="FORCE_SEQUENCER_TCL_DEBUG_MODE" value="false" />
 // Retrieval info: 	<generic name="ENABLE_SEQUENCER_MARGINING_ON_BY_DEFAULT" value="false" />
-// Retrieval info: 	<generic name="REF_CLK_FREQ" value="125.0" />
+// Retrieval info: 	<generic name="REF_CLK_FREQ" value="50.0" />
 // Retrieval info: 	<generic name="REF_CLK_FREQ_PARAM_VALID" value="false" />
 // Retrieval info: 	<generic name="REF_CLK_FREQ_MIN_PARAM" value="0.0" />
 // Retrieval info: 	<generic name="REF_CLK_FREQ_MAX_PARAM" value="0.0" />
@@ -435,16 +435,16 @@ endmodule
 // Retrieval info: 	<generic name="TIMING_BOARD_DELTA_READ_DQS_ARRIVAL_TIME" value="0.0" />
 // Retrieval info: 	<generic name="PACKAGE_DESKEW" value="false" />
 // Retrieval info: 	<generic name="AC_PACKAGE_DESKEW" value="false" />
-// Retrieval info: 	<generic name="TIMING_BOARD_MAX_CK_DELAY" value="0.6" />
-// Retrieval info: 	<generic name="TIMING_BOARD_MAX_DQS_DELAY" value="0.6" />
-// Retrieval info: 	<generic name="TIMING_BOARD_SKEW_CKDQS_DIMM_MIN" value="-0.01" />
-// Retrieval info: 	<generic name="TIMING_BOARD_SKEW_CKDQS_DIMM_MAX" value="0.01" />
+// Retrieval info: 	<generic name="TIMING_BOARD_MAX_CK_DELAY" value="0.183" />
+// Retrieval info: 	<generic name="TIMING_BOARD_MAX_DQS_DELAY" value="0.181" />
+// Retrieval info: 	<generic name="TIMING_BOARD_SKEW_CKDQS_DIMM_MIN" value="0.002" />
+// Retrieval info: 	<generic name="TIMING_BOARD_SKEW_CKDQS_DIMM_MAX" value="0.007" />
 // Retrieval info: 	<generic name="TIMING_BOARD_SKEW_BETWEEN_DIMMS" value="0.05" />
-// Retrieval info: 	<generic name="TIMING_BOARD_SKEW_WITHIN_DQS" value="0.02" />
-// Retrieval info: 	<generic name="TIMING_BOARD_SKEW_BETWEEN_DQS" value="0.02" />
-// Retrieval info: 	<generic name="TIMING_BOARD_DQ_TO_DQS_SKEW" value="0.0" />
-// Retrieval info: 	<generic name="TIMING_BOARD_AC_SKEW" value="0.02" />
-// Retrieval info: 	<generic name="TIMING_BOARD_AC_TO_CK_SKEW" value="0.0" />
+// Retrieval info: 	<generic name="TIMING_BOARD_SKEW_WITHIN_DQS" value="0.008" />
+// Retrieval info: 	<generic name="TIMING_BOARD_SKEW_BETWEEN_DQS" value="0.005" />
+// Retrieval info: 	<generic name="TIMING_BOARD_DQ_TO_DQS_SKEW" value="-6.0E-4" />
+// Retrieval info: 	<generic name="TIMING_BOARD_AC_SKEW" value="0.017" />
+// Retrieval info: 	<generic name="TIMING_BOARD_AC_TO_CK_SKEW" value="-1.3E-4" />
 // Retrieval info: 	<generic name="ENABLE_EXPORT_SEQ_DEBUG_BRIDGE" value="false" />
 // Retrieval info: 	<generic name="CORE_DEBUG_CONNECTION" value="EXPORT" />
 // Retrieval info: 	<generic name="ADD_EXTERNAL_SEQ_DEBUG_NIOS" value="false" />

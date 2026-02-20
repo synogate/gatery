@@ -36,7 +36,7 @@ package require ::quartus::ddr_timing_model
 set t(CK) 3.333
 
 # Reference Clock Period
-set t(refCK) 8.0
+set t(refCK) 20.0
 
 # Minimum Clock Period
 set t(min_CK) 1.25
@@ -82,8 +82,8 @@ set t(DCD) 0.0
 # Controller parameters
 #######################
 
-set t(RL) 7
-set t(WL) 6
+set t(RL) 5
+set t(WL) 5
 set t(DWIDTH_RATIO) [expr { 2 * 2 }]
 set t(rd_to_wr_turnaround_oct) 2
 
@@ -122,14 +122,14 @@ set ISI(READ_DQ) 0.0
 set ISI(READ_DQS) 0.0
 
 # Board skews
-set board(abs_max_CK_delay) 0.6
-set board(abs_max_DQS_delay) 0.6
-set board(minCK_DQS_skew) -0.01
-set board(maxCK_DQS_skew) 0.01
+set board(abs_max_CK_delay) 0.183
+set board(abs_max_DQS_delay) 0.181
+set board(minCK_DQS_skew) 0.002
+set board(maxCK_DQS_skew) 0.007
 set board(tpd_inter_DIMM) 0.0
-set board(intra_DQS_group_skew) 0.02
-set board(inter_DQS_group_skew) 0.02
-set board(DQ_DQS_skew) 0.0
-set board(intra_addr_ctrl_skew) 0.02
-set board(addresscmd_CK_skew) 0.0
+set board(intra_DQS_group_skew) 0.008
+set board(inter_DQS_group_skew) 0.005
+set board(DQ_DQS_skew) -6.0E-4
+set board(intra_addr_ctrl_skew) 0.017
+set board(addresscmd_CK_skew) -1.3E-4
 

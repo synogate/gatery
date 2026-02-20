@@ -50,6 +50,7 @@ gen_mmap.h
 /tests/export/**/*.jdi
 /tests/export/**/*.jditmp
 /tests/export/**/*.done
+/tests/export/**/*_summary.csv
 
 # GHDL
 work-obj08.cf

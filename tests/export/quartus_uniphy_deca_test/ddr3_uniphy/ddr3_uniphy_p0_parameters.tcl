@@ -12,7 +12,7 @@ set ::GLOBAL_ddr3_uniphy_p0_dqs_group_size 8
 set ::GLOBAL_ddr3_uniphy_p0_number_of_ck_pins 1
 set ::GLOBAL_ddr3_uniphy_p0_number_of_dm_pins 2
 set ::GLOBAL_ddr3_uniphy_p0_dqs_delay_chain_length 2
-set ::GLOBAL_ddr3_uniphy_p0_uniphy_temp_ver_code 1303929735
+set ::GLOBAL_ddr3_uniphy_p0_uniphy_temp_ver_code 1404209629
 # PLL Parameters
 
 #USER W A R N I N G !
@@ -23,35 +23,35 @@ set ::GLOBAL_ddr3_uniphy_p0_uniphy_temp_ver_code 1303929735
 #USER apply those changes to the PLL parameters in this file
 
 set ::GLOBAL_ddr3_uniphy_p0_num_pll_clock 5
-set ::GLOBAL_ddr3_uniphy_p0_pll_mult(0) 6
-set ::GLOBAL_ddr3_uniphy_p0_pll_div(0) 5
+set ::GLOBAL_ddr3_uniphy_p0_pll_mult(0) 3
+set ::GLOBAL_ddr3_uniphy_p0_pll_div(0) 1
 set ::GLOBAL_ddr3_uniphy_p0_pll_phase(0) 0.0
-set ::GLOBAL_ddr3_uniphy_p0_pll_mult(PLL_AFI_CLK) 6
-set ::GLOBAL_ddr3_uniphy_p0_pll_div(PLL_AFI_CLK) 5
+set ::GLOBAL_ddr3_uniphy_p0_pll_mult(PLL_AFI_CLK) 3
+set ::GLOBAL_ddr3_uniphy_p0_pll_div(PLL_AFI_CLK) 1
 set ::GLOBAL_ddr3_uniphy_p0_pll_phase(PLL_AFI_CLK) 0.0
-set ::GLOBAL_ddr3_uniphy_p0_pll_mult(1) 12
-set ::GLOBAL_ddr3_uniphy_p0_pll_div(1) 5
+set ::GLOBAL_ddr3_uniphy_p0_pll_mult(1) 6
+set ::GLOBAL_ddr3_uniphy_p0_pll_div(1) 1
 set ::GLOBAL_ddr3_uniphy_p0_pll_phase(1) 0.0
-set ::GLOBAL_ddr3_uniphy_p0_pll_mult(PLL_MEM_CLK) 12
-set ::GLOBAL_ddr3_uniphy_p0_pll_div(PLL_MEM_CLK) 5
+set ::GLOBAL_ddr3_uniphy_p0_pll_mult(PLL_MEM_CLK) 6
+set ::GLOBAL_ddr3_uniphy_p0_pll_div(PLL_MEM_CLK) 1
 set ::GLOBAL_ddr3_uniphy_p0_pll_phase(PLL_MEM_CLK) 0.0
-set ::GLOBAL_ddr3_uniphy_p0_pll_mult(2) 12
-set ::GLOBAL_ddr3_uniphy_p0_pll_div(2) 5
+set ::GLOBAL_ddr3_uniphy_p0_pll_mult(2) 6
+set ::GLOBAL_ddr3_uniphy_p0_pll_div(2) 1
 set ::GLOBAL_ddr3_uniphy_p0_pll_phase(2) 270.0
-set ::GLOBAL_ddr3_uniphy_p0_pll_mult(PLL_WRITE_CLK) 12
-set ::GLOBAL_ddr3_uniphy_p0_pll_div(PLL_WRITE_CLK) 5
+set ::GLOBAL_ddr3_uniphy_p0_pll_mult(PLL_WRITE_CLK) 6
+set ::GLOBAL_ddr3_uniphy_p0_pll_div(PLL_WRITE_CLK) 1
 set ::GLOBAL_ddr3_uniphy_p0_pll_phase(PLL_WRITE_CLK) 270.0
-set ::GLOBAL_ddr3_uniphy_p0_pll_mult(3) 12
-set ::GLOBAL_ddr3_uniphy_p0_pll_div(3) 5
+set ::GLOBAL_ddr3_uniphy_p0_pll_mult(3) 6
+set ::GLOBAL_ddr3_uniphy_p0_pll_div(3) 1
 set ::GLOBAL_ddr3_uniphy_p0_pll_phase(3) 0.0
-set ::GLOBAL_ddr3_uniphy_p0_pll_mult(PLL_ADDR_CMD_CLK) 12
-set ::GLOBAL_ddr3_uniphy_p0_pll_div(PLL_ADDR_CMD_CLK) 5
+set ::GLOBAL_ddr3_uniphy_p0_pll_mult(PLL_ADDR_CMD_CLK) 6
+set ::GLOBAL_ddr3_uniphy_p0_pll_div(PLL_ADDR_CMD_CLK) 1
 set ::GLOBAL_ddr3_uniphy_p0_pll_phase(PLL_ADDR_CMD_CLK) 0.0
-set ::GLOBAL_ddr3_uniphy_p0_pll_mult(4) 12
-set ::GLOBAL_ddr3_uniphy_p0_pll_div(4) 5
+set ::GLOBAL_ddr3_uniphy_p0_pll_mult(4) 6
+set ::GLOBAL_ddr3_uniphy_p0_pll_div(4) 1
 set ::GLOBAL_ddr3_uniphy_p0_pll_phase(4) 270.0
-set ::GLOBAL_ddr3_uniphy_p0_pll_mult(PLL_AFI_HALF_CLK) 12
-set ::GLOBAL_ddr3_uniphy_p0_pll_div(PLL_AFI_HALF_CLK) 5
+set ::GLOBAL_ddr3_uniphy_p0_pll_mult(PLL_AFI_HALF_CLK) 6
+set ::GLOBAL_ddr3_uniphy_p0_pll_div(PLL_AFI_HALF_CLK) 1
 set ::GLOBAL_ddr3_uniphy_p0_pll_phase(PLL_AFI_HALF_CLK) 270.0
 
 set ::GLOBAL_ddr3_uniphy_p0_leveling_capture_phase 90.0

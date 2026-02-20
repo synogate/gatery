@@ -17,6 +17,8 @@
 */
 #include "gatery/scl_pch.h"
 #include "UniPhy.h"
+#include <gatery/scl/Counter.h>
+#include <gatery/scl/ShiftReg.h>
 
 using namespace gtry::scl::arch::intel;
 
@@ -99,12 +101,18 @@ Afi UniPhy::afi(size_t ratio)
 	in(pre + "cal_req") = ret.cal_req;
 
 	ret.rdata = out(pre + "rdata", ret.rdata.width());
-	ret.rdata_valid = out(pre + "rdata_valid", ret.rdata_valid.width());
 
-	ret.cal_success = out(pre + "cal_success");
-	ret.cal_fail = out(pre + "cal_fail");
-	ret.wlat = (UInt)out(pre + "wlat", ret.wlat.width());
-	ret.rlat = (UInt)out(pre + "rlat", ret.rlat.width());
+	BVec simReadValid = ret.rdata_en;
+	for (size_t i = 0; i < 10; ++i)
+		simReadValid = reg(simReadValid, ConstBVec(0, simReadValid.width()));
+	ret.rdata_valid = simOverride(out(pre + "rdata_valid", ret.rdata_valid.width()), simReadValid);
+
+	ret.cal_success = simOverride(out(pre + "cal_success"), '1');
+	ret.cal_fail = simOverride(out(pre + "cal_fail"), '0');
+	ret.wlat = 2;// simOverride((UInt)out(pre + "wlat", ret.wlat.width()), 3);
+	ret.rlat = simOverride((UInt)out(pre + "rlat", ret.rlat.width()), 0); // for some reason rlat is 0 in practice
+
+	setName(ret.wlat, "test_wlat");
 
 	return ret;
 }
@@ -125,7 +133,7 @@ Afi Afi::create(BitWidth addrW, BitWidth dqW, size_t ratio)
 		.dqs_burst = dqW / 8 * ratio,
 		.dm = dqW / 8 * ratio * 2,
 		.wdata = dqW * ratio * 2,
-		.wdata_valid = BitWidth{ratio},
+		.wdata_valid = dqW / 8 * ratio,
 		
 		.rdata_en = BitWidth{ratio},
 		.rdata_en_full = BitWidth{ratio},
@@ -164,4 +172,184 @@ void Afi::setDefaults()
 
 	init_req = '0';
 	cal_req = '0';
+}
+
+
+gtry::scl::TileLinkU gtry::scl::arch::intel::afi2tilelinkSequentialBridge(Afi& afi, Bit refresh, Afi2TileLinkConfig cfg)
+{
+	Area ent{ "scl_afi2avalonSequentialBridge", true };
+	HCL_NAMED(afi);
+	HCL_NAMED(refresh);
+
+	picoseconds tCK = ClockScope::getClk().period() / 2;
+	BitWidth addrW = afi.addr.width() / 2;
+	BitWidth baW = afi.ba.width() / 2;
+	BitWidth dataW = afi.rdata.width();
+	BitWidth colSelW = 10_b - BitWidth::count(dataW.bytes() / 2);
+
+	auto ret = tileLinkInit<TileLinkU>(addrW + baW + colSelW, dataW, cfg.sourceW);
+	**ret.d = tileLinkDefaultResponse(*ret.a);
+	(**ret.d).data = afi.rdata;
+
+	ready(ret.a) = '0';
+	valid(*ret.d) = '0';
+	(**ret.d).data = afi.rdata;
+
+	afi.setDefaults();
+	
+	// row command always in first slot
+	afi.ba.part(2, 0) = ret.a->wordAddress().upper(baW);
+	afi.addr.part(2, 0) = ret.a->wordAddress()(colSelW.bits(), addrW); // row address
+
+	// col command always in second slot
+	afi.ba.part(2, 1) = ret.a->wordAddress().upper(baW);
+	afi.addr.part(2, 1) = zext(cat(
+		'0', // A12 BC4 burst lenth
+		'0', // A11 used in 4bit dqs group versions only
+		'1', // A10 auto precharge
+		ret.a->wordAddress().lower(colSelW), // column address
+		ConstBVec(0, BitWidth{ 10 - colSelW.bits() }) // burst wrap offset
+	));
+
+	afi.wdata = ret.a->data;
+	afi.dm = ~ret.a->mask;
+
+	enum class AfiState
+	{
+		calibration,
+		idle,
+		refresh,
+
+		cas,
+
+		write_wait_wlat,
+		write_data,
+		write_commit,
+		write_precharge,
+
+		read_commit,
+		read_precharge,
+	};
+	Reg<Enum<AfiState>> state{ AfiState::calibration };
+	state.setName("state");
+
+	IF(state.current() == AfiState::calibration)
+	{
+		IF(afi.cal_success)
+			state = AfiState::idle;
+	}
+
+	scl::Counter timer(cfg.tRFC);
+	IF(!timer.isLast())
+		timer.inc();
+
+	Bit refreshRequest = flag(refresh, state.current() == AfiState::refresh) | name("refreshRequest");
+	IF(state.current() == AfiState::idle)
+	{
+		timer.reset();
+
+		IF(refreshRequest)
+			state = AfiState::refresh;
+		ELSE IF(valid(ret.a))
+		{
+			afi.ras_n = 0;
+			afi.cs_n[0] = '0';
+			state = AfiState::cas;
+		}
+	}
+
+	IF(state.current() == AfiState::cas)
+	{
+		// - 1 for the extra delay between command slot 0 (RAS) and 1 (CAS)
+		size_t cycles = ceil((ClockRational{ cfg.tRCD } / tCK - 1) / 2);
+		IF(timer.value().lower(3_b) == cycles - 1)
+		{
+			afi.cas_n = 0;
+			afi.cs_n[1] = '0';
+			timer.reset();
+
+			IF(ret.a->isPut())
+			{
+				afi.we_n = 0;
+				state = AfiState::write_wait_wlat;
+			}
+			ELSE
+			{
+				afi.rdata_en = 3;
+				afi.rdata_en_full = 3;
+				state = AfiState::read_commit;
+			}
+		}
+	}
+
+	IF(state.current() == AfiState::write_wait_wlat)
+	{
+		// Note that with WL 6 on MAX10 we had to remove the -1 to make it work. What might be caused by tCK (max) violation.
+		IF(zext(timer.value()) == afi.wlat - 1)
+		{
+			afi.dqs_burst.part(2, 1) = afi.dqs_burst.part(2, 1).width().mask(); // write preamble
+			state = AfiState::write_data;
+		}
+	}
+
+	IF(state.current() == AfiState::write_data)
+	{
+		afi.dqs_burst = afi.dqs_burst.width().mask();
+		afi.wdata_valid = afi.wdata_valid.width().mask();
+		state = AfiState::write_commit;
+	}
+
+	IF(state.current() == AfiState::write_commit)
+	{
+		valid(*ret.d) = '1';
+		ready(ret.a) = ready(*ret.d);
+
+		IF(transfer(ret.a))
+			state = AfiState::write_precharge;
+	}
+
+	IF(state.combinatorial() == AfiState::write_precharge)
+	{
+		size_t writeCycles = (cfg.WL + 4 /* write data phase */ + ceil(ClockRational(cfg.tWR + cfg.tPR) / tCK) + 1) / 2;
+		IF(timer.value() >= writeCycles - 1)
+			state = AfiState::idle;
+	}
+
+	IF(state.current() == AfiState::read_commit)
+	{
+		Bit done = afi.rdata_valid != 0 | timer.isLast();
+		(**ret.d).error = afi.rdata_valid == 0;
+		valid(*ret.d) = done;
+		ready(ret.a) = done;
+
+		IF(done)
+		{
+			state = AfiState::read_precharge;
+			sim_assert(ready(*ret.d)) << "no back pressure on read data supported from external memory";
+		}
+	}
+
+	IF(state.combinatorial() == AfiState::read_precharge)
+	{
+		size_t readCycles = (cfg.CL + 3 /* read data phase */ + ceil(ClockRational{ cfg.tPR } / tCK) + 1) / 2;
+		IF(timer.value() >= readCycles - 1)
+			state = AfiState::idle;
+	}
+
+	IF(state.current() != AfiState::refresh & state.next() == AfiState::refresh)
+	{
+		// REFRESH command
+		afi.ras_n = 0;
+		afi.cas_n = 0;
+		afi.cs_n[1] = '0';
+	}
+
+	IF(state.current() == AfiState::refresh)
+	{
+		IF(timer.isLast())
+			state = AfiState::idle;
+	}
+
+	HCL_NAMED(ret);
+	return ret;
 }

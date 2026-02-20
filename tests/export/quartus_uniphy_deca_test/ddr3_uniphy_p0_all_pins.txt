@@ -6,29 +6,29 @@
 #
 
 INSTANCE: ddr3_uniphy_inst|ddr3_uniphy_inst
-DQS: {ddr3_dqs[0]} {ddr3_dqs[1]}
+DQS: {ddr3_dqs_p[0]} {ddr3_dqs_p[1]}
 DQSn: {ddr3_dqs_n[0]} {ddr3_dqs_n[1]}
 DQ: {{ddr3_dq[0]} {ddr3_dq[1]} {ddr3_dq[2]} {ddr3_dq[3]} {ddr3_dq[4]} {ddr3_dq[5]} {ddr3_dq[6]} {ddr3_dq[7]}} {{ddr3_dq[8]} {ddr3_dq[9]} {ddr3_dq[10]} {ddr3_dq[11]} {ddr3_dq[12]} {ddr3_dq[13]} {ddr3_dq[14]} {ddr3_dq[15]}}
 DM {ddr3_dm[0]} {ddr3_dm[1]}
-CK: {ddr3_ck[0]}
+CK: {ddr3_ck_p[0]}
 CKn: {ddr3_ck_n[0]}
 ADD: {ddr3_a[0]} {ddr3_a[10]} {ddr3_a[11]} {ddr3_a[12]} {ddr3_a[13]} {ddr3_a[14]} {ddr3_a[1]} {ddr3_a[2]} {ddr3_a[3]} {ddr3_a[4]} {ddr3_a[5]} {ddr3_a[6]} {ddr3_a[7]} {ddr3_a[8]} {ddr3_a[9]}
 CMD: {ddr3_cs_n[0]} {ddr3_we_n[0]} {ddr3_ras_n[0]} {ddr3_cas_n[0]} {ddr3_cke[0]} ddr3_odt
 RESET: ddr3_reset_n
 BA: {ddr3_ba[0]} {ddr3_ba[1]} {ddr3_ba[2]}
-REF CLK: MAX10_CLK1_50
+REF CLK: DDR3_CLK_50
 PLL AFI: ddr3_uniphy_inst|ddr3_uniphy_inst|pll0|upll_memphy|auto_generated|pll1|clk[4]
 PLL CK: ddr3_uniphy_inst|ddr3_uniphy_inst|pll0|upll_memphy|auto_generated|pll1|clk[0]
 PLL DQ WRITE: ddr3_uniphy_inst|ddr3_uniphy_inst|pll0|upll_memphy|auto_generated|pll1|clk[1]
 PLL WRITE: ddr3_uniphy_inst|ddr3_uniphy_inst|pll0|upll_memphy|auto_generated|pll1|clk[0]
 PLL AC: ddr3_uniphy_inst|ddr3_uniphy_inst|pll0|upll_memphy|auto_generated|pll1|clk[0]
-DQS_IN_CLOCK DQS_PIN (0): ddr3_dqs[0]
-DQS_IN_CLOCK DQS_PIN (1): ddr3_dqs[1]
+DQS_IN_CLOCK DQS_PIN (0): ddr3_dqs_p[0]
+DQS_IN_CLOCK DQS_PIN (1): ddr3_dqs_p[1]
 DQS_OUT_CLOCK SRC (0): ddr3_uniphy_inst|ddr3_uniphy_inst|p0|umemphy|dq_ddio[0].ubidir_dq_dqs|dqs_ddio_io|gpio_one_bit.i_loop[0].altgpio_bit_i|pseudo_diff_output_buf.obuf_a|o
-DQS_OUT_CLOCK DST (0): ddr3_dqs[0]
+DQS_OUT_CLOCK DST (0): ddr3_dqs_p[0]
 DQS_OUT_CLOCK DM (0): ddr3_dm[0]
 DQS_OUT_CLOCK SRC (1): ddr3_uniphy_inst|ddr3_uniphy_inst|p0|umemphy|dq_ddio[1].ubidir_dq_dqs|dqs_ddio_io|gpio_one_bit.i_loop[0].altgpio_bit_i|pseudo_diff_output_buf.obuf_a|o
-DQS_OUT_CLOCK DST (1): ddr3_dqs[1]
+DQS_OUT_CLOCK DST (1): ddr3_dqs_p[1]
 DQS_OUT_CLOCK DM (1): ddr3_dm[1]
 DQSN_OUT_CLOCK SRC (0): ddr3_uniphy_inst|ddr3_uniphy_inst|p0|umemphy|dq_ddio[0].ubidir_dq_dqs|dqs_ddio_io|gpio_one_bit.i_loop[0].altgpio_bit_i|pseudo_diff_output_buf.obuf_a_bar|o
 DQSN_OUT_CLOCK DST (0): ddr3_dqs_n[0]

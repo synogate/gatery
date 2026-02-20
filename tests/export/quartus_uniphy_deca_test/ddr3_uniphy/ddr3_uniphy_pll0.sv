@@ -44,19 +44,19 @@ module ddr3_uniphy_pll0 (
 parameter DEVICE_FAMILY = "MAX 10";
 
 // Clock settings
-parameter REF_CLK_PERIOD_PS = 8000;
+parameter REF_CLK_PERIOD_PS = 20000;
 
-parameter PLL_AFI_CLK_DIV           = 5;
-parameter PLL_MEM_CLK_DIV           = 5;
-parameter PLL_WRITE_CLK_DIV         = 5;
-parameter PLL_CAP0_CLK_DIV          = 5;
-parameter PLL_CAP1_CLK_DIV          = 5;
+parameter PLL_AFI_CLK_DIV           = 1;
+parameter PLL_MEM_CLK_DIV           = 1;
+parameter PLL_WRITE_CLK_DIV         = 1;
+parameter PLL_CAP0_CLK_DIV          = 1;
+parameter PLL_CAP1_CLK_DIV          = 1;
 
-parameter PLL_AFI_CLK_MULT          = 6;
-parameter PLL_MEM_CLK_MULT          = 12;
-parameter PLL_WRITE_CLK_MULT        = 12;
-parameter PLL_CAP0_CLK_MULT         = 12;
-parameter PLL_CAP1_CLK_MULT         = 12;
+parameter PLL_AFI_CLK_MULT          = 3;
+parameter PLL_MEM_CLK_MULT          = 6;
+parameter PLL_WRITE_CLK_MULT        = 6;
+parameter PLL_CAP0_CLK_MULT         = 6;
+parameter PLL_CAP1_CLK_MULT         = 6;
 
 parameter PLL_AFI_CLK_PHASE_PS      = "0";
 parameter PLL_MEM_CLK_PHASE_PS      = "0";

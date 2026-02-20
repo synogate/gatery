@@ -18,6 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 #include <gatery/scl/stream/Stream.h>
+#include <gatery/scl/tilelink/tilelink.h>
 
 namespace gtry::scl::arch::intel
 {
@@ -72,6 +73,19 @@ namespace gtry::scl::arch::intel
 		BitWidth m_dqW;
 
 	};
+
+	struct Afi2TileLinkConfig
+	{
+		BitWidth sourceW = 0_b;
+		size_t CL;
+		size_t WL;
+		picoseconds tRCD;
+		picoseconds tPR;
+		picoseconds tWR;
+		nanoseconds tRFC;
+	};
+
+	TileLinkU afi2tilelinkSequentialBridge(Afi& afi, Bit refresh, Afi2TileLinkConfig cfg);
 	
 }
 
