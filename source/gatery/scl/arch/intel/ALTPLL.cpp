@@ -177,11 +177,13 @@ namespace gtry::scl::arch::intel
 		HCL_DESIGNCHECK_HINT(m_availableOutputClocks[idx] == true, "the desired clock index is not available");
 		m_availableOutputClocks[idx] = false;
 
+		size_t periodPS = ceil(picoseconds::period::den / (m_inClk->absoluteFrequency() * hlim::ClockRational{ mul, div }));
+
 		// TODO: set phase shift
 		Clock out = m_inClk->deriveClock(ClockConfig{
 			.frequencyMultiplier = hlim::ClockRational{ mul, div },
+			.phaseShiftDeg = phaseShiftPs * 360 / periodPS,
 			.name = "pllclk" + std::to_string(idx),
-			//.phaseSynchronousWithParent = phaseShiftPs == 0,
 			.resetType = resetType,
 			.memoryResetType = ClockConfig::ResetType::NONE,
 		});
