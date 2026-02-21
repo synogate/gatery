@@ -109,7 +109,7 @@ Afi UniPhy::afi(size_t ratio)
 
 	ret.cal_success = simOverride(out(pre + "cal_success"), '1');
 	ret.cal_fail = simOverride(out(pre + "cal_fail"), '0');
-	ret.wlat = 2;// simOverride((UInt)out(pre + "wlat", ret.wlat.width()), 3);
+	ret.wlat = simOverride((UInt)out(pre + "wlat", ret.wlat.width()), 3);
 	ret.rlat = simOverride((UInt)out(pre + "rlat", ret.rlat.width()), 0); // for some reason rlat is 0 in practice
 
 	setName(ret.wlat, "test_wlat");
