@@ -19,6 +19,7 @@
 #include <gatery/frontend.h>
 #include "tilelink.h"
 #include "../stream/StreamArbiter.h"
+#include "../io/TxRxStream.h"
 
 namespace gtry::scl
 {
@@ -65,4 +66,22 @@ namespace gtry::scl
 	 */
 	TileLinkU tileLinkChopDataWidth(TileLinkU&& slave, size_t dataWidthDivider);
 	inline auto tileLinkChopDataWidth(size_t dataWidthDivider) { return [=](auto&& in) { return tileLinkChopDataWidth(std::forward<decltype(in)>(in), dataWidthDivider); }; }
+
+	/**
+	 * @brief Serialize a TileLink over a packet stream. Can be used to use tile link in packet based or off chip scenarios.
+	 *			This function is intended to be used between slave and packet stream. It does:
+	 *				tx -> a
+	 *				d -> rx
+	 *			The current implementation chooses to split burst into multiple packets.
+	 */
+	Reverse<TxRxPacketStream> tileLinkSerialize(TileLinkU&& slave, BitWidth dataW);
+	inline auto tileLinkSerialize(BitWidth dataW) { return [=](auto&& in) { return tileLinkSerialize(std::forward<decltype(in)>(in), dataW); }; }
+
+	/**
+	 * @brief The inverse of tileLinkSerialize.
+	 *				a -> tx
+	 *				rx -> d
+	 */
+	TileLinkU tileLinkDeserialize(Reverse<TxRxPacketStream>&& pipe, const TileLinkU& blueprint);
+	inline auto tileLinkDeserialize(const TileLinkU& blueprint) { return [&](auto&& in) { return tileLinkDeserialize(std::forward<decltype(in)>(in), blueprint); }; }
 }

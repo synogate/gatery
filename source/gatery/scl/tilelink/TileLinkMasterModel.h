@@ -56,6 +56,8 @@ namespace gtry::scl
 		void init(std::string_view prefix, const TileLinkU& tlub);
 		void initAndDrive(std::string_view prefix, TileLinkU&& slave);
 
+		void operator() (TileLinkU&& slave) { initAndDrive("model", move(slave)); }
+
 		void probability(float valid, float ready, uint32_t seed = 1337);
 
 		SimFunction<TransactionIn> request(TransactionOut tx, const Clock& clk);

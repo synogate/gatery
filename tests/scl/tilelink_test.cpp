@@ -1826,3 +1826,33 @@ BOOST_FIXTURE_TEST_CASE(tilelink_chop_data_test, BoostUnitTestSimulationFixture)
 
 	runEvalOnlyTest();
 }
+
+BOOST_FIXTURE_TEST_CASE(tilelink_serialize_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ 100_mhz });
+	ClockScope clkScp(clock);
+
+	scl::TileLinkMasterModel linkModel;
+
+	TileLinkU mem = tileLinkMemory(8_b, 16_b, 4_b);
+	move(mem) |
+		tileLinkSerialize(8_b) |
+		name("encoded") |
+		tileLinkDeserialize(mem) |
+		linkModel;
+
+	addSimulationProcess([&]()->SimProcess {
+		co_await OnClk(clock);
+		co_await linkModel.put(122, 1, 0x1234, clock);
+		auto [val, def, err] = co_await linkModel.get(122, 1, clock);
+		BOOST_TEST(!err);
+		BOOST_TEST(def == 0xFFFF);
+		BOOST_TEST(val == 0x1234);
+
+		co_await OnClk(clock);
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout(1us));
+}

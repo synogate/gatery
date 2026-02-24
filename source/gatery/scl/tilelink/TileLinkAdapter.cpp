@@ -455,6 +455,31 @@ namespace gtry::scl
 		HCL_NAMED(out);
 		return out;
 	}
+
+	Reverse<TxRxPacketStream> tileLinkSerialize(TileLinkU&& slave, BitWidth dataW)
+	{
+		Area ent{ "scl_tileLinkSerialize", true };
+		TxRxPacketStream out{
+			.tx = {dataW},
+			.rx = {dataW}
+		};
+		slave.a <<= strm::deserialize(move(out.tx), *slave.a);
+		*out.rx <<= strm::serialize(move(*slave.d), dataW);
+
+		HCL_NAMED(out);
+		return out;
+	}
+
+	TileLinkU tileLinkDeserialize(Reverse<TxRxPacketStream>&& pipe, const TileLinkU& blueprint)
+	{
+		Area ent{ "scl_tileLinkDeserialize", true };
+		TileLinkU out = constructFrom(blueprint);
+		pipe->tx <<= strm::serialize(move(out.a), pipe->tx->width());
+		*out.d <<= strm::deserialize(*pipe->rx, **out.d);
+
+		HCL_NAMED(out);
+		return out;
+	}
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::internal::AddBurstSource, source, size, sequence, forward, last);
