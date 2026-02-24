@@ -333,18 +333,14 @@ BOOST_FIXTURE_TEST_CASE(quartus_uniphy_deca_geardown_test, BoostUnitTestSimulati
 		refreshPulse = scl::Counter(4us).isLast();
 		refreshPulse = scl::synchronizeEvent(refreshPulse, mcuClkShift, afiClk, {.outStages = 1, .inStage = false});
 	}
+	Bit initialStallCondition = reg(
+		!afi.cal_success | allowClockDomainCrossing(afiClk, mcuClk), 
+		'1', { .clock = mcuClk }) | name("initialStallCondition");
 	
 	scl::TileLinkU mm =
 		afi2tilelinkSequentialBridge(afi, refreshPulse, cfg) |
 		scl::tileLinkDynamicToFixedLatencyCdc(mcuClk, mcuClkShift, afiClk) |
-		[&](scl::TileLinkU&& in) {
-			ClockScope cs{ mcuClk };
-			Bit stallCondition = reg(!afi.cal_success | allowClockDomainCrossing(afiClk, mcuClk), '1');
-			scl::TileLinkU out = constructFrom(in);
-			in.a <<= scl::strm::stall(move(out.a), stallCondition);
-			*out.d <<= *in.d;
-			return out;
-		};
+		scl::tileLinkStall(initialStallCondition);
 	HCL_NAMED(mm);
 
 	ClockScope mcuScope(mcuClk);

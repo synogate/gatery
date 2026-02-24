@@ -408,6 +408,14 @@ namespace gtry::scl
 
 		return out;
 	}
+
+	TileLinkU tileLinkStall(TileLinkU&& slave, Bit stallCondition)
+	{
+		scl::TileLinkU out = constructFrom(slave);
+		slave.a <<= scl::strm::stall(move(out.a), stallCondition);
+		*out.d <<= *slave.d;
+		return out;
+	}
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::internal::AddBurstSource, source, size, sequence, forward, last);

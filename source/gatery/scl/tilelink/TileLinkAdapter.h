@@ -52,4 +52,11 @@ namespace gtry::scl
 	 */
 	TileLinkU tileLinkDynamicToFixedLatencyCdc(TileLinkU&& slave, const Clock& requestLaunchClk, const Clock& responseLatchClk, const Clock& slaveClk);
 	inline auto tileLinkDynamicToFixedLatencyCdc(const Clock& requestLaunchClk, const Clock& responseLatchClk, const Clock& slaveClk) { return [=](auto&& in) { return tileLinkDynamicToFixedLatencyCdc(std::forward<decltype(in)>(in), requestLaunchClk, responseLatchClk, slaveClk); }; }
+
+	/**
+	 * @brief Stalls the request channel using stallCondition and strm::stall. The D channel is untouched.
+	 */
+	TileLinkU tileLinkStall(TileLinkU&& slave, Bit stallCondition);
+	inline auto tileLinkStall(Bit stallCondition) { return [=](auto&& in) { return tileLinkStall(std::forward<decltype(in)>(in), stallCondition); }; }
+
 }
