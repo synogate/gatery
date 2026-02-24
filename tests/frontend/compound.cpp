@@ -266,14 +266,12 @@ BOOST_FIXTURE_TEST_CASE(ConstructFromPreservesLoopiness, BoostUnitTestSimulation
 
 
 	RichStruct templateStruct;
-	templateStruct.base.vec = 5_b;
-	templateStruct.base.bit = '0';
 	templateStruct.parameter = 12;
 
 	RichStruct strct;
 	strct = constructFrom(templateStruct);
-	sim_assert(strct.base.vec == 13);
-	strct.base.vec = 13;
+	sim_assert(strct.base.vec == 5);
+	strct.base.vec = 5;
 
 	eval();
 }
