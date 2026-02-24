@@ -1800,3 +1800,29 @@ BOOST_FIXTURE_TEST_CASE(tilelink_spiflash_sdr_gatemate_test, BoostUnitTestSimula
 
 	flowTask.wait();
 }
+
+BOOST_FIXTURE_TEST_CASE(tilelink_chop_data_test, BoostUnitTestSimulationFixture)
+{
+	TileLinkU slave = tileLinkInit<TileLinkU>(8_b, 32_b);
+	TileLinkU master = move(slave) | tileLinkChopDataWidth(2);
+
+	master.a->address = 2;
+	sim_assert(slave.a->address == 4) << "a address error";
+
+	master.a->mask = ConstBVec(3, 2_b);
+	sim_assert(slave.a->mask == ConstBVec(3, 4_b)) << "a mask error";
+
+	master.a->data = ConstBVec(0x1234, 16_b);
+	sim_assert(slave.a->data == ConstBVec(0x1234, 32_b)) << "a data error";
+
+	master.a->size = 1;
+	sim_assert(slave.a->size == 2) << "a size error";
+
+	(*slave.d)->data = ConstBVec(0x1234, 32_b);
+	sim_assert((*master.d)->data == ConstBVec(0x1234, 16_b)) << "d data error";
+
+	(*slave.d)->size = 2;
+	sim_assert((*master.d)->size == 1) << "d size error";
+
+	runEvalOnlyTest();
+}

@@ -59,4 +59,10 @@ namespace gtry::scl
 	TileLinkU tileLinkStall(TileLinkU&& slave, Bit stallCondition);
 	inline auto tileLinkStall(Bit stallCondition) { return [=](auto&& in) { return tileLinkStall(std::forward<decltype(in)>(in), stallCondition); }; }
 
+	/**
+	 * @brief Reduce data width by setting all unused data bits to zero and reducing the address width accordingly.
+	 * @param dataWidthDivider New data path width is old width divided by dataWidthDivider. Needs to be power of 2 for the current implementation.
+	 */
+	TileLinkU tileLinkChopDataWidth(TileLinkU&& slave, size_t dataWidthDivider);
+	inline auto tileLinkChopDataWidth(size_t dataWidthDivider) { return [=](auto&& in) { return tileLinkChopDataWidth(std::forward<decltype(in)>(in), dataWidthDivider); }; }
 }

@@ -416,6 +416,45 @@ namespace gtry::scl
 		*out.d <<= *slave.d;
 		return out;
 	}
+
+	TileLinkU tileLinkChopDataWidth(TileLinkU&& slave, size_t dataWidthDivider)
+	{
+		HCL_DESIGNCHECK(utils::isPow2(dataWidthDivider));
+		HCL_DESIGNCHECK(slave.a->data.width() / dataWidthDivider >= 8_b);
+
+		Area ent{ "scl_tileLinkChopDataWidth", true };
+		
+		TileLinkCfg cfg = slave.cfg;
+		cfg.dataW /= dataWidthDivider;
+		cfg.addrW = cfg.addrW - utils::Log2(dataWidthDivider);
+		cfg.burstLimitLog -= utils::Log2(dataWidthDivider);
+
+		TileLinkU out = tileLinkInit(cfg);
+		slave.a <<= strm::transform(move(out.a), [&](const TileLinkA& a) {
+			return TileLinkA{
+				.opcode = a.opcode,
+				.param = a.param,
+				.size = zext(a.size, slave.a->size.width()) + utils::Log2(dataWidthDivider),
+				.source = a.source,
+				.address = cat(a.address, ConstUInt(0, BitWidth::count(dataWidthDivider))),
+				.mask = zext(a.mask),
+				.data = zext(a.data),
+			};
+		});
+		*out.d <<= strm::transform(move(*slave.d), [&](const TileLinkD& d) {
+			return TileLinkD{
+				.opcode = d.opcode,
+				.param = d.param,
+				.size = (d.size - utils::Log2(dataWidthDivider)).lower((**out.d).size.width()),
+				.source = d.source,
+				.sink = d.sink,
+				.data = d.data.lower(cfg.dataW),
+				.error = d.error,
+			};
+		});
+		HCL_NAMED(out);
+		return out;
+	}
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::internal::AddBurstSource, source, size, sequence, forward, last);
