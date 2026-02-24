@@ -22,11 +22,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 namespace gtry {
 
-	template<BaseSignal T, typename Tr>
-	T simOverride(T val, const Tr& simulationSignal)
+	template<BaseSignal T, std::convertible_to<T> Tr>
+	T simOverride(const T& val, const Tr& simulationSignal)
 	{
-		val.simulationOverride(simulationSignal);
-		return val;
+		NormalizedWidthOperands ops{ val, T{simulationSignal} };
+		T ret{ ops.lhs };
+		ret.simulationOverride(ops.rhs);
+		return ret;
 	}
 
 	template<Signal T, typename Tr> requires(!BaseSignal<T>)

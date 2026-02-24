@@ -195,6 +195,8 @@ namespace gtry {
 
 	void BaseBitVector::exportOverride(const BaseBitVector& exportOverride)
 	{
+		HCL_DESIGNCHECK(exportOverride.readPort().width() == width());
+
 		auto* expOverride = DesignScope::createNode<hlim::Node_ExportOverride>();
 		expOverride->connectInput(readPort());
 		expOverride->connectOverride(exportOverride.readPort());
@@ -203,6 +205,8 @@ namespace gtry {
 
 	void BaseBitVector::simulationOverride(const BaseBitVector& simulationOverride)
 	{
+		HCL_DESIGNCHECK(simulationOverride.readPort().width() == width());
+
 		auto* expOverride = DesignScope::createNode<hlim::Node_ExportOverride>();
 		expOverride->connectInput(simulationOverride.readPort());
 		expOverride->connectOverride(readPort());
