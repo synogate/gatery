@@ -443,7 +443,24 @@ namespace gtry::scl::strm
 
 	template<StreamSignal T>
 	auto duplicate(T&& in, UInt duplicates);
-	inline auto duplicate(const UInt& duplicates) { return [&](auto&& s1) { return duplicate(std::forward<decltype(s1)>(s1), duplicate); }; }
+	inline auto duplicate(const UInt& duplicates) { return [&](auto&& s1) { return duplicate(std::forward<decltype(s1)>(s1), duplicates); }; }
+
+	/**
+	 * @brief Serialize any payload into a multi beat BVec packet stream. 
+				Any meta signals except for valid, ready and eop are duplicated to all beats.
+	 * @param dataW Width of the resulting stream BVec.
+	 * @return Packet stream of BVec.
+	 */
+	template<StreamSignal T>
+	auto serialize(T&& in, BitWidth dataW);
+	inline auto serialize(const BitWidth& dataW) { return [&](auto&& s1) { return serialize(std::forward<decltype(s1)>(s1), dataW); }; }
+
+	/**
+	 * @brief The inverse function to serialize. Beats are registered until a full Payload is received.
+	 */
+	template<Signal T, StreamSignal Ts>
+	auto deserialize(Ts&& in, const T& blueprint);
+	inline auto deserialize(const Signal auto& blueprint) { return [&](auto&& s1) { return deserialize(std::forward<decltype(s1)>(s1), blueprint); }; }
 }
 
 namespace gtry::scl::strm
@@ -1202,5 +1219,52 @@ namespace gtry::scl::strm
 
 		HCL_NAMED(out);
 		return out;
+	}
+
+	template<StreamSignal T>
+	auto serialize(T&& in, BitWidth dataW)
+	{
+		Area ent{ "scl_strm_serialize", true };
+		size_t beats = width(*in).numBeats(dataW);
+
+		Bit lastBeat;
+		return move(in) |
+			strm::duplicate(beats) |
+			strm::transform([&](const auto& inp) {
+			scl::Counter partCounter(beats);
+			lastBeat = partCounter.isLast();
+			BVec rawData = zext(pack(inp), dataW * beats);
+			return rawData.part(beats, partCounter.value());
+		}) |
+			strm::attach(Eop{ lastBeat });
+	}
+
+	template<Signal T, StreamSignal Ts>
+	auto deserialize(Ts&& in, const T& blueprint)
+	{
+		Area ent{ "scl_strm_deserialize", true };
+		size_t beats = width(blueprint).numBeats(in->width());
+
+		Bit lastBeat;
+		Stream out = move(in) |
+			strm::transform([&](const BVec& slice) {
+			BVec rawData = in->width() * beats;
+			rawData = reg(rawData);
+
+			scl::Counter partCounter(beats);
+			lastBeat = partCounter.isLast();
+			rawData.part(beats, partCounter.value()) = slice;
+
+			T ret = constructFrom(blueprint);
+			unpack(rawData.lower(width(ret)), ret);
+			return ret;
+		});
+
+		HCL_NAMED(lastBeat);
+		sim_assert(!valid(out) | eop(out) == lastBeat) << "length of serialized packet unexpected";
+		ready(in) |= !lastBeat;
+		valid(out) &= lastBeat;
+
+		return out | strm::remove<Eop>();
 	}
 }

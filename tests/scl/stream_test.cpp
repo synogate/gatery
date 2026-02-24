@@ -34,6 +34,7 @@
 
 using namespace boost::unit_test;
 using namespace gtry;
+using namespace gtry::scl;
 
 class StreamTransferFixture : public BoostUnitTestSimulationFixture
 {
@@ -3061,7 +3062,6 @@ BOOST_FIXTURE_TEST_CASE(stream_join_left_test, BoostUnitTestSimulationFixture)
 {
 	Clock clk({ .absoluteFrequency = 100'000'000, .memoryResetType = ClockConfig::ResetType::NONE });
 	ClockScope clkScp(clk);
-	using namespace gtry::scl;
 
 	RvStream<BVec> in1{ 8_b };
 	pinIn(in1, "in1");
@@ -3123,7 +3123,6 @@ BOOST_FIXTURE_TEST_CASE(stream_join_right_test, BoostUnitTestSimulationFixture)
 {
 	Clock clk({ .absoluteFrequency = 100'000'000, .memoryResetType = ClockConfig::ResetType::NONE });
 	ClockScope clkScp(clk);
-	using namespace gtry::scl;
 
 	VStream<BVec> in1{ 8_b };
 	pinIn(in1, "in1");
@@ -3179,4 +3178,53 @@ BOOST_FIXTURE_TEST_CASE(stream_join_right_test, BoostUnitTestSimulationFixture)
 
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000'000 }));
+}
+
+struct TestPayload
+{
+	UInt a;
+	Bit b;
+};
+BOOST_HANA_ADAPT_STRUCT(TestPayload, a, b);
+
+BOOST_FIXTURE_TEST_CASE(stream_serialize_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk({ 100_mhz });
+	ClockScope clkScp(clk);
+
+	RvStream<TestPayload> in = 
+		strm::createVStream(TestPayload{ 14_b }, '1') |
+		strm::attach(Ready{});
+	
+	{
+		scl::Counter generatorCounter{ in->a.width() };
+		IF(transfer(in))
+			generatorCounter.inc();
+		in->a = generatorCounter.value();
+		in->b = generatorCounter.value()[0] == generatorCounter.value()[1];
+	}
+	HCL_NAMED(in);
+
+	RvStream<TestPayload> out = move(in) |
+		strm::serialize(8_b) |
+		name("encoded") |
+		strm::deserialize(*in);
+	pinOut(out, "out");
+
+	addSimulationProcess([&, this]()->SimProcess {
+		fork(strm::readyDriverRNG(out, clk, 50));
+		
+		for (size_t i = 0; i < 5; ++i)
+		{
+			co_await strm::performTransferWait(out, clk);
+			BOOST_TEST(simu(out->a) == i);
+			BOOST_TEST(simu(out->b) == (i != 1 && i != 2));
+		}
+
+		co_await OnClk(clk);
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout(1us));
 }
