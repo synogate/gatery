@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pinplan
+ variation_name="ddr3_uniphy"
+ megafunction_name="ALTERA_MEM_IF_DDR3_EMIF"
+ intended_family="MAX 10"
+ specifies="all_ports">
+ <global>
+  <pin name="pll_ref_clk" direction="input" scope="external" />
+  <pin name="global_reset_n" direction="input" scope="external" />
+  <pin name="soft_reset_n" direction="input" scope="external" />
+  <pin name="afi_clk" direction="output" scope="external" />
+  <pin name="afi_half_clk" direction="output" scope="external" />
+  <pin name="afi_reset_n" direction="output" scope="external" />
+  <pin name="afi_reset_export_n" direction="output" scope="external" />
+  <pin name="mem_a[14..0]" direction="output" scope="external" />
+  <pin name="mem_ba[2..0]" direction="output" scope="external" />
+  <pin name="mem_ck" direction="bidir" scope="external" />
+  <pin name="mem_ck_n" direction="bidir" scope="external" />
+  <pin name="mem_cke" direction="output" scope="external" />
+  <pin name="mem_cs_n" direction="output" scope="external" />
+  <pin name="mem_dm[1..0]" direction="output" scope="external" />
+  <pin name="mem_ras_n" direction="output" scope="external" />
+  <pin name="mem_cas_n" direction="output" scope="external" />
+  <pin name="mem_we_n" direction="output" scope="external" />
+  <pin name="mem_reset_n" direction="output" scope="external" />
+  <pin name="mem_dq[15..0]" direction="bidir" scope="external" />
+  <pin name="mem_dqs[1..0]" direction="bidir" scope="external" />
+  <pin name="mem_dqs_n[1..0]" direction="bidir" scope="external" />
+  <pin name="mem_odt" direction="output" scope="external" />
+  <pin name="afi_addr[29..0]" direction="input" scope="external" />
+  <pin name="afi_ba[5..0]" direction="input" scope="external" />
+  <pin name="afi_cke[1..0]" direction="input" scope="external" />
+  <pin name="afi_cs_n[1..0]" direction="input" scope="external" />
+  <pin name="afi_ras_n[1..0]" direction="input" scope="external" />
+  <pin name="afi_we_n[1..0]" direction="input" scope="external" />
+  <pin name="afi_cas_n[1..0]" direction="input" scope="external" />
+  <pin name="afi_rst_n[1..0]" direction="input" scope="external" />
+  <pin name="afi_odt[1..0]" direction="input" scope="external" />
+  <pin name="afi_dqs_burst[3..0]" direction="input" scope="external" />
+  <pin name="afi_wdata_valid[3..0]" direction="input" scope="external" />
+  <pin name="afi_wdata[63..0]" direction="input" scope="external" />
+  <pin name="afi_dm[7..0]" direction="input" scope="external" />
+  <pin name="afi_rdata[63..0]" direction="output" scope="external" />
+  <pin name="afi_rdata_en[1..0]" direction="input" scope="external" />
+  <pin name="afi_rdata_en_full[1..0]" direction="input" scope="external" />
+  <pin name="afi_rdata_valid[1..0]" direction="output" scope="external" />
+  <pin name="afi_mem_clk_disable" direction="input" scope="external" />
+  <pin name="afi_init_req" direction="input" scope="external" />
+  <pin name="afi_cal_req" direction="input" scope="external" />
+  <pin name="afi_wlat[5..0]" direction="output" scope="external" />
+  <pin name="afi_rlat[5..0]" direction="output" scope="external" />
+  <pin name="afi_cal_success" direction="output" scope="external" />
+  <pin name="afi_cal_fail" direction="output" scope="external" />
+  <pin name="pll_mem_clk" direction="output" scope="external" />
+  <pin name="pll_write_clk" direction="output" scope="external" />
+  <pin name="pll_locked" direction="output" scope="external" />
+  <pin name="pll_capture0_clk" direction="output" scope="external" />
+  <pin name="pll_capture1_clk" direction="output" scope="external" />
+ </global>
+</pinplan>

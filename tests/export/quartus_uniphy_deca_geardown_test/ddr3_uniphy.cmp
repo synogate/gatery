@@ -1,0 +1,56 @@
+	component ddr3_uniphy is
+		port (
+			pll_ref_clk         : in    std_logic                     := 'X';             -- clk
+			global_reset_n      : in    std_logic                     := 'X';             -- reset_n
+			soft_reset_n        : in    std_logic                     := 'X';             -- reset_n
+			afi_clk             : out   std_logic;                                        -- clk
+			afi_half_clk        : out   std_logic;                                        -- clk
+			afi_reset_n         : out   std_logic;                                        -- reset_n
+			afi_reset_export_n  : out   std_logic;                                        -- reset_n
+			mem_a               : out   std_logic_vector(14 downto 0);                    -- mem_a
+			mem_ba              : out   std_logic_vector(2 downto 0);                     -- mem_ba
+			mem_ck              : inout std_logic_vector(0 downto 0)  := (others => 'X'); -- mem_ck
+			mem_ck_n            : inout std_logic_vector(0 downto 0)  := (others => 'X'); -- mem_ck_n
+			mem_cke             : out   std_logic_vector(0 downto 0);                     -- mem_cke
+			mem_cs_n            : out   std_logic_vector(0 downto 0);                     -- mem_cs_n
+			mem_dm              : out   std_logic_vector(1 downto 0);                     -- mem_dm
+			mem_ras_n           : out   std_logic_vector(0 downto 0);                     -- mem_ras_n
+			mem_cas_n           : out   std_logic_vector(0 downto 0);                     -- mem_cas_n
+			mem_we_n            : out   std_logic_vector(0 downto 0);                     -- mem_we_n
+			mem_reset_n         : out   std_logic;                                        -- mem_reset_n
+			mem_dq              : inout std_logic_vector(15 downto 0) := (others => 'X'); -- mem_dq
+			mem_dqs             : inout std_logic_vector(1 downto 0)  := (others => 'X'); -- mem_dqs
+			mem_dqs_n           : inout std_logic_vector(1 downto 0)  := (others => 'X'); -- mem_dqs_n
+			mem_odt             : out   std_logic_vector(0 downto 0);                     -- mem_odt
+			afi_addr            : in    std_logic_vector(29 downto 0) := (others => 'X'); -- afi_addr
+			afi_ba              : in    std_logic_vector(5 downto 0)  := (others => 'X'); -- afi_ba
+			afi_cke             : in    std_logic_vector(1 downto 0)  := (others => 'X'); -- afi_cke
+			afi_cs_n            : in    std_logic_vector(1 downto 0)  := (others => 'X'); -- afi_cs_n
+			afi_ras_n           : in    std_logic_vector(1 downto 0)  := (others => 'X'); -- afi_ras_n
+			afi_we_n            : in    std_logic_vector(1 downto 0)  := (others => 'X'); -- afi_we_n
+			afi_cas_n           : in    std_logic_vector(1 downto 0)  := (others => 'X'); -- afi_cas_n
+			afi_rst_n           : in    std_logic_vector(1 downto 0)  := (others => 'X'); -- afi_rst_n
+			afi_odt             : in    std_logic_vector(1 downto 0)  := (others => 'X'); -- afi_odt
+			afi_dqs_burst       : in    std_logic_vector(3 downto 0)  := (others => 'X'); -- afi_dqs_burst
+			afi_wdata_valid     : in    std_logic_vector(3 downto 0)  := (others => 'X'); -- afi_wdata_valid
+			afi_wdata           : in    std_logic_vector(63 downto 0) := (others => 'X'); -- afi_wdata
+			afi_dm              : in    std_logic_vector(7 downto 0)  := (others => 'X'); -- afi_dm
+			afi_rdata           : out   std_logic_vector(63 downto 0);                    -- afi_rdata
+			afi_rdata_en        : in    std_logic_vector(1 downto 0)  := (others => 'X'); -- afi_rdata_en
+			afi_rdata_en_full   : in    std_logic_vector(1 downto 0)  := (others => 'X'); -- afi_rdata_en_full
+			afi_rdata_valid     : out   std_logic_vector(1 downto 0);                     -- afi_rdata_valid
+			afi_mem_clk_disable : in    std_logic_vector(0 downto 0)  := (others => 'X'); -- afi_mem_clk_disable
+			afi_init_req        : in    std_logic                     := 'X';             -- afi_init_req
+			afi_cal_req         : in    std_logic                     := 'X';             -- afi_cal_req
+			afi_wlat            : out   std_logic_vector(5 downto 0);                     -- afi_wlat
+			afi_rlat            : out   std_logic_vector(5 downto 0);                     -- afi_rlat
+			afi_cal_success     : out   std_logic;                                        -- afi_cal_success
+			afi_cal_fail        : out   std_logic;                                        -- afi_cal_fail
+			pll_mem_clk         : out   std_logic;                                        -- pll_mem_clk
+			pll_write_clk       : out   std_logic;                                        -- pll_write_clk
+			pll_locked          : out   std_logic;                                        -- pll_locked
+			pll_capture0_clk    : out   std_logic;                                        -- pll_capture0_clk
+			pll_capture1_clk    : out   std_logic                                         -- pll_capture1_clk
+		);
+	end component ddr3_uniphy;
+

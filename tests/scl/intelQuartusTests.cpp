@@ -276,9 +276,6 @@ BOOST_FIXTURE_TEST_CASE(quartus_uniphy_deca_test, BoostUnitTestSimulationFixture
 	scl::MemoryTester tester;
 	tester.generate(mm);
 
-	ENIF(transfer(*mm.d))
-		tap(reg((**mm.d).data) | name("readData"));
-
 	BVec led = ConstBVec(0, 8_b);
 	led[0] = afi.cal_success;
 	led[1] = scl::Counter(26_b).value().msb();
@@ -291,6 +288,83 @@ BOOST_FIXTURE_TEST_CASE(quartus_uniphy_deca_test, BoostUnitTestSimulationFixture
 	design.postprocess();
 
 	vhdl::VHDLExport vhdl("export/quartus_uniphy_deca_test/top.vhd");
+	vhdl(design.getCircuit());
+
+	runHitsTimeout(8us);
+}
+
+BOOST_FIXTURE_TEST_CASE(quartus_uniphy_deca_geardown_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk_ddr_50{ ClockConfig{
+		.absoluteFrequency = 50'000'000,
+		.name = "DDR3_CLK_50",
+		.resetType = ClockConfig::ResetType::NONE
+	} };
+
+	scl::arch::intel::UniPhy phy(15_b, 16_b, "ddr3_uniphy");
+	phy.refClk(clk_ddr_50);
+	phy.pin("ddr3_");
+
+	Clock afiClk = phy.afiClk(150_mhz);
+
+	auto* pll2 = DesignScope::get()->createNode<scl::arch::intel::ALTPLL>();
+	pll2->setClock(0, afiClk);
+	pll2->setBandwidthType(scl::arch::intel::ALTPLL::BandwidthType::LOW); // recommended for pll cascading
+	pll2->setOperationMode("NORMAL");
+	Clock mcuClk = pll2->generateOutClock(0, 1, 75, 50, 0);
+	Clock mcuClkShift = pll2->generateOutClock(1, 1, 75, 50, 133'333);
+
+	ClockScope afiScope(afiClk);
+
+	scl::arch::intel::Afi afi = phy.afi(2);
+
+	scl::arch::intel::Afi2TileLinkConfig cfg{
+		.sourceW = 2_b,
+		.CL = 5,
+		.WL = 5,
+		.tRCD = 13'750_ps,
+		.tPR = 13'750_ps,
+		.tWR = 15ns,
+		.tRFC = 260ns,
+	};
+	Bit refreshPulse;
+	{
+		ClockScope cs{ mcuClkShift };
+		refreshPulse = scl::Counter(4us).isLast();
+		refreshPulse = scl::synchronizeEvent(refreshPulse, mcuClkShift, afiClk, {.outStages = 1, .inStage = false});
+	}
+	
+	scl::TileLinkU mm =
+		afi2tilelinkSequentialBridge(afi, refreshPulse, cfg) |
+		scl::tileLinkDynamicToFixedLatencyCdc(mcuClk, mcuClkShift, afiClk) |
+		[&](scl::TileLinkU&& in) {
+			ClockScope cs{ mcuClk };
+			Bit stallCondition = reg(!afi.cal_success | allowClockDomainCrossing(afiClk, mcuClk), '1');
+			scl::TileLinkU out = constructFrom(in);
+			in.a <<= scl::strm::stall(move(out.a), stallCondition);
+			*out.d <<= *in.d;
+			return out;
+		};
+	HCL_NAMED(mm);
+
+	ClockScope mcuScope(mcuClk);
+
+	scl::MemoryTester tester;
+	tester.generate(mm);
+
+	BVec led = ConstBVec(0, 8_b);
+	led[0] = afi.cal_success | allowClockDomainCrossing(afiClk, mcuClk);
+	led[1] = scl::Counter(20_b).value().msb();
+	led(2, 6_b) = mm.a->address.upper(6_b);
+	led[6] = tester.numErrors() != 0;
+	led[7] = tester.readPhase();
+
+	pinOut(~led, "LED");
+
+	design.postprocess();
+
+	vhdl::VHDLExport vhdl("export/quartus_uniphy_deca_geardown_test/top.vhd");
+	vhdl.targetSynthesisTool(new IntelQuartus());
 	vhdl(design.getCircuit());
 
 	runHitsTimeout(8us);

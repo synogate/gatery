@@ -103,6 +103,7 @@ namespace gtry::scl::arch::intel
 		resizeIOPorts(IN_COUNT, OUT_COUNT);
 
 		declInputBitVector(IN_INCLK, "INCLK", 2);
+		declInputBit(IN_ARESET, "areset");
 		// declInputBit(IN_FBIN, "FBIN");
 		// declInputBit(IN_PHASEUPDOWN, "PHASEUPDOWN");
 		// declInputBit(IN_PHASESTEP, "PHASESTEP");
@@ -179,13 +180,13 @@ namespace gtry::scl::arch::intel
 
 		size_t periodPS = ceil(picoseconds::period::den / (m_inClk->absoluteFrequency() * hlim::ClockRational{ mul, div }));
 
-		// TODO: set phase shift
 		Clock out = m_inClk->deriveClock(ClockConfig{
 			.frequencyMultiplier = hlim::ClockRational{ mul, div },
 			.phaseShiftDeg = phaseShiftPs * 360 / periodPS,
 			.name = "pllclk" + std::to_string(idx),
 			.resetType = resetType,
 			.memoryResetType = ClockConfig::ResetType::NONE,
+			.resetActive = ClockConfig::ResetActive::LOW,
 		});
 
 		configureClock(idx, mul, div, dutyCyclePercent, phaseShiftPs);
@@ -197,7 +198,7 @@ namespace gtry::scl::arch::intel
 
 		if (resetType != ClockConfig::ResetType::NONE)
 		{
-			Bit pllReset = !getOutputBit(OUT_LOCKED);
+			Bit pllReset = getOutputBit(OUT_LOCKED);
 			pllReset = scl::synchronize(pllReset, *m_inClk, out, {.outStages = 2, .inStage = false});
 
 			Bit rstSignal; // Leave unconnected to let the simulator drive the clock's reset signal during simulation
@@ -215,15 +216,33 @@ namespace gtry::scl::arch::intel
 		BVec inClockVec = ConstBVec(2_b);
 		inClockVec.lsb() = clock.clkSignal();
 		setInput(IN_INCLK, inClockVec);
+		setInput(IN_ARESET, clock.reset(ClockConfig::ResetActive::HIGH));
+		if (clock.getClk()->getRegAttribs().resetType != ClockConfig::ResetType::NONE)
+			m_genericParameters["port_areset"] = "PORT_USED";
 		//attachClock(clock, idx);
 
-		const double clockPeriod = clock.absoluteFrequency().denominator() / (double)clock.absoluteFrequency().numerator();
-		const size_t periodPs = (size_t)round(clockPeriod * 1e12);
+		const size_t periodPs = floor(picoseconds::period::den / clock.absoluteFrequency());
 		std::string name = "inclk" + std::to_string(idx);
 		m_genericParameters[name + "_input_frequency"] = periodPs;
 		m_genericParameters["port_" + name] = "PORT_USED";
 
 		m_inClk = clock;
+	}
+
+	void ALTPLL::setBandwidthType(BandwidthType type)
+	{
+		switch (type)
+		{
+		case BandwidthType::AUTO:	m_genericParameters["bandwidth_type"] = "AUTO"; break;
+		case BandwidthType::LOW:	m_genericParameters["bandwidth_type"] = "LOW"; break;
+		case BandwidthType::MEDIUM:	m_genericParameters["bandwidth_type"] = "MEDIUM"; break;
+		case BandwidthType::HIGH:	m_genericParameters["bandwidth_type"] = "HIGH"; break;
+		}
+	}
+
+	void ALTPLL::setOperationMode(std::string mode)
+	{
+		m_genericParameters["operation_mode"] = mode;
 	}
 
 	Clock ALTPLL::generateUnspecificClock(size_t mul, size_t div, size_t dutyCyclePercent, size_t phaseShiftPs, ClockConfig::ResetType resetType)

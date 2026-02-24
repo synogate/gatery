@@ -43,4 +43,13 @@ namespace gtry::scl
 
 	inline auto tileLinkAddBurst(size_t burstLimitLog) { return [=](auto&& in) { return tileLinkAddBurst(std::forward<decltype(in)>(in), burstLimitLog); }; }
 	inline auto tileLinkAddBurst(BitWidth sizeW) { return [=](auto&& in) { return tileLinkAddBurst(std::forward<decltype(in)>(in), sizeW); }; }
+
+	/**
+	 * @brief Makes a high clock rate slave accessible from a much slower master clock with single cycle latency.
+	 * @param requestLaunchClk The master clock domain that generates the A stream.
+	 * @param responseLatchClk The phase shifted master clock. Such that, a request is guaranteed to be finished between launch and latch edges.
+	 * @param slaveClk
+	 */
+	TileLinkU tileLinkDynamicToFixedLatencyCdc(TileLinkU&& slave, const Clock& requestLaunchClk, const Clock& responseLatchClk, const Clock& slaveClk);
+	inline auto tileLinkDynamicToFixedLatencyCdc(const Clock& requestLaunchClk, const Clock& responseLatchClk, const Clock& slaveClk) { return [=](auto&& in) { return tileLinkDynamicToFixedLatencyCdc(std::forward<decltype(in)>(in), requestLaunchClk, responseLatchClk, slaveClk); }; }
 }

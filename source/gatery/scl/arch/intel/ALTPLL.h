@@ -36,6 +36,8 @@ namespace gtry::scl::arch::intel
 
 		enum Inputs {
 			IN_INCLK,
+			IN_ARESET,
+
 			// IN_FBIN,
 			// IN_PHASEUPDOWN,
 			// IN_PHASESTEP,
@@ -75,9 +77,16 @@ namespace gtry::scl::arch::intel
 			OUT_COUNT
 		};
 
+		enum class BandwidthType
+		{
+			AUTO, LOW, MEDIUM, HIGH,
+		};
+
 		ALTPLL(size_t availableOutputClocks = 5);
 
 		void setClock(size_t idx, const Clock& clock);
+		void setBandwidthType(BandwidthType type);
+		void setOperationMode(std::string mode);
 		
 		hlim::ClockRational inClkFrequency() const { HCL_DESIGNCHECK_HINT(m_inClk, "input clock not yet specified"); return m_inClk->absoluteFrequency(); }
 

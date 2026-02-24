@@ -361,6 +361,53 @@ namespace gtry::scl
 	{
 		return tileLinkAddBurst(move(slave), sizeW.last());
 	}
+
+	TileLinkU tileLinkDynamicToFixedLatencyCdc(TileLinkU&& slave, const Clock& requestLaunchClk, const Clock& responseLatchClk, const Clock& slaveClk)
+	{
+		Area ent{ "scl_tileLinkDynamicToFixedLatencyCdc", true };
+
+		TileLinkU out = constructFrom(slave);
+		HCL_NAMED(out);
+
+		// request
+		ClockScope captureRequestScope{ requestLaunchClk };
+		VStream<TileLinkA> req = move(out.a) |
+			strm::regDownstreamBlocking() |
+			strm::removeReady() |
+			allowClockDomainCrossing(requestLaunchClk, slaveClk) |
+			name("launchRequest");
+
+		//Clock slaveClkPreserve = slaveClk.deriveClock(ClockConfig{ .synchronizationRegister = true });
+		ClockScope css{ slaveClk };
+		Bit captureEdge = synchronizeEvent('1', requestLaunchClk, slaveClk, { .outStages = 2, .inStage = false }) | name("captureEdge");
+		VStream<TileLinkA> reqSlave = strm::createVStream(
+			*req,
+			flagInstantSet(captureEdge & valid(req), ready(slave.a))
+		);
+		slave.a <<= reqSlave | strm::attach(Ready{}) | name("slaveRequest");
+
+		// response
+		TileLinkD resData = *(move(*slave.d) | strm::removeReady() | strm::remove<Valid>());
+		TileLinkD resCaptured = constructFrom(resData);
+		IF(transfer(*slave.d))
+			resCaptured = resData;
+		resCaptured = reg(resCaptured) | name("resCaptured");
+
+		ClockScope captureResponseScope{ responseLatchClk };
+		*out.d <<= strm::createVStream(
+				resCaptured | allowClockDomainCrossing(slaveClk, responseLatchClk),
+				'0'
+			) |
+			strm::regDownstreamBlocking() |
+			allowClockDomainCrossing(responseLatchClk, requestLaunchClk) |
+			strm::attach(Ready{}) |
+			name("response");
+
+		ClockScope requestScope{ requestLaunchClk };
+		valid(*out.d) = reg(valid(out.a), '0');
+
+		return out;
+	}
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::internal::AddBurstSource, source, size, sequence, forward, last);
