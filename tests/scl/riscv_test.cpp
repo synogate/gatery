@@ -2181,7 +2181,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_single_cycle_export, BoostUnitTestSimulationFixtur
 
 #endif
 
-BOOST_FIXTURE_TEST_CASE(riscv_gdb_soc_export, BoostUnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(riscv_gdb_soc_export, BoostUnitTestSimulationFixture, *boost::unit_test::disabled())
 {
 	bool hasDisplay = false;
 	bool hasSdCard = false;

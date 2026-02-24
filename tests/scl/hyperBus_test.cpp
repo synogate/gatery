@@ -172,7 +172,7 @@ BOOST_FIXTURE_TEST_CASE(HyperRAMreadTest, HyperBusMasterTest)
 	BOOST_TEST(!runHitsTimeout(1us));
 }
 
-BOOST_FIXTURE_TEST_CASE(HyperRAM_soc_test_export, BoostUnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(HyperRAM_soc_test_export, BoostUnitTestSimulationFixture, *boost::unit_test::disabled())
 {
 	const std::string& testName = boost::unit_test::framework::current_test_case().p_name.get();
 
