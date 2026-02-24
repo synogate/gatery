@@ -17,9 +17,22 @@
 */
 #pragma once
 #include "Function.h"
+#include "../TxRxStream.h"
 
 namespace gtry::scl::usb
 {
+	class SimuBusBase;
+
 	// The notification endpoint is optional but Linux does not accept the device without it. It works under windows.
 	void virtualCOMsetup(Function& func, uint8_t interfaceNumber, uint8_t endPoint, std::optional<uint8_t> notificationEndPoint = {}, boost::optional<Bit&> dtr = {}, boost::optional<Bit&> rts = {});
+
+	/**
+	 * @brief One stop shop for GPIO based USB Function to TxRxStream using CDC device class. Use if you need the most simple usb communication.
+	 *			- It's also a great starting point for more customized USB devices.
+	 *			- use usb::SimuHostController controller(*usbBus, usbFunction.descriptor()); to drive your simulation tests.
+	 * @param function Function instance needs to stay alive for simulation.
+	 * @param simhost Required for simulation.
+	 * @param enablePinName (optional) Pin name for a simple low after reset enable pin.
+	 */
+	Reverse<TxRxStream> streamToSerialAdapter(usb::Function& function, SimuBusBase** simhost = nullptr, std::string_view enablePinName = "USB_EN");
 }
