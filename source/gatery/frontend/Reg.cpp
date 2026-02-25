@@ -48,6 +48,10 @@ namespace gtry
 		if(settings.allowRetimingBackward)
 			reg->getFlags().insert(hlim::Node_Register::Flags::ALLOW_RETIMING_BACKWARD);
 
+		std::optional<EnableScope> en;
+		if (settings.en)
+			en.emplace(*settings.en);
+
 		EnableScope* scope = EnableScope::get();
 		if(scope)
 			reg->connectInput(hlim::Node_Register::ENABLE, scope->getFullEnableCondition());
