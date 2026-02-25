@@ -33,4 +33,23 @@ namespace gtry::scl
 
 	using TxRxStream = TxRxStreamBase<BVec>;
 	using TxRxPacketStream = TxRxStreamBase<BVec, Eop>;
+
+	/**
+	 * @brief Connect tx to rx and tx to rx.
+	 */
+	template<Signal T = BVec, Signal... MetaT>
+	Reverse<TxRxStreamBase<T, MetaT...>> crossover(TxRxStreamBase<T, MetaT...>&& in);
+
+}
+
+namespace gtry::scl
+{
+	template<Signal T, Signal ...MetaT>
+	Reverse<TxRxStreamBase<T, MetaT...>> crossover(TxRxStreamBase<T, MetaT...>&& in)
+	{
+		Reverse<TxRxStreamBase<T, MetaT...>> out = constructFrom(in);
+		*out->rx <<= in.tx;
+		*in.rx <<= out->tx;
+		return out;
+	}
 }

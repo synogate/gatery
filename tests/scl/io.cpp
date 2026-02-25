@@ -27,6 +27,7 @@
 #include <gatery/scl/io/RecoverDataDifferential.h>
 #include <gatery/scl/io/SpiPort.h>
 #include <gatery/scl/io/SpiMaster.h>
+#include <gatery/scl/io/TxRxPacketStreamRouter.h>
 #include <gatery/scl/interrupt.h>
 #include <gatery/scl/riscv/DualCycleRV.h>
 #include <gatery/scl/riscv/EmbeddedSystemBuilder.h>
@@ -595,22 +596,90 @@ BOOST_FIXTURE_TEST_CASE(rotary_encoder_test_export, BoostUnitTestSimulationFixtu
 
 	design.postprocess();
 
-	const std::string& testName = boost::unit_test::framework::current_test_case().p_name.get();
-	std::filesystem::path cwd = std::filesystem::path{ "export" } / testName;
-	std::future<int> flow;
-	vhdl::VHDLExport vhdl(cwd / "top.vhd");
-	if (std::filesystem::is_directory(cwd))
-	{
-		//vhdl.addTestbenchRecorder(*m_simulator, "tb", true);
-		vhdl(design.getCircuit());
-
-		flow = std::async([=]() {
-			return std::system(("make -C " + cwd.string()).c_str());
-			});
-	}
+	//const std::string& testName = boost::unit_test::framework::current_test_case().p_name.get();
+	//std::filesystem::path cwd = std::filesystem::path{ "export" } / testName;
+	//std::future<int> flow;
+	//vhdl::VHDLExport vhdl(cwd / "top.vhd");
+	//if (std::filesystem::is_directory(cwd))
+	//{
+	//	//vhdl.addTestbenchRecorder(*m_simulator, "tb", true);
+	//	vhdl(design.getCircuit());
+	//
+	//	flow = std::async([=]() {
+	//		return std::system(("make -C " + cwd.string()).c_str());
+	//		});
+	//}
 
 	BOOST_TEST(!runHitsTimeout(2ms));
 
 //	if (flow.valid())
 //		BOOST_TEST(flow.get() == 0);
+}
+
+BOOST_FIXTURE_TEST_CASE(txrx_router_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock{{ 100_mhz }};
+	ClockScope clkScp(clock);
+
+	// A side setup
+	TxRxPacketStream A0{ {8_b}, {8_b} };
+	pinIn(A0, "A0");
+	TxRxPacketStream A1{ {8_b}, {8_b} };
+	pinIn(A1, "A1");
+
+	TxRxPacketStreamRouter routerA;
+	move(A0) | routerA(0x55);
+	move(A1) | routerA(0xAA);
+
+	// B side setup
+	TxRxPacketStream B0{ {8_b}, {8_b} };
+	pinIn(B0, "B0");
+	TxRxPacketStream B1{ {8_b}, {8_b} };
+	pinIn(B1, "B1");
+
+	TxRxPacketStreamRouter routerB;
+	move(B0) | routerB(0x55);
+	move(B1) | routerB(0xAA);
+
+	// connect sides using crossover
+	*crossover(routerA.generate()) <<= routerB.generate() | name("link");
+
+	addSimulationProcess([&]()->SimProcess {
+		simu(valid(A0.tx)) = '0';
+		simu(valid(A1.tx)) = '0';
+		simu(valid(B0.tx)) = '0';
+		simu(valid(B1.tx)) = '0';
+		fork(strm::readyDriverRNG(*A0.rx, clock, 70));
+		fork(strm::readyDriverRNG(*A1.rx, clock, 70));
+		fork(strm::readyDriverRNG(*B0.rx, clock, 70));
+		fork(strm::readyDriverRNG(*B1.rx, clock, 70));
+		co_await OnClk(clock);
+
+		size_t done = 0;
+		std::mt19937_64 rng(0xDAD);
+		auto testPath = [&](RvPacketStream<BVec>& tx, RvPacketStream<BVec>& rx) -> SimProcess {
+			for(size_t i = 0; i < 2; ++i)
+			{
+				strm::SimPacket testPacket(rng(), 64_b);
+				testPacket.invalidBeats(rng());
+
+				fork(strm::sendPacket(tx, testPacket, clock));
+				strm::SimPacket pktB = co_await strm::receivePacket(rx, clock);
+				BOOST_TEST((pktB == testPacket));
+			}
+			done++;
+		};
+
+		fork(testPath(A0.tx, *B0.rx));
+		fork(testPath(A1.tx, *B1.rx));
+		fork(testPath(B0.tx, *A0.rx));
+		fork(testPath(B1.tx, *A1.rx));
+
+		while(done != 4)
+			co_await OnClk(clock);
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout(8us));
 }

@@ -129,6 +129,11 @@ namespace gtry::scl::strm
 	requires (T::template has<Ready>())
 	T insertBeat(T&& source, UInt beatOffset, const Tval& value);
 
+	inline auto insertBeat(UInt beatOffset, const Signal auto& value)
+	{
+		return [&, beatOffset](auto&& source) { return insertBeat(std::forward<decltype(source)>(source), beatOffset, value); };
+	}
+
 	/**
 	 * @brief stalls a stream using a stall condition. This function ensures a stream is backpressured without losing any data
 	 * @param source source stream
