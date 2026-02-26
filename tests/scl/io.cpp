@@ -683,3 +683,53 @@ BOOST_FIXTURE_TEST_CASE(txrx_router_test, BoostUnitTestSimulationFixture)
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout(8us));
 }
+
+BOOST_FIXTURE_TEST_CASE(txrx_replaceEopByLengthHeader_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock{ { 100_mhz } };
+	ClockScope clkScp(clock);
+
+	// A side setup
+	TxRxPacketStream A{ {8_b}, {8_b} };
+	pinIn(A, "A");
+
+	TxRxPacketStream B{ {8_b}, {8_b} };
+	pinIn(B, "B");
+
+	*(move(A) | scl::replaceEopByLengthHeader(8) | crossover()) <<=
+		move(B) | scl::replaceEopByLengthHeader(8) | name("link");
+
+	addSimulationProcess([&]()->SimProcess {
+		simu(valid(A.tx)) = '0';
+		simu(valid(B.tx)) = '0';
+		//simu(ready(*A.rx)) = '1';
+		//simu(ready(*B.rx)) = '1';
+
+		fork(strm::readyDriverRNG(*A.rx, clock, 70));
+		fork(strm::readyDriverRNG(*B.rx, clock, 70));
+		co_await OnClk(clock);
+
+		std::mt19937_64 rng(0xDEAD);
+		{
+			strm::SimPacket testPacket(rng(), 64_b);
+			fork(strm::sendPacket(A.tx, testPacket, clock));
+
+			strm::SimPacket checkPacket = co_await strm::receivePacket(*B.rx, clock);
+			BOOST_TEST((testPacket == checkPacket));
+		}
+		{
+			strm::SimPacket testPacket(0x5A, 8_b);
+			fork(strm::sendPacket(B.tx, testPacket, clock));
+
+			strm::SimPacket checkPacket = co_await strm::receivePacket(*A.rx, clock);
+			BOOST_TEST((testPacket == checkPacket));
+		}
+
+
+		co_await OnClk(clock);
+		stopTest();
+		});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout(8us));
+}

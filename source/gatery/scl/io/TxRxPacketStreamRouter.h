@@ -42,4 +42,12 @@ namespace gtry::scl
 	private:
 		std::map<size_t, TxRxPacketStream> m_sinks;
 	};
+
+	/**
+	 * @brief Prepend packet length in beats to the packet and remove eop in tx direction.
+	 *			The opposite in rx direction.
+	 *			Used in combination with TxRxPacketStreamRouter to go off chip without eop pin.
+	 */
+	TxRxStream replaceEopByLengthHeader(TxRxPacketStream&& in, size_t maxPacketLength);
+	inline auto replaceEopByLengthHeader(size_t maxPacketLength) { return [=](auto&& s1) { return replaceEopByLengthHeader(std::forward<decltype(s1)>(s1), maxPacketLength); }; }
 }

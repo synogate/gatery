@@ -57,4 +57,19 @@ namespace gtry::scl
 
 		return out;
 	}
+
+	TxRxStream replaceEopByLengthHeader(TxRxPacketStream&& in, size_t maxPacketBeats)
+	{
+		Area ent{ "scl_replaceEopByLengthHeader", true };
+		TxRxStream out = { {in.tx->width()}, {(*in.rx)->width()} };
+
+		// tx
+		out.tx <<= move(in.tx) | strm::prependPacketLengthHeader(maxPacketBeats) | strm::remove<Eop>();
+		
+		// rx
+		*in.rx <<= move(*out.rx) | strm::attachEopFromPacketLengthHeader(maxPacketBeats);
+
+		HCL_NAMED(out);
+		return out;
+	}
 }

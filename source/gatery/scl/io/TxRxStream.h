@@ -39,7 +39,7 @@ namespace gtry::scl
 	 */
 	template<Signal T = BVec, Signal... MetaT>
 	Reverse<TxRxStreamBase<T, MetaT...>> crossover(TxRxStreamBase<T, MetaT...>&& in);
-
+	inline auto crossover() { return [=](auto&& s1) { return crossover(std::forward<decltype(s1)>(s1)); }; }
 }
 
 namespace gtry::scl

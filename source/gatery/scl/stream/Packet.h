@@ -124,6 +124,7 @@ namespace gtry::scl::strm
 	*/
 	template<scl::StreamSignal StreamT>
 	RvStream<UInt> packetSize(StreamT&& in, BitWidth maxPacketW);
+	inline auto packetSize(BitWidth maxPacketW) { return [=](auto&& s1) { return packetSize(std::forward<decltype(s1)>(s1), maxPacketW); }; }
 
 	/**
 	 * @brief drops tail of a packet stream with bit granularity. Can be used to keep only the header of a packet stream
@@ -140,6 +141,24 @@ namespace gtry::scl::strm
 	*/
 	template<scl::StreamSignal StreamT> requires (std::remove_cvref_t<StreamT>::template has<Empty>())
 	auto streamDropTailBytes(StreamT&& in, const UInt& byteCutoff, BitWidth maxPacketW);
+
+	/**
+	 * @brief Prepends a single beat to every packet containing the length of the packet in beats - 1.
+	 *			Use attachEopFromPacketLengthHeader for the reverse operation.
+	 * @return Maximum packet length in beats.
+	 */
+	template<PacketStreamSignal T>
+	T prependPacketLengthHeader(T&& in, size_t maxPacketBeats);
+	inline auto prependPacketLengthHeader(size_t maxPacketBeats) { return [=](auto&& s1) { return prependPacketLengthHeader(std::forward<decltype(s1)>(s1), maxPacketBeats); }; }
+
+	/**
+	 * @brief Removes the first beat from packet and use it as packet length - 1 to attach eop.
+	 * @param maxPacketBeats Maximum packet length in beats.
+	 * @return 
+	 */
+	template<StreamSignal T>
+	auto attachEopFromPacketLengthHeader(T&& in, size_t maxPacketBeats);
+	inline auto attachEopFromPacketLengthHeader(size_t maxPacketBeats) { return [=](auto&& s1) { return attachEopFromPacketLengthHeader(std::forward<decltype(s1)>(s1), maxPacketBeats); }; }
 }
 
 namespace gtry::scl::strm
@@ -1218,6 +1237,58 @@ namespace gtry::scl::strm
 	}
 	extern template auto streamDropTailBytes(RvPacketStream<BVec, Empty> &&in, const UInt& byteCutoff, BitWidth maxPacketW);
 
+	template<PacketStreamSignal T>
+	T prependPacketLengthHeader(T&& in, size_t maxPacketBeats)
+	{
+		Area ent{ "scl_prependPacketLengthHeader", true };
+
+		StreamBroadcaster inCast(move(in));
+
+		RvStream<UInt> packetSize = inCast.bcastTo() |
+			strm::transform([=](const Eop& e) {
+					scl::Counter beatCtr{ maxPacketBeats };
+					IF(e.eop) beatCtr.reset();
+					return beatCtr.value();
+			}) |
+			[](StreamSignal auto&& s) {
+				valid(s) &= eop(s);
+				return move(s);
+			} |
+			remove<Eop>() |
+			regDownstream() |
+			name("packetSize");
+
+		auto out = inCast.bcastTo() |
+			strm::fifo(maxPacketBeats) |
+			strm::stall(!valid(packetSize)) |
+			name("bufferedPacket") |
+			insertBeat(0, (typename std::remove_cvref_t<decltype(in)>::Payload) * packetSize);
+
+		ready(packetSize) = transfer(out) & eop(out);
+		HCL_NAMED(out);
+		return out;
+	}
+
+	template<StreamSignal T>
+	auto attachEopFromPacketLengthHeader(T&& in, size_t maxPacketBeats)
+	{
+		Area ent{ "scl_attachEopFromPacketLengthHeader", true };
+
+		Bit inPacket;
+		UInt packetLength = (UInt)reg(UInt{ *in }, { .en = !inPacket }) | name("packetLength");
+
+		scl::Counter rxCtr{ maxPacketBeats };
+		IF(transfer(in))
+			rxCtr.inc();
+		Bit isEop = reg(rxCtr.value() == packetLength, '0', { .en = transfer(in) });
+
+		Stream target = move(in) | strm::attach(Eop{ isEop });
+		inPacket = flag(transfer(in), transfer(in) & isEop) | name("inPacket");
+		valid(target) &= inPacket;
+
+		HCL_NAMED(target);
+		return move(target) | readyIfNotValid();
+	}
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::strm::internal::ShiftRightMetaParams, state, mustAnticipateEnd, isSingleBeat);

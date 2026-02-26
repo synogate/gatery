@@ -466,6 +466,15 @@ namespace gtry::scl::strm
 	template<Signal T, StreamSignal Ts>
 	auto deserialize(Ts&& in, const T& blueprint);
 	inline auto deserialize(const Signal auto& blueprint) { return [&](auto&& s1) { return deserialize(std::forward<decltype(s1)>(s1), blueprint); }; }
+
+	/**
+	 * @brief Asserts ready whenever valid is low. 
+				Useful for modules that would otherwise violate the valid without ready requirement of streams.
+				In case this introduces too much delay into the ready path use regReady instead.
+	 */
+	template<StreamSignal T>
+	auto readyIfNotValid(T&& in);
+	inline auto readyIfNotValid() { return [&](auto&& s1) { return readyIfNotValid(std::forward<decltype(s1)>(s1)); }; }
 }
 
 namespace gtry::scl::strm
@@ -1271,5 +1280,14 @@ namespace gtry::scl::strm
 		valid(out) &= lastBeat;
 
 		return out | strm::remove<Eop>();
+	}
+
+	template<StreamSignal T>
+	auto readyIfNotValid(T&& in)
+	{
+		Stream ret = constructFrom(in);
+		ret <<= in;
+		ready(in) |= !valid(in);
+		return ret;
 	}
 }
