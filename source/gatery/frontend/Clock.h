@@ -190,12 +190,19 @@ namespace gtry {
 	/// Inserts a node that allows clock domain crossing and verifies that the crossing happens from/to the specified clocks.
 	template<BaseSignal SignalType>
 	std::remove_reference_t<SignalType> allowClockDomainCrossing(SignalType&& in, const Clock& srcClock, const Clock& dstClock, const hlim::Node_CDC::CdcNodeParameter params = {}) {
-		if (!internal::AllowCdcReverseScope::inReverseAllowCdc)
+		if constexpr (!std::is_rvalue_reference_v<SignalType&&>)
+		{
 			return internal::allowClockDomainCrossing(in, srcClock, dstClock, params);
+		}
+		else
+		{
+			if (!internal::AllowCdcReverseScope::inReverseAllowCdc)
+				return internal::allowClockDomainCrossing(in, srcClock, dstClock, params);
 
-		std::remove_cvref_t<SignalType> s = constructFrom(in);
-		in = internal::allowClockDomainCrossing(s, dstClock, srcClock, params);
-		return s;
+			std::remove_cvref_t<SignalType> s = constructFrom(in);
+			in = internal::allowClockDomainCrossing(s, dstClock, srcClock, params);
+			return s;
+		}
 	}
 
 
