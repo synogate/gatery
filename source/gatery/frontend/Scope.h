@@ -22,6 +22,8 @@
 
 #include "../hlim/NodeGroupType.h"
 
+#include <stack>
+
 namespace gtry {
 
 namespace hlim {
@@ -50,19 +52,21 @@ class BaseScope
 	};
 
 	public:
-		BaseScope() { m_parentScope = m_currentScope; m_currentScope = static_cast<FinalType*>(this); }
-		~BaseScope() { m_currentScope = m_parentScope; }
+		BaseScope() { m_parentScope = m_currentScope; m_currentScope = static_cast<FinalType*>(this); m_scopes.push(m_currentScope); }
+		~BaseScope() { m_scopes.pop(); m_currentScope = m_scopes.empty() ? nullptr : m_scopes.top(); }
 
 		static Lock lock() { Lock ret = m_currentScope; m_currentScope = nullptr; return ret; }
 	protected:
 		static void unlock(FinalType* scope) { assert(!m_currentScope); m_currentScope = scope; }
 
 		FinalType *m_parentScope;
-		static thread_local FinalType *m_currentScope;
-};
+		inline static thread_local FinalType *m_currentScope = nullptr;
 
-template<class FinalType>
-thread_local FinalType *BaseScope<FinalType>::m_currentScope = nullptr;
+		// We had to use a stack instead of m_parentScope because we have not found a way to make 
+		// sure that clock scopes in pipe operations go out of scope in construction order.
+		// The stack allows scopes to go out of scope in any order.
+		inline static thread_local std::stack<FinalType*> m_scopes;
+};
 	
 class GroupScope : public BaseScope<GroupScope>
 {
