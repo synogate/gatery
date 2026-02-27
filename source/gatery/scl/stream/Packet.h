@@ -1275,12 +1275,14 @@ namespace gtry::scl::strm
 		Area ent{ "scl_attachEopFromPacketLengthHeader", true };
 
 		Bit inPacket;
-		UInt packetLength = (UInt)reg(UInt{ *in }, { .en = !inPacket }) | name("packetLength");
+		UInt packetLength = (UInt)capture(*in, !inPacket) | name("packetLength");
 
 		scl::Counter rxCtr{ maxPacketBeats };
+		Bit isEop = reg(rxCtr.value() == packetLength, '0', { .en = transfer(in) });
 		IF(transfer(in))
 			rxCtr.inc();
-		Bit isEop = reg(rxCtr.value() == packetLength, '0', { .en = transfer(in) });
+		IF(isEop)
+			rxCtr.reset();
 
 		Stream target = move(in) | strm::attach(Eop{ isEop });
 		inPacket = flag(transfer(in), transfer(in) & isEop) | name("inPacket");
