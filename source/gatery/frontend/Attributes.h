@@ -18,6 +18,7 @@
 #pragma once
 
 #include "Compound.h"
+#include "Reverse.h"
 
 #include "../hlim/Attributes.h"
 
@@ -91,29 +92,60 @@ void pathAttribute(ElementarySignal &start, ElementarySignal &end, PathAttribute
 class Clock;
 
 namespace internal {
+	/// Inserts a node that allows clock domain crossing and verifies that the crossing happens from/to the specified clocks.
+	SignalReadPort allowClockDomainCrossing(const ElementarySignal& in, const Clock &srcClock, const Clock &dstClock, const hlim::Node_CDC::CdcNodeParameter params = {});
 
-/// Inserts a node that allows clock domain crossing and verifies that the crossing happens from/to the specified clocks.
-SignalReadPort allowClockDomainCrossing(const ElementarySignal& in, const Clock &srcClock, const Clock &dstClock, const hlim::Node_CDC::CdcNodeParameter params = {});
+	struct AllowCdcReverseScope
+	{
+		inline static thread_local bool inReverseAllowCdc = false;
 
+		AllowCdcReverseScope() { inReverseAllowCdc = !inReverseAllowCdc; }
+		~AllowCdcReverseScope() { inReverseAllowCdc = !inReverseAllowCdc; }
+	};
 }
 
 /// Inserts a node that allows clock domain crossing and verifies that the crossing happens from/to the specified clocks.
 template<BaseSignal SignalType>
-inline SignalType allowClockDomainCrossing(const SignalType& in, const Clock &srcClock, const Clock &dstClock, const hlim::Node_CDC::CdcNodeParameter params = {}) {
-	return internal::allowClockDomainCrossing(in, srcClock, dstClock, params);
+std::remove_reference_t<SignalType> allowClockDomainCrossing(SignalType&& in, const Clock &srcClock, const Clock &dstClock, const hlim::Node_CDC::CdcNodeParameter params = {}) {
+	if(!internal::AllowCdcReverseScope::inReverseAllowCdc)
+		return internal::allowClockDomainCrossing(in, srcClock, dstClock, params);
+
+	std::remove_cvref_t<SignalType> s = constructFrom(in);
+	in = internal::allowClockDomainCrossing(s, dstClock, srcClock, params);
+	return s;
 }
 	
 
 /// Inserts a node that allows clock domain crossing and verifies that the crossing happens from/to the specified clocks.
 template<Signal T>
-T allowClockDomainCrossing(const T& val, const Clock &srcClock, const Clock &dstClock, const hlim::Node_CDC::CdcNodeParameter params = {})
+std::remove_reference_t<T> allowClockDomainCrossing(T&& val, const Clock &srcClock, const Clock &dstClock, const hlim::Node_CDC::CdcNodeParameter params = {})
 {
-	return internal::transformSignal(val, [&](const auto& sig) {
-		if constexpr (!Signal<decltype(sig)>)
+	return internal::transformSignal(std::forward<T>(val), [&](auto&& sig) {
+		if constexpr (!Signal<std::remove_reference_t<decltype(sig)>>)
 			return sig;
 		else
-			return allowClockDomainCrossing(sig, srcClock, dstClock, params);
+			return allowClockDomainCrossing(std::forward<decltype(sig)>(sig), srcClock, dstClock, params);
 	});
+}
+
+// reverse clock direction on reverse signals
+template<Signal T>
+Reverse<T> allowClockDomainCrossing(Reverse<T>&& val, const Clock& srcClock, const Clock& dstClock, const hlim::Node_CDC::CdcNodeParameter params = {})
+{
+	internal::AllowCdcReverseScope scope;
+	return allowClockDomainCrossing(move(*val), srcClock, dstClock, params);
+}
+
+template<Signal T>
+T allowClockDomainCrossing(const Reverse<T>& val, const Clock& srcClock, const Clock& dstClock, const hlim::Node_CDC::CdcNodeParameter params = {})
+{
+	static_assert(!"reverse signals must be rvalue");
+}
+
+template<Signal T>
+T allowClockDomainCrossing(Reverse<T>& val, const Clock& srcClock, const Clock& dstClock, const hlim::Node_CDC::CdcNodeParameter params = {})
+{
+	static_assert(!"reverse signals must be rvalue");
 }
 
 inline auto allowClockDomainCrossing(const Clock& srcClock, const Clock& dstClock, const hlim::Node_CDC::CdcNodeParameter params = {})

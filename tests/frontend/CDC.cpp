@@ -180,3 +180,42 @@ BOOST_FIXTURE_TEST_CASE(intentionalCDCDetection, gtry::BoostUnitTestSimulationFi
 	BOOST_TEST(detections == 0);
 }
 
+BOOST_FIXTURE_TEST_CASE(cdc_recursive_reverse_allowCdc_test, gtry::BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock1({ 50_mhz });
+	Clock clock2({ 50_mhz });
+
+	using TestType = Reverse<std::tuple<Bit, Reverse<Bit>>>;
+	
+	ClockScope cs1{ clock1 };
+	TestType a;
+	pinIn(a, "a");
+
+	ClockScope cs2{ clock2 };
+	TestType b = move(a) | allowClockDomainCrossing(clock1, clock2);
+	pinOut(b, "b");
+
+	size_t detections = 0;
+	gtry::hlim::detectUnguardedCDCCrossings(
+		design.getCircuit(),
+		gtry::hlim::ConstSubnet::all(design.getCircuit()),
+		[&detections](const gtry::hlim::BaseNode* node, std::vector<gtry::hlim::SignalClockDomain>*) {
+			detections++;
+		}
+	);
+	BOOST_TEST(detections == 0);
+
+	addSimulationProcess([&, this]()->SimProcess {
+		simu(get<0>(*b)) = '0';
+		simu(*get<1>(*a)) = '1';
+		co_await OnClk(clock1);
+		BOOST_TEST(simu(get<0>(*a)) == '0');
+		BOOST_TEST(simu(*get<1>(*b)) == '1');
+
+		stopTest();
+	});
+
+	runTest(1us);
+}

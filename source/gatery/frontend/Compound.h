@@ -581,27 +581,35 @@ namespace gtry
 
 	namespace internal
 	{
+		template<typename Torg, typename Targ>
+		auto&& forward_if(Targ&& arg)
+		{
+			if constexpr (std::is_rvalue_reference_v<Torg&&>)
+				return static_cast<std::remove_reference_t<Targ>&&>(arg);
+			else
+				return static_cast<Targ>(arg);
+		}
 
 		template<BaseSignal T, typename TFunc>
-		T transformSignal(const T& val, TFunc&& func);
+		std::remove_reference_t<T> transformSignal(T&& val, TFunc&& func);
 
 		template<BaseSignal T, std::convertible_to<T> Tr, typename TFunc>
 		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func);
 
 		template<CompoundSignal T, typename TFunc>
-		T transformSignal(const T& val, TFunc&& func);
+		std::remove_reference_t<T> transformSignal(T&& val, TFunc&& func);
 
 		template<CompoundSignal T, std::convertible_to<T> Tr, typename TFunc>
 		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func);
 
 		template<ContainerSignal T, typename TFunc>
-		T transformSignal(const T& val, TFunc&& func);
+		std::remove_cvref_t<T> transformSignal(T&& val, TFunc&& func);
 
 		template<ContainerSignal T, ContainerSignal Tr, typename TFunc>
 		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func);
 
 		template<TupleSignal T, typename TFunc>
-		T transformSignal(const T& val, TFunc&& func);
+		std::remove_reference_t<T> transformSignal(T&& val, TFunc&& func);
 
 		template<TupleSignal T, TupleSignal Tr, typename TFunc>
 		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func);
@@ -633,9 +641,9 @@ namespace gtry
 		}
 
 		template<BaseSignal T, typename TFunc>
-		T transformSignal(const T& val, TFunc&& func)
+		std::remove_reference_t<T> transformSignal(T&& val, TFunc&& func)
 		{
-			return func(val);
+			return func(std::forward<T>(val));
 		}
 
 		template<BaseSignal T, std::convertible_to<T> Tr, typename TFunc>
@@ -645,14 +653,14 @@ namespace gtry
 		}
 
 		template<CompoundSignal T, typename TFunc>
-		T transformSignal(const T& val, TFunc&& func)
+		std::remove_reference_t<T> transformSignal(T&& val, TFunc&& func)
 		{
-			return gtry::make_from_tuple<T>(
+			return gtry::make_from_tuple<std::remove_cvref_t<T>>(
 				boost::hana::transform(boost::pfr::structure_tie(val), [&](auto&& member) {
-					if constexpr(Signal<decltype(member)>)
-						return func(member);
+					if constexpr (Signal<std::remove_cvref_t<decltype(member)>>)
+						return func(internal::forward_if<T>(member));
 					else
-						return member;
+						return internal::forward_if<T>(member);
 				})
 			);
 		}
@@ -678,15 +686,15 @@ namespace gtry
 		}
 
 		template<ContainerSignal T, typename TFunc>
-		T transformSignal(const T& val, TFunc&& func)
+		std::remove_cvref_t<T> transformSignal(T&& val, TFunc&& func)
 		{
-			T ret;
+			std::remove_cvref_t<T> ret;
 
 			if constexpr(requires { ret.reserve(val.size()); })
 				ret.reserve(val.size());
 
 			for(auto&& it : val)
-				ret.insert(ret.end(), func(it));
+				ret.insert(ret.end(), func(internal::forward_if<T>(it)));
 
 			return ret;
 		}
@@ -709,7 +717,7 @@ namespace gtry
 		}
 
 		template<TupleSignal T, typename TFunc>
-		T transformSignal(const T& val, TFunc&& func)
+		std::remove_reference_t<T> transformSignal(T&& val, TFunc&& func)
 		{
 			using namespace internal;
 
@@ -718,7 +726,7 @@ namespace gtry
 			});
 
 			return boost::hana::unpack(in2, [&](auto&&... args) {
-				return T{ func(args)... };
+				return std::remove_reference_t<T>{ func(internal::forward_if<T>(args))... };
 			});
 		}
 
