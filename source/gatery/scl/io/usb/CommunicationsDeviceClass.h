@@ -32,7 +32,8 @@ namespace gtry::scl::usb
 	 *			- use usb::SimuHostController controller(*usbBus, usbFunction.descriptor()); to drive your simulation tests.
 	 * @param function Function instance needs to stay alive for simulation.
 	 * @param simhost Required for simulation.
+	 * @param usbClk Specify a clock for usb if different from TxRxStream clock. Clock domain crossing is included using the buffer fifo's.
 	 * @param enablePinName (optional) Pin name for a simple low after reset enable pin.
 	 */
-	Reverse<TxRxStream> streamToSerialAdapter(usb::Function& function, SimuBusBase** simhost = nullptr, std::string_view enablePinName = "USB_EN");
+	Reverse<TxRxStream> streamToSerialAdapter(usb::Function& function, SimuBusBase** simhost = nullptr, std::optional<Clock> usbClk = {}, std::string_view enablePinName = "USB_EN");
 }

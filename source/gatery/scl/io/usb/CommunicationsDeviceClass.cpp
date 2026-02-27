@@ -83,8 +83,13 @@ namespace gtry::scl::usb
 			});
 	}
 
-	Reverse<TxRxStream> streamToSerialAdapter(usb::Function& function, usb::SimuBusBase** simhost, std::string_view enablePinName)
+	Reverse<TxRxStream> streamToSerialAdapter(usb::Function& function, usb::SimuBusBase** simhost, std::optional<Clock> usbClk, std::string_view enablePinName)
 	{
+		Area ent{ "scl_streamToSerialAdapter", true };
+
+		std::optional<ClockScope> cs;
+		if (usbClk) cs.emplace(*usbClk);
+
 		if(!enablePinName.empty())
 		{
 			Counter usbEnDelay{ 500ms };
@@ -107,24 +112,25 @@ namespace gtry::scl::usb
 		if (simhost)
 			*simhost = host;
 
-		// RX
 		scl::TransactionalFifo<scl::usb::Function::StreamData> rxFifo{ 128 };
 		function.attachRxFifo(rxFifo, 1 << 1);
+		scl::TransactionalFifo<scl::usb::Function::StreamData> txFifo{ 128 };
+		function.attachTxFifo(txFifo, 1 << 1);
+
+		cs.reset(); // return to user clock domain
 		Reverse<TxRxStream> ret(TxRxStream{
 			.tx = { 8_b },
 			.rx = strm::pop(rxFifo) | strm::transform([](const auto& sd) { return (BVec)sd.data; }),
-			});
-		rxFifo.generate();
-
-		// TX
-		scl::TransactionalFifo<scl::usb::Function::StreamData> txFifo{ 128 };
-		function.attachTxFifo(txFifo, 1 << 1);
+		});
 
 		move(ret->tx)
 			| strm::transform([](const BVec& d) { return scl::usb::Function::StreamData{ .data = (UInt)d, .endPoint = 1, }; })
 			| strm::push(txFifo);
+		
+		rxFifo.generate();
 		txFifo.generate();
 
+		HCL_NAMED(ret);
 		return ret;
 	}
 }
