@@ -66,7 +66,7 @@ namespace gtry::scl::arch::intel
 		Clock afiClk(hlim::ClockRational freq);
 
 		void pin(std::string prefix = "ddr_");
-		Afi afi(size_t ratio);
+		Afi afi(size_t ratio); // NOTE: call in afiClk clock scope
 
 	private:
 		BitWidth m_addrW;
