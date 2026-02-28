@@ -405,6 +405,7 @@ namespace gtry::scl
 
 		ClockScope requestScope{ requestLaunchClk };
 		valid(*out.d) = reg(valid(out.a), '0');
+		sim_assert(!valid(*out.d) | ready(*out.d)) << "fixed latency module does not support back pressure";
 
 		return out;
 	}
