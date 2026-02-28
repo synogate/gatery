@@ -84,4 +84,12 @@ namespace gtry::scl
 	 */
 	TileLinkU tileLinkDeserialize(Reverse<TxRxPacketStream>&& pipe, const TileLinkU& blueprint);
 	inline auto tileLinkDeserialize(const TileLinkU& blueprint) { return [&](auto&& in) { return tileLinkDeserialize(std::forward<decltype(in)>(in), blueprint); }; }
+
+	/**
+	 * @brief Inserts a FiFo into the D channel path to buffer responses. It also stalls the A channel if the FiFo is too full to buffer more responses.
+	 *			Can be used with devices that do not support back pressure on D channel like external memories.
+	 * @param readLatencyLimit The device latency from request to response. Used to size the FiFo and configure the A channel stall condition.
+	 */
+	TileLinkU tileLinkFifoResultBuffer(TileLinkU&& slave, size_t readLatencyLimit, size_t minFifoDepth = 32);
+	inline auto tileLinkFifoResultBuffer(size_t readLatencyLimit, size_t minFifoDepth = 32) { return [=](auto&& in) { return tileLinkFifoResultBuffer(std::forward<decltype(in)>(in), readLatencyLimit, minFifoDepth); }; }
 }

@@ -457,6 +457,59 @@ namespace gtry::scl
 		return out;
 	}
 
+	static RvStream<TileLinkA> tileLinkDeserialzeA(RvPacketStream<BVec>&& in, const TileLinkA& blueprint)
+	{
+		Area ent{ "scl_tileLinkDeserialzeA", true };
+
+		size_t beats = width(blueprint).numBeats(in->width());
+
+		scl::Counter partCounter(beats);
+		IF(transfer(in) & !partCounter.isLast())
+			partCounter.inc();
+		IF(transfer(in) & eop(in))
+			partCounter.reset();
+
+		Bit burstState = flag(transfer(in) & partCounter.isLast(), transfer(in) & eop(in)) | name("burstState");
+
+		scl::Counter byteCounter(blueprint.data.width().bytes());
+		IF(!burstState)
+			byteCounter.reset();
+		IF(transfer(in) & burstState)
+			byteCounter.inc();
+
+		RvStream<TileLinkA> out;
+		TileLinkA a = constructFrom(blueprint);
+		IF(transfer(out))
+		{
+			a.address += a.data.width().bytes();
+			if(a.source.width() > 0_b)
+				a.source += 1;
+		}
+
+		a = reg(a);
+		IF(valid(in) & !burstState)
+		{
+			BVec rawData = zext(pack(a), in->width() * beats);
+			rawData.part(beats, partCounter.value()) = *in;
+			unpack(rawData.lower(width(a)), a);
+		}
+		IF(valid(in) & burstState)
+		{
+			a.data.part(a.data.width().bytes(), byteCounter.value()) = *in;
+		}
+		a = name(a, "a");
+
+		*out = a;
+		valid(out) = '0';
+		IF(!burstState & partCounter.isLast())
+			valid(out) = valid(in);
+		IF(burstState & byteCounter.isLast())
+			valid(out) = valid(in);
+
+		ready(in) = ready(out) | !valid(out);
+		return out;
+	}
+
 	Reverse<TxRxPacketStream> tileLinkSerialize(TileLinkU&& slave, BitWidth dataW)
 	{
 		Area ent{ "scl_tileLinkSerialize", true };
@@ -464,7 +517,7 @@ namespace gtry::scl
 			.tx = {dataW},
 			.rx = {dataW}
 		};
-		slave.a <<= strm::deserialize(move(out.tx), *slave.a);
+		slave.a <<= tileLinkDeserialzeA(move(out.tx), *slave.a);
 		*out.rx <<= strm::serialize(move(*slave.d), dataW);
 
 		HCL_NAMED(out);
@@ -478,6 +531,25 @@ namespace gtry::scl
 		pipe->tx <<= strm::serialize(move(out.a), pipe->tx->width());
 		*out.d <<= strm::deserialize(*pipe->rx, **out.d);
 
+		HCL_NAMED(out);
+		return out;
+	}
+
+	TileLinkU tileLinkFifoResultBuffer(TileLinkU&& slave, size_t readLatencyLimit, size_t minFifoDepth)
+	{
+		Area ent{ "scl_tileLinkFifoResultBuffer", true };
+		readLatencyLimit += 2; // fifo delay
+
+		if (readLatencyLimit > minFifoDepth)
+			minFifoDepth = readLatencyLimit;
+
+		Fifo<Stream<TileLinkD>> buffer{ minFifoDepth, {**slave.d} };
+
+		TileLinkU out = constructFrom(slave);
+		*out.d <<= move(*slave.d) | strm::fifo(buffer, FifoLatency::DontCare());
+		slave.a <<= move(out.a) | strm::stall(!buffer.almostEmpty(buffer.depth() - readLatencyLimit));
+
+		buffer.generate();
 		HCL_NAMED(out);
 		return out;
 	}
