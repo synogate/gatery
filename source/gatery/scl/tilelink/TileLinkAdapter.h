@@ -72,7 +72,12 @@ namespace gtry::scl
 	 *			This function is intended to be used between slave and packet stream. It does:
 	 *				tx -> a
 	 *				d -> rx
-	 *			The current implementation chooses to split burst into multiple packets.
+	 *			The function does some intelligent packing to reduce the transfer size on A and D channel:
+	 *				- opcodes without data omit the data member
+	 *				- bursts transfers send the header once, followed by a burst of data
+	 *			Note that due to this optimization the data mask is not updated per beat. Thus partial put bursts are not supported.
+	 * 
+	 *			See driver::TileLinkSerializer to decode/encode the serialized format.
 	 */
 	Reverse<TxRxPacketStream> tileLinkSerialize(TileLinkU&& slave, BitWidth dataW);
 	inline auto tileLinkSerialize(BitWidth dataW) { return [=](auto&& in) { return tileLinkSerialize(std::forward<decltype(in)>(in), dataW); }; }

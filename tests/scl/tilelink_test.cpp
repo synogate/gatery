@@ -27,8 +27,8 @@
 #include <gatery/scl/arch/colognechip/io.h>
 #include <gatery/scl/arch/colognechip/lut.h>
 #include <gatery/scl/arch/colognechip/SpecialFunction.h>
+#include <gatery/scl/driver/TileLinkDriverUtils.h>
 #include <gatery/scl/synthesisTools/IntelQuartus.h>
-
 #include <gatery/scl/stream/SimuHelpers.h>
 #include <gatery/scl/tilelink/tilelink.h>
 #include <gatery/scl/tilelink/TileLinkCache.h>
@@ -1834,7 +1834,7 @@ BOOST_FIXTURE_TEST_CASE(tilelink_serialize_test, BoostUnitTestSimulationFixture)
 
 	scl::TileLinkMasterModel linkModel;
 
-	TileLinkU mem = tileLinkMemory(8_b, 16_b, 4_b);
+	TileLinkU mem = tileLinkMemory(8_b, 16_b, 8_b) | tileLinkAddBurst(3);
 	move(mem) |
 		tileLinkSerialize(8_b) |
 		name("encoded") |
@@ -1843,11 +1843,187 @@ BOOST_FIXTURE_TEST_CASE(tilelink_serialize_test, BoostUnitTestSimulationFixture)
 
 	addSimulationProcess([&]()->SimProcess {
 		co_await OnClk(clock);
-		co_await linkModel.put(122, 1, 0x1234, clock);
-		auto [val, def, err] = co_await linkModel.get(122, 1, clock);
-		BOOST_TEST(!err);
-		BOOST_TEST(def == 0xFFFF);
-		BOOST_TEST(val == 0x1234);
+
+		bool putErr;
+		
+		putErr = co_await linkModel.put(0x02, 1, 0x1234, clock);
+		BOOST_TEST(!putErr);
+
+		putErr = co_await linkModel.put(0x04, 2, 0x5678'9ABC, clock);
+		BOOST_TEST(!putErr);
+
+		{
+			auto [val, def, err] = co_await linkModel.get(0x02, 1, clock);
+			BOOST_TEST(!err);
+			BOOST_TEST(def == 0xFFFF);
+			BOOST_TEST(val == 0x1234);
+		}
+		{
+			auto [val, def, err] = co_await linkModel.get(0x04, 2, clock);
+			BOOST_TEST(!err);
+			BOOST_TEST(def == 0xFFFF'FFFF);
+			BOOST_TEST(val == 0x5678'9ABC);
+		}
+
+		co_await OnClk(clock);
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout(1us));
+}
+
+BOOST_FIXTURE_TEST_CASE(tilelink_deserialize_a_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ 100_mhz });
+	ClockScope clkScp(clock);
+
+	TileLinkU link = tileLinkInit<TileLinkU>(8_b, 16_b, 2_b, 2_b);
+	TxRxPacketStream packetStream = *tileLinkSerialize(move(link), 8_b);
+
+	pinIn(packetStream, "packetStream");
+	pinOut(link, "link");
+
+	addSimulationProcess([&]()->SimProcess {
+		simu(ready(*packetStream.rx)) = '1';
+		simu(valid(packetStream.tx)) = '0';
+		fork(strm::readyDriverRNG(link.a, clock, 20));
+		simu(valid(*link.d)) = '0';
+
+		co_await OnClk(clock);
+		
+		driver::TileLinkSerializer tlSer = driver::TileLinkSerializer::fromLink(link);
+
+		auto sendAndCheck = [&](driver::TileLinkAData req, bool checkRequestEnded) -> SimProcess {
+			std::array<uint8_t, 32> requestSequence;
+			std::span tlReq = tlSer.serialize(requestSequence, req);
+			fork(strm::sendPacket(packetStream.tx, strm::SimPacket(tlReq), clock));
+			
+			co_await strm::performTransferWait(link.a, clock);
+			BOOST_TEST(simu(valid(link.a)) == '1');
+			BOOST_TEST(simu(link.a->opcode) == req.opcode);
+			BOOST_TEST(simu(link.a->param) == req.param);
+			BOOST_TEST(simu(link.a->source) == req.source);
+			BOOST_TEST(simu(link.a->address) == req.address);
+			BOOST_TEST(simu(link.a->mask) == req.mask);
+
+			if(!req.data.empty())
+			{
+				size_t word0 = req.data[0] | req.data[1] << 8u;
+				BOOST_TEST(simu(link.a->data) == word0);
+			}
+
+			for(size_t wordCtr = 1; wordCtr < req.data.size() / 2; ++wordCtr) 
+			{
+				co_await strm::performTransferWait(link.a, clock);
+				BOOST_TEST(simu(valid(link.a)) == '1');
+				BOOST_TEST(simu(link.a->opcode) == req.opcode);
+				BOOST_TEST(simu(link.a->param) == req.param);
+				BOOST_TEST(simu(link.a->source) == req.source);
+				BOOST_TEST(simu(link.a->address) == req.address);
+				BOOST_TEST(simu(link.a->mask) == req.mask);
+
+				size_t word = req.data[wordCtr * 2] | req.data[wordCtr * 2 + 1] << 8u;
+				BOOST_TEST(simu(link.a->data) == word);
+			}
+
+			if (checkRequestEnded)
+			{
+				co_await OnClk(clock);
+				BOOST_TEST(simu(valid(link.a)) == '0');
+			}
+		};
+
+		for (size_t i = 0; i < 2; ++i)
+		{
+			// non burst put
+			uint8_t writeData1[] = { 0x5A, 0xA5 };
+			co_await sendAndCheck({
+				.opcode = 0, .size = 1, .source = 1, .address = 0xFE, .mask = 1, .data = writeData1
+			}, i == 0);
+
+			// non burst get without data
+			co_await sendAndCheck({
+				.opcode = 4, .size = 1, .source = 2, .address = 0xEF, .mask = 2
+			}, i == 0);
+		
+			// non burst put
+			uint8_t writeData2[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+			co_await sendAndCheck({
+				.opcode = 0, .size = 3, .source = 3, .address = 0x66, .mask = 3, .data = writeData2
+			}, i == 0);
+		}
+
+		co_await OnClk(clock);
+		stopTest();
+		});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout(1us));
+}
+
+BOOST_FIXTURE_TEST_CASE(tilelink_serialize_d_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ 100_mhz });
+	ClockScope clkScp(clock);
+
+	TileLinkU link = tileLinkInit<TileLinkU>(8_b, 16_b, 2_b, 2_b);
+	TxRxPacketStream packetStream = *tileLinkSerialize(move(link), 8_b);
+
+	pinIn(packetStream, "packetStream");
+	pinOut(link, "link");
+
+	addSimulationProcess([&]()->SimProcess {
+		fork(strm::readyDriverRNG(*packetStream.rx, clock, 20));
+		simu(valid(packetStream.tx)) = '0';
+		simu(ready(link.a)) = '1';
+		simu(valid(*link.d)) = '0';
+
+		co_await OnClk(clock);
+		driver::TileLinkSerializer tlSer = driver::TileLinkSerializer::fromLink(link);
+
+		auto sendAndCheck = [&](driver::TileLinkDData data) -> SimProcess {
+
+			fork([&]() -> SimProcess {
+				simu((*link.d)->opcode) = data.opcode;
+				simu((*link.d)->param) = data.param;
+				simu((*link.d)->source) = data.source;
+				simu((*link.d)->size) = data.size;
+				simu((*link.d)->error) = data.error;
+
+				size_t beats = std::max<size_t>(data.data.size() / 2, 1);
+				for (size_t i = 0; i < beats; ++i)
+				{
+					if (!data.data.empty())
+					{
+						size_t word = data.data[i * 2] | data.data[i * 2 + 1] << 8u;
+						simu((*link.d)->data) = word;
+					}
+
+					co_await strm::performTransfer(*link.d, clock);
+				}
+
+			//	simu((*link.d)->data) = 0xABCD;
+			});
+
+			strm::SimPacket packet = co_await strm::receivePacket(*packetStream.rx, clock);
+			driver::TileLinkDData res = tlSer.deserializeD(packet.data());
+			BOOST_TEST((res == data));
+		};
+
+		co_await sendAndCheck({
+			.opcode = 0, .param = 7, .size = 1, .source = 2, .error = false, .data = {}
+		});
+
+		uint8_t writeData1[] = { 0x12, 0x34 };
+		co_await sendAndCheck({
+			.opcode = 1, .param = 0, .size = 1, .source = 1, .error = true, .data = writeData1
+		});
+
+		uint8_t writeData2[] = { 0x56, 0x78, 0x9A, 0xBC };
+		co_await sendAndCheck({
+			.opcode = 1, .param = 0, .size = 2, .source = 0, .error = false, .data = writeData2
+		});
 
 		co_await OnClk(clock);
 		stopTest();

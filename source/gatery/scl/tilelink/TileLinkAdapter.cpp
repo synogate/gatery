@@ -20,6 +20,8 @@
 #include "TileLinkMasterModel.h"
 #include "TileLinkAdapter.h"
 
+#include <gatery/scl/stream/StreamDemux.h>
+
 namespace gtry::scl
 {
 	static TileLinkU adaptWidth(TileLinkU&& slave, BitWidth targetW)
@@ -457,57 +459,13 @@ namespace gtry::scl
 		return out;
 	}
 
-	static RvStream<TileLinkA> tileLinkDeserialzeA(RvPacketStream<BVec>&& in, const TileLinkA& blueprint)
+	template<typename T>
+	static T removeDataMember(const T& in)
 	{
-		Area ent{ "scl_tileLinkDeserialzeA", true };
-
-		size_t beats = width(blueprint).numBeats(in->width());
-
-		scl::Counter partCounter(beats);
-		IF(transfer(in) & !partCounter.isLast())
-			partCounter.inc();
-		IF(transfer(in) & eop(in))
-			partCounter.reset();
-
-		Bit burstState = flag(transfer(in) & partCounter.isLast(), transfer(in) & eop(in)) | name("burstState");
-
-		scl::Counter byteCounter(blueprint.data.width().bytes());
-		IF(!burstState)
-			byteCounter.reset();
-		IF(transfer(in) & burstState)
-			byteCounter.inc();
-
-		RvStream<TileLinkA> out;
-		TileLinkA a = constructFrom(blueprint);
-		IF(transfer(out))
-		{
-			a.address += a.data.width().bytes();
-			if(a.source.width() > 0_b)
-				a.source += 1;
-		}
-
-		a = reg(a);
-		IF(valid(in) & !burstState)
-		{
-			BVec rawData = zext(pack(a), in->width() * beats);
-			rawData.part(beats, partCounter.value()) = *in;
-			unpack(rawData.lower(width(a)), a);
-		}
-		IF(valid(in) & burstState)
-		{
-			a.data.part(a.data.width().bytes(), byteCounter.value()) = *in;
-		}
-		a = name(a, "a");
-
-		*out = a;
-		valid(out) = '0';
-		IF(!burstState & partCounter.isLast())
-			valid(out) = valid(in);
-		IF(burstState & byteCounter.isLast())
-			valid(out) = valid(in);
-
-		ready(in) = ready(out) | !valid(out);
-		return out;
+		T ret = in;
+		ret.data.resetNode();
+		ret.data = ConstBVec(0_b);
+		return ret;
 	}
 
 	Reverse<TxRxPacketStream> tileLinkSerialize(TileLinkU&& slave, BitWidth dataW)
@@ -517,8 +475,25 @@ namespace gtry::scl
 			.tx = {dataW},
 			.rx = {dataW}
 		};
-		slave.a <<= tileLinkDeserialzeA(move(out.tx), *slave.a);
-		*out.rx <<= strm::serialize(move(*slave.d), dataW);
+
+		TileLinkA headerA = removeDataMember(*slave.a);
+		slave.a <<= strm::deserializeHeaderPayloadBurst(move(out.tx), headerA, slave.a->data) |
+			strm::transform([](const BVec& data, const TileLinkA& header) {
+				TileLinkA ret = header;
+				ret.data.resetNode();
+				ret.data = data;
+				return ret;
+			}) |
+			strm::remove<TileLinkA>() |
+			strm::remove<Eop>();
+		sim_assert(!valid(slave.a) | headerA.opcode != (size_t)TileLinkA::PutPartialData | !headerA.isBurst()) << "Put partial bursts are not supported. Mask is transferred only once as part of the header.";
+
+		TileLinkD headerD = removeDataMember(**slave.d);
+		Stream dataD = move(*slave.d) |
+			strm::attach(Eop{ eop(*slave.d) }) |
+			strm::transform(&TileLinkD::data);
+
+		*out.rx <<= strm::serializeHeaderPayloadBurst(move(dataD), headerD, dataW, headerD.hasData());
 
 		HCL_NAMED(out);
 		return out;
@@ -528,8 +503,23 @@ namespace gtry::scl
 	{
 		Area ent{ "scl_tileLinkDeserialize", true };
 		TileLinkU out = constructFrom(blueprint);
-		pipe->tx <<= strm::serialize(move(out.a), pipe->tx->width());
-		*out.d <<= strm::deserialize(*pipe->rx, **out.d);
+
+		TileLinkA headerA = removeDataMember(*out.a);
+		Stream dataA = move(out.a) |
+			strm::attach(Eop{ eop(out.a) }) |
+			strm::transform(&TileLinkA::data);
+		pipe->tx <<= strm::serializeHeaderPayloadBurst(move(dataA), headerA, pipe->tx->width(), headerA.hasData());
+
+		TileLinkD headerD = removeDataMember(**out.d);
+		*out.d <<= strm::deserializeHeaderPayloadBurst(move(*pipe->rx), headerD, (*out.d)->data) |
+			strm::transform([](const BVec& data, const TileLinkD& header) {
+				TileLinkD ret = header;
+				ret.data.resetNode();
+				ret.data = data;
+				return ret;
+			}) |
+			strm::remove<TileLinkD>() |
+			strm::remove<Eop>();
 
 		HCL_NAMED(out);
 		return out;

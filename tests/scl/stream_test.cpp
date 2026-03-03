@@ -3208,7 +3208,8 @@ BOOST_FIXTURE_TEST_CASE(stream_serialize_test, BoostUnitTestSimulationFixture)
 	RvStream<TestPayload> out = move(in) |
 		strm::serialize(8_b) |
 		name("encoded") |
-		strm::deserialize(*in);
+		strm::deserialize(*in) |
+		strm::remove<Eop>();
 	pinOut(out, "out");
 
 	addSimulationProcess([&, this]()->SimProcess {

@@ -175,6 +175,9 @@ namespace gtry::scl
 
 	Bit eop(const TileLinkChannel auto& source)
 	{
+		if (source->data.width() == 0_b)
+			return '1';
+
 		gtry::EnableScope en{ transfer(source) };
 		return eop(source->size, source->data.width(), !source->hasData());
 	}
@@ -304,6 +307,7 @@ namespace gtry::scl
 		Memory<BVec> mem(memAddrW.count(), dataW);
 		auto link = tileLinkInit<TileLinkU>(addrW, dataW, sourceW);
 		connect(mem, link);
+		HCL_NAMED(link);
 		return link;
 	}
 

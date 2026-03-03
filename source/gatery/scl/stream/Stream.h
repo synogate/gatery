@@ -386,6 +386,10 @@ namespace gtry::scl::strm
 	template<Signal AddPayloadT, Signal ...AddMetaT, Signal PayloadT, Signal ...Meta> 
 	auto attach(Stream<PayloadT, Meta...>&& stream, Stream<AddPayloadT, AddMetaT...>&& metaStream) 
 	{
+		Area ent{ "scl_attach_stream", true };
+		HCL_NAMED(stream);
+		HCL_NAMED(metaStream);
+
 		auto [result, duplicated] = replicateForEntirePacket(move(stream), move(metaStream));
 		ready(duplicated) = '1';
 
@@ -394,6 +398,7 @@ namespace gtry::scl::strm
 		if constexpr (Stream<PayloadT, Meta...>::template has<Error>())
 			error(out) |= error(duplicated);
 
+		HCL_NAMED(out);
 		return out;
 	}
 

@@ -21,8 +21,9 @@
 #include "Stream.h"
 #include "metaSignals.h"
 #include "../cdc.h"
-#include "StreamBroadcaster.h"
 #include "StreamArbiter.h"
+#include "StreamBroadcaster.h"
+#include "StreamDemux.h"
 
 namespace gtry::scl::strm
 {
@@ -466,6 +467,22 @@ namespace gtry::scl::strm
 	template<Signal T, StreamSignal Ts>
 	auto deserialize(Ts&& in, const T& blueprint);
 	inline auto deserialize(const Signal auto& blueprint) { return [&](auto&& s1) { return deserialize(std::forward<decltype(s1)>(s1), blueprint); }; }
+
+	/**
+	 * @brief Serialize header followed by any number of serialized payload beats.
+	 *			See tileLinkSerialize for an example on usage.
+	 * @param payloadStream Stream that gets serialized into the return stream.
+	 * @param dataW Width of resulting PacketStream<BVec>.
+	 * @param hasPayload Can be used to send non payload packets that only consist of the header. Assert payloadStream and deassert hasPayload.
+	 */
+	template<StreamSignal T, Signal Th>
+	auto serializeHeaderPayloadBurst(T&& payloadStream, const Th& header, BitWidth dataW, Bit hasPayload = '1');
+
+	/**
+	 * @brief The inverse operation of serializeHeaderPayloadBurst.
+	 */
+	template<StreamSignal T, Signal Th, Signal Tp>
+	auto deserializeHeaderPayloadBurst(T&& in, const Th& headerBlueprint, const Tp& payloadBlueprint);
 
 	/**
 	 * @brief Asserts ready whenever valid is low. 
@@ -1241,16 +1258,14 @@ namespace gtry::scl::strm
 		Area ent{ "scl_strm_serialize", true };
 		size_t beats = width(*in).numBeats(dataW);
 
-		Bit lastBeat;
 		return move(in) |
-			strm::duplicate(beats) |
+			strm::duplicate(beats) | name("dup") |
+			strm::transform<InsertPos::attach>([&](const Eop& e) { return Eop{ e.eop & eop(in) }; }) | name("withEop") |
 			strm::transform([&](const auto& inp) {
-			scl::Counter partCounter(beats);
-			lastBeat = partCounter.isLast();
-			BVec rawData = zext(pack(inp), dataW * beats);
-			return rawData.part(beats, partCounter.value());
-		}) |
-			strm::attach(Eop{ lastBeat });
+				scl::Counter partCounter(beats);
+				BVec rawData = zext(pack(inp), dataW * beats);
+				return rawData.part(beats, partCounter.value());
+			}) | name("out");
 	}
 
 	template<Signal T, StreamSignal Ts>
@@ -1258,28 +1273,93 @@ namespace gtry::scl::strm
 	{
 		Area ent{ "scl_strm_deserialize", true };
 		size_t beats = width(blueprint).numBeats(in->width());
+		scl::Counter partCounter(beats);
+		IF(transfer(in))
+			partCounter.inc();
 
-		Bit lastBeat;
 		Stream out = move(in) |
 			strm::transform([&](const BVec& slice) {
-			BVec rawData = in->width() * beats;
-			rawData = reg(rawData);
+				BVec rawData = in->width() * beats;
+				rawData = reg(rawData) | name("rawData");
+				rawData.part(beats, partCounter.value()) = slice;
 
-			scl::Counter partCounter(beats);
-			lastBeat = partCounter.isLast();
-			rawData.part(beats, partCounter.value()) = slice;
+				T ret = constructFrom(blueprint);
+				unpack(rawData.lower(width(ret)), ret);
+				return ret;
+			});
 
-			T ret = constructFrom(blueprint);
-			unpack(rawData.lower(width(ret)), ret);
-			return ret;
-		});
+		valid(out) &= partCounter.isLast();
 
-		HCL_NAMED(lastBeat);
-		sim_assert(!valid(out) | eop(out) == lastBeat) << "length of serialized packet unexpected";
-		ready(in) |= !lastBeat;
-		valid(out) &= lastBeat;
+		if constexpr (Ts::template has<Eop>())
+		{
+			IF(transfer(in) & eop(in))
+				partCounter.reset();
+			valid(out) |= valid(in) & eop(in);
+		}
 
-		return out | strm::remove<Eop>();
+		return out | strm::readyIfNotValid() | name("out");
+	}
+
+	template<StreamSignal T, Signal Th, Signal Tp>
+	auto deserializeHeaderPayloadBurst(T&& in, const Th& headerBlueprint, const Tp& payloadBlueprint)
+	{
+		Area ent{ "scl_deserializeHeaderPayloadBurst", true };
+		HCL_NAMED(in);
+
+		Bit payloadPhase;
+		StreamDemux mux(move(in), zext(payloadPhase));
+
+		Stream header = mux.out(0) |
+			strm::deserialize(headerBlueprint) |
+			name("headerStream");
+
+		Stream payload = mux.out(1) |
+			strm::deserialize(payloadBlueprint) |
+			name("payloadStream");
+
+		payloadPhase = flag(transfer(header), transfer(in) & eop(in)) | name("payloadPhase");
+
+
+		Stream out = move(payload) | strm::attach(capture(*header, valid(header)));
+		ready(header) = '1';
+		IF(valid(header) & eop(in))
+		{
+			valid(out) = '1';
+			ready(header) = ready(out);
+		}
+		HCL_NAMED(out);
+		return out | strm::readyIfNotValid();
+	}
+
+	template<StreamSignal T, Signal Th>
+	auto serializeHeaderPayloadBurst(T&& payloadStream, const Th& header, BitWidth dataW, Bit hasPayload)
+	{
+		Area ent{ "scl_serializeHeaderPayloadBurst", true };
+		HCL_NAMED(payloadStream);
+		HCL_NAMED(header);
+
+		Bit pausePayload;
+		Stream payload = move(payloadStream) |
+			strm::serialize(dataW) |
+			strm::stall(pausePayload) |
+			name("payload");
+		Stream head = strm::createVStream(header, valid(payloadStream)) |
+			strm::attach(Ready{}) |
+			strm::serialize(dataW) |
+			name("head");
+
+		Stream out = strm::arbitrate(move(payload), move(head));
+
+		// mask header eop if payload exists
+		eop(out) &= !pausePayload | !hasPayload;
+
+		// override ready from arbiter in case we never sample the payload stream
+		ready(payloadStream) |= transfer(head) & eop(head) & !hasPayload;
+
+		pausePayload = flag(transfer(payload) & eop(payload), transfer(head) & eop(head) & hasPayload, '1') | name("pausePayload");
+
+		HCL_NAMED(out);
+		return out;
 	}
 
 	template<StreamSignal T>
