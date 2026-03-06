@@ -29,7 +29,7 @@ namespace gtry::scl::driver
 		uint64_t address = 0;
 		uint8_t mask = 0;
 
-		std::span<uint8_t> data;
+		std::span<const uint8_t> data;
 	};
 
 	struct TileLinkDData
