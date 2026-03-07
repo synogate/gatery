@@ -234,12 +234,12 @@ namespace gtry {
 		bool operator!=(std::int64_t v) const { return !this->operator==(v); }
 
 		// use templates to provide a perfect fit and prevent ambiguous overloads (cast operands for provided operator== vs use provided cast operator and buildin ==)
-		template<std::signed_integral T>
-		void operator=(T v) { this->operator=((std::uint64_t)v); }
-		template<std::signed_integral T>
-		bool operator==(T v) const { return this->operator==((std::uint64_t)v); }
-		template<std::signed_integral T>
-		bool operator!=(T v) const { return this->operator!=((std::uint64_t)v); }
+		template<std::integral T>
+		void operator=(T v) { this->operator=((std::int64_t)v); }
+		template<std::integral T>
+		bool operator==(T v) const { return this->operator==((std::int64_t)v); }
+		template<std::integral T>
+		bool operator!=(T v) const { return this->operator!=((std::int64_t)v); }
 
 
 		std::int64_t value() const { ReadSignalList::addToAllScopes(this->m_handle.getOutput()); return (std::int64_t)this->m_handle; }
