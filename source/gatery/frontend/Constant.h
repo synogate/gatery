@@ -26,6 +26,7 @@
 #include <gatery/utils/Preprocessor.h>
 #include <gatery/utils/Traits.h>
 
+#include <concepts>
 #include <string_view>
 
 namespace gtry 
@@ -35,34 +36,6 @@ namespace gtry
  * @addtogroup gtry_frontend
  * @{
  */
-
-
-	class UInt;
-
-#if 0 // ConstUInt as class study
-
-	class ConstUInt
-	{
-	public:
-		constexpr ConstUInt(uint64_t value, BitWidth width, std::string_view name = "") : m_intValue(value), m_width(width), m_name(name) {}
-		constexpr ConstUInt(BitWidth width, std::string_view name = "") : m_width(width), m_name(name) {}
-		constexpr ConstUInt(std::string_view value, std::string_view name = "") : m_stringValue(value), m_name(name) {}
-
-		UInt get() const;
-		operator UInt () const;
-
-		sim::DefaultBitVectorState state() const;
-
-	private:
-		std::optional<std::string_view> m_stringValue;
-		std::optional<uint64_t> m_intValue;
-		BitWidth m_width;
-		std::string_view m_name;
-	};
-
-	std::ostream& operator << (std::ostream&, const ConstUInt&);
-#else
-
 	class UndefinedVec
 	{
 	public:
@@ -86,17 +59,38 @@ namespace gtry
 		BitWidth m_width;
 	};
 
+	template<BitVectorSignal T>
+	T Const(std::integral auto value, BitWidth width, std::string_view name = "")
+	{
+		auto* node = DesignScope::createNode<hlim::Node_Constant>(sim::parseBitVector(value, width.bits()), hlim::ConnectionType::BITVEC);
+		if (!name.empty())
+			node->setName(std::string(name));
+
+		return SignalReadPort(node);
+	}
+
+	template<BitVectorSignal T>
+	T Const(BitWidth width, std::string_view name = "")
+	{
+		sim::DefaultBitVectorState value;
+		value.resize(width.bits());
+		value.setRange(sim::DefaultConfig::DEFINED, 0, width.bits(), false);
+
+		auto* node = DesignScope::createNode<hlim::Node_Constant>(value, hlim::ConnectionType::BITVEC);
+		if (!name.empty())
+			node->setName(std::string(name));
+
+		return SignalReadPort(node);
+	}
+
 	BVec ConstBVec(uint64_t value, BitWidth width, std::string_view name = "");
 	BVec ConstBVec(BitWidth width, std::string_view name = ""); // undefined constant
 
 	UInt ConstUInt(uint64_t value, BitWidth width, std::string_view name = "");
 	UInt ConstUInt(BitWidth width, std::string_view name = ""); // undefined constant
 
-/*
 	SInt ConstSInt(int64_t value, BitWidth width, std::string_view name = "");
 	SInt ConstSInt(BitWidth width, std::string_view name = ""); // undefined constant
-*/
-#endif
 
 
 #define GTRY_CONST_BVEC_DESC(x, value, desc) \

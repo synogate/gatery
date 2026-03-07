@@ -20,47 +20,34 @@
 
 #include "BVec.h"
 #include "UInt.h"
-
-using namespace gtry;
+#include "SInt.h"
 
 gtry::BVec gtry::ConstBVec(uint64_t value, BitWidth width, std::string_view name)
 {
-	auto* node = DesignScope::createNode<hlim::Node_Constant>(sim::parseBitVector(value, width.value), hlim::ConnectionType::BITVEC);
-	if (!name.empty())
-		node->setName(std::string(name));
-
-	return SignalReadPort(node);
+	return Const<BVec>(value, width, name);
 }
 
 gtry::BVec gtry::ConstBVec(BitWidth width, std::string_view name)
 {
-	sim::DefaultBitVectorState value;
-	value.resize(width.value);
-	value.setRange(sim::DefaultConfig::DEFINED, 0, width.value, false);
-
-	auto* node = DesignScope::createNode<hlim::Node_Constant>(value, hlim::ConnectionType::BITVEC);
-	if (!name.empty())
-		node->setName(std::string(name));
-	return SignalReadPort(node);
+	return Const<BVec>(width, name);
 }
 
 gtry::UInt gtry::ConstUInt(uint64_t value, BitWidth width, std::string_view name)
 {
-	auto* node = DesignScope::createNode<hlim::Node_Constant>(sim::parseBitVector(value, width.value), hlim::ConnectionType::BITVEC);
-	if (!name.empty())
-		node->setName(std::string(name));
-
-	return SignalReadPort(node);
+	return Const<UInt>(value, width, name);
 }
 
 gtry::UInt gtry::ConstUInt(BitWidth width, std::string_view name)
 {
-	sim::DefaultBitVectorState value;
-	value.resize(width.value);
-	value.setRange(sim::DefaultConfig::DEFINED, 0, width.value, false);
+	return Const<UInt>(width, name);
+}
 
-	auto* node = DesignScope::createNode<hlim::Node_Constant>(value, hlim::ConnectionType::BITVEC);
-	if (!name.empty())
-		node->setName(std::string(name));
-	return SignalReadPort(node);
+gtry::SInt gtry::ConstSInt(int64_t value, BitWidth width, std::string_view name)
+{
+	return Const<SInt>(value, width, name);
+}
+
+gtry::SInt gtry::ConstSInt(BitWidth width, std::string_view name)
+{
+	return Const<SInt>(width, name);
 }
