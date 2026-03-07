@@ -17,6 +17,8 @@
 */
 #pragma once
 #include "Signal.h"
+#include "BVec.h"
+#include "SInt.h"
 #include "Compound.h"
 #include "ConstructFrom.h"
 
@@ -88,6 +90,15 @@ namespace gtry
 		);
 	}
 
+	/**
+	 * @brief This overload is just syntax sugar to be able to write reg(signal, 0) for BVec and SInt.
+	 */
+	template<BitVectorSignal T, std::integral Tr> requires(!std::convertible_to<Tr, T>)
+	T reg(const T& val, const Tr& resetVal, const RegisterSettings& settings = {})
+	{
+		return reg(val, Const<T>(resetVal, val.width()), settings);
+	}
+
 	template<Signal T>
 	T reg(const T& val, const RegisterSettings& settings)
 	{
@@ -110,17 +121,58 @@ namespace gtry
 		});
 	}
 
-	struct RegFactory
+	struct RegFactoryBit
 	{
-		RegisterSettings settings;
+		const RegisterSettings& settings;
+		std::optional<Bit> resetValue;
+		std::string_view signalName;
+
+		// pipe operator
 		auto operator() (Signal auto&& sig) { return reg(sig, settings); }
+
+		operator Bit() const {
+			Bit s;
+			if (resetValue)
+				s = reg(s, *resetValue, settings);
+			else
+				s = reg(s, settings);
+			if (!signalName.empty())
+				s = name(s, signalName);
+			return s;
+		}
+
+	};
+
+	template<typename Treset = void>
+	struct RegFactoryVec
+	{
+		const RegisterSettings& settings;
+		const BitWidth width;
+		const Treset* resetValue = nullptr;
+		std::string_view signalName;
+
+		template<BitVectorSignal T>
+		operator T() const {
+			T s = width;
+			if constexpr (std::is_same_v<Treset, void>)
+				s = reg(s, settings);
+			else
+				s = reg(s, *resetValue, settings);
+			if (!signalName.empty())
+				s = name(s, signalName);
+			return s;
+		}
 	};
 
 	/**
-	 * @brief A special overload of reg that is used for the pipe operator. It is implimented with the RegFactory class to support.
-	 *			Cases where we would like to initialize a signal as a register using Signal a = reg(); syntax.
+	 * @brief Overloads of reg that is used for the pipe operator and direct register loop initialization.
 	*/
-	inline RegFactory reg(const RegisterSettings& settings = {}) { return { settings }; }
+	inline RegFactoryBit reg(const RegisterSettings& settings) { return { settings }; }
+	inline RegFactoryBit reg(std::string_view name = "", const RegisterSettings& settings = {}) { return { settings, {}, name }; }
+	inline RegFactoryBit reg(char resetValue, std::string_view name = "", const RegisterSettings& settings = {}) { return { settings, resetValue, name }; }
+	inline RegFactoryVec<> reg(BitWidth width, std::string_view name = "", const RegisterSettings& settings = {}) { return { settings, width, nullptr, name }; }
+	template<std::integral Tr>
+	inline RegFactoryVec<Tr> reg(BitWidth width, const Tr& resetValue, std::string_view name = "", const RegisterSettings& settings = {}) { return { settings, width, &resetValue, name }; }
 
 	template<Signal S>
 	class Reg

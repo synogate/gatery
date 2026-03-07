@@ -615,6 +615,55 @@ BOOST_FIXTURE_TEST_CASE(RegFactoryPipe_test, gtry::BoostUnitTestSimulationFixtur
 	design.postprocess();
 	runTest({ 1,1 });
 }
+BOOST_FIXTURE_TEST_CASE(RegFactoryLoopInit_test, gtry::BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ 100_mhz });
+	ClockScope clockScope(clock);
+
+	auto addTest = [&, this](std::string name, auto type, auto&&... param) {
+		decltype(type) s = reg(param...);
+		auto o = s;
+		pinOut(o, name + "_out");
+		pinIn(s, name + "_in");
+
+		addSimulationProcess([=, this]()->SimProcess {
+			for (size_t i = 0; i < 8; ++i)
+			{
+				if constexpr (std::is_same_v<decltype(type), Bit>)
+				{
+					bool val = i % 2 == 0;
+					simu(s) = val;
+					co_await AfterClk(clock);
+					BOOST_TEST(simu(o) == val);
+				}
+				else
+				{
+					simu(s) = i;
+					co_await AfterClk(clock);
+					BOOST_TEST(simu(o) == i);
+				}
+			}
+		});
+	};
+
+	addTest("i1", Bit{});
+	addTest("i2", Bit{}, '0');
+	addTest("i3", Bit{}, "i3");
+	addTest("i4", Bit{}, '0', "i4");
+	addTest("u1", UInt{}, 8_b);
+	addTest("u2", UInt{}, 8_b, 0);
+	addTest("s1", SInt{}, 8_b);
+	addTest("s2", SInt{}, 8_b, 0);
+	addTest("b1", BVec{}, 8_b);
+	addTest("b2", BVec{}, 8_b, 0);
+	addTest("b3", BVec{}, 8_b, "b3");
+	addTest("b4", BVec{}, 8_b, 0, "b4");
+
+	design.postprocess();
+	runHitsTimeout(100ns);
+}
 
 
 /*
