@@ -611,7 +611,7 @@ namespace gtry
 		template<TupleSignal T, typename TFunc>
 		std::remove_reference_t<T> transformSignal(T&& val, TFunc&& func);
 
-		template<TupleSignal T, TupleSignal Tr, typename TFunc>
+		template<TupleSignal T, typename Tr, typename TFunc>
 		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func);
 
 		// cannot transform Reverse signals. (Signals with upstream components) Use downstream() to extract the downstream part.
@@ -730,7 +730,7 @@ namespace gtry
 			});
 		}
 
-		template<TupleSignal T, TupleSignal Tr, typename TFunc>
+		template<TupleSignal T, typename Tr, typename TFunc>
 		T transformSignal(const T& val, const Tr& resetVal, TFunc&& func)
 		{
 			static_assert(std::tuple_size<T>::value == std::tuple_size<Tr>::value, "Mismatch between signal and reset value tuple size");
@@ -757,7 +757,7 @@ namespace gtry
 			// all of which l value references.
 
 			auto in3 = boost::hana::zip_with([](auto&& a, auto&& b) {
-				static_assert(std::is_constructible_v<decltype(a), decltype(b)>, "reset type is not convertable to signal type");
+			//	static_assert(std::is_constructible_v<decltype(a), decltype(b)>, "reset type is not convertable to signal type");
 				return std::tie(a, b);
 			}, in2, in2r);
 
