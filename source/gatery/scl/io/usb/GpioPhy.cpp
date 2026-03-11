@@ -227,9 +227,13 @@ gtry::SimFunction<std::vector<std::byte>> gtry::scl::usb::GpioPhy::receive(size_
 	HCL_ASSERT_HINT(bitCounter == 0, "incomplete byte");
 	HCL_ASSERT_HINT(!data.empty() && data[0] == std::byte(0x80), "preamble missing");
 
+	sim::SimulationContext::current()->onDebugMessage(nullptr, "SE0 start");
+
 	while (lineState() != J)
 		co_await WaitFor(baudRate);
 	co_await WaitFor(baudRate);
+
+	sim::SimulationContext::current()->onDebugMessage(nullptr, "SE0 end");
 
 	if (!data.empty())
 		data.erase(data.begin());
@@ -360,11 +364,11 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 
 	Bit wait = pulseExtender(
 		m_se0,
-		hlim::floor(m_clock.absoluteFrequency() / hlim::ClockRational{ 12'000'000 }) * 3);
+		hlim::floor(m_clock.absoluteFrequency() * 3 / 12_mhz));
 
 	txStuffedStream = scl::strm::stall(move(txStuffedStream), wait);
 
-	Counter txTimer{ hlim::floor(m_clock.absoluteFrequency() / hlim::ClockRational{ 12'000'000 }) };
+	Counter txTimer{ hlim::floor(m_clock.absoluteFrequency() / 12_mhz) };
 	IF(valid(txStuffedStream))
 		txTimer.inc();
 	ELSE
@@ -377,8 +381,8 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 
 	Bit se0 = reg(pulseExtender(
 		transfer(txStuffedStream) & eop(txStuffedStream),
-		hlim::floor(m_clock.absoluteFrequency() / hlim::ClockRational{ 12'000'000 }) * 2), '0');
-	HCL_NAMED(se0);
+		hlim::floor(m_clock.absoluteFrequency() * 2 / 12_mhz)), '0');
+	setName(se0, "tx_se0");
 
 	IF(se0)
 	{
@@ -386,6 +390,16 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 		p = '0';
 		n = '0';
 	}
+	IF(edgeFalling(se0))
+	{
+		en = '1';
+		p = '1';
+		n = '0';
+	}
+
+	setName(en, "pin_tx_en");
+	setName(p, "pin_tx_p");
+	setName(n, "pin_tx_n");
 }
 
 void gtry::scl::usb::GpioPhy::generateRx(const VStream<Bit, SingleEnded>& in)
