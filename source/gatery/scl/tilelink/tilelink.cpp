@@ -131,6 +131,22 @@ namespace gtry::scl
 		return master;
 	}
 
+	TileLinkU tileLinkRegA(TileLinkU&& slave)
+	{
+		TileLinkU out = constructFrom(slave);
+		slave.a <<= strm::regDecouple(move(out.a));
+		*out.d <<= move(*slave.d);
+		return out;
+	}
+
+	TileLinkU tileLinkRegD(TileLinkU&& slave)
+	{
+		TileLinkU out = constructFrom(slave);
+		slave.a <<= move(out.a);
+		*out.d <<= strm::regDecouple(move(*slave.d));
+		return out;
+	}
+
 	Bit TileLinkD::hasData() const
 	{ 
 		return opcode.lsb(); 

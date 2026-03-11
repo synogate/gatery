@@ -210,6 +210,8 @@ namespace gtry::scl
 	 * @return the slave-side tileLink handle, where decoupling registers have been inserted in both directions.
 	*/
 	TileLinkU tileLinkRegDecouple(TileLinkU&& slave);
+	TileLinkU tileLinkRegA(TileLinkU&& slave);
+	TileLinkU tileLinkRegD(TileLinkU&& slave);
 
 	/// Overload to correctly forward addr space description
 	template<TileLinkSignal T>
