@@ -34,6 +34,14 @@ namespace gtry::scl
 		return *this;
 	}
 
+	TxRxPacketStreamRouter& TxRxPacketStreamRouter::attach(size_t routingId, TxRxStream&& stream)
+	{
+		TxRxPacketStream pks{ {stream.tx->width()}, {(*stream.rx)->width()} };
+		pks.tx <<= move(stream.tx) | strm::attach(Eop{ '1' });
+		*stream.rx <<= move(*pks.rx) | strm::remove<Eop>();
+		return attach(routingId, move(pks));
+	}
+
 	TxRxPacketStream TxRxPacketStreamRouter::generate()
 	{
 		Area ent{ "scl_TxRxPacketStreamRouter", true };

@@ -32,6 +32,7 @@ namespace gtry::scl
 	{
 	public:
 		TxRxPacketStreamRouter& attach(size_t routingId, TxRxPacketStream&& stream);
+		TxRxPacketStreamRouter& attach(size_t routingId, TxRxStream&& stream);
 		TxRxPacketStream generate();
 
 		// used for | operator
