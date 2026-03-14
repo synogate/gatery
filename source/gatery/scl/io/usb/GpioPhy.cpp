@@ -54,7 +54,7 @@ static gtry::scl::RvPacketStream<gtry::Bit> bitStuff(gtry::scl::RvPacketStream<g
 
 	Bit wasEop = reg(eop(source), {.en = !insertState}) | name("wasEop");
 
-		ready(source) = '0';
+	ready(source) = '0';
 	IF(insertState)
 	{
 		valid(out) = '1';
@@ -328,17 +328,17 @@ static gtry::Bit pulseExtender(gtry::Bit input, size_t cycles, gtry::Bit reset =
 	using namespace gtry;
 	using namespace gtry::scl;
 	Area area{ "scl_pulseExtender", true };
-
-	HCL_DESIGNCHECK(cycles != 0);
-
-	Counter pulseCtr(cycles + 1);
-
-	IF(input)
-		pulseCtr.reset();
-
 	HCL_NAMED(input);
-	Bit ret = flagInstantSet(input, (pulseCtr.isLast() & !input) | reset); HCL_NAMED(ret);
 
+	Bit ret = input;
+	if(cycles != 0)
+	{
+		Counter pulseCtr(cycles);
+		IF(input)
+			pulseCtr.reset();
+
+		ret = flagInstantSet(input, (pulseCtr.isLast() & !input) | reset); HCL_NAMED(ret);
+	}
 	return ret;
 }
 
@@ -386,9 +386,11 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 	p = *txStuffedStream;
 	n = !p;
 
+	size_t se0Cycles = hlim::floor(m_clock.absoluteFrequency() * 2 / 12_mhz);
 	Bit se0 = reg(pulseExtender(
 		transfer(txStuffedStream) & eop(txStuffedStream),
-		hlim::floor(m_clock.absoluteFrequency() * 2 / 12_mhz)), '0');
+		se0Cycles - 1
+		), '0');
 	setName(se0, "tx_se0");
 
 	IF(se0)
