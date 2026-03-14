@@ -167,6 +167,51 @@ BOOST_FIXTURE_TEST_CASE(usb_windows_discovery, UsbFixture)
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000 }));
 }
 
+BOOST_FIXTURE_TEST_CASE(usb_resend_on_error, UsbFixture)
+{
+	// uncomment to enable full gpiophy simulation
+	m_useSimuPhy = false;
+	m_pinApplicationInterface = false;
+
+	Clock clock({ .absoluteFrequency = 12'000'000 * (m_useSimuPhy ? 1 : 4) });
+	ClockScope clkScp(clock);
+
+	setupFunction();
+
+	RvStream<BVec> tx = { 8_b };
+	pinIn(tx, "tx");
+	m_func->txEndPointFifo(1, 256, move(tx));
+
+	addSimulationProcess([&]() -> SimProcess {
+		simu(valid(tx)) = '0';
+		co_await OnClk(clock);
+
+		co_await m_controller->sendToken(Pid::in, m_controller->functionAddress(), 1);
+		std::vector<std::byte> ret0 = co_await m_controller->bus().receive();
+
+		std::vector<uint8_t> data{ 0x0F, 0x03, 0x06, 0x82, 0xE6, 0x00, 0xFF, 0xE0 };
+		co_await strm::sendPacket(tx, strm::SimPacket{data}, clock);
+		
+		co_await m_controller->sendToken(Pid::in, m_controller->functionAddress(), 1);
+		std::vector<std::byte> ret1 = co_await m_controller->bus().receive();
+		BOOST_TEST(ret1.size() == data.size() + 3);
+
+		for(size_t i = 0; i < 16; ++i)
+			co_await OnClk(clock);
+
+		co_await m_controller->sendToken(Pid::in, m_controller->functionAddress(), 1);
+		std::vector<std::byte> ret2 = co_await m_controller->bus().receive();
+		BOOST_TEST(ret1 == ret2);
+
+
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout({ 1, 1'000 }));
+}
+
+
 class SingleEndpointUsbFixture : public UsbFixture
 {
 public:

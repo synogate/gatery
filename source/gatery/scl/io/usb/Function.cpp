@@ -515,8 +515,10 @@ void gtry::scl::usb::Function::generateInitialFsm()
 
 		Bit lenghtLimitReached = m_packetLen == m_packetLenTxLimit | name("lenghtLimitReached");
 		Bit sendDataValid = (m_tx.valid & m_tx.endPoint == m_endPoint & !lenghtLimitReached) | name("sendDataValid");
-		if(m_phyCyclesPerTransfer > 1)
-			sendDataValid = reg(sendDataValid, '1');
+	// This optimization causes problems in resend cases where sendDataValid may be false low in the first cycle
+	// We have to find anoother way to break the critical path
+	//	if(m_phyCyclesPerTransfer > 1)
+	//		sendDataValid = reg(sendDataValid, '1');
 		IF(sendDataValid)
 		{
 			m_tx.ready = tx.ready;
