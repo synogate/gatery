@@ -35,24 +35,36 @@ static gtry::scl::RvPacketStream<gtry::Bit> bitStuff(gtry::scl::RvPacketStream<g
 
 	auto scope = Area{ "bitStuff" }.enter();
 
-	Counter c{ repeats + 1 };
-
 	RvPacketStream<Bit> out;
-	IF(transfer(out))
-	{
-		IF(!*source | eop(out))
-			c.reset();
-		ELSE
-			c.inc();
-	}
 
-	out <<= source;
-	IF(c.isLast())
+	Counter c{ repeats };
+	Bit insertTrigger = c.isLast() & *source;
+	Bit insertState;
+	insertState = flag(transfer(source) & insertTrigger, transfer(out) & insertState) | name("insertState");
+
+	IF(transfer(source))
 	{
+		IF(*source & !eop(source))
+			c.inc();
+		ELSE
+			c.reset();
+	}
+	IF(insertState)
+		c.reset();
+
+	Bit wasEop = reg(eop(source), {.en = !insertState}) | name("wasEop");
+
 		ready(source) = '0';
+	IF(insertState)
+	{
 		valid(out) = '1';
-		eop(out) = '0';
+		eop(out) = wasEop;
 		*out = '0';
+	}
+	ELSE
+	{
+		out <<= source;
+		eop(out) &= !insertTrigger;
 	}
 	HCL_NAMED(out);
 	return out;
@@ -214,7 +226,6 @@ gtry::SimFunction<std::vector<std::byte>> gtry::scl::usb::GpioPhy::receive(size_
 			current = lineState();
 			if (current == last)
 				raiseSimulationError(nullptr, "stuff error");
-	//			HCL_ASSERT_HINT(current != last, "stuff error");
 		}
 		if(current != last)
 			stuffBitCounter = 0;
@@ -223,17 +234,13 @@ gtry::SimFunction<std::vector<std::byte>> gtry::scl::usb::GpioPhy::receive(size_
 		co_await WaitFor(baudRate);
 
 	} while (lineState() != SE0);
-
+	HCL_ASSERT_HINT(stuffBitCounter < 5, "missing trailing stuff bit error");
 	HCL_ASSERT_HINT(bitCounter == 0, "incomplete byte");
 	HCL_ASSERT_HINT(!data.empty() && data[0] == std::byte(0x80), "preamble missing");
-
-	sim::SimulationContext::current()->onDebugMessage(nullptr, "SE0 start");
 
 	while (lineState() != J)
 		co_await WaitFor(baudRate);
 	co_await WaitFor(baudRate);
-
-	sim::SimulationContext::current()->onDebugMessage(nullptr, "SE0 end");
 
 	if (!data.empty())
 		data.erase(data.begin());
