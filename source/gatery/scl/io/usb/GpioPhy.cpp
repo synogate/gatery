@@ -324,24 +324,6 @@ void gtry::scl::usb::GpioPhy::lineState(Symbol state)
 	}
 }
 
-static gtry::Bit pulseExtender(gtry::Bit input, size_t cycles, gtry::Bit reset = '0') {
-	using namespace gtry;
-	using namespace gtry::scl;
-	Area area{ "scl_pulseExtender", true };
-	HCL_NAMED(input);
-
-	Bit ret = input;
-	if(cycles != 0)
-	{
-		Counter pulseCtr(cycles);
-		IF(input)
-			pulseCtr.reset();
-
-		ret = flagInstantSet(input, (pulseCtr.isLast() & !input) | reset); HCL_NAMED(ret);
-	}
-	return ret;
-}
-
 void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 {
 	HCL_NAMED(m_tx);
@@ -369,7 +351,7 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 	nrzi(txStuffedStream);
 	HCL_NAMED(txStuffedStream);
 
-	Bit wait = pulseExtender(
+	Bit wait = pulseExtend(
 		m_se0,
 		hlim::floor(m_clock.absoluteFrequency() * 3 / 12_mhz));
 
@@ -387,7 +369,7 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 	n = !p;
 
 	size_t se0Cycles = hlim::floor(m_clock.absoluteFrequency() * 2 / 12_mhz);
-	Bit se0 = reg(pulseExtender(
+	Bit se0 = reg(pulseExtend(
 		transfer(txStuffedStream) & eop(txStuffedStream),
 		se0Cycles - 1
 		), '0');

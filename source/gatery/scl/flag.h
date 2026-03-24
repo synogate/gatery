@@ -23,16 +23,16 @@ namespace gtry::scl
 	/**
 	* @brief this function implements a flag where both set and reset are registered
 	*/
-	inline Bit flag(const Bit& set, const Bit& reset, char resetValue = '0');
+	Bit flag(const Bit& set, const Bit& reset, char resetValue = '0');
 	/**
 	* @brief this function implements a flag where set is combinational and reset is registered
 	*/
-	inline Bit flagInstantSet(const Bit& set, const Bit& reset, char resetValue = '0');
+	Bit flagInstantSet(const Bit& set, const Bit& reset, char resetValue = '0');
 	/**
 	* @brief This function implements a flag where reset is combinational and set is registered.
 	*  It is equivalent to !flagInstantSet(reset, set, !resetValue);
 	*/
-	inline Bit flagInstantReset(const Bit& set, const Bit& reset, char resetValue = '0');
+	Bit flagInstantReset(const Bit& set, const Bit& reset, char resetValue = '0');
 
 	inline Bit edge(const Bit& in) { return in != reg(in, '0'); }
 	inline Bit edgeRising(const Bit& in) { return in & !reg(in, '1'); }
@@ -43,37 +43,16 @@ namespace gtry::scl
 	*/
 	template<Signal T> T capture(const T& in, Bit condition);
 	template<Signal T> T capture(const T& in, const T& resetValue, Bit condition);
+
+
+	/**
+	 * @brief Whenever input is high it is forwarded to out and extended by cycles additional cycles.
+	 */
+	Bit pulseExtend(Bit input, UInt cycles, Bit reset = '0');
 }
 
 namespace gtry::scl
 {
-	Bit flag(const Bit& set, const Bit& reset, char resetValue)
-	{
-		Bit ret;
-		ret |= set;
-		ret &= !reset;
-		ret = reg(ret, resetValue);
-		return final(ret);
-	}
-
-	Bit flagInstantSet(const Bit& set, const Bit& reset, char resetValue)
-	{
-		Bit ret;
-		ret &= !reset;
-		ret = reg(ret, resetValue);
-		ret |= set;
-		return final(ret);
-	}
-
-	Bit flagInstantReset(const Bit& set, const Bit& reset, char resetValue)
-	{
-		Bit ret;
-		ret |= set;
-		ret = reg(ret, resetValue);
-		ret &= !reset;
-		return final(ret);
-	}
-
 	template<Signal T>
 	T capture(const T& in, Bit condition)
 	{
