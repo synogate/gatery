@@ -197,6 +197,7 @@ namespace gtry::scl
 		std::string name = std::string{ prefix };
 
 		address.setName(name + "address");
+		if (ready) (*ready).setName(name + "ready");
 		if (read) (*read).setName(name + "read");
 		if (write) (*write).setName(name + "write");
 		if (writeData) (*writeData).setName(name + "writedata");
