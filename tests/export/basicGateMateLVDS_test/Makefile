@@ -3,6 +3,7 @@ TOP = top
 # the oss-cad openFPGALoader was unable to communicate
 OFL   = "C:\Program Files\cc-toolchain-win\bin\openFPGALoader\openFPGALoader.exe"
 YOSYS = yosys
+SEED ?= 1
 #"C:\Program Files\cc-toolchain-win\bin\yosys\yosys.exe"
 
 all: jtag
@@ -27,7 +28,7 @@ synth.json: $(TOP).v
 	yosys -ql net_$(TOP)_synth.log -p 'synth_gatemate -top $(TOP) -luttree -nomx8 -json $@' $<
 
 bitfile.txt: synth.json top.sdc top.ccf
-	nextpnr-himbaechel --json $< --device CCGM1A1 --router router2 --seed 1 --sdc .\top.sdc -o ccf=top.ccf -o out=bitfile.txt --write pnr.json
+	nextpnr-himbaechel --json $< --device CCGM1A1 --router router2 -o fpga_mode=speed -o time_mode=typical --seed $(SEED) --sdc .\top.sdc -o ccf=top.ccf -o out=bitfile.txt --write pnr.json
 
 %.bit: %.txt
 	gmpack $< $@

@@ -114,7 +114,11 @@ namespace gtry::scl
 		scl::arch::colognechip::CC_LVDS_OBUF buf;
 		buf.pin(pinName + "p", pinName + "n");
 		buf.regOut(true);
-		buf.O() = scl::arch::colognechip::serdes(~BVec("7b1100011"), clkSlow, clkFast, syncPulse);
+
+		BVec clockSequence = ConstBVec(channel[0].width());
+		for (auto& it : clockSequence.parts(channel[0].width() / 7_b))
+			it = BVec("7b1100011");
+		buf.O() = scl::arch::colognechip::serdes(~clockSequence, clkSlow, clkFast, syncPulse);
 	}
 
 	std::list<std::deque<BVec>> displayControllerDualOpenLDI(TileLinkU&& dma, MemoryMap& mmap, size_t w, size_t h)

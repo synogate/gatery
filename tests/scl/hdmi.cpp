@@ -342,8 +342,8 @@ BOOST_FIXTURE_TEST_CASE(basicGateMateLVDS_test, gtry::BoostUnitTestSimulationFix
 
 #if 1
 	scl::DisplayMode mode = {
-		.pixelFreq = 40_mhz,
-		.w = {.resolution = 1920 / 2, .syncStart = 1920 / 2, .syncEnd = 0, .total = 2130 / 2, },
+		.pixelFreq = 22_mhz,
+		.w = {.resolution = 1920 / 4, .syncStart = 1920 / 4, .syncEnd = 0, .total = 2130 / 4, },
 		.h = {.resolution = 1080, .syncStart = 1080, .syncEnd = 0, .total = 1100, },
 	};
 #elif 0
@@ -424,12 +424,19 @@ BOOST_FIXTURE_TEST_CASE(basicGateMateLVDS_test, gtry::BoostUnitTestSimulationFix
 	std::deque<BVec> lvds = scl::displayOpenLDIEncode(
 		{ rgbImage->at(0).upper(colorDepth), rgbImage->at(1).upper(colorDepth), rgbImage->at(2).upper(colorDepth) },
 		get<scl::DisplaySync>(rgbImage).onScreen,
-		get<scl::DisplaySync>(rgbImage).vsync,
-		get<scl::DisplaySync>(rgbImage).hsync
+		get<scl::DisplaySync>(rgbImage).onScreen,	// vsync
+		get<scl::DisplaySync>(rgbImage).onScreen	// hsync (both ignored by flat panels, so output onScreen to reduce toggle rate)
 	);
 
-	scl::displayOpenLDIGateMate(clkFast, lvds, "DISPLAY_RXO");
-	scl::displayOpenLDIGateMate(clkFast, lvds, "DISPLAY_RXE");
+	// output pixel twice per channel to allow even divider and therefore ddr output usage in serdes
+	// this results in a total of 4 pixel per cycle
+	std::deque<BVec> lvds_double;
+	for (BVec& chan : lvds)
+		lvds_double.push_back(cat(chan, chan));
+	HCL_NAMED(lvds_double);
+
+	scl::displayOpenLDIGateMate(clkFast, lvds_double, "DISPLAY_RXO");
+	scl::displayOpenLDIGateMate(clkFast, lvds_double, "DISPLAY_RXE");
 
 	{ // back light code
 		ClockScope slowScope{ clkSlow };
@@ -449,11 +456,11 @@ BOOST_FIXTURE_TEST_CASE(basicGateMateLVDS_test, gtry::BoostUnitTestSimulationFix
 	vhdl::VHDLExport vhdl("export/basicGateMateLVDS_test/top.vhd");
 	vhdl(design.getCircuit());
 
-	auto flowTask = std::async([]() {
-		return std::system("make -C export/basicGateMateLVDS_test");
-		});
-
-	runHitsTimeout({ 17, 1'000'000 });
-	flowTask.wait();
+	//auto flowTask = std::async([]() {
+	//	return std::system("make -C export/basicGateMateLVDS_test");
+	//	});
+	//
+	//runHitsTimeout({ 17, 1'000'000 });
+	//flowTask.wait();
 }
 

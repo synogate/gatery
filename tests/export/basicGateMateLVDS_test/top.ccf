@@ -51,30 +51,30 @@
 
 # Floppy
 Pin_in      "CLK12M"          Loc = "IO_SB_A8";
-Pin_out     "UART0_TX"        Loc = "IO_NA_A1";
-Pin_out     "UART0_RX"        Loc = "IO_NA_B1";
+#Pin_out     "UART0_TX"        Loc = "IO_NA_A1";
+#Pin_out     "UART0_RX"        Loc = "IO_NA_B1";
 
 # Display
-Pin_out     "DISPLAY_RXE0p"   Loc = "IO_WC_A4";
-Pin_out     "DISPLAY_RXE0n"   Loc = "IO_WC_B4";
-Pin_out     "DISPLAY_RXE1p"   Loc = "IO_WC_A6";
-Pin_out     "DISPLAY_RXE1n"   Loc = "IO_WC_B6";
-Pin_out     "DISPLAY_RXE2p"   Loc = "IO_WC_A0";
-Pin_out     "DISPLAY_RXE2n"   Loc = "IO_WC_B0";
-Pin_out     "DISPLAY_RXE3p"   Loc = "IO_WC_A5";
-Pin_out     "DISPLAY_RXE3n"   Loc = "IO_WC_B5";
-Pin_out     "DISPLAY_RXECp"   Loc = "IO_WC_A3";
-Pin_out     "DISPLAY_RXECn"   Loc = "IO_WC_B3";
-Pin_out     "DISPLAY_RXO0p"   Loc = "IO_WB_A6";
-Pin_out     "DISPLAY_RXO0n"   Loc = "IO_WB_B6";
-Pin_out     "DISPLAY_RXO1p"   Loc = "IO_WB_A8";
-Pin_out     "DISPLAY_RXO1n"   Loc = "IO_WB_B8";
-Pin_out     "DISPLAY_RXO2p"   Loc = "IO_WB_A3";
-Pin_out     "DISPLAY_RXO2n"   Loc = "IO_WB_B3";
-Pin_out     "DISPLAY_RXO3p"   Loc = "IO_WB_A7";
-Pin_out     "DISPLAY_RXO3n"   Loc = "IO_WB_B7";
-Pin_out     "DISPLAY_RXOCp"   Loc = "IO_WB_A5";
-Pin_out     "DISPLAY_RXOCn"   Loc = "IO_WB_B5";
+Pin_out     "DISPLAY_RXE0p"   Loc = "IO_WB_A8";
+Pin_out     "DISPLAY_RXE0n"   Loc = "IO_WB_B8";
+Pin_out     "DISPLAY_RXE1p"   Loc = "IO_WB_A6";
+Pin_out     "DISPLAY_RXE1n"   Loc = "IO_WB_B6";
+Pin_out     "DISPLAY_RXE2p"   Loc = "IO_WB_A7";
+Pin_out     "DISPLAY_RXE2n"   Loc = "IO_WB_B7";
+Pin_out     "DISPLAY_RXE3p"   Loc = "IO_WB_A3";
+Pin_out     "DISPLAY_RXE3n"   Loc = "IO_WB_B3";
+Pin_out     "DISPLAY_RXECp"   Loc = "IO_WB_A5";
+Pin_out     "DISPLAY_RXECn"   Loc = "IO_WB_B5";
+Pin_out     "DISPLAY_RXO0p"   Loc = "IO_WC_A6";
+Pin_out     "DISPLAY_RXO0n"   Loc = "IO_WC_B6";
+Pin_out     "DISPLAY_RXO1p"   Loc = "IO_WC_A4";
+Pin_out     "DISPLAY_RXO1n"   Loc = "IO_WC_B4";
+Pin_out     "DISPLAY_RXO2p"   Loc = "IO_WC_A5";
+Pin_out     "DISPLAY_RXO2n"   Loc = "IO_WC_B5";
+Pin_out     "DISPLAY_RXO3p"   Loc = "IO_WC_A0";
+Pin_out     "DISPLAY_RXO3n"   Loc = "IO_WC_B0";
+Pin_out     "DISPLAY_RXOCp"   Loc = "IO_WC_A3";
+Pin_out     "DISPLAY_RXOCn"   Loc = "IO_WC_B3";
 
 Pin_out     "DISPLAY_EN_12V"  Loc = "IO_WC_B7";
 Pin_out     "DISPLAY_BL_EN"   Loc = "IO_WB_B4";

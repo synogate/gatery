@@ -210,11 +210,6 @@ namespace gtry::scl::arch::colognechip
 			shiftReg = inWord;
 		shiftReg = reg(shiftReg, { .clock = fastClk }) | name("shiftReg");
 
-		scl::arch::colognechip::CC_ODDR ddr;
-		ddr.D0() = reg(shiftReg[0]);
-		ddr.D1() = reg(shiftReg[0]);
-		return ddr.Q();
-
 		if (ddrMode)
 		{
 			scl::arch::colognechip::CC_ODDR ddr;
