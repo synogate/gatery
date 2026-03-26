@@ -464,3 +464,31 @@ BOOST_FIXTURE_TEST_CASE(basicGateMateLVDS_test, gtry::BoostUnitTestSimulationFix
 	//flowTask.wait();
 }
 
+BOOST_FIXTURE_TEST_CASE(basicGateMateLVDS_bug_repro, gtry::BoostUnitTestSimulationFixture, *boost::unit_test::disabled())
+{
+	Clock clk12{ ClockConfig{
+		.absoluteFrequency = 12_mhz,
+		.name = "CLK12M",
+		.resetType = hlim::RegisterAttributes::ResetType::NONE
+	} };
+
+	Clock clkFast = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = 400_mhz, .resetType = ClockConfig::ResetType::NONE });
+	ClockScope scope(clkFast);
+
+	BVec shiftReg = 6_b;
+	shiftReg = rotr(shiftReg, 2);
+	shiftReg = reg(shiftReg, BVec("6b111000")) | name("shiftReg");
+
+	scl::arch::colognechip::CC_ODDR ddr;
+	ddr.D0() = shiftReg[1];
+	ddr.D1() = shiftReg[0];
+
+	scl::arch::colognechip::CC_LVDS_OBUF buf;
+	buf.pin("DISPLAY_RXECp", "DISPLAY_RXECn");
+	buf.O() = ddr.Q();
+
+	design.postprocess();
+
+	vhdl::VHDLExport vhdl("export/basicGateMateLVDS_bug_repro/top.vhd");
+	vhdl(design.getCircuit());
+}
