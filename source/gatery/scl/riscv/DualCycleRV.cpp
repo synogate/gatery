@@ -379,7 +379,7 @@ namespace gtry::scl
 				unpack(newData, writeData);
 				port = writeData;
 #else
-				sim_assert(link.a->mask == 0xF) << "no write mask support work around";
+				sim_assert(link.a->mask == link.a->mask.width().mask()) << "no write mask support work around";
 				port = link.a->data;
 #endif
 			}
