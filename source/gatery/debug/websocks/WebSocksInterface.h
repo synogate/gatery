@@ -20,7 +20,16 @@
 #include "../DebugInterface.h"
 
 #include <boost/beast/core.hpp>
+
+#ifdef _MSC_VER
+# pragma warning (push)
+# pragma warning (disable : 4267, justification : "boost beast warning")
+#endif
 #include <boost/beast/websocket.hpp>
+#ifdef _MSC_VER
+# pragma warning (pop)
+#endif
+
 #include <boost/asio/ip/tcp.hpp>
 
 #include <vector>
