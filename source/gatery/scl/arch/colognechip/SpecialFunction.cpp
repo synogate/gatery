@@ -148,7 +148,10 @@ namespace gtry::scl::arch::colognechip
 
 		size_t divider = mul.denominator();
 		if (divider == 1)
+		{
+			cfg.absoluteFrequency.reset();
 			return src.deriveClock(cfg);
+		}
 
 		ClockScope clkscope{ src };
 		Bit clkSignal;

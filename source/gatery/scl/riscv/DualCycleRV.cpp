@@ -257,8 +257,22 @@ void gtry::scl::riscv::DualCycleRV::setIP(const UInt& ip)
 	}
 }
 
+#include "../arch/colognechip/RiscVopt.h"
+
 void gtry::scl::riscv::DualCycleRV::genRegisterFile(UInt rs1, UInt rs2, UInt)
 {
+	Bit writeRf = m_resultValid & !m_stall & m_instr.rd != 0;
+	HCL_NAMED(writeRf);
+
+#if 0
+	auto [r1, r2] = arch::colognechip::registerFile(rs1, rs2, m_instr.rd, writeRf, m_resultData);
+	m_r1 = (UInt)r1;
+	m_r2 = (UInt)r2;
+	HCL_NAMED(m_r1);
+	HCL_NAMED(m_r2);
+	return;
+#endif
+
 	auto scope = m_area.enter("register_file");
 	HCL_NAMED(m_resultData);
 	HCL_NAMED(m_resultValid);
@@ -272,8 +286,6 @@ void gtry::scl::riscv::DualCycleRV::genRegisterFile(UInt rs1, UInt rs2, UInt)
 	m_rf.initZero();
 	m_rf.setName("register_file");
 
-	Bit writeRf = m_resultValid & !m_stall & m_instr.rd != 0;
-	HCL_NAMED(writeRf);
 	IF(writeRf)
 		m_rf[m_instr.rd] = m_resultData;
 
