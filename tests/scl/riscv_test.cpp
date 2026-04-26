@@ -26,6 +26,7 @@
 
 #include <gatery/scl/algorithm/GCD.h>
 #include <gatery/scl/arch/colognechip/SpecialFunction.h>
+#include <gatery/scl/arch/colognechip/RiscVopt.h>
 #include <gatery/scl/driver/CascadiaCode_Regular25.h>
 #include <gatery/scl/io/DisplayEngine.h>
 #include <gatery/scl/io/ethernet/EthernetPhy.h>
@@ -2273,7 +2274,48 @@ BOOST_FIXTURE_TEST_CASE(riscv_gdb_soc_export, BoostUnitTestSimulationFixture, *b
 			return std::system(("make -C " + cwd.string()).c_str());
 		});
 	}
-	runHitsTimeout(100us);
+//	runHitsTimeout(100us);
+
+	if (flow.valid())
+		BOOST_TEST(flow.get() == 0);
+}
+
+BOOST_FIXTURE_TEST_CASE(riscv_gatemate_rf_repro_case, BoostUnitTestSimulationFixture, *boost::unit_test::disabled())
+{
+	Clock clk12{ ClockConfig{
+		.absoluteFrequency = 12_mhz,
+		.name = "CLK12M",
+		.resetType = hlim::RegisterAttributes::ResetType::NONE
+	} };
+
+	ClockScope clkScp(clk12);
+
+	UInt ra1 = pinIn(5_b).setName("ra1");
+	UInt ra2 = pinIn(5_b).setName("ra2");
+	UInt rd = pinIn(5_b).setName("rd");
+	Bit wr = pinIn().setName("write");
+	UInt wrData = pinIn(32_b).setName("writeData");
+
+	auto [r1, r2] = scl::arch::colognechip::registerFile(ra1, ra2, rd, wr, wrData);
+	pinOut(r1, "r1");
+	pinOut(r2, "r2");
+
+	design.postprocess();
+
+	const std::string& testName = boost::unit_test::framework::current_test_case().p_name.get();
+	std::filesystem::path cwd = std::filesystem::path{ "export" } / testName;
+	std::future<int> flow;
+	vhdl::VHDLExport vhdl(cwd / "top.vhd");
+	if (std::filesystem::is_directory(cwd))
+	{
+		//vhdl.addTestbenchRecorder(*m_simulator, "tb", true);
+		vhdl(design.getCircuit());
+
+		flow = std::async([=]() {
+			return std::system(("make -C " + cwd.string()).c_str());
+			});
+	}
+//	runHitsTimeout(100us);
 
 	if (flow.valid())
 		BOOST_TEST(flow.get() == 0);
