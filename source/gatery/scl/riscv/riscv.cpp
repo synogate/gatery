@@ -219,35 +219,22 @@ void gtry::scl::riscv::RV32I::branch()
 	IF(m_instr.opcode == "b11000")
 	{
 		auto ent = Area{ "branch" }.enter();
-		HCL_NAMED(m_IP);
-		UInt target = m_IP + m_instr.immB(0, m_IP.width());
-		HCL_NAMED(target);
-		
 		m_alu.sub = '1';
 
-		// equal
-		IF(m_instr.func3 == "b000" & m_aluResult.zero)
-			setIP(target);
+		Bit flag = mux(m_instr.func3(1, 2_b), {
+			m_aluResult.zero,							// equal
+			Bit{'X'},									// unused
+			m_aluResult.sign != m_aluResult.overflow,	// less than
+			!m_aluResult.carry							// less than unsigned
+		}) | name("flag");
 
-		// not equal
-		IF(m_instr.func3 == "b001" & !m_aluResult.zero)
+		IF((flag ^ m_instr.func3.lsb()) | name("flag_inv"))
+		{
+			HCL_NAMED(m_IP);
+			UInt target = m_IP + m_instr.immB(0, m_IP.width());
+			HCL_NAMED(target);
 			setIP(target);
-
-		// less than
-		IF(m_instr.func3 == "b100" & m_aluResult.sign != m_aluResult.overflow)
-			setIP(target);
-
-		// greater than or equal
-		IF(m_instr.func3 == "b101" & m_aluResult.sign == m_aluResult.overflow)
-			setIP(target);
-
-		// less than unsigned
-		IF(m_instr.func3 == "b110" & !m_aluResult.carry)
-			setIP(target);
-
-		// greater than or equal unsigned
-		IF(m_instr.func3 == "b111" & m_aluResult.carry)
-			setIP(target);
+		}
 	}
 }
 
@@ -789,3 +776,4 @@ void gtry::scl::riscv::RV32I::setStall(const Bit& wait)
 {
 	m_stall |= wait;
 }
+
