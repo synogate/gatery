@@ -749,7 +749,8 @@ void MemoryGroup::buildResetLogic(Circuit &circuit)
 	lazyCreateFixupNodeGroup();
 
 	auto *resetWritePort = findSuitableResetWritePort();
-	HCL_ASSERT_HINT(resetWritePort != nullptr, "No suitable write port was found to reset initialize memory " + m_memory->getName());
+	if (!resetWritePort)
+		return; // no reset logic on rom
 	auto *clockDomain = resetWritePort->getClocks()[0];
 
 	if (clockDomain->getRegAttribs().memoryResetType == RegisterAttributes::ResetType::NONE) return;
