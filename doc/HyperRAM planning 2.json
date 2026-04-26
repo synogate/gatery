@@ -30,6 +30,8 @@
       {name: 'DQO1',    wave: '3579x..', period: 2, data: ['40', '24', '8', 'MSB']},
     ],
     {},
+    {name: 'CLK',     wave: 'P............', period: 2},
+    {},
     ['Read 85MHz CLK based sampling',
     {name: 'state',  wave: '==.=.=..=.=.=', period: 2, data: ['idle', 'command', 'initial latency', '[additional latency]', 'read latency', 'read', 'idle']},
     ['min tCKDS',
