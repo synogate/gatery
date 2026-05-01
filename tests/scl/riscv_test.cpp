@@ -39,6 +39,7 @@
 #include <gatery/scl/riscv/MemorySoC.h>
 #include <gatery/scl/riscv/riscv.h>
 #include <gatery/scl/riscv/rvcc.h>
+#include <gatery/scl/riscv/PipelineRV.h>
 #include <gatery/scl/tilelink/tilelink.h>
 #include <gatery/scl/tilelink/TileLinkCache.h>
 #include <gatery/scl/tilelink/TileLinkFiFo.h>
@@ -2319,4 +2320,19 @@ BOOST_FIXTURE_TEST_CASE(riscv_gatemate_rf_repro_case, BoostUnitTestSimulationFix
 
 	if (flow.valid())
 		BOOST_TEST(flow.get() == 0);
+}
+
+BOOST_FIXTURE_TEST_CASE(riscv_pipelinerv_sandbox, BoostUnitTestSimulationFixture, *boost::unit_test::disabled())
+{
+	Clock clk{ ClockConfig{
+		.absoluteFrequency = 100_mhz,
+		.memoryResetType = hlim::RegisterAttributes::ResetType::NONE
+	} };
+	ClockScope clkScp(clk);
+
+	rivet::PipelineRV rv;
+	rv.generate();
+
+	design.postprocess();
+	runHitsTimeout(1us);
 }
