@@ -114,7 +114,7 @@ namespace gtry
 		for(size_t i = 0; i < portList.size(); ++i)
 			m_node->connectInput(i, portList[i]);
 		m_node->setConcat();
-		return SignalReadPort(m_node);
+		return SignalReadPort(m_node, Expansion::zero);
 	}
 
 	template<typename... Comp>
