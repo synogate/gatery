@@ -2196,10 +2196,10 @@ BOOST_FIXTURE_TEST_CASE(riscv_gdb_soc_export, BoostUnitTestSimulationFixture, *b
 		.resetType = hlim::RegisterAttributes::ResetType::NONE
 	} };
 
-	hlim::ClockRational sysFreq = 24_mhz;
+	hlim::ClockRational sysFreq = 30_mhz;
 	Clock clkFast = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = sysFreq, .resetType = ClockConfig::ResetType::NONE });
-	Clock clock = scl::arch::colognechip::clkdiv(clkFast, { .absoluteFrequency = sysFreq, .resetType = ClockConfig::ResetType::NONE });
-	ClockScope clkScp(clock);
+	//Clock clock = scl::arch::colognechip::clkdiv(clkFast, { .absoluteFrequency = sysFreq, .resetType = ClockConfig::ResetType::NONE });
+	ClockScope clkScp(clkFast);
 
 	MemorySoC soc;
 
@@ -2247,7 +2247,10 @@ BOOST_FIXTURE_TEST_CASE(riscv_gdb_soc_export, BoostUnitTestSimulationFixture, *b
 		}
 	}
 	{ // hyper ram
-		Reverse<HyperBusController> hyperRamController = hyperBusControllerLowLatency(gateMateHyperBusPhy());
+		Reverse<HyperBusController> hyperRamController = hyperBusControllerLowLatency(
+			gateMateHyperBusPhy("HYPER", { .pinClkN = {}, .pinResetN = "_RESETn" }),
+			{.protocoll = HyperBusProtocoll::OctalPeripheralInterface}
+		);
 		
 		Bit hyperRamRegisterAccess;
 		mapIn(soc.mmap(), hyperRamRegisterAccess, "hyperram_register_access");
@@ -2275,7 +2278,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_gdb_soc_export, BoostUnitTestSimulationFixture, *b
 			return std::system(("make -C " + cwd.string()).c_str());
 		});
 	}
-//	runHitsTimeout(100us);
+	runHitsTimeout(100us);
 
 	if (flow.valid())
 		BOOST_TEST(flow.get() == 0);

@@ -50,101 +50,42 @@
 #
 #default_GPIO | SLEW = slow;
 
-# Floppy
-Pin_in      "CLK12M"          Loc = "IO_SB_A8";
-Pin_out     "UART0_TX"        Loc = "IO_NA_A1" | SLEW = slow;
-Pin_in      "UART0_RX"        Loc = "IO_NA_B1" | SCHMITT_TRIGGER = true;
-
-# Test Points
-#Pin_out     "RX1"           Loc = "IO_NA_B0";
-#Pin_out     "TX1"           Loc = "IO_NA_A0";
-#Pin_out     "TP2"           Loc = "IO_NA_B1";
-#Pin_out     "TP1"           Loc = "IO_NA_A1";
+# BFC
+Pin_in      "CLK12M"          Loc = "IO_SB_A5";
+Pin_out     "UART0_TX"        Loc = "IO_WB_A8" | SLEW = slow;
+Pin_in      "UART0_RX"        Loc = "IO_WB_B8" | SCHMITT_TRIGGER = true;
 
 # HyperRAM
-Pin_out   "HYPER_CKp"   Loc = "IO_SA_A6";
-Pin_out   "HYPER_CKn"   Loc = "IO_SA_B6";
-Pin_out   "HYPER_CSn"   Loc = "IO_SA_B4";
-Pin_inout "HYPER_RWDS"  Loc = "IO_SA_B2";
-Pin_inout "HYPER_DQ0"   Loc = "IO_SA_B5";
-Pin_inout "HYPER_DQ1"   Loc = "IO_SA_B8";
-Pin_inout "HYPER_DQ2"   Loc = "IO_SA_B0";
-Pin_inout "HYPER_DQ3"   Loc = "IO_SA_B3";
-Pin_inout "HYPER_DQ4"   Loc = "IO_SA_A0";
-Pin_inout "HYPER_DQ5"   Loc = "IO_SA_A3";
-Pin_inout "HYPER_DQ6"   Loc = "IO_SA_A5";
-Pin_inout "HYPER_DQ7"   Loc = "IO_SA_A8";
+Pin_out   "HYPER_CKp"    Loc = "IO_EB_A0";
+#Pin_out   "HYPER_CKn"    Loc = "IO_EB_";
+Pin_out   "HYPER_CSn"    Loc = "IO_EB_B2";
+Pin_out   "HYPER_RESETn" Loc = "IO_EB_A2";
+Pin_inout "HYPER_RWDS"   Loc = "IO_EB_A6";
+Pin_inout "HYPER_DQ0"    Loc = "IO_EB_B5";
+Pin_inout "HYPER_DQ1"    Loc = "IO_EB_A8";
+Pin_inout "HYPER_DQ2"    Loc = "IO_EB_A4";
+Pin_inout "HYPER_DQ3"    Loc = "IO_EB_A5";
+Pin_inout "HYPER_DQ4"    Loc = "IO_EB_B4";
+Pin_inout "HYPER_DQ5"    Loc = "IO_EB_B6";
+Pin_inout "HYPER_DQ6"    Loc = "IO_EB_B8";
+Pin_inout "HYPER_DQ7"    Loc = "IO_EB_B7";
+
+Pin_out "DMG_CLK"       Loc = "IO_NA_A7";
+Pin_out "DMG_CS"        Loc = "IO_NA_B6";
+Pin_out "DMG_RD"        Loc = "IO_NA_A8";
+Pin_out "DMG_D[0]"        Loc = "IO_WC_A5";
+Pin_out "DMG_D[1]"        Loc = "IO_WC_B5";
+Pin_out "DMG_D[2]"        Loc = "IO_WC_B4";
+Pin_out "DMG_D[3]"        Loc = "IO_WC_A4";
+Pin_out "DMG_D[4]"        Loc = "IO_WC_A3";
+Pin_out "DMG_D[5]"        Loc = "IO_WC_B3";
+Pin_out "DMG_D[6]"        Loc = "IO_WC_A2";
+Pin_out "DMG_D[7]"        Loc = "IO_WC_B2";
 
 # SD0
-#Pin_out     "SD0_CLK"           Loc = "IO_EB_A1";
-#Pin_out     "SD0_CMD"           Loc = "IO_EB_B1";
-#Pin_in      "SD0_DAT0"          Loc = "IO_EB_B2" | PULLUP=true;
-#Pin_out     "SD0_DAT1"          Loc = "IO_EB_A2";
-#Pin_out     "SD0_DAT2"          Loc = "IO_EB_B3";
-#Pin_out     "SD0_DAT3"          Loc = "IO_EB_A3";
-
-# SD1
-#Pin_out     "SD1_CLK"           Loc = "IO_EB_A0";
-#Pin_out     "SD1_CMD"           Loc = "IO_EB_B0";
-#Pin_in      "SD1_DAT0"          Loc = "IO_EA_B7" | PULLUP=true;
-#Pin_out     "SD1_DAT1"          Loc = "IO_EA_A7";
-#Pin_out     "SD1_DAT2"          Loc = "IO_EA_B8";
-#Pin_out     "SD1_DAT3"          Loc = "IO_EA_A8";
-
-# SD2
-Pin_out     "SD2_CLK"           Loc = "IO_EA_A6";
-Pin_out     "SD2_CMD"           Loc = "IO_EA_B6";
-Pin_in      "SD2_DAT0"          Loc = "IO_EA_A2" | PULLUP=true;
-Pin_out     "SD2_DAT1"          Loc = "IO_EA_B2";
-Pin_out     "SD2_DAT2"          Loc = "IO_EA_A4";
-Pin_out     "SD2_DAT3"          Loc = "IO_EA_B4";
-#Pin_in      "SD_WP"            Loc = "IO_EA_A5" | PULLUP=true;
-#Pin_in      "SD_CD"            Loc = "IO_EA_B5" | PULLUP=true;
-
-# pin assignment for BFC rev5
-#Pin_in      "CLK12M"          Loc = "IO_SB_A5";
-#Pin_out     "UART0_TX"        Loc = "IO_WB_A8";
-#Pin_out     "UART0_RX"        Loc = "IO_WB_B8";
-
-# Display
-Pin_out     "DISPLAY_RXE0p"   Loc = "IO_WB_A8";
-Pin_out     "DISPLAY_RXE0n"   Loc = "IO_WB_B8";
-Pin_out     "DISPLAY_RXE1p"   Loc = "IO_WB_A6";
-Pin_out     "DISPLAY_RXE1n"   Loc = "IO_WB_B6";
-Pin_out     "DISPLAY_RXE2p"   Loc = "IO_WB_A7";
-Pin_out     "DISPLAY_RXE2n"   Loc = "IO_WB_B7";
-Pin_out     "DISPLAY_RXE3p"   Loc = "IO_WB_A3";
-Pin_out     "DISPLAY_RXE3n"   Loc = "IO_WB_B3";
-Pin_out     "DISPLAY_RXECp"   Loc = "IO_WB_A5";
-Pin_out     "DISPLAY_RXECn"   Loc = "IO_WB_B5";
-Pin_out     "DISPLAY_RXO0p"   Loc = "IO_WC_A6";
-Pin_out     "DISPLAY_RXO0n"   Loc = "IO_WC_B6";
-Pin_out     "DISPLAY_RXO1p"   Loc = "IO_WC_A4";
-Pin_out     "DISPLAY_RXO1n"   Loc = "IO_WC_B4";
-Pin_out     "DISPLAY_RXO2p"   Loc = "IO_WC_A5";
-Pin_out     "DISPLAY_RXO2n"   Loc = "IO_WC_B5";
-Pin_out     "DISPLAY_RXO3p"   Loc = "IO_WC_A0";
-Pin_out     "DISPLAY_RXO3n"   Loc = "IO_WC_B0";
-Pin_out     "DISPLAY_RXOCp"   Loc = "IO_WC_A3";
-Pin_out     "DISPLAY_RXOCn"   Loc = "IO_WC_B3";
-
-Pin_out     "DISPLAY_EN_12V"  Loc = "IO_WC_B7";
-Pin_out     "DISPLAY_BL_EN"   Loc = "IO_WB_B4";
-Pin_out     "DISPLAY_BL_PWM"  Loc = "IO_WB_A4";
-
-# RMII
-Pin_out     "rmii_tx_en"    Loc = "IO_SB_A0" | FF_OBF=true;
-Pin_out     "rmii_txd[0]"   Loc = "IO_SB_A1" | FF_OBF=true;
-Pin_out     "rmii_txd[1]"   Loc = "IO_SB_B0" | FF_OBF=true;
-Pin_in      "rmii_crs_dv"   Loc = "IO_SB_B1";
-Pin_in      "rmii_rxd[0]"   Loc = "IO_SB_A2";
-Pin_in      "rmii_rxd[1]"   Loc = "IO_SB_B2";
-Pin_out     "rmii_ref_clk"  Loc = "IO_SB_A3";
-Pin_out     "rmii_rst"      Loc = "IO_SB_A5";
-Pin_out     "rmii_mdc"      Loc = "IO_SB_B6";
-Pin_out     "rmii_mdio"     Loc = "IO_SB_B8";
-
-# rotary encoder port
-Pin_in      "ROT_A"     Loc = "IO_SB_A7" | PULLUP=true | SCHMITT_TRIGGER=true;
-Pin_in      "ROT_B"     Loc = "IO_SB_B4" | PULLUP=true | SCHMITT_TRIGGER=true;
-Pin_in      "ROT_SW"    Loc = "IO_SB_A4" | PULLUP=true | SCHMITT_TRIGGER=true;
+#Pin_out     "SD0_CLK"           Loc = "IO_";
+#Pin_out     "SD0_CMD"           Loc = "IO_";
+#Pin_in      "SD0_DAT0"          Loc = "IO_" | PULLUP=true;
+#Pin_out     "SD0_DAT1"          Loc = "IO_";
+#Pin_out     "SD0_DAT2"          Loc = "IO_";
+#Pin_out     "SD0_DAT3"          Loc = "IO_";

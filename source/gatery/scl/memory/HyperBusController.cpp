@@ -34,6 +34,9 @@ namespace gtry::scl
 			anyActive |= !csn;
 		HCL_NAMED(anyActive);
 
+		if (!cfg.pinResetN.empty())
+			pinOut(Bit{ '1' }, pinPrefix + std::string{ cfg.pinResetN });
+
 		// clock
 		{
 			scl::arch::colognechip::CC_ODDR clkDdr;
@@ -87,12 +90,13 @@ namespace gtry::scl
 
 		// DQ
 		*phy->dq.r = ConstBVec(16_b);
+		Bit dqDisable = flagInstantReset(!phy->dq.fen, phy->dq.fen) | name("dqDisable");
 		for (size_t i = 0; i < 8; ++i)
 		{
 			arch::colognechip::CC_IOBUF buf;
 			buf.pin(pinPrefix + std::string{ cfg.pinDq } + std::to_string(i));
 			buf.delayOut(15);
-			buf.disable() = !flagInstantSet(phy->dq.fen, !phy->dq.fen);
+			buf.disable() = dqDisable;
 
 			arch::colognechip::CC_ODDR out(buf);
 			out.D0() = phy->dq.f[i];
@@ -117,7 +121,7 @@ namespace gtry::scl
 		return phy;
 	}
 
-	Reverse<HyperBusController> hyperBusControllerLowLatency(Reverse<HyperBusPhy> phy)
+	Reverse<HyperBusController> hyperBusControllerLowLatency(Reverse<HyperBusPhy> phy, HyerBusControllerConfig cfg)
 	{
 		Area ent{ "scl_hyperBusControllerLowLatency", true };
 		HCL_NAMED(phy);
@@ -158,7 +162,9 @@ namespace gtry::scl
 		phy->dq.f(13, 1_b) = ctrl->command->burst.toBVec();
 
 		const BVec wordAddr = (BVec)ctrl->command->wordAddress;
-		phy->dq.f(0, 13_b) = wordAddr.upper(-19_b);
+
+		if(cfg.protocoll == HyperBusProtocoll::HyperBus)
+			phy->dq.f(0, 13_b) = wordAddr.upper(-19_b);
 
 		std::array<BVec, 2> cmdWord = { 16_b, 16_b };
 		Enum<HyperBusCommand::Type> cmdType;
@@ -179,8 +185,17 @@ namespace gtry::scl
 			cmdType = ctrl->command->type;
 			cmdSpace = ctrl->command->space;
 
-			cmdWord[0] = wordAddr(3, 16_b);
-			cmdWord[1] = zext(wordAddr.lower(3_b), 16_b);
+			switch (cfg.protocoll)
+			{
+			case HyperBusProtocoll::HyperBus:
+				cmdWord[0] = wordAddr(3, 16_b);
+				cmdWord[1] = zext(wordAddr.lower(3_b), 16_b);
+				break;
+			case HyperBusProtocoll::OctalPeripheralInterface:
+				cmdWord[0] = wordAddr(9, 16_b);
+				cmdWord[1] = cat(wordAddr(3, 6_b), "6b0", wordAddr(0, 3_b), '0');
+				break;
+			}
 		}
 		cmdWord = reg(cmdWord) | name("cmdWord");
 		cmdType = reg(cmdType) | name("cmdType");

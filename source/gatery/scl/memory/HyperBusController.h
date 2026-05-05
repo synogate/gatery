@@ -43,6 +43,7 @@ namespace gtry::scl
 		std::string_view pinClkN = "_CKn";	// set empty for single ended clock
 		std::string_view pinRwds = "_RWDS";
 		std::string_view pinDq = "_DQ";
+		std::string_view pinResetN;
 	};
 
 	Reverse<HyperBusPhy> gateMateHyperBusPhy(std::string pinPrefix = "HYPER", HyperBusPhyConfig cfg = {});
@@ -85,7 +86,18 @@ namespace gtry::scl
 		// Writes to registers are always independent of the Initial Latency setting.
 		// It is therefore possible to recude hw by setting this to a constant, independent of the device default setting.
 		// A typical default is 7 and a typical value for speeds up to 85MHz is 3.
-		UInt latency = 3_b;
+		UInt latency = 4_b;
+	};
+
+	enum class HyperBusProtocoll
+	{
+		HyperBus,
+		OctalPeripheralInterface,
+	};
+
+	struct HyerBusControllerConfig
+	{
+		HyperBusProtocoll protocoll = HyperBusProtocoll::HyperBus;
 	};
 
 	/**
@@ -96,7 +108,7 @@ namespace gtry::scl
 	 *			At Initial Latency of 3 the read latency of this controller is 7 or 10 cycles.
 	 *			The controller does not issue any autonomous register accesses. Use 'space = reg' to setup the device as needed.
 	 */
-	Reverse<HyperBusController> hyperBusControllerLowLatency(Reverse<HyperBusPhy> phy);
+	Reverse<HyperBusController> hyperBusControllerLowLatency(Reverse<HyperBusPhy> phy, HyerBusControllerConfig cfg = {});
 
 	////////////////////////////// memory adapter //////////////////////////////
 

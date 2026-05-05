@@ -32,9 +32,9 @@ int main()
 	{
 #if 0 // simple memory tester
 		unsigned x2 = x;
-		unsigned* mem = (unsigned*)(4);
+		volatile unsigned* mem = (volatile unsigned*)(4);
 		unsigned len = 1600*900/16;
-		for(unsigned* it = mem; it != mem + len; ++it)
+		for(volatile unsigned* it = mem; it != mem + len; ++it)
 		{
 			x ^= x << 13;
 			x ^= x >> 17;
@@ -43,7 +43,7 @@ int main()
 		}
 		
 		unsigned e = 0;
-		for(unsigned* it = mem; it != mem + len; ++it)
+		for(volatile unsigned* it = mem; it != mem + len; ++it)
 		{
 			x2 ^= x2 << 13;
 			x2 ^= x2 >> 17;
@@ -62,8 +62,12 @@ inline void start_memory()
 {
 	volatile unsigned short* hyperReg = (volatile unsigned short*)(2<<11);
 	dev::root().hyperram_register_access = 1;
+#if 1 // octal interface (IS66WVO)
+	hyperReg[0] = 0b1'001'000'0'0000'0'0'10; // latency 3, 52 Ohm, dynamic latency
+#else // hyperram interface
 	hyperReg[0] = 0xBFE0; // latency 3, 50 Ohm, dynamic latency
 	hyperReg[1] = 0xFF81; // differential clock, full refresh
+#endif
 	dev::root().hyperram_register_access = 0;
 }
 
