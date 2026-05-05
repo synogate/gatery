@@ -240,3 +240,56 @@ BOOST_FIXTURE_TEST_CASE(HyperRAM_soc_test_export, BoostUnitTestSimulationFixture
 	//BOOST_TEST(!runHitsTimeout(2ms));
 }
 
+BOOST_FIXTURE_TEST_CASE(HyperRAM_gatemate_io_disable_repro_case, BoostUnitTestSimulationFixture, *boost::unit_test::disabled())
+{
+	Clock clk12{ ClockConfig{
+		.absoluteFrequency = 12_mhz,
+		.name = "CLK12M",
+		.resetType = hlim::RegisterAttributes::ResetType::NONE
+	} };
+
+	ClockScope clkScp(clk12);
+
+	scl::Counter timer(5_b);
+	Bit testPusle = timer.value().msb() | name("test_pulse");
+	pinOut(testPusle, "TEST_ENABLE");
+
+	{
+		scl::arch::colognechip::CC_IOBUF buf;
+		buf.pin("TEST0");
+		buf.delayOut(15);
+		buf.disable() = !testPusle;
+		buf.pulldown(true);
+		buf.O() = '1';
+	}
+	{
+		scl::arch::colognechip::CC_IOBUF buf;
+		buf.pin("TEST1");
+		buf.delayOut(15);
+		buf.disable() = testPusle;
+		buf.pulldown(true);
+		buf.O() = '1';
+	}
+
+	design.postprocess();
+
+	const std::string& testName = boost::unit_test::framework::current_test_case().p_name.get();
+	std::filesystem::path cwd = std::filesystem::path{ "export" } / testName;
+	std::future<int> flow;
+	vhdl::VHDLExport vhdl(cwd / "top.vhd");
+	if (std::filesystem::is_directory(cwd))
+	{
+		//vhdl.addTestbenchRecorder(*m_simulator, "tb", true);
+		vhdl(design.getCircuit());
+
+		flow = std::async([=]() {
+			return std::system(("make -C " + cwd.string()).c_str());
+			});
+	}
+//	runHitsTimeout(100us);
+
+	if (flow.valid())
+		BOOST_TEST(flow.get() == 0);
+}
+
+
