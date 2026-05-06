@@ -25,6 +25,7 @@
 #include "../rivet/ModInstrDecode.h"
 #include "../rivet/ModResultSelect.h"
 #include "../rivet/ModLoadStore.h"
+#include "../rivet/ModLoadStoreSubWord.h"
 #include "../rivet/ModIntAlu.h"
 #include "../rivet/ModBaseIntInstrSet.h"
 #include "../rivet/ModFenceNoop.h"
@@ -57,6 +58,7 @@ namespace gtry::scl::rivet
 		mod::BaseIntInstrSet<
 		mod::Branch<
 		mod::FenceNoop<
+		mod::LoadStoreSubword<
 		mod::LoadStore<
 		mod::EnvCallBreak<
 		mod::ShiftUnit<
@@ -67,7 +69,7 @@ namespace gtry::scl::rivet
 		mod::InstrDecode<
 		mod::InstrBoolSolver<
 		mod::InstrSet<
-		mod::Root>>>>>>>>>>>>>>>>>>
+		mod::Root>>>>>>>>>>>>>>>>>>>
 	{
 	public:
 		PipelineRV()
@@ -183,6 +185,7 @@ namespace gtry::scl::rivet
 				attach(hazardDataForwardingDiff()) |
 				stageExecute() |
 				dataMem() |
+				attach(shiftMemReadData()) |
 				strm::then([&](const MemCtrl& mem) { result = strm::createVStream(mem.memWriteData.lower(8_b), mem.memWrite & EnableScope::getFullEnable()); }) |
 				stageResults() |
 				attach(makeBranchDecision()) |
