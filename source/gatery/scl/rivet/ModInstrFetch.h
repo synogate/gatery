@@ -28,15 +28,6 @@ namespace gtry::scl::rivet
 
 namespace gtry::scl::rivet::mod
 {
-	template<typename T>
-	class InstrFetch : public T
-	{
-	public:
-
-	protected:
-
-	private:
-	};
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::rivet::InstrOpcode, instr);

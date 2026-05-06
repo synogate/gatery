@@ -32,6 +32,7 @@
 #include "../rivet/ModEnvCallBreak.h"
 #include "../rivet/ModBranch.h"
 #include "../rivet/ModInstrRom.h"
+#include "../rivet/ModInstrTileLink.h"
 #include "../rivet/ModDataMemory.h"
 #include "../rivet/ModBranchMissPredict.h"
 #include "../rivet/ModCsr.h"
@@ -47,7 +48,8 @@ namespace gtry::scl::rivet
 {
 	class PipelineRV : public
 	//	mod::GateMate<
-		mod::InstrRom<
+	//	mod::InstrRom<
+		mod::InstrTileLink<
 		mod::DataMemory<
 		mod::Csr<
 		mod::HazardDataResolve<
@@ -88,7 +90,11 @@ namespace gtry::scl::rivet
 				0x83, 0x27, 0xc4, 0xfe,   0x13, 0x85, 0x07, 0x00,   0x03, 0x24, 0xc1, 0x01,
 				0x13, 0x01, 0x01, 0x02,   0x67, 0x80, 0x00, 0x00
 			};
-			instrRom(std::as_bytes(std::span(gcd_bin)));
+		//	instrRom(std::as_bytes(std::span(gcd_bin)));
+
+			Memory<BVec> imem(sizeof(gcd_bin) + 3 / 4, 32_b);
+			imem.fillPowerOnState(sim::createDefaultBitVectorState(std::as_bytes(std::span{ gcd_bin })));
+			instrFetch(tileLinkMemory(imem, TileLinkMemoryConfig{ .sourceW = 0_b, .writePort = false, .latency = 1 }));
 
 
 			const unsigned gcd_parameter[] = {
@@ -170,7 +176,6 @@ namespace gtry::scl::rivet
 
 				stageInstrPtr() |
 				instrFetch() |
-				pipelineStage("fetch") |
 				stageDecode() |
 				stageOperands() |
 				pipelineStage("decode") |

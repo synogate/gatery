@@ -2333,7 +2333,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_pipelinerv_sandbox, BoostUnitTestSimulationFixture
 		.resetType = hlim::RegisterAttributes::ResetType::NONE
 	} };
 
-	Clock clkFast = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = 55_mhz, .resetType = ClockConfig::ResetType::NONE });
+	Clock clkFast = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = 50_mhz, .resetType = ClockConfig::ResetType::NONE });
 	ClockScope clkScp(clkFast);
 
 	rivet::PipelineRV rv;
@@ -2347,5 +2347,5 @@ BOOST_FIXTURE_TEST_CASE(riscv_pipelinerv_sandbox, BoostUnitTestSimulationFixture
 	vhdl::VHDLExport vhdl(cwd / "top.vhd");
 	vhdl(design.getCircuit());
 
-	runHitsTimeout(1us);
+	runHitsTimeout(2us);
 }

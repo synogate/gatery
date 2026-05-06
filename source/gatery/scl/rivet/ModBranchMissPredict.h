@@ -30,6 +30,7 @@ namespace gtry::scl::rivet::mod
 		{
 			Bit missPredicted;
 			Bit onTransfer;
+			Bit valid;
 			Bit hadBranchMissPredict;
 		};
 	protected:
@@ -39,7 +40,7 @@ namespace gtry::scl::rivet::mod
 			return [this, name](StreamSignal auto&& in) {
 				return move(in) |
 					Base::pipelineStage(name) |
-					Base::attach(invalidateOnBranchTaken());
+					Base::attach(invalidateOnBranchTaken(name));
 				};
 		}
 
@@ -56,14 +57,17 @@ namespace gtry::scl::rivet::mod
 		}
 
 	private:
-		auto invalidateOnBranchTaken()
+		auto invalidateOnBranchTaken(std::string_view stageName)
 		{
 			std::shared_ptr stage = std::make_shared<PerStageSignals>();
-			stage->hadBranchMissPredict = flagInstantSet(stage->missPredicted, stage->onTransfer);
+			stage->hadBranchMissPredict = 
+				flagInstantSet(stage->missPredicted, stage->onTransfer | !stage->valid) | 
+				name(std::format("BranchMissPredict_{}_hadBranchMissPredict", stageName));
 
 			return [this, stage](const Valid& in)
 				{
 					stage->onTransfer = EnableScope::getFullEnable();
+					stage->valid = in.valid;
 					Valid ret{
 						in.valid & !stage->hadBranchMissPredict
 					};

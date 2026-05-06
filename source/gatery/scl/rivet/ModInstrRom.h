@@ -17,9 +17,7 @@
 */
 #pragma once
 #include <gatery/frontend.h>
-#include "ModInstrBoolSolver.h"
-#include "ModControlFlow.h"
-#include "ModIntAlu.h"
+#include "ModInstrFetch.h"
 
 namespace gtry::scl::rivet::mod
 {
@@ -36,7 +34,9 @@ namespace gtry::scl::rivet::mod
 		{
 			return [this](StreamSignal auto&& in)
 				{
-					return move(in) | Base::attach([this](const InstrPtr& ptr) { return generateInstrFetch(ptr); });
+					return move(in) | 
+						Base::attach([this](const InstrPtr& ptr) { return generateInstrFetch(ptr); }) |
+						Base::pipelineStage("fetch");
 				};
 		}
 
