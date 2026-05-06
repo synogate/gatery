@@ -199,8 +199,7 @@ namespace gtry::scl
 	/**
 	 * @brief Attach a new port to the memory and connect it to a tile link bus.
 	 */
-	template<typename T>
-	TileLinkU tileLinkMemory(Memory<T>& mem, TileLinkMemoryConfig cfg = {});
+	TileLinkU tileLinkMemory(Memory<BVec>& mem, TileLinkMemoryConfig cfg = {});
 
 	template<TileLinkSignal TLink> TLink regDecouple(TLink&& link);
 	/**

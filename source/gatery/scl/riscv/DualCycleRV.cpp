@@ -367,48 +367,6 @@ void gtry::scl::riscv::DualCycleRV::genInstructionDecode(UInt instruction)
 	HCL_NAMED(m_instr);
 }
 
-namespace gtry::scl
-{
-	template<typename T>
-	TileLinkU tileLinkMemory(Memory<T>& mem, TileLinkMemoryConfig cfg)
-	{
-		BitWidth wordAddrW = BitWidth::count(mem.wordSize().bytes());
-		TileLinkU link = tileLinkSlaveInit(mem.addressWidth() + wordAddrW, mem.wordSize(), cfg.sourceW);
-
-		auto port = mem[link.a->address.upper(-wordAddrW)];
-
-		if (cfg.writePort)
-		{
-			IF(transfer(link.a) & link.a->isPut())
-			{
-#if 0
-				BVec newData = (BVec)pack(port.read());
-				for (size_t i = 0; i < link.a->mask.size(); ++i)
-					IF(link.a->mask[i])
-						newData.part(link.a->mask.size(), i) = link.a->data.part(link.a->mask.size(), i);
-				
-				T writeData = constructFrom(mem.defaultValue());
-				unpack(newData, writeData);
-				port = writeData;
-#else
-				sim_assert(link.a->mask == link.a->mask.width().mask()) << "no write mask support work around";
-				port = link.a->data;
-#endif
-			}
-		}
-
-		if (cfg.readPort)
-		{
-			(*link.d)->data = (BVec)pack(port.read());
-		}
-
-		size_t latency = cfg.readPort ? mem.readLatencyHint() : 0;
-		for (size_t i = 0; i < latency; ++i)
-			*link.d = strm::regDownstream(move(*link.d), { .allowRetimingBackward = true });
-		return link;
-	}
-}
-
 void gtry::scl::riscv::embeddedRV32(TileLinkU&& dataFetch, std::filesystem::path elfPath, EmbeddedRV32Config cfg)
 {
 	Area ent{ "scl_embeddedRV32", true };
