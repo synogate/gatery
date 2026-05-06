@@ -42,16 +42,17 @@ namespace gtry::scl::rivet::mod
 		{
 			return [this](const ResultCollection& in, const OperandsSum& operand, const InstrOpcode& instr)
 				{
+					Area ent{ "rivet_bitshift", true };
 					ResultCollection ret = in;
 
-					UInt value = (UInt)operand.sum_operand[0];
-					UInt amount = (UInt)operand.sum_operand[1](0, 5_b);
+					UInt value = (UInt)operand.sum_operand[0] | name("value");
+					UInt amount = (UInt)operand.sum_operand[1](0, 5_b) | name("amount");
 
-					UInt shiftLeft = value << amount;
+					UInt shiftLeft = (value << amount) | name("shl");
 					ret.result.push_back({ "ShiftLeft", shiftLeft });
 
-					Bit arithmetic = instr.instr[30];
-					UInt shiftRight = shr(value, amount, arithmetic);
+					Bit arithmetic = instr.instr[30] | name("arithmetic");
+					UInt shiftRight = shr(value, amount, arithmetic) | name("shr");
 					ret.result.push_back({ "ShiftRight", shiftRight });
 
 					return ret;
