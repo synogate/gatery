@@ -2327,15 +2327,25 @@ BOOST_FIXTURE_TEST_CASE(riscv_gatemate_rf_repro_case, BoostUnitTestSimulationFix
 
 BOOST_FIXTURE_TEST_CASE(riscv_pipelinerv_sandbox, BoostUnitTestSimulationFixture, *boost::unit_test::disabled())
 {
-	Clock clk{ ClockConfig{
-		.absoluteFrequency = 100_mhz,
-		.memoryResetType = hlim::RegisterAttributes::ResetType::NONE
+	Clock clk12{ ClockConfig{
+		.absoluteFrequency = 12_mhz,
+		.name = "CLK12M",
+		.resetType = hlim::RegisterAttributes::ResetType::NONE
 	} };
-	ClockScope clkScp(clk);
+
+	Clock clkFast = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = 55_mhz, .resetType = ClockConfig::ResetType::NONE });
+	ClockScope clkScp(clkFast);
 
 	rivet::PipelineRV rv;
 	rv.generate();
 
 	design.postprocess();
+
+	const std::string& testName = boost::unit_test::framework::current_test_case().p_name.get();
+	std::filesystem::path cwd = std::filesystem::path{ "export" } / testName;
+	std::future<int> flow;
+	vhdl::VHDLExport vhdl(cwd / "top.vhd");
+	vhdl(design.getCircuit());
+
 	runHitsTimeout(1us);
 }

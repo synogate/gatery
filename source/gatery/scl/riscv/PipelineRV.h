@@ -37,11 +37,16 @@
 #include "../rivet/ModCsr.h"
 #include "../rivet/ModHazardData.h"
 
+#include "../rivet/ModGateMate.h"
+
+#include "../io/uart.h"
+
 #include <external/minbool/minbool.h>
 
 namespace gtry::scl::rivet
 {
 	class PipelineRV : public
+	//	mod::GateMate<
 		mod::InstrRom<
 		mod::DataMemory<
 		mod::Csr<
@@ -157,6 +162,7 @@ namespace gtry::scl::rivet
 
 		void generate()
 		{
+			VStream<BVec> result;
 
 			Stream ret =
 				strm::createVStream(Nothing{}, '1') |
@@ -172,6 +178,7 @@ namespace gtry::scl::rivet
 				attach(hazardDataForwardingDiff()) |
 				stageExecute() |
 				dataMem() |
+				strm::then([&](const MemCtrl& mem) { result = strm::createVStream(mem.memWriteData.lower(8_b), mem.memWrite & EnableScope::getFullEnable()); }) |
 				stageResults() |
 				attach(makeBranchDecision()) |
 				pipelineStage("execute") |
@@ -181,12 +188,10 @@ namespace gtry::scl::rivet
 			tap(ret);
 			resultLoopBack(move(ret));
 
+			Bit txPin = uartTx(move(result) | strm::regDownstream() | strm::attach(Ready{}) | strm::fifo(512), 230400);
+			pinOut(txPin, "UART0_TX");
+
+
 		}
-
-
 	};
-
-
-
 }
-

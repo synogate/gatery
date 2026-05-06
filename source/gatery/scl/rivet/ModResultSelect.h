@@ -76,7 +76,46 @@ namespace gtry::scl::rivet::mod
 			}
 			return ret;
 		}
+	};
 
+	template<typename Base>
+	class ResultSelectMux : public Base
+	{
+	protected:
+
+		virtual UInt selectResult(std::string_view area, const ResultCollection& results, const InstrOpcode& instr, std::function<const std::string& (const InstrDef&)> proj)
+		{
+			UInt ret{ "32bX" };
+
+			// build list of unique targets used by instr set
+			std::vector<std::string_view> targets;
+			for (const InstrDef& def : Base::instructions())
+				if (const std::string& val = proj(def); !val.empty())
+					targets.push_back(val);
+			std::sort(targets.begin(), targets.end());
+			targets.erase(std::unique(targets.begin(), targets.end()), targets.end());
+
+			UInt resultIdx = ConstUInt(0, BitWidth::count(targets.size()));
+			std::vector<BVec> input(targets.size(), ConstBVec(Base::dataPathW()));
+
+			for (size_t i = 0; i < targets.size(); ++i)
+			{
+				std::string_view target = targets[i];
+
+				auto it = std::ranges::find(results.result, target, &ExecResult::name);
+				if (it == results.result.end())
+					throw std::runtime_error("cpu pipeline does not provide " + std::string{ target } + " result");
+
+				input[i] = it->value;
+				if (std::optional<Bit> select = Base::findInstrCondition(instr, Base::instrAction({ std::string{target} }, { std::string{} }, proj)))
+				{
+					*select = *select | name(std::format("{}_{}_select", area, target));
+					resultIdx |= ConstUInt(i, resultIdx.width()) & *select;
+				}
+			}
+
+			return (UInt)mux(resultIdx | name("resultIdx"), input);
+		}
 
 	};
 }
