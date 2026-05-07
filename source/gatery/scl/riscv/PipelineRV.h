@@ -30,6 +30,7 @@
 #include "../rivet/ModBaseIntInstrSet.h"
 #include "../rivet/ModFenceNoop.h"
 #include "../rivet/ModShiftUnit.h"
+#include "../rivet/ModShiftUnitSequential.h"
 #include "../rivet/ModEnvCallBreak.h"
 #include "../rivet/ModBranch.h"
 #include "../rivet/ModInstrRom.h"
@@ -43,12 +44,10 @@
 
 #include "../io/uart.h"
 
-#include <external/minbool/minbool.h>
-
 namespace gtry::scl::rivet
 {
 	class PipelineRV : public
-	//	mod::GateMate<
+		mod::GateMate<
 	//	mod::InstrRom<
 		mod::InstrTileLink<
 		mod::DataMemory<
@@ -61,7 +60,7 @@ namespace gtry::scl::rivet
 		mod::LoadStoreSubword<
 		mod::LoadStore<
 		mod::EnvCallBreak<
-		mod::ShiftUnit<
+		mod::ShiftUnitSequential<
 		mod::ControlFlow<
 		mod::RegisterFile<
 		mod::IntAlu<
@@ -69,7 +68,7 @@ namespace gtry::scl::rivet
 		mod::InstrDecode<
 		mod::InstrBoolSolver<
 		mod::InstrSet<
-		mod::Root>>>>>>>>>>>>>>>>>>>
+		mod::Root>>>>>>>>>>>>>>>>>>>>
 	{
 	public:
 		PipelineRV()
@@ -154,8 +153,8 @@ namespace gtry::scl::rivet
 						attach(aluSum()) |
 						attach(selectAluResults()) |
 						attach(selectMemCtrl()) |
-						attach(ecallUnit()) |
-						attach(shiftUnit());
+						shiftUnit() |
+						attach(ecallUnit());
 				};
 		}
 
@@ -196,7 +195,7 @@ namespace gtry::scl::rivet
 			tap(ret);
 			resultLoopBack(move(ret));
 
-			Bit txPin = uartTx(move(result) | strm::regDownstream() | strm::attach(Ready{}) | strm::fifo(512), 230400);
+			Bit txPin = uartTx(move(result) | strm::regDownstream() | strm::attach(Ready{}) | strm::fifo(512), 230400, { .baudGeneratorLogStepSize = 10 });
 			pinOut(txPin, "UART0_TX");
 
 

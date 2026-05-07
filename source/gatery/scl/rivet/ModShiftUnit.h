@@ -40,24 +40,30 @@ namespace gtry::scl::rivet::mod
 
 		auto shiftUnit()
 		{
-			return [this](const ResultCollection& in, const OperandsSum& operand, const InstrOpcode& instr)
-				{
-					Area ent{ "rivet_bitshift", true };
-					ResultCollection ret = in;
-
-					UInt value = (UInt)operand.sum_operand[0] | name("value");
-					UInt amount = (UInt)operand.sum_operand[1](0, 5_b) | name("amount");
-
-					UInt shiftLeft = (value << amount) | name("shl");
-					ret.result.push_back({ "ShiftLeft", shiftLeft });
-
-					Bit arithmetic = instr.instr[30] | name("arithmetic");
-					UInt shiftRight = shr(value, amount, arithmetic) | name("shr");
-					ret.result.push_back({ "ShiftRight", shiftRight });
-
-					return ret;
+			return [this](StreamSignal auto&& in) {
+				return move(in) |
+					Base::attach([this](const ResultCollection& in, const OperandsSum& operand, const InstrOpcode& instr) { return shift(in, operand, instr); })
+					;
 				};
 		}
+
+		ResultCollection shift(const ResultCollection& in, const OperandsSum& operand, const InstrOpcode& instr)
+		{
+			Area ent{ "rivet_bitshift", true };
+			ResultCollection ret = in;
+
+			UInt value = (UInt)operand.sum_operand[0] | name("value");
+			UInt amount = (UInt)operand.sum_operand[1](0, 5_b) | name("amount");
+
+			UInt shiftLeft = (value << amount) | name("shl");
+			ret.result.push_back({ "ShiftLeft", shiftLeft });
+
+			Bit arithmetic = instr.instr[30] | name("arithmetic");
+			UInt shiftRight = shr(value, amount, arithmetic) | name("shr");
+			ret.result.push_back({ "ShiftRight", shiftRight });
+
+			return ret;
+		};
 
 	};
 }
