@@ -20,11 +20,8 @@
 #include "../stream/strm.h"
 #include "../arch/colognechip/BRAM.h"
 #include "../arch/colognechip/RiscVopt.h"
+#include "../arch/colognechip/Arithmetic.h"
 #include "ModRegisterFile.h"
-
-namespace gtry::scl::rivet
-{
-}
 
 namespace gtry::scl::rivet::mod
 {
@@ -35,6 +32,34 @@ namespace gtry::scl::rivet::mod
 
 	protected:
 
+#if 1
+		auto aluDiff() 
+		{
+			return [this](const OperandsDiff& op)
+				{
+					std::array<arch::colognechip::CC_ADDF, 32> adder;
+					std::array<Bit, 32> sum;
+					for (size_t i = 0; i < adder.size(); ++i)
+					{
+						adder[i].A() = op.dif_operand[0][i];
+						adder[i].B() = ~op.dif_operand[1][i];
+						adder[i].CI() = i == 0 ? Bit{ '1' } : adder[i - 1].CO();
+
+						sum[i] = adder[i].S();
+					}
+
+					AluDiff ret;
+					ret.diff = pack(sum);
+					ret.diff_zero = ret.diff == 0;
+					ret.diff_overflow = adder[30].CO() ^ adder[31].CO();
+					ret.diff_sign = adder.back().S();
+					ret.diff_carry = adder.back().CO();
+					return ret;
+				};
+		}
+#endif
+
+#if 0
 		auto readRegisterFile()
 		{
 			return [this](const RegCtrl& ctrl)
@@ -61,7 +86,7 @@ namespace gtry::scl::rivet::mod
 
 			Base::resultLoopBack(move(result));
 		}
-
+#endif
 
 	private:
 		RegCtrl m_writeCtrl;
