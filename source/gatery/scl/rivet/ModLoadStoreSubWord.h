@@ -35,13 +35,10 @@ namespace gtry::scl::rivet::mod
 					ctrl.memWriteMask = ctrl.memWriteMask.width().mask();
 
 					size_t numBytes = ctrl.memWriteData.width().bytes();
-					m_logSize.resize(utils::Log2(numBytes));
 					BVec writeData = ctrl.memWriteData;
-					for (size_t logSize = 0; logSize < m_logSize.size(); ++logSize)
+					for (size_t logSize = 0; logSize < utils::Log2(numBytes); ++logSize)
 					{
-						m_logSize[logSize] = ctrl.memLogSize == logSize;
-
-						IF(m_logSize[logSize])
+						IF(ctrl.memLogSize == logSize)
 						{
 							// broadcast subword to all possible locations independent of address
 							size_t parts = numBytes / (1ull << logSize);
@@ -50,13 +47,15 @@ namespace gtry::scl::rivet::mod
 								ctrl.memWriteData.part(parts, i) = subWord;
 
 							// select mask based on address and size
-							const UInt& subAddr = ctrl.memAddress(logSize, BitWidth{ m_logSize.size() - logSize });
-							BVec& subMask = ctrl.memWriteMask.part(parts, subAddr);
-							subMask = subMask.width().mask();
+							const UInt& subAddr = ctrl.memAddress(logSize, BitWidth{ utils::Log2(numBytes) - logSize });
+							std::vector<Bit> mask(ctrl.memWriteMask.width().bits(), '0');
+							for (size_t i = 0; i < mask.size(); ++i)
+								mask[i] = subAddr == (i >> logSize);
+							ctrl.memWriteMask = pack(mask);
 						}
 					}
 
-					return ctrl;
+					return ctrl | name("LoadStoreSubword");
 				};
 		}
 
@@ -73,7 +72,7 @@ namespace gtry::scl::rivet::mod
 					std::vector<BVec> alignedData(utils::Log2(wordW.bytes()) + 1);
 					for (size_t logSize = 0; logSize < alignedData.size(); ++logSize)
 					{
-						const UInt& subAddr = ctrl.memAddress(logSize, BitWidth{ m_logSize.size() - logSize });
+						const UInt& subAddr = ctrl.memAddress(logSize, BitWidth{ utils::Log2(wordW.bytes()) - logSize });
 						size_t parts = wordW.bytes() / (1ull << logSize);
 						alignedData[logSize] = zext(it->value.part(parts, subAddr), wordW) | name(std::format("LoadStoreSubword_readdata_log{}", logSize));
 					}
@@ -82,10 +81,5 @@ namespace gtry::scl::rivet::mod
 					return results;
 				};
 		}
-
-	private:
-		std::vector<Bit> m_logSize;
-
-
 	};
 }

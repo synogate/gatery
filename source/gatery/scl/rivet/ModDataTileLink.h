@@ -40,21 +40,22 @@ namespace gtry::scl::rivet::mod
 				{
 					const MemCtrl& ctrl = get<MemCtrl>(in);
 					Bit memAccess = (ctrl.memRead | ctrl.memWrite) | name("memAccess");
-					Bit accessPending = flag(transfer(m_link.a), transfer(*m_link.d)) | name("memAccessPending");
+					Bit readPending = flag(transfer(m_link.a) & ctrl.memRead, transfer(*m_link.d) & (*m_link.d)->hasData()) | name("memAccessPending");
 
-					valid(m_link.a) = valid(in) & memAccess & !accessPending;
+					valid(m_link.a) = valid(in) & memAccess & !readPending;
 					m_link.a->opcode = cat(ctrl.memRead, '0', '0');
 					m_link.a->param = 0;
 					m_link.a->size = ctrl.memLogSize;
 					m_link.a->source = 0;
 					m_link.a->address = resizeTo(ctrl.memAddress, m_link.a->address.width());
+					m_link.a->address.lower(BitWidth::count(m_link.a->data.width().bytes())) = 0;
 					m_link.a->mask = m_link.a->mask.width().mask();
 					m_link.a->data = ctrl.memWriteData;
 
 					Bit responseValid = valid(*m_link.d) & (*m_link.d)->hasData() | name("memResponseValid");
 					Stream ret = move(in) |
 						Base::attach([this](const ResultCollection& in) { return in + ExecResult{ "Mem", (*m_link.d)->data }; }) |
-						strm::stall(valid(in) & ctrl.memRead & !responseValid);
+						strm::stall(valid(in) & ctrl.memRead & !responseValid | valid(m_link.a) & !ready(m_link.a));
 
 					ready(*m_link.d) = ready(ret);
 					return ret;
