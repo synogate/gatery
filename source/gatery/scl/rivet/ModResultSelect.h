@@ -75,9 +75,9 @@ namespace gtry::scl::rivet::mod
 					*select = *select | name(std::format("{}_{}_select", area, target));
 
 					if (target == targets.front())
-						ret = (UInt)it->value & *select;
+						ret = zext((UInt)it->value & *select);
 					else
-						ret |= (UInt)it->value & *select;
+						ret |= zext((UInt)it->value & *select);
 				}
 			}
 			return ret;
