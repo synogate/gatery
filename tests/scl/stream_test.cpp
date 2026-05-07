@@ -1350,71 +1350,63 @@ BOOST_FIXTURE_TEST_CASE(streamBroadcaster, BoostUnitTestSimulationFixture)
 	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScope(clk);
 
-	std::mt19937 rng{ 12524 };
+	std::mt19937_64 rng{ 12524 };
 
 	scl::RvStream<BVec> inStream{ 8_b };
-	scl::RvStream<BVec> outStream1{ 8_b };
-	scl::RvStream<BVec> outStream2{ 8_b };
-
+	std::array<scl::RvStream<BVec>, 3> outStream;
+	std::array<Bit, 3> enable;
 	{
-		scl::StreamBroadcaster inBCaster(inStream);
-
-		outStream1 <<= inBCaster;
-		outStream2 <<= inBCaster;
+		scl::StreamBroadcaster inBCaster(move(inStream));
+		for(size_t i = 0; i < outStream.size(); ++i)
+			outStream[i] <<= inBCaster(enable[i]);
 	}
 
 	pinIn(inStream, "inStream");
-	pinOut(outStream1, "outStream1");
-	pinOut(outStream2, "outStream2");
+	pinIn(enable, "outEnable");
+	pinOut(outStream, "outStream");
 
 	addSimulationProcess([&, this]()->SimProcess {
-
-		std::vector<std::uint8_t> allData;
-		allData.resize(1024);
+		std::vector<std::uint8_t> allData(1024);
 		for (auto &b : allData)
-			b = rng();
+			b = (uint8_t)rng();
 
-		size_t numDone = 0;
+		strm::SimPacket pkt{ allData };
+		pkt.invalidBeats(rng());
+		fork(strm::sendPacket(inStream, pkt, clk));
 
-		auto checkOutput = [&](scl::RvStream<BVec> &stream)->SimProcess {
-
-			fork([&]()->SimProcess {
+		for(size_t i = 0; i < outStream.size(); ++i)
+			fork([&, i]()->SimProcess {
 				while (true) {
-					simu(ready(stream)) = (rng() & 1) == 1;
+					simu(ready(outStream[i])) = (rng() & 1) == 1;
+					simu(enable[i]) = (rng() & 1) == 1;
 					co_await OnClk(clk);
 				}
 			});
 
-			for (auto &b : allData) {
-				co_await performTransferWait(stream, clk);
-				BOOST_TEST(simu(*stream) == b);
-			}
-			numDone++;
-		};
-
-		fork([&]()->SimProcess {
-			while (true) {
-				simu(valid(inStream)) = (rng() & 1) == 1;
-				co_await OnClk(clk);
-			}
-		});
-
-		fork(checkOutput(outStream1));
-		fork(checkOutput(outStream2));
-
-		for (auto &b : allData) {
-			simu(*inStream) = b;
+		for (size_t i = 0; i < allData.size(); ++i)
+		{
 			co_await performTransferWait(inStream, clk);
-		}
 
-		while (numDone != 2)
-			co_await OnClk(clk);
+			for (size_t s = 0; s < outStream.size(); ++s)
+			{
+				BOOST_TEST(simu(*outStream[s]) == allData[i]);
+				if (simu(enable[s]) == '1')
+				{
+					BOOST_TEST(simu(ready(outStream[s])) == '1');
+					BOOST_TEST(simu(valid(outStream[s])) == '1');
+				}
+				else
+				{
+					BOOST_TEST(simu(valid(outStream[s])) == '0');
+				}
+			}
+		}
 
 		stopTest();
 	});
 
 	design.postprocess();
-	BOOST_TEST(!runHitsTimeout({ 10000, 100'000'000 }));
+	BOOST_TEST(!runHitsTimeout(100us));
 }
 
 BOOST_FIXTURE_TEST_CASE(streamShiftLeft_test, BoostUnitTestSimulationFixture)
