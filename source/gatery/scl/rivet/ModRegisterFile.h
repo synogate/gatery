@@ -63,7 +63,7 @@ namespace gtry::scl::rivet::mod
 					).value_or('0') | name("is_regRead1_instr");
 
 					ctrl.regRead[1] = Base::findInstrCondition(instr, 
-						Base::instrAction({ InstrEncoding::R }, { InstrEncoding::DontCare }, &InstrDef::encoding)
+						Base::instrAction({ InstrEncoding::R, InstrEncoding::S, InstrEncoding::SB }, { InstrEncoding::DontCare }, &InstrDef::encoding)
 					).value_or('0') | name("is_regRead2_instr");
 
 					std::vector<MatchValue> actions;
