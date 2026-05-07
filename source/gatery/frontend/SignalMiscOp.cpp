@@ -252,6 +252,8 @@ namespace gtry
 	{
 		if(auto* scope = ConditionalScope::get())
 			condition |= !Bit(SignalReadPort{ scope->getFullCondition() });
+		if (auto* scope = EnableScope::get())
+			condition |= !scope->getFullEnable();
 
 		SignalTapHelper helper(hlim::Node_SignalTap::LVL_ASSERT);
 		helper.triggerIfNot(condition);
