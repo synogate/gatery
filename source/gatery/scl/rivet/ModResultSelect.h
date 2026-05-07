@@ -32,6 +32,12 @@ namespace gtry::scl::rivet
 		std::vector<ExecResult> result;
 
 		void set(ExecResult&& r) { result.push_back(move(r)); /* TODO: remove old result of same name */ }
+
+		ResultCollection operator + (ExecResult&& result) const {
+			ResultCollection ret = *this;
+			ret.set(move(result));
+			return ret;
+		}
 	};
 }
 

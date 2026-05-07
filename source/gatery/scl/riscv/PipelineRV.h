@@ -36,6 +36,7 @@
 #include "../rivet/ModInstrRom.h"
 #include "../rivet/ModInstrTileLink.h"
 #include "../rivet/ModDataMemory.h"
+#include "../rivet/ModDataTileLink.h"
 #include "../rivet/ModBranchMissPredict.h"
 #include "../rivet/ModCsr.h"
 #include "../rivet/ModHazardData.h"
@@ -50,7 +51,8 @@ namespace gtry::scl::rivet
 		mod::GateMate<
 	//	mod::InstrRom<
 		mod::InstrTileLink<
-		mod::DataMemory<
+	//	mod::DataMemory<
+		mod::DataTileLink<
 		mod::Csr<
 		mod::HazardDataResolve<
 		mod::BranchMissPredict<
@@ -101,13 +103,16 @@ namespace gtry::scl::rivet
 			const unsigned gcd_parameter[] = {
 				210, 126,
 			};
-			dataMemContent(std::as_bytes(std::span(gcd_parameter)));
-			dataMemSize(2048);
+		//	dataMemContent(std::as_bytes(std::span(gcd_parameter)));
+		//	dataMemSize(2048);
 
+			Memory<BVec> dmem(512, 32_b);
+			dmem.fillPowerOnState(sim::createDefaultBitVectorState(std::as_bytes(std::span{ gcd_parameter })));
+			dataMem(tileLinkMemory(dmem, TileLinkMemoryConfig{ .sourceW = 0_b, .latency = 1 }));
 
-			addCsrCycle(64_b);
-			addCsrTime(32_b, 1ms);
-			addCsrInstructionsRetired(32_b);
+		//	addCsrCycle(64_b);
+		//	addCsrTime(32_b, 1ms);
+		//	addCsrInstructionsRetired(32_b);
 		}
 
 		auto stageInstrPtr() {
