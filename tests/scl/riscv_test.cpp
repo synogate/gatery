@@ -2196,7 +2196,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_gdb_soc_export, BoostUnitTestSimulationFixture, *b
 		.resetType = hlim::RegisterAttributes::ResetType::NONE
 	} };
 
-	hlim::ClockRational sysFreq = 30_mhz;
+	hlim::ClockRational sysFreq = 36_mhz;
 	Clock clkFast = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = sysFreq, .resetType = ClockConfig::ResetType::NONE });
 	//Clock clock = scl::arch::colognechip::clkdiv(clkFast, { .absoluteFrequency = sysFreq, .resetType = ClockConfig::ResetType::NONE });
 	ClockScope clkScp(clkFast);
@@ -2209,7 +2209,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_gdb_soc_export, BoostUnitTestSimulationFixture, *b
 	{
 		Area ent{ "devices", true };
 
-		uartDevice(soc.mmap(), "uart");
+		uartDevice(soc.mmap(), "uart", "UART0_", { .baudGeneratorLogStepSize = 10 });
 		
 		if(hasSdCard)
 		{
@@ -2333,10 +2333,49 @@ BOOST_FIXTURE_TEST_CASE(riscv_pipelinerv_sandbox, BoostUnitTestSimulationFixture
 		.resetType = hlim::RegisterAttributes::ResetType::NONE
 	} };
 
-	Clock clkFast = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = 50_mhz, .resetType = ClockConfig::ResetType::NONE });
+	Clock clkFast = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = 55_mhz, .resetType = ClockConfig::ResetType::NONE });
 	ClockScope clkScp(clkFast);
 
 	rivet::PipelineRV rv;
+	rv.environmentCallAddress("32b0");
+
+	const unsigned char gcd_bin[] = {
+		0x13, 0x00, 0x00, 0x00,   0x13, 0x01, 0x00, 0x40,   0x93, 0x00, 0x00, 0x00,
+		0x93, 0x04, 0x40, 0x00,   0x13, 0x09, 0x80, 0x00,   0x83, 0xa0, 0x00, 0x00,
+		0x83, 0xa4, 0x04, 0x00,   0x63, 0x8c, 0x90, 0x00,   0x63, 0xd6, 0x14, 0x00,
+		0xb3, 0x80, 0x90, 0x40,   0x6f, 0xf0, 0x5f, 0xff,   0xb3, 0x84, 0x14, 0x40,
+		0x6f, 0xf0, 0xdf, 0xfe,   0x23, 0x20, 0x19, 0x00,   0x6f, 0xf0, 0x1f, 0xfd,
+		0x13, 0x01, 0x01, 0xfe,   0x23, 0x2e, 0x81, 0x00,   0x13, 0x04, 0x01, 0x02,
+		0x23, 0x26, 0xa4, 0xfe,   0x23, 0x24, 0xb4, 0xfe,   0x03, 0x27, 0xc4, 0xfe,
+		0x83, 0x27, 0x84, 0xfe,   0x63, 0x0c, 0xf7, 0x02,   0x03, 0x27, 0xc4, 0xfe,
+		0x83, 0x27, 0x84, 0xfe,   0x63, 0xdc, 0xe7, 0x00,   0x03, 0x27, 0xc4, 0xfe,
+		0x83, 0x27, 0x84, 0xfe,   0xb3, 0x07, 0xf7, 0x40,   0x23, 0x26, 0xf4, 0xfe,
+		0x6f, 0xf0, 0x9f, 0xfd,   0x03, 0x27, 0x84, 0xfe,   0x83, 0x27, 0xc4, 0xfe,
+		0xb3, 0x07, 0xf7, 0x40,   0x23, 0x24, 0xf4, 0xfe,   0x6f, 0xf0, 0x5f, 0xfc,
+		0x83, 0x27, 0xc4, 0xfe,   0x13, 0x85, 0x07, 0x00,   0x03, 0x24, 0xc1, 0x01,
+		0x13, 0x01, 0x01, 0x02,   0x67, 0x80, 0x00, 0x00
+	};
+//	rv.instrRom(std::as_bytes(std::span(gcd_bin)));
+
+	Memory<BVec> imem(sizeof(gcd_bin) + 3 / 4, 32_b);
+	imem.fillPowerOnState(sim::createDefaultBitVectorState(std::as_bytes(std::span{ gcd_bin })));
+	rv.instrFetch(tileLinkMemory(imem, TileLinkMemoryConfig{ .sourceW = 0_b, .writePort = false, .latency = 1 }));
+
+
+	const unsigned gcd_parameter[] = {
+		210, 126,
+	};
+//	rv.dataMemContent(std::as_bytes(std::span(gcd_parameter)));
+//	rv.dataMemSize(2048);
+
+	Memory<BVec> dmem(512, 32_b);
+	dmem.fillPowerOnState(sim::createDefaultBitVectorState(std::as_bytes(std::span{ gcd_parameter })));
+	rv.dataMem(tileLinkMemory(dmem, TileLinkMemoryConfig{ .sourceW = 0_b, .latency = 1 }));
+
+//	rv.addCsrCycle(64_b);
+//	rv.addCsrTime(32_b, 1ms);
+//	rv.addCsrInstructionsRetired(32_b);
+
 	rv.generate();
 
 	design.postprocess();

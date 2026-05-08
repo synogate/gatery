@@ -32,6 +32,8 @@ namespace gtry::scl::rivet::mod
 			link <<= move(m_link) | name("dataLink");
 		}
 
+		void waitForStoreCompletion(bool value) { m_waitForStore = value; }
+
 	protected:
 
 		auto dataMem()
@@ -39,9 +41,11 @@ namespace gtry::scl::rivet::mod
 			return [this](StreamSignal auto&& in)
 				{
 					const MemCtrl& ctrl = get<MemCtrl>(in);
-					Bit memAccess = (ctrl.memRead | ctrl.memWrite) | name("memAccess");
-					Bit readPending = flag(transfer(m_link.a) & ctrl.memRead, transfer(*m_link.d) & (*m_link.d)->hasData()) | name("memAccessPending");
+					Bit waitStart = (m_waitForStore ? transfer(m_link.a) : transfer(m_link.a) & ctrl.memRead) | name("memWaitStart");
+					Bit responseValid = (m_waitForStore ? valid(*m_link.d) : valid(*m_link.d) & (*m_link.d)->hasData()) | name("memResponseValid");
+					Bit readPending = flag(waitStart, responseValid & ready(*m_link.d)) | name("memAccessPending");
 
+					Bit memAccess = (ctrl.memRead | ctrl.memWrite) | name("memAccess");
 					valid(m_link.a) = valid(in) & memAccess & !readPending;
 					m_link.a->opcode = cat(ctrl.memRead, '0', '0');
 					m_link.a->param = 0;
@@ -49,13 +53,13 @@ namespace gtry::scl::rivet::mod
 					m_link.a->source = 0;
 					m_link.a->address = resizeTo(ctrl.memAddress, m_link.a->address.width());
 					m_link.a->address.lower(BitWidth::count(m_link.a->data.width().bytes())) = 0;
-					m_link.a->mask = m_link.a->mask.width().mask();
+					m_link.a->mask = ctrl.memWriteMask;
 					m_link.a->data = ctrl.memWriteData;
 
-					Bit responseValid = valid(*m_link.d) & (*m_link.d)->hasData() | name("memResponseValid");
+					Bit waitCondition = m_waitForStore ? memAccess : ctrl.memRead;
 					Stream ret = move(in) |
 						Base::attach([this](const ResultCollection& in) { return in + ExecResult{ "Mem", (*m_link.d)->data }; }) |
-						strm::stall(valid(in) & ctrl.memRead & !responseValid | valid(m_link.a) & !ready(m_link.a));
+						strm::stall(valid(in) & waitCondition & !responseValid | valid(m_link.a) & !ready(m_link.a));
 
 					ready(*m_link.d) = ready(ret);
 					return ret;
@@ -64,5 +68,7 @@ namespace gtry::scl::rivet::mod
 
 	private:
 		TileLinkU m_link;
+
+		bool m_waitForStore = false;
 	};
 }

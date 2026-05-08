@@ -22,6 +22,8 @@
 #include "../memoryMap/TileLinkMemoryMap.h"
 #include "../tilelink/TileLinkCache.h"
 
+#include "PipelineRV.h"
+
 using namespace gtry;
 using namespace gtry::scl;
 
@@ -126,11 +128,20 @@ void gtry::scl::MemorySoC::generateCpu(TileLinkArbiter& arbiter)
 					a->size = i;
 	};
 
-	riscv::DualCycleRV userCpu(m_addrW, m_addrW);
-
 	BitWidth addrW = std::max(9_b, BitWidth::count(m_firmwareRom.size() / 32));
 	TileLinkU iCachePort = tileLinkCacheDirectMappedReadOnlyBurst(move(iFetchPort), addrW, burstSelect, m_firmwareRom) | name("iCachePort");
+	
+#if 0
+	riscv::DualCycleRV userCpu(m_addrW, m_addrW);
 	userCpu.fetch(move(iCachePort), m_entryPoint);
 	userCpu.execute();
 	userCpu.mem(arbiter);
+#else
+	rivet::PipelineRV userCpu;
+	userCpu.instrStartAddress(m_entryPoint);
+	userCpu.environmentCallAddress(m_entryPoint);
+	userCpu.instrFetch(move(iCachePort));
+	userCpu.dataMem(arbiter);
+	userCpu.generate();
+#endif
 }
