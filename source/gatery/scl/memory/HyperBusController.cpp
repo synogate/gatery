@@ -22,6 +22,74 @@
 
 namespace gtry::scl
 {
+	Reverse<HyperBusPhy> genericHyperBusPhy(std::string pinPrefix, HyperBusPhyConfig cfg)
+	{
+		Area ent{ "scl_genericHyperBusPhy", true };
+
+		Reverse<HyperBusPhy> phy;
+		phy->csn = BitWidth{ cfg.pinCsn.size() };
+
+		Bit anyActive = '0';
+		for (const Bit& csn : phy->csn)
+			anyActive |= !csn;
+		HCL_NAMED(anyActive);
+
+		if (!cfg.pinResetN.empty())
+			pinOut(Bit{ '1' }, pinPrefix + std::string{ cfg.pinResetN });
+
+		// clock
+		Bit clk = anyActive & ClockScope::getClk().clkSignal();
+		{
+			pinOut(clk, pinPrefix + std::string{ cfg.pinClk });
+
+			if (!cfg.pinClkN.empty())
+				pinOut(~clk, pinPrefix + std::string{ cfg.pinClkN });
+		}
+
+		// chip select
+		for (size_t i = 0; i < cfg.pinCsn.size(); ++i)
+		{
+			Bit csn;
+			csn |= phy->csn[i]; // delayed reset
+			csn = reg(csn, '1');
+			csn &= phy->csn[i];	// instant set
+
+			pinOut(csn, pinPrefix + std::string{ cfg.pinCsn[i] });
+		}
+
+		// RWDS
+		{
+			*phy->rwds.r = oext(tristatePin(phy->rwds.f.lsb(), flagInstantSet(phy->rwds.fen, !phy->rwds.fen)).setName(pinPrefix + std::string{ cfg.pinRwds }));
+			*phy->rwds.r = simOverride(*phy->rwds.r, BVec{ "2b00" });
+		}
+
+		// DQ
+		*phy->dq.r = ConstBVec(16_b);
+		Bit dqDisable = flagInstantReset(!phy->dq.fen, phy->dq.fen) | name("dqDisable");
+		for (size_t i = 0; i < 8; ++i)
+		{
+			(*phy->dq.r)[i] = tristatePin(phy->dq.f[i], !dqDisable).setName(pinPrefix + std::string{cfg.pinDq} + std::to_string(i));
+		}
+
+		// set defaults
+		phy->csn = phy->csn.width().last();
+		phy->rwds.f = ConstBVec(2_b);
+		phy->rwds.fen = '0';
+		phy->dq.f = ConstBVec(16_b);
+		phy->dq.fen = '0';
+
+		DesignScope::get()->getCircuit().addSimulationProcess([sig = clk, clk = ClockScope::getClk()]() -> SimProcess {
+			while (true)
+			{
+				co_await OnClk(clk);
+				simu(sig).eval();
+			}
+		});
+
+		HCL_NAMED(phy);
+		return phy;
+	}
+
 	Reverse<HyperBusPhy> gateMateHyperBusPhy(std::string pinPrefix, HyperBusPhyConfig cfg)
 	{
 		Area ent{ "scl_gateMateHyperBusPhy", true };

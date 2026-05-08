@@ -46,6 +46,9 @@ namespace gtry::scl
 		std::string_view pinResetN;
 	};
 
+	// NOTE: generic phy is not functional due to lack of generic ddr macros. use for testing only.
+	Reverse<HyperBusPhy> genericHyperBusPhy(std::string pinPrefix = "HYPER", HyperBusPhyConfig cfg = {});
+
 	Reverse<HyperBusPhy> gateMateHyperBusPhy(std::string pinPrefix = "HYPER", HyperBusPhyConfig cfg = {});
 
 	////////////////////////////// controller //////////////////////////////
