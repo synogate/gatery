@@ -55,9 +55,9 @@ namespace gtry::scl::rivet::mod
 
 					UInt counter = amount.width();
 					counter = counter + 1;
-					IF(transfer(in))
+					IF(!valid(in) | ready(in))
 						counter = 0;
-					counter = reg(counter, 0) | name("counter");
+					counter = reg(counter) | name("counter");
 
 					UInt value = valueInitial.width();
 					value = mux(right, {
