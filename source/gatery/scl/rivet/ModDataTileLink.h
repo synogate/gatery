@@ -52,9 +52,14 @@ namespace gtry::scl::rivet::mod
 					m_link.a->size = ctrl.memLogSize;
 					m_link.a->source = 0;
 					m_link.a->address = resizeTo(ctrl.memAddress, m_link.a->address.width());
-					m_link.a->address.lower(BitWidth::count(m_link.a->data.width().bytes())) = 0;
 					m_link.a->mask = ctrl.memWriteMask;
 					m_link.a->data = ctrl.memWriteData;
+
+					sim_assert(
+						!valid(m_link.a) |
+						!(m_link.a->address[0] & m_link.a->size > 0) &
+						!(m_link.a->address[1] & m_link.a->size > 1)
+					) << "invalid tile link access alignment";
 
 					Bit waitCondition = m_waitForStore ? memAccess : ctrl.memRead;
 					Stream ret = move(in) |

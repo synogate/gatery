@@ -31,29 +31,24 @@ namespace gtry::scl::rivet::mod
 			return [this](const MemCtrl& in, const InstrOpcode& instr, const AluSum& sum, const OperandsDiff& diff)
 				{
 					MemCtrl ctrl = Base::selectMemCtrl()(in, instr, sum, diff);
-					// override access based right aligned mask
-					ctrl.memWriteMask = ctrl.memWriteMask.width().mask();
 
-					size_t numBytes = ctrl.memWriteData.width().bytes();
-					BVec writeData = ctrl.memWriteData;
-					for (size_t logSize = 0; logSize < utils::Log2(numBytes); ++logSize)
-					{
-						IF(ctrl.memLogSize == logSize)
-						{
-							// broadcast subword to all possible locations independent of address
-							size_t parts = numBytes / (1ull << logSize);
-							BVec subWord = writeData.part(parts, 0);
-							for (size_t i = 1; i < parts; ++i)
-								ctrl.memWriteData.part(parts, i) = subWord;
+					Area ent{ "ent_debug", true };
 
-							// select mask based on address and size
-							const UInt& subAddr = ctrl.memAddress(logSize, BitWidth{ utils::Log2(numBytes) - logSize });
-							std::vector<Bit> mask(ctrl.memWriteMask.width().bits(), '0');
-							for (size_t i = 0; i < mask.size(); ++i)
-								mask[i] = subAddr == (i >> logSize);
-							ctrl.memWriteMask = pack(mask);
-						}
-					}
+					auto wrByte = ctrl.memWriteData.parts(4);
+					ctrl.memWriteData = cat(
+						mux(ctrl.memLogSize, { wrByte[0], wrByte[1], wrByte[3], wrByte[3] }),
+						mux(ctrl.memLogSize.msb(), { wrByte[0], wrByte[2] }),
+						mux(ctrl.memLogSize, { wrByte[0], wrByte[1], wrByte[1], wrByte[1] }), // use mux4 to keep it single level and share inputs with byte 3
+						wrByte[0]
+					);
+
+					const UInt& ofs = ctrl.memAddress.lower(2_b);
+					ctrl.memWriteMask = cat(
+						ofs == 3 | ofs == 2 & ctrl.memLogSize == 1,
+						ofs == 2,
+						ofs == 1 | ofs == 0 & ctrl.memLogSize == 1,
+						ofs == 0
+					) | ctrl.memLogSize.msb();
 
 					return ctrl | name("LoadStoreSubword");
 				};
