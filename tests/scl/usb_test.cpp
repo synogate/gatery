@@ -34,6 +34,8 @@
 
 #include <gatery/scl/io/dynamicDelay.h>
 #include <gatery/scl/arch/sky130/Sky130Device.h>
+#include <gatery/scl/arch/colognechip/SpecialFunction.h>
+
 using namespace boost::unit_test;
 using namespace gtry;
 using namespace gtry::scl;
@@ -476,43 +478,22 @@ public:
 		m_useSimuPhy = false;
 		m_pinApplicationInterface = false;
 		m_pinStatusRegister = false;
+		m_maxPacketLength = 8;
 
 		Clock clk12{ ClockConfig{
-			.absoluteFrequency = 12'000'000,
+			.absoluteFrequency = 12_mhz,
 			.name = "CLK12M",
-			.resetType = hlim::RegisterAttributes::ResetType::NONE
+			.resetType = hlim::RegisterAttributes::ResetType::NONE,
 		} };
 
-		ExternalModule pll{ "CC_PLL" };
-		pll.requiresComponentDeclaration(true);
-		pll.isEntity(false);
-		pll.generic("REF_CLK") = "12.0";
-		pll.generic("OUT_CLK") = std::to_string(12.0 * samplingRatio);
-		//pll.generic("PERF_MD") = "LOWPOWER";
-		pll.generic("LOW_JITTER") = 1;
-		pll.generic("CI_FILTER_CONST") = 2;
-		pll.generic("CP_FILTER_CONST") = 4;
-		pll.generic("LOCK_REQ") = 1;
-		pll.clockIn(clk12, "CLK_REF");
-
-		Bit clk0 = pll.out("CLK0");
-		ExternalModule clk0BufG{ "CC_BUFG" };
-		clk0BufG.requiresComponentDeclaration(true);
-		clk0BufG.isEntity(false);
-		clk0BufG.in("I") = clk0;
-
-		Clock clk48 = clk0BufG.clockOut("O", {}, ClockConfig{
-			.absoluteFrequency = clk12.absoluteFrequency() * samplingRatio,
-			.resetType = hlim::RegisterAttributes::ResetType::NONE,
-			.memoryResetType = hlim::RegisterAttributes::ResetType::NONE
-		});
-		ClockScope clkScp(clk48);
+		Clock clk = scl::arch::colognechip::pll(clk12, { .absoluteFrequency = clk12.absoluteFrequency() * samplingRatio, .resetType = ClockConfig::ResetType::NONE, .memoryResetType = hlim::RegisterAttributes::ResetType::NONE });
+		ClockScope clkScp(clk);
 
 		{
-			scl::Counter usbRstCtr{ 23_b };
+			scl::Counter usbRstCtr{ 22_b };
 			IF(!usbRstCtr.isLast())
 				usbRstCtr.inc();
-			pinOut(usbRstCtr.value().msb(), "USB_EN");
+			pinOut(reg(usbRstCtr.isLast(), '0'), "USB_EN");
 		}
 
 		setupFunction();
@@ -524,17 +505,17 @@ public:
 		}
 
 		addSimulationProcess([&]() -> SimProcess {
-			co_await OnClk(clk48);
+			co_await OnClk(clk);
 			co_await m_controller->testWindowsDeviceDiscovery();
 			stopTest();
 		});
 
 		design.postprocess();
 
-		vhdl::VHDLExport vhdl("synthesis_projects/usb_loopback_gatemate/usb_loopback_gatemate.vhd");
+		vhdl::VHDLExport vhdl("export/usb_loopback_gatemate/top.vhd");
 		vhdl(design.getCircuit());
 
-		BOOST_TEST(!runHitsTimeout({ 1, 1'000 }));
+		BOOST_TEST(!runHitsTimeout(1ms));
 	}
 };
 
