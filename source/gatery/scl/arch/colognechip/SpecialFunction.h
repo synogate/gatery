@@ -64,6 +64,7 @@ namespace gtry::scl::arch::colognechip
 
 	Clock pll(const Clock& src, const ClockConfig& cfg, bool userClk = false);
 	Clock clkdiv(const Clock& src, ClockConfig cfg);
+	Clock clkdivRegChain(const Clock& src, size_t log2div, bool buffer = true);
 
 	Bit serdes(BVec data, const Clock& slowClk, const Clock& fastClk);
 	Bit serdes(BVec data, const Clock& slowClk, const Clock& fastClk, Bit syncPulse);

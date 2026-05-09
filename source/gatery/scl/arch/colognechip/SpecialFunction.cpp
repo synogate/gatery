@@ -18,6 +18,7 @@
 #include "gatery/scl_pch.h"
 #include "SpecialFunction.h"
 #include "io.h"
+#include "lut.h"
 
 #include "../../Counter.h"
 #include "../../flag.h"
@@ -185,6 +186,28 @@ namespace gtry::scl::arch::colognechip
 			slowClk.reset(src.rstSignal(), src.getClk(), src.getClk()->getRegAttribs().resetActive);
 		}
 		return slowClk;
+	}
+
+	Clock clkdivRegChain(const Clock& src, size_t log2div, bool buffer)
+	{
+		Clock clk = src;
+		for (size_t i = 0; i < log2div; ++i)
+		{
+			ClockScope cs{ clk };
+
+			Bit nextClk;
+			nextClk = reg(!nextClk, '0');
+			clk = clk.deriveClock({
+				.frequencyMultiplier = hlim::ClockRational{1,2},
+				.name = std::format("{}_div{}", src.name(), 2ull << i),
+			});
+
+			Bit clkSig = nextClk;
+			if (buffer && i == log2div - 1)
+				clkSig = bufg(clkSig) | name(std::string{ clk.name() } + "_sig");
+			clk.overrideClkWith(clkSig);
+		}
+		return clk;
 	}
 
 	Bit serdes(BVec data, const Clock& slowClk, const Clock& fastClk)
