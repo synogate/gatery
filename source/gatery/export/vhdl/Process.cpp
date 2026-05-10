@@ -782,33 +782,92 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 				}
 			} else
 			if (muxNode != nullptr) {
-				if (hlim::getOutputWidth(muxNode->getDriver(0)) == 0) { 
+				if (true) // we noticed that a tree of IF's is surprisingly the only mux construct that gets recognized as mux4 by yosys and preserved by ghdl during verilog conversion
+				{
+					hlim::NodePort sel = muxNode->getDriver(0);
+					size_t selW = hlim::getOutputWidth(sel);
+					size_t pos = (1ull << selW) - 1;
+
+					std::function<void(size_t)> generateMuxTree = [&, this](size_t depth) {
+						size_t levelIndentation = indentation + 1 + selW - depth;
+						if (depth == 0)
+						{
+							cf.indent(code, levelIndentation);
+							code << assignmentPrefix;
+
+							if (muxNode->getNumInputPorts() > pos + 1)
+							{
+								formatExpression(code, 0, comment, muxNode->getDriver(1 + pos), statement.inputs, targetContext, false);
+							}
+							else if (!isSingleBit(targetContext))
+							{
+								code << '"';
+								for ([[maybe_unused]] auto bitIdx : utils::Range(hlim::getOutputWidth(muxNode->getDriver(1))))
+									code << 'X';
+								code << '"';
+							}
+							else
+							{
+								code << "'0'";
+							}
+
+							code << ";\n";
+							pos--;
+							return;
+						}
+
+						cf.indent(code, levelIndentation);
+						code << "IF ";
+						if (selW == 1)
+							formatExpression(code, 0, comment, sel, statement.inputs, VHDLDataType::BOOL, false);
+						else
+						{
+							formatExpression(code, 0, comment, sel, statement.inputs, VHDLDataType::UNSIGNED, false);
+							code << "(" << depth - 1 << ")";
+						}
+						code << " THEN\n";
+
+						generateMuxTree(depth - 1);
+
+						cf.indent(code, levelIndentation);
+						code << "ELSE\n";
+
+						generateMuxTree(depth - 1);
+
+						cf.indent(code, levelIndentation);
+						code << "END IF;\n";
+						};
+
+					code << "-- MUX" << muxNode->getNumInputPorts() - 1 << '\n';
+					generateMuxTree(selW);
+				}
+				else if (hlim::getOutputWidth(muxNode->getDriver(0)) == 0) {
 					// if for whatever reason the selector is zero bits, always keep the first input.
 					code << assignmentPrefix;
-					formatExpression(code, indentation+2, comment, muxNode->getDriver(1), statement.inputs, targetContext, false);
+					formatExpression(code, indentation + 2, comment, muxNode->getDriver(1), statement.inputs, targetContext, false);
 					code << ";" << std::endl;
-				} else
-				if (muxNode->getNumInputPorts() == 3 && hlim::getOutputConnectionType(muxNode->getDriver(0)).type == hlim::ConnectionType::BOOL) {
+				}
+				else if (muxNode->getNumInputPorts() == 3 && hlim::getOutputConnectionType(muxNode->getDriver(0)).type == hlim::ConnectionType::BOOL) {
 					code << "IF ";
-					formatExpression(code, indentation+2, comment, muxNode->getDriver(0), statement.inputs, VHDLDataType::BOOL, false);
-					code << " THEN"<< std::endl;
+					formatExpression(code, indentation + 2, comment, muxNode->getDriver(0), statement.inputs, VHDLDataType::BOOL, false);
+					code << " THEN" << std::endl;
 
-						cf.indent(code, indentation+2);
-						code << assignmentPrefix;
+					cf.indent(code, indentation + 2);
+					code << assignmentPrefix;
 
-						formatExpression(code, indentation+3, comment, muxNode->getDriver(2), statement.inputs, targetContext, false);
-						code << ";" << std::endl;
+					formatExpression(code, indentation + 3, comment, muxNode->getDriver(2), statement.inputs, targetContext, false);
+					code << ";" << std::endl;
 
-					cf.indent(code, indentation+1);
+					cf.indent(code, indentation + 1);
 					code << "ELSE" << std::endl;
 
-						cf.indent(code, indentation+2);
-						code << assignmentPrefix;
+					cf.indent(code, indentation + 2);
+					code << assignmentPrefix;
 
-						formatExpression(code, indentation+3, comment, muxNode->getDriver(1), statement.inputs, targetContext, false);
-						code << ";" << std::endl;
+					formatExpression(code, indentation + 3, comment, muxNode->getDriver(1), statement.inputs, targetContext, false);
+					code << ";" << std::endl;
 
-					cf.indent(code, indentation+1);
+					cf.indent(code, indentation + 1);
 					code << "END IF;" << std::endl;
 				} else {
 					code << "CASE ";
