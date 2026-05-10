@@ -2370,7 +2370,14 @@ BOOST_FIXTURE_TEST_CASE(riscv_pipelinerv_sandbox, BoostUnitTestSimulationFixture
 
 	Memory<BVec> dmem(512, 32_b);
 	dmem.fillPowerOnState(sim::createDefaultBitVectorState(std::as_bytes(std::span{ gcd_parameter })));
-	rv.dataMem(tileLinkMemory(dmem, TileLinkMemoryConfig{ .sourceW = 0_b, .latency = 1 }));
+
+	TileLinkU dmemLink = tileLinkMemory(dmem, TileLinkMemoryConfig{ .sourceW = 0_b, .latency = 1 });
+
+	Stream result = strm::createVStream((*dmemLink.d)->data.lower(8_b), transfer(*dmemLink.d));
+	Bit resultTx = uartTx(move(result) | strm::regDownstream() | strm::attach(Ready{}), 230400, { .baudGeneratorLogStepSize = 14 });
+	pinOut(resultTx, "UART0_TX");
+
+	rv.dataMem(move(dmemLink));
 
 //	rv.addCsrCycle(64_b);
 //	rv.addCsrTime(32_b, 1ms);
