@@ -819,7 +819,7 @@ void CombinatoryProcess::writeVHDL(std::ostream &stream, unsigned indentation)
 						cf.indent(code, levelIndentation);
 						code << "IF ";
 						if (selW == 1)
-							formatExpression(code, 0, comment, sel, statement.inputs, VHDLDataType::BOOL, false);
+							formatExpression(code, 0, comment, sel, statement.inputs, VHDLDataType::STD_LOGIC, false);
 						else
 						{
 							formatExpression(code, 0, comment, sel, statement.inputs, VHDLDataType::UNSIGNED, false);
