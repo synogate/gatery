@@ -359,8 +359,8 @@ namespace gtry::scl
 			(*link.d)->data = (BVec)pack(port.read());
 		}
 
-		size_t latency = cfg.readPort ? mem.readLatencyHint() : 0;
-		for (size_t i = 0; i < latency; ++i)
+		size_t latency = cfg.latency.value_or(mem.readLatencyHint());
+		for (size_t i = 0; i < latency && cfg.readPort; ++i)
 			*link.d = strm::regDownstream(move(*link.d), { .allowRetimingBackward = true });
 		return link;
 	}
