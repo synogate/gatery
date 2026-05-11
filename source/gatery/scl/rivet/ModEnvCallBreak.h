@@ -18,6 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 #include "ModResultSelect.h"
+#include "ModCsr.h"
 
 namespace gtry::scl::rivet::mod
 {
@@ -27,22 +28,25 @@ namespace gtry::scl::rivet::mod
 	public:
 		EnvCallBreak()
 		{
-			Base::addInstr(InstrDef{ .name = "ECALL", .opcode = "11100", .func3 = "000", .jmpTarget = "Ecall" });
+			Base::addInstr(InstrDef{ .name = "ECALL", .opcode = "11100", .func3 = "000", .sumSrc = {{OperandSource::CSR, OperandSource::Zero}}, .jmpTarget = "Sum"});
 		}
 
 		void environmentCallAddress(UInt address) { m_address = address; }
 
 	protected:
 
-		auto ecallUnit()
+		auto ecallDecode()
 		{
-			return [this](const ResultCollection& in)
+			return [this](const InstrOpcode& instr, const CsrCtrl& in)
 				{
 					HCL_DESIGNCHECK_HINT(m_address.valid(), "environment call target address not specified");
 
-					ResultCollection ret = in;
-					ret.result.push_back({ "Ecall", m_address });
-					return ret;
+					Bit ecallInstr = Base::findInstrCondition(instr, Base::instrAction({"ECALL"sv}, {}, &InstrDef::name)).value_or('0') | name("EnvCallBreak_select");
+
+					CsrCtrl out = in;
+					IF(ecallInstr)
+						out.csrReadData = m_address;
+					return out;
 				};
 		}
 

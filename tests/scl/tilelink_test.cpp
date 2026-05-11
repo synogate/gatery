@@ -23,7 +23,6 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
 
-#include <gatery/scl/arch/colognechip/CPE.h>
 #include <gatery/scl/arch/colognechip/io.h>
 #include <gatery/scl/arch/colognechip/lut.h>
 #include <gatery/scl/arch/colognechip/SpecialFunction.h>

@@ -64,8 +64,8 @@ namespace gtry::scl::rivet::mod
 				};
 		}
 
-		auto hazardDataForwardingSum() { return hazardDataForwarding<OperandsSum>([](const HazardData& h) { return h.hazardDataForwardSum; }); }
-		auto hazardDataForwardingDiff() { return hazardDataForwarding<OperandsDiff>([](const HazardData& h) { return h.hazardDataForwardDiff; }); }
+		auto hazardDataForwardingSum() { return hazardDataForwarding<SumOperands>([](const HazardData& h) { return h.hazardDataForwardSum; }); }
+		auto hazardDataForwardingDiff() { return hazardDataForwarding<AluOperands>([](const HazardData& h) { return h.hazardDataForwardDiff; }); }
 
 		void resultLoopBack(StreamSignal auto&& result)
 		{
@@ -136,7 +136,7 @@ namespace gtry::scl::rivet::mod
 			for (size_t i = 0; i < 2; ++i)
 			{
 				hd.hazardDataForwardSum.regUsed[i] = findCondition([i](const InstrDef& def) { return def.sumSrc[i]; });
-				hd.hazardDataForwardDiff.regUsed[i] = findCondition([i](const InstrDef& def) { return def.difSrc[i]; });
+				hd.hazardDataForwardDiff.regUsed[i] = findCondition([i](const InstrDef& def) { return def.aluSrc[i]; });
 			}
 			return hd;
 		}

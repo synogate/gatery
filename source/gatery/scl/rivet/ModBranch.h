@@ -30,21 +30,21 @@ namespace gtry::scl::rivet::mod
 
 		auto makeBranchDecision()
 		{
-			return [this](const JmpCtrl& in, const AluDiff& flags, const InstrOpcode& instr)
+			return [this](const JmpCtrl& in, const AluResult& flags, const InstrOpcode& instr)
 				{
 					BVec func3 = instr.instr(12, 3_b);
 
 					Bit decision = mux(func3(1, 2_b), {
-						flags.diff_zero,						// equal
+						flags.alu_zero,							// equal
 						Bit{'X'},								// unused
-						flags.diff_sign != flags.diff_overflow,	// less than
-						!flags.diff_carry						// less than unsigned
+						flags.alu_sign != flags.alu_overflow,	// less than
+						!flags.alu_carry						// less than unsigned
 					}) ^ func3.lsb() | name("branch_decision");
 
 					std::vector<MatchValue> actions;
 					actions.reserve(Base::instructions().size());
 					for (const InstrDef& def : Base::instructions())
-						if (def.name == "BRA")
+						if (def.name.starts_with("BRA"))
 							actions.push_back(MatchValue::Low);
 						else if (def.jmpTarget.empty())
 							actions.push_back(MatchValue::DontCare);

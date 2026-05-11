@@ -27,7 +27,16 @@ namespace gtry::scl::rivet
 
 	enum class OperandSource
 	{
-		Reg, Imm, Zero, IP, CSR, InvInstrSize, DontCare
+		Reg, Imm, Zero, IP, CSR, InstrSize, DontCare
+	};
+
+	enum class AluMode
+	{
+		A, B,				// identity
+		Add, Sub, Arith,	// arithmetic (Arith is a hack to select between add and sub based on bit 30)
+		Equal, Less,		// compare
+		And, Or, Xor,		// logic
+		DontCare
 	};
 
 	struct InstrDef
@@ -42,11 +51,12 @@ namespace gtry::scl::rivet
 
 		// operation
 		std::array<OperandSource, 2> sumSrc = { {OperandSource::DontCare, OperandSource::DontCare} };
-		std::array<OperandSource, 2> difSrc = { {OperandSource::DontCare, OperandSource::DontCare} };
+		std::array<OperandSource, 2> aluSrc = { {OperandSource::DontCare, OperandSource::DontCare} };
+		AluMode aluMode = AluMode::DontCare;
 
 		// result
 		std::string resultSource; // Alu, Shift, Mul, ...
-		std::string jmpTarget; // Alu, ecall-vector, ...
+		std::string jmpTarget; // Sum, ecall-vector, ...
 	};
 }
 

@@ -42,7 +42,7 @@ namespace gtry::scl::rivet::mod
 		LoadStore()
 		{
 			Base::addInstr(InstrDef{ .name = "LOAD",  .opcode = "00000", .encoding = InstrEncoding::I, .sumSrc = {{OperandSource::Reg, OperandSource::Imm}}, .resultSource = "Mem" });
-			Base::addInstr(InstrDef{ .name = "STORE", .opcode = "01000", .encoding = InstrEncoding::S, .sumSrc = {{OperandSource::Reg, OperandSource::Imm}}, .difSrc = {{OperandSource::DontCare, OperandSource::Reg}} });
+			Base::addInstr(InstrDef{ .name = "STORE", .opcode = "01000", .encoding = InstrEncoding::S, .sumSrc = {{OperandSource::Reg, OperandSource::Imm}}, .aluSrc = {{OperandSource::DontCare, OperandSource::Reg}} });
 		}
 
 	protected:
@@ -66,11 +66,11 @@ namespace gtry::scl::rivet::mod
 
 		auto selectMemCtrl()
 		{
-			return [this](const MemCtrl& in, const InstrOpcode& instr, const AluSum& sum, const OperandsDiff& diff)
+			return [this](const MemCtrl& in, const InstrOpcode& instr, const SumResult& sum, const AluOperands& diff)
 				{
 					MemCtrl ctrl = in;
-					ctrl.memAddress = (UInt)sum.sum;
-					ctrl.memWriteData = diff.dif_operand[1];
+					ctrl.memAddress = (UInt)sum.sum_result;
+					ctrl.memWriteData = diff.alu_operand[1];
 					ctrl.memWriteMask = cat(ctrl.memLogSize[1], ctrl.memLogSize[1], ctrl.memLogSize != 0, '1');
 					return ctrl;
 				};

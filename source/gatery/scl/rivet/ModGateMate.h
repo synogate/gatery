@@ -19,6 +19,7 @@
 #include <gatery/frontend.h>
 #include "../stream/strm.h"
 #include "../arch/colognechip/BRAM.h"
+#include "../arch/colognechip/lut.h"
 #include "../arch/colognechip/RiscVopt.h"
 #include "../arch/colognechip/Arithmetic.h"
 #include "ModRegisterFile.h"
@@ -33,28 +34,47 @@ namespace gtry::scl::rivet::mod
 	protected:
 
 #if 1
-		auto aluDiff() 
+		auto aluExecute()
 		{
-			return [this](const OperandsDiff& op)
+			return [this](const AluOperands& op, const AluCtrl& ctrl)
 				{
+					BVec op1 = op.alu_operand[0] & ctrl.alu_enSumInputA | name("aluAdderOp1");
+					BVec op2 = ConstBVec(op1.width());
+					for (size_t i = 0; i < op2.size(); ++i)
+					{
+#if 1
+						arch::colognechip::CC_MX4 mux;
+						mux.D0() = ctrl.alu_truthTable[0];
+						mux.D1() = ctrl.alu_truthTable[1];
+						mux.D2() = ctrl.alu_truthTable[2];
+						mux.D3() = ctrl.alu_truthTable[3];
+						mux.S0() = op.alu_operand[0][i];
+						mux.S1() = op.alu_operand[1][i];
+						op2[i] = mux.Y();
+#else
+						op2[i] = mux(cat(op.alu_operand[1][i], op.alu_operand[0][i]), ctrl.alu_truthTable);
+#endif
+					}
+					op2 = name(op2, "aluAdderOp2");
+
 					std::array<arch::colognechip::CC_ADDF, 32> adder;
 					std::array<Bit, 32> sum;
 					for (size_t i = 0; i < adder.size(); ++i)
 					{
-						adder[i].A() = op.dif_operand[0][i];
-						adder[i].B() = ~op.dif_operand[1][i];
-						adder[i].CI() = i == 0 ? Bit{ '1' } : adder[i - 1].CO();
+						adder[i].A() = op1[i];
+						adder[i].B() = op2[i];
+						adder[i].CI() = i == 0 ? ctrl.alu_carryIn : adder[i - 1].CO();
 
 						sum[i] = adder[i].S();
 					}
 
-					AluDiff ret;
-					ret.diff = pack(sum);
-					ret.diff_zero = ret.diff == 0;
-					ret.diff_overflow = adder[30].CO() ^ adder[31].CO();
-					ret.diff_sign = adder.back().S();
-					ret.diff_carry = adder.back().CO();
-					return ret;
+					return AluResult{
+						.alu_result = pack(sum),
+						.alu_zero = adder.back().CO(),
+						.alu_overflow = adder[30].CO() ^ adder.back().CO(),
+						.alu_sign = adder.back().S(),
+						.alu_carry = adder.back().CO(),
+					};
 				};
 		}
 #endif

@@ -32,8 +32,8 @@ namespace gtry::scl::rivet::mod
 	public:
 		ShiftUnitSequential()
 		{
-			Base::addInstr(InstrDef{ .name = "SH",	.opcode = "01100", .func3 = "-01", .encoding = InstrEncoding::R, .sumSrc = {{OperandSource::Reg, OperandSource::Reg}},	.resultSource = "Shift" });
-			Base::addInstr(InstrDef{ .name = "SHI",	.opcode = "00100", .func3 = "-01", .encoding = InstrEncoding::I, .sumSrc = {{OperandSource::Reg, OperandSource::Imm}},	.resultSource = "Shift" });
+			Base::addInstr(InstrDef{ .name = "SH",	.opcode = "01100", .func3 = "-01", .encoding = InstrEncoding::R, .aluSrc = {{OperandSource::Reg, OperandSource::Reg}},	.resultSource = "Shift" });
+			Base::addInstr(InstrDef{ .name = "SHI",	.opcode = "00100", .func3 = "-01", .encoding = InstrEncoding::I, .aluSrc = {{OperandSource::Reg, OperandSource::Imm}},	.resultSource = "Shift" });
 		}
 
 	protected:
@@ -44,9 +44,9 @@ namespace gtry::scl::rivet::mod
 				{
 					Area ent{ "rivet_bitshift", true };
 
-					const OperandsSum& operand = get<OperandsSum>(in);
-					UInt valueInitial = (UInt)operand.sum_operand[0] | name("valueInitial");
-					UInt amount = (UInt)operand.sum_operand[1](0, 5_b) | name("amount");
+					const AluOperands& operand = get<AluOperands>(in);
+					UInt valueInitial = (UInt)operand.alu_operand[0] | name("valueInitial");
+					UInt amount = (UInt)operand.alu_operand[1](0, 5_b) | name("amount");
 
 					const InstrOpcode& instr = get<InstrOpcode>(in);
 					Bit right = instr.instr[14] | name("right");

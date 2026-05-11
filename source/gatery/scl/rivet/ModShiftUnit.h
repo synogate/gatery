@@ -30,10 +30,10 @@ namespace gtry::scl::rivet::mod
 	public:
 		ShiftUnit()
 		{
-			Base::addInstr(InstrDef{ .name = "SLL",		.opcode = "01100", .func3 = "001", .encoding = InstrEncoding::R, .sumSrc = {{OperandSource::Reg, OperandSource::Reg}}, .resultSource = "ShiftLeft" });
-			Base::addInstr(InstrDef{ .name = "SLLI",	.opcode = "00100", .func3 = "001", .encoding = InstrEncoding::I, .sumSrc = {{OperandSource::Reg, OperandSource::Imm}}, .resultSource = "ShiftLeft" });
-			Base::addInstr(InstrDef{ .name = "SR",		.opcode = "01100", .func3 = "101", .encoding = InstrEncoding::R, .sumSrc = {{OperandSource::Reg, OperandSource::Reg}}, .resultSource = "ShiftRight" });
-			Base::addInstr(InstrDef{ .name = "SRI",		.opcode = "00100", .func3 = "101", .encoding = InstrEncoding::I, .sumSrc = {{OperandSource::Reg, OperandSource::Imm}}, .resultSource = "ShiftRight" });
+			Base::addInstr(InstrDef{ .name = "SLL",		.opcode = "01100", .func3 = "001", .encoding = InstrEncoding::R, .aluSrc = {{OperandSource::Reg, OperandSource::Reg}}, .resultSource = "ShiftLeft" });
+			Base::addInstr(InstrDef{ .name = "SLLI",	.opcode = "00100", .func3 = "001", .encoding = InstrEncoding::I, .aluSrc = {{OperandSource::Reg, OperandSource::Imm}}, .resultSource = "ShiftLeft" });
+			Base::addInstr(InstrDef{ .name = "SR",		.opcode = "01100", .func3 = "101", .encoding = InstrEncoding::R, .aluSrc = {{OperandSource::Reg, OperandSource::Reg}}, .resultSource = "ShiftRight" });
+			Base::addInstr(InstrDef{ .name = "SRI",		.opcode = "00100", .func3 = "101", .encoding = InstrEncoding::I, .aluSrc = {{OperandSource::Reg, OperandSource::Imm}}, .resultSource = "ShiftRight" });
 		}
 
 	protected:
@@ -42,18 +42,18 @@ namespace gtry::scl::rivet::mod
 		{
 			return [this](StreamSignal auto&& in) {
 				return move(in) |
-					Base::attach([this](const ResultCollection& in, const OperandsSum& operand, const InstrOpcode& instr) { return shift(in, operand, instr); })
+					Base::attach([this](const ResultCollection& in, const AluOperands& operand, const InstrOpcode& instr) { return shift(in, operand, instr); })
 					;
 				};
 		}
 
-		ResultCollection shift(const ResultCollection& in, const OperandsSum& operand, const InstrOpcode& instr)
+		ResultCollection shift(const ResultCollection& in, const AluOperands& operand, const InstrOpcode& instr)
 		{
 			Area ent{ "rivet_bitshift", true };
 			ResultCollection ret = in;
 
-			UInt value = (UInt)operand.sum_operand[0] | name("value");
-			UInt amount = (UInt)operand.sum_operand[1](0, 5_b) | name("amount");
+			UInt value = (UInt)operand.alu_operand[0] | name("value");
+			UInt amount = (UInt)operand.alu_operand[1](0, 5_b) | name("amount");
 
 			UInt shiftLeft = (value << amount) | name("shl");
 			ret.result.push_back({ "ShiftLeft", shiftLeft });

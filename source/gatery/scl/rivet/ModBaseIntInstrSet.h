@@ -33,42 +33,43 @@ namespace gtry::scl::rivet::mod
 	public:
 		BaseIntInstrSet()
 		{
-			Base::addInstr(InstrDef{ .name = "LUI",		.opcode = "01101", .encoding = InstrEncoding::U, .sumSrc = { {OperandSource::Zero, OperandSource::Imm} },	.resultSource = "Sum" });
-			Base::addInstr(InstrDef{ .name = "AUIPC",	.opcode = "00101", .encoding = InstrEncoding::U,	.sumSrc = {{OperandSource::IP, OperandSource::Imm}},	.resultSource = "Sum" });
-			Base::addInstr(InstrDef{ .name = "ADD",		.opcode = "01100", .func3 = "000", .encoding = InstrEncoding::R, .sumSrc = {{OperandSource::Reg, OperandSource::Reg}}, .difSrc = {{OperandSource::Reg, OperandSource::Reg}}, .resultSource = "AddInstr" });
-			Base::addInstr(InstrDef{ .name = "ADDI",	.opcode = "00100", .func3 = "000", .encoding = InstrEncoding::I, .sumSrc = {{OperandSource::Reg, OperandSource::Imm}}, .resultSource = "Sum" });
-			Base::addInstr(InstrDef{ .name = "XOR",		.opcode = "01100", .func3 = "100", .encoding = InstrEncoding::R, .sumSrc = {{OperandSource::Reg, OperandSource::Reg}}, .resultSource = "LogicXor" });
-			Base::addInstr(InstrDef{ .name = "XORI",	.opcode = "00100", .func3 = "100", .encoding = InstrEncoding::I, .sumSrc = {{OperandSource::Reg, OperandSource::Imm}}, .resultSource = "LogicXor" });
-			Base::addInstr(InstrDef{ .name = "OR",		.opcode = "01100", .func3 = "110", .encoding = InstrEncoding::R, .sumSrc = {{OperandSource::Reg, OperandSource::Reg}}, .resultSource = "LogicOr" });
-			Base::addInstr(InstrDef{ .name = "ORI",		.opcode = "00100", .func3 = "110", .encoding = InstrEncoding::I, .sumSrc = {{OperandSource::Reg, OperandSource::Imm}}, .resultSource = "LogicOr" });
-			Base::addInstr(InstrDef{ .name = "AND",		.opcode = "01100", .func3 = "111", .encoding = InstrEncoding::R, .sumSrc = {{OperandSource::Reg, OperandSource::Reg}}, .resultSource = "LogicAnd" });
-			Base::addInstr(InstrDef{ .name = "ANDI",	.opcode = "00100", .func3 = "111", .encoding = InstrEncoding::I, .sumSrc = {{OperandSource::Reg, OperandSource::Imm}}, .resultSource = "LogicAnd" });
-			Base::addInstr(InstrDef{ .name = "SETCMP",	.opcode = "01100", .func3 = "01-", .encoding = InstrEncoding::R, .difSrc = {{OperandSource::Reg, OperandSource::Reg}}, .resultSource = "Cmp" });
-			Base::addInstr(InstrDef{ .name = "SETCMPI",	.opcode = "00100", .func3 = "01-", .encoding = InstrEncoding::I, .difSrc = {{OperandSource::Reg, OperandSource::Imm}}, .resultSource = "Cmp" });
+			Base::addInstr(InstrDef{ .name = "LUI",		.opcode = "01101", .encoding = InstrEncoding::U, .aluSrc = { {OperandSource::DontCare, OperandSource::Imm} },	.aluMode = AluMode::B,				.resultSource = "Alu" });
+			Base::addInstr(InstrDef{ .name = "AUIPC",	.opcode = "00101", .encoding = InstrEncoding::U, .aluSrc = { {OperandSource::IP, OperandSource::Imm}},			.aluMode = AluMode::Add,			.resultSource = "Alu" });
 
-			Base::addInstr(InstrDef{ .name = "JAL",		.opcode = "11011", .encoding = InstrEncoding::UJ,	.sumSrc = {{OperandSource::IP, OperandSource::Imm}},	.difSrc = {{OperandSource::IP, OperandSource::InvInstrSize}},	.resultSource = "Diff", .jmpTarget = "Sum" });
-			Base::addInstr(InstrDef{ .name = "JALR",	.opcode = "11001", .encoding = InstrEncoding::I,	.sumSrc = {{OperandSource::Reg, OperandSource::Imm}},	.difSrc = {{OperandSource::IP, OperandSource::InvInstrSize}},	.resultSource = "Diff", .jmpTarget = "Sum" });
-			Base::addInstr(InstrDef{ .name = "BRA",		.opcode = "11000", .encoding = InstrEncoding::SB,	.sumSrc = {{OperandSource::IP, OperandSource::Imm}},	.difSrc = {{OperandSource::Reg, OperandSource::Reg}},			.jmpTarget = "Sum" });
+			Base::addInstr(InstrDef{ .name = "ADDI",	.opcode = "00100", .func3 = "000", .encoding = InstrEncoding::I, .aluSrc = {{OperandSource::Reg, OperandSource::Imm}},	.aluMode = AluMode::Add,	.resultSource = "Alu" });
+			Base::addInstr(InstrDef{ .name = "XORI",	.opcode = "00100", .func3 = "100", .encoding = InstrEncoding::I, .aluSrc = {{OperandSource::Reg, OperandSource::Imm}},	.aluMode = AluMode::Xor,	.resultSource = "Alu" });
+			Base::addInstr(InstrDef{ .name = "ORI",		.opcode = "00100", .func3 = "110", .encoding = InstrEncoding::I, .aluSrc = {{OperandSource::Reg, OperandSource::Imm}},	.aluMode = AluMode::Or,		.resultSource = "Alu" });
+			Base::addInstr(InstrDef{ .name = "ANDI",	.opcode = "00100", .func3 = "111", .encoding = InstrEncoding::I, .aluSrc = {{OperandSource::Reg, OperandSource::Imm}},	.aluMode = AluMode::And,	.resultSource = "Alu" });
+			Base::addInstr(InstrDef{ .name = "SETCMPI",	.opcode = "00100", .func3 = "01-", .encoding = InstrEncoding::I, .aluSrc = {{OperandSource::Reg, OperandSource::Imm}},	.aluMode = AluMode::Less,	.resultSource = "Cmp" });
+			
+			Base::addInstr(InstrDef{ .name = "ADD",		.opcode = "01100", .func3 = "000", .encoding = InstrEncoding::R, .aluSrc = {{OperandSource::Reg, OperandSource::Reg}},	.aluMode = AluMode::Arith,	.resultSource = "Alu" });
+			Base::addInstr(InstrDef{ .name = "XOR",		.opcode = "01100", .func3 = "100", .encoding = InstrEncoding::R, .aluSrc = {{OperandSource::Reg, OperandSource::Reg}},	.aluMode = AluMode::Xor,	.resultSource = "Alu" });
+			Base::addInstr(InstrDef{ .name = "OR",		.opcode = "01100", .func3 = "110", .encoding = InstrEncoding::R, .aluSrc = {{OperandSource::Reg, OperandSource::Reg}},	.aluMode = AluMode::Or,		.resultSource = "Alu" });
+			Base::addInstr(InstrDef{ .name = "AND",		.opcode = "01100", .func3 = "111", .encoding = InstrEncoding::R, .aluSrc = {{OperandSource::Reg, OperandSource::Reg}},	.aluMode = AluMode::And,	.resultSource = "Alu" });
+			Base::addInstr(InstrDef{ .name = "SETCMP",	.opcode = "01100", .func3 = "01-", .encoding = InstrEncoding::R, .aluSrc = {{OperandSource::Reg, OperandSource::Reg}},	.aluMode = AluMode::Less,	.resultSource = "Cmp" });
+
+			Base::addInstr(InstrDef{ .name = "JAL",		.opcode = "11011", .encoding = InstrEncoding::UJ,	.sumSrc = {{OperandSource::IP, OperandSource::Imm}},	.aluSrc = {{OperandSource::IP, OperandSource::InstrSize}},	.aluMode = AluMode::Add, .resultSource = "Alu", .jmpTarget = "Sum" });
+			Base::addInstr(InstrDef{ .name = "JALR",	.opcode = "11001", .encoding = InstrEncoding::I,	.sumSrc = {{OperandSource::Reg, OperandSource::Imm}},	.aluSrc = {{OperandSource::IP, OperandSource::InstrSize}},	.aluMode = AluMode::Add, .resultSource = "Alu", .jmpTarget = "Sum" });
+			Base::addInstr(InstrDef{ .name = "BRAEQ",	.opcode = "11000", .func3 = "00-", .encoding = InstrEncoding::SB,	.sumSrc = {{OperandSource::IP, OperandSource::Imm}},	.aluSrc = {{OperandSource::Reg, OperandSource::Reg}},		.aluMode = AluMode::Equal,		.jmpTarget = "Sum" });
+			Base::addInstr(InstrDef{ .name = "BRALT",	.opcode = "11000", .func3 = "1--", .encoding = InstrEncoding::SB,	.sumSrc = {{OperandSource::IP, OperandSource::Imm}},	.aluSrc = {{OperandSource::Reg, OperandSource::Reg}},		.aluMode = AluMode::Less,		.jmpTarget = "Sum" });
 		}
 
 	protected:
 
 		auto selectAluResults()
 		{
-			return [this](const ResultCollection& in, const InstrOpcode& instr, const AluDiff& diff, const AluSum& sum, const OperandsSum& op)
+			return [this](const ResultCollection& in, const InstrOpcode& instr, const AluResult& alu, const SumResult& sum, const SumOperands& op)
 				{
 					ResultCollection ret = in;
-					ret.set({ "AddInstr", mux(instr.instr[30], { sum.sum, diff.diff }) });
-					ret.set({ "Sum", sum.sum });
-					ret.set({ "Diff", diff.diff });
-					ret.set({ "LogicXor", op.sum_operand[0] ^ op.sum_operand[1] });
-					ret.set({ "LogicOr",  op.sum_operand[0] | op.sum_operand[1] });
-					ret.set({ "LogicAnd", op.sum_operand[0] & op.sum_operand[1] });
+					ret.set({ "Alu", alu.alu_result });
+					ret.set({ "Sum", sum.sum_result });
 
-					Bit lt = !diff.diff_carry; // unsigned
+					Bit lt = !alu.alu_carry; // unsigned
 					IF(instr.instr[12] == '0')
-						lt = diff.diff_sign != diff.diff_overflow;
-					ret.set({ "Cmp", zext(lt, Base::dataPathW()) });
+						lt = alu.alu_sign != alu.alu_overflow; // signed
+					ret.set({ "Cmp", zext(lt) });
+
+
 					return ret;
 				};
 		}

@@ -99,7 +99,7 @@ namespace gtry::scl::rivet::mod
 				if (selector[i] && source[i])
 				{
 					if (!out) out = *selector[i] & *source[i];
-					else *out |= *selector[i] & *source[i];
+					else *out |= zext(*selector[i] & *source[i]);
 				}
 			return out;
 		}

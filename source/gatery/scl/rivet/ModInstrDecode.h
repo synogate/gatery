@@ -18,6 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 #include "../stream/strm.h"
+#include "../utils/OneHot.h"
 
 #include "ModInstrFetch.h"
 #include "ModRegisterFile.h"
@@ -91,7 +92,7 @@ namespace gtry::scl::rivet::mod
 					source[(size_t)OperandSource::IP] = zext(ip.instrPtr, Base::dataPathW());
 					source[(size_t)OperandSource::Imm] = imm.imm;
 					source[(size_t)OperandSource::Zero] = ConstBVec(0, Base::dataPathW());
-					source[(size_t)OperandSource::InvInstrSize] = invInstrSize(size);
+					source[(size_t)OperandSource::InstrSize] = decoder(size.instrLogSize);
 					source[(size_t)OperandSource::CSR] = csr.csrReadData;
 
 					BVec out[2];

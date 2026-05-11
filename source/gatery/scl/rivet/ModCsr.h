@@ -42,10 +42,10 @@ namespace gtry::scl::rivet::mod
 		Csr()
 		{
 			// simplified decoding for read only csr implementation
-			Base::addInstr(InstrDef{ .name = "CSRRRW",	.opcode = "11100", .func3 = "001", .sumSrc = {{OperandSource::Zero, OperandSource::CSR}}, .resultSource = "Sum"});
-			Base::addInstr(InstrDef{ .name = "CSRRRS",	.opcode = "11100", .func3 = "010", .sumSrc = {{OperandSource::Zero, OperandSource::CSR}}, .resultSource = "Sum"});
-			Base::addInstr(InstrDef{ .name = "CSRRCI",	.opcode = "11100", .func3 = "011", .sumSrc = {{OperandSource::Zero, OperandSource::CSR}}, .resultSource = "Sum"});
-			Base::addInstr(InstrDef{ .name = "CSRRI",	.opcode = "11100", .func3 = "1--", .sumSrc = {{OperandSource::Zero, OperandSource::CSR}}, .resultSource = "Sum"});
+			Base::addInstr(InstrDef{ .name = "CSRRRW",	.opcode = "11100", .func3 = "001", .aluSrc = {{OperandSource::CSR, OperandSource::DontCare}}, .aluMode = AluMode::A, .resultSource = "Alu"});
+			Base::addInstr(InstrDef{ .name = "CSRRRS",	.opcode = "11100", .func3 = "010", .aluSrc = {{OperandSource::CSR, OperandSource::DontCare}}, .aluMode = AluMode::A, .resultSource = "Alu"});
+			Base::addInstr(InstrDef{ .name = "CSRRCI",	.opcode = "11100", .func3 = "011", .aluSrc = {{OperandSource::CSR, OperandSource::DontCare}}, .aluMode = AluMode::A, .resultSource = "Alu"});
+			Base::addInstr(InstrDef{ .name = "CSRRI",	.opcode = "11100", .func3 = "1--", .aluSrc = {{OperandSource::CSR, OperandSource::DontCare}}, .aluMode = AluMode::A, .resultSource = "Alu"});
 		}
 
 		void addCsrReadOnly(size_t addr, const BVec& value) { m_register.push_back({ addr, value }); }

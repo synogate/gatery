@@ -28,7 +28,7 @@ namespace gtry::scl::rivet::mod
 
 		auto selectMemCtrl()
 		{
-			return [this](const MemCtrl& in, const InstrOpcode& instr, const AluSum& sum, const OperandsDiff& diff)
+			return [this](const MemCtrl& in, const InstrOpcode& instr, const SumResult& sum, const AluOperands& diff)
 				{
 					MemCtrl ctrl = Base::selectMemCtrl()(in, instr, sum, diff);
 
@@ -56,7 +56,7 @@ namespace gtry::scl::rivet::mod
 
 		auto shiftMemReadData()
 		{
-			return [this](const MemCtrl& ctrl, const ResultCollection& in)
+			return [this](const MemCtrl& ctrl, const ResultCollection& in, const InstrOpcode& instr)
 				{
 					ResultCollection results = in;
 					auto it = std::ranges::find(results.result, "Mem", &ExecResult::name);
@@ -69,7 +69,13 @@ namespace gtry::scl::rivet::mod
 					{
 						const UInt& subAddr = ctrl.memAddress(logSize, BitWidth{ utils::Log2(wordW.bytes()) - logSize });
 						size_t parts = wordW.bytes() / (1ull << logSize);
-						alignedData[logSize] = zext(it->value.part(parts, subAddr), wordW) | name(std::format("LoadStoreSubword_readdata_log{}", logSize));
+
+						BVec selectedWord = it->value.part(parts, subAddr) | name(std::format("LoadStoreSubword_read_log{}_word", logSize));
+						BVec extension = ConstBVec(0, wordW - selectedWord.width());
+						if(!extension.empty())
+							extension = extension | (selectedWord.msb() & !instr.instr[14] | name(std::format("LoadStoreSubword_read_log{}_extend", logSize)));
+
+						alignedData[logSize] = cat(extension, selectedWord) | name(std::format("LoadStoreSubword_read_log{}_data", logSize));
 					}
 
 					it->value = mux(ctrl.memLogSize, alignedData);

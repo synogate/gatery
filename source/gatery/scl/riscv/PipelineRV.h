@@ -91,12 +91,14 @@ namespace gtry::scl::rivet
 				{
 					return move(in) |
 						attach(addInstrName()) | // move to instr name class
-						strm::then(checkForIllegalInstructionCode()) | // move to seperate class
+						strm::then(checkForIllegalInstructionCode()) | // move to separate class
 						attach(decodeImmediate()) |
 						attach(addCsrCtrl()) |
 						attach(addRegCtrl()) |
 						attach(addJmpCtrl()) |
-						attach(addMemCtrl());
+						attach(addMemCtrl()) |
+						attach(ecallDecode()) |
+						attach(aluDecode());
 				};
 		}
 
@@ -106,8 +108,8 @@ namespace gtry::scl::rivet
 					return move(in) |
 						attach(readRegisterFile()) |
 						attach(selectCsrReadData()) |
-						attach(selectOperands<OperandsSum>("sum", &InstrDef::sumSrc)) |
-						attach(selectOperands<OperandsDiff>("diff", &InstrDef::difSrc));
+						attach(selectOperands<SumOperands>("sum", &InstrDef::sumSrc)) |
+						attach(selectOperands<AluOperands>("diff", &InstrDef::aluSrc));
 				};
 		}
 
@@ -116,12 +118,11 @@ namespace gtry::scl::rivet
 				{
 					return move(in) |
 						strm::attach(ResultCollection{}) |
-						attach(aluDiff()) |
+						attach(aluExecute()) |
 						attach(aluSum()) |
 						attach(selectAluResults()) |
 						attach(selectMemCtrl()) |
-						shiftUnit() |
-						attach(ecallUnit());
+						shiftUnit();
 				};
 		}
 
@@ -156,7 +157,7 @@ namespace gtry::scl::rivet
 
 				strm::removeReady('1') |
 				name("result");
-
+			//tap(ret);
 			resultLoopBack(move(ret));
 		}
 	};

@@ -72,4 +72,65 @@ namespace gtry::scl::arch::colognechip
 	private:
 		Bit m_simQ;
 	};
+
+	class CC_DLT : public ExternalModule
+	{
+	public:
+		CC_DLT();
+
+		Bit& D() { return in("D"); }
+		Bit& G() { return in("G"); }
+		Bit& SR() { return in("SR"); }
+		Bit Q() { return out("Q"); }
+
+		CC_DLT& gInv(bool invert) { generic("G_INV") = invert ? 1 : 0; return *this; }
+		CC_DLT& srInv(bool invert) { generic("SR_INV") = invert ? 1 : 0; return *this; }
+		CC_DLT& srVal(bool value) { generic("SR_VAL") = value ? 1 : 0; return *this; }
+		CC_DLT& init(bool value) { generic("INIT") = value ? 1 : 0; return *this; }
+	};
+
+	class CC_MX2 : public ExternalModule
+	{
+	public:
+		CC_MX2() : ExternalModule("CC_MX2") {
+			requiresComponentDeclaration(true);
+			isEntity(false);
+
+			m_Y = simOverride(out("Y"), mux(S0(), { D0(), D1() }));
+		}
+
+		Bit& D0() { return in("D0"); }
+		Bit& D1() { return in("D1"); }
+		Bit& S0() { return in("S0"); }
+
+		const Bit& Y() { return m_Y; }
+
+	private:
+		Bit m_Y;
+	};
+
+	class CC_MX4 : public ExternalModule
+	{
+	public:
+		CC_MX4() : ExternalModule("CC_MX4") {
+			requiresComponentDeclaration(true);
+			isEntity(false);
+
+			m_Y = simOverride(out("Y"), mux(cat(S1(), S0()), { D0(), D1(), D2(), D3() }));
+		}
+
+		Bit& D0() { return in("D0"); }
+		Bit& D1() { return in("D1"); }
+		Bit& D2() { return in("D2"); }
+		Bit& D3() { return in("D3"); }
+		Bit& S0() { return in("S0"); }
+		Bit& S1() { return in("S1"); }
+
+		const Bit& Y() { return m_Y; }
+
+	private:
+		Bit m_Y;
+	};
+
+
 }
