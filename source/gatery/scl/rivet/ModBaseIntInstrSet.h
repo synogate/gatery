@@ -50,8 +50,12 @@ namespace gtry::scl::rivet::mod
 
 			Base::addInstr(InstrDef{ .name = "JAL",		.opcode = "11011", .encoding = InstrEncoding::UJ,	.sumSrc = {{OperandSource::IP, OperandSource::Imm}},	.aluSrc = {{OperandSource::IP, OperandSource::InstrSize}},	.aluMode = AluMode::Add, .resultSource = "Alu", .jmpTarget = "Sum" });
 			Base::addInstr(InstrDef{ .name = "JALR",	.opcode = "11001", .encoding = InstrEncoding::I,	.sumSrc = {{OperandSource::Reg, OperandSource::Imm}},	.aluSrc = {{OperandSource::IP, OperandSource::InstrSize}},	.aluMode = AluMode::Add, .resultSource = "Alu", .jmpTarget = "Sum" });
-			Base::addInstr(InstrDef{ .name = "BRAEQ",	.opcode = "11000", .func3 = "00-", .encoding = InstrEncoding::SB,	.sumSrc = {{OperandSource::IP, OperandSource::Imm}},	.aluSrc = {{OperandSource::Reg, OperandSource::Reg}},		.aluMode = AluMode::Equal,		.jmpTarget = "Sum" });
-			Base::addInstr(InstrDef{ .name = "BRALT",	.opcode = "11000", .func3 = "1--", .encoding = InstrEncoding::SB,	.sumSrc = {{OperandSource::IP, OperandSource::Imm}},	.aluSrc = {{OperandSource::Reg, OperandSource::Reg}},		.aluMode = AluMode::Less,		.jmpTarget = "Sum" });
+			Base::addInstr(InstrDef{ .name = "BEQ",		.opcode = "11000", .func3 = "000", .encoding = InstrEncoding::SB,	.sumSrc = {{OperandSource::IP, OperandSource::Imm}},	.aluSrc = {{OperandSource::Reg, OperandSource::Reg}},		.aluMode = AluMode::Equal,		.jmpTarget = "Sum" });
+			Base::addInstr(InstrDef{ .name = "BNE",		.opcode = "11000", .func3 = "001", .encoding = InstrEncoding::SB,	.sumSrc = {{OperandSource::IP, OperandSource::Imm}},	.aluSrc = {{OperandSource::Reg, OperandSource::Reg}},		.aluMode = AluMode::Equal,		.jmpTarget = "Sum" });
+			Base::addInstr(InstrDef{ .name = "BLT",		.opcode = "11000", .func3 = "100", .encoding = InstrEncoding::SB,	.sumSrc = {{OperandSource::IP, OperandSource::Imm}},	.aluSrc = {{OperandSource::Reg, OperandSource::Reg}},		.aluMode = AluMode::Less,		.jmpTarget = "Sum" });
+			Base::addInstr(InstrDef{ .name = "BGE",		.opcode = "11000", .func3 = "101", .encoding = InstrEncoding::SB,	.sumSrc = {{OperandSource::IP, OperandSource::Imm}},	.aluSrc = {{OperandSource::Reg, OperandSource::Reg}},		.aluMode = AluMode::Less,		.jmpTarget = "Sum" });
+			Base::addInstr(InstrDef{ .name = "BLTU",	.opcode = "11000", .func3 = "110", .encoding = InstrEncoding::SB,	.sumSrc = {{OperandSource::IP, OperandSource::Imm}},	.aluSrc = {{OperandSource::Reg, OperandSource::Reg}},		.aluMode = AluMode::Less,		.jmpTarget = "Sum" });
+			Base::addInstr(InstrDef{ .name = "BGEU",	.opcode = "11000", .func3 = "111", .encoding = InstrEncoding::SB,	.sumSrc = {{OperandSource::IP, OperandSource::Imm}},	.aluSrc = {{OperandSource::Reg, OperandSource::Reg}},		.aluMode = AluMode::Less,		.jmpTarget = "Sum" });
 		}
 
 	protected:

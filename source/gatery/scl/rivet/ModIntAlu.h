@@ -46,6 +46,7 @@ namespace gtry::scl::rivet
 		Bit alu_overflow;
 		Bit alu_sign;
 		Bit alu_carry;
+		Bit alu_carry2;
 	};
 }
 
@@ -74,6 +75,7 @@ namespace gtry::scl::rivet::mod
 			.alu_overflow = carry[carry.size() - 2] ^ carry.msb(),
 			.alu_sign = sum.msb(),
 			.alu_carry = carry.msb(),
+			.alu_carry2 = carry[carry.size() - 2],
 		};
 	}
 
@@ -131,5 +133,5 @@ namespace gtry::scl::rivet::mod
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::rivet::SumOperands, sum_operand);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::rivet::AluOperands, alu_operand);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::rivet::SumResult, sum_result);
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::rivet::AluResult, alu_result, alu_zero, alu_overflow, alu_sign, alu_carry);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::rivet::AluResult, alu_result, alu_zero, alu_overflow, alu_sign, alu_carry, alu_carry2);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::rivet::mod::AluCtrl, alu_truthTable, alu_carryIn, alu_enSumInputA);

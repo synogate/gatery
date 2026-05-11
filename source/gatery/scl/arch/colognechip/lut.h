@@ -132,5 +132,120 @@ namespace gtry::scl::arch::colognechip
 		Bit m_Y;
 	};
 
+	class CC_L2T4 : public ExternalModule
+	{
+	public:
+		CC_L2T4() : ExternalModule("CC_L2T4") {
+			requiresComponentDeclaration(true);
+			isEntity(false);
 
+			I0() = '0';
+			I1() = '0';
+			I2() = '0';
+			I3() = '0';
+
+			l00(0);
+			l01(0);
+			l10(0);
+		}
+
+		CC_L2T4& l00(size_t truthTable) { return lut2(0, truthTable); }
+		CC_L2T4& l01(size_t truthTable) { return lut2(1, truthTable); }
+		CC_L2T4& l10(size_t truthTable) { return lut2(2, truthTable); }
+
+		CC_L2T4& lut2(size_t id, size_t truthTable)
+		{
+			HCL_ASSERT(id < m_table.size());
+			HCL_ASSERT(truthTable < 16);
+			m_table[id] = uint8_t(truthTable);
+			generic(std::format("INIT_L{}{}", id / 2, id % 2)) = truthTable;
+			m_simDirty = true;
+			return *this;
+		}
+
+		void updateSim()
+		{
+			Bit o00 = mux(cat(I1(), I0()), ConstUInt(m_table[0], 4_b));
+			Bit o01 = mux(cat(I3(), I2()), ConstUInt(m_table[1], 4_b));
+			Bit o10 = mux(cat(o01, o00), ConstUInt(m_table[2], 4_b));
+			m_O = simOverride(out("O"), o10);
+			m_simDirty = false;
+		}
+
+		Bit& I0() { return in("I0"); }
+		Bit& I1() { return in("I1"); }
+		Bit& I2() { return in("I2"); }
+		Bit& I3() { return in("I3"); }
+
+		Bit O() const { return final(m_O); }
+
+	private:
+		Bit m_O;
+
+		std::array<uint8_t, 3> m_table;
+		bool m_simDirty = true;
+	};
+
+	class CC_L2T5 : public ExternalModule
+	{
+	public:
+		CC_L2T5() : ExternalModule("CC_L2T5") {
+			requiresComponentDeclaration(true);
+			isEntity(false);
+
+			I0() = '0';
+			I1() = '0';
+			I2() = '0';
+			I3() = '0';
+			I4() = 'X';
+
+			l00(0);
+			l01(0);
+			l10(0);
+			l20(0);
+		}
+
+		CC_L2T5& l00(size_t truthTable) { return lut2(0, truthTable); }
+		CC_L2T5& l01(size_t truthTable) { return lut2(1, truthTable); }
+		CC_L2T5& l10(size_t truthTable) { return lut2(2, truthTable); }
+		CC_L2T5& l20(size_t truthTable) { return lut2(3, truthTable); }
+
+		CC_L2T5& lut2(size_t id, size_t truthTable)
+		{
+			HCL_ASSERT(id < m_table.size());
+			HCL_ASSERT(truthTable < 16);
+			m_table[id] = uint8_t(truthTable);
+			std::string_view names[] = { "INIT_L02", "INIT_L03", "INIT_L11", "INIT_L20" };
+			generic(names[id]) = truthTable;
+			m_simDirty = true;
+			return *this;
+		}
+
+		void updateSim()
+		{
+			Bit o00 = mux(cat(I1(), I0()), ConstUInt(m_table[0], 4_b));
+			Bit o01 = mux(cat(I3(), I2()), ConstUInt(m_table[1], 4_b));
+			Bit o10 = mux(cat(o01, o00), ConstUInt(m_table[2], 4_b));
+			Bit o20 = mux(cat(o10, I4()), ConstUInt(m_table[3], 4_b));
+			m_O = simOverride(out("O"), o20);
+			m_simDirty = false;
+		}
+
+		Bit& I0() { return in("I0"); }
+		Bit& I1() { return in("I1"); }
+		Bit& I2() { return in("I2"); }
+		Bit& I3() { return in("I3"); }
+
+		// this input needs to be from another L2T4
+		Bit& I4() { return in("I4"); }
+		void I4(const CC_L2T4& in) { I4() = in.O(); }
+
+		Bit O() const { return final(m_O); }
+
+	private:
+		Bit m_O;
+
+		std::array<uint8_t, 4> m_table;
+		bool m_simDirty = true;
+	};
 }

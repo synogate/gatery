@@ -98,6 +98,7 @@ namespace gtry::scl::rivet
 						attach(addJmpCtrl()) |
 						attach(addMemCtrl()) |
 						attach(ecallDecode()) |
+						attach(branchDecode()) |
 						attach(aluDecode());
 				};
 		}
@@ -152,7 +153,7 @@ namespace gtry::scl::rivet
 				dataMem() |
 				attach(shiftMemReadData()) |
 				stageResults() |
-				attach(makeBranchDecision()) |
+				attach(branchDecision()) |
 				pipelineStage("execute") |
 
 				strm::removeReady('1') |

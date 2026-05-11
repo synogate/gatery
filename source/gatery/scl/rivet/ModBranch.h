@@ -28,7 +28,15 @@ namespace gtry::scl::rivet::mod
 	{
 	protected:
 
-		auto makeBranchDecision()
+		auto branchDecode()
+		{
+			return [this]()
+				{
+					return Nothing{};
+				};
+		}
+
+		auto branchDecision()
 		{
 			return [this](const JmpCtrl& in, const AluResult& flags, const InstrOpcode& instr)
 				{
@@ -44,7 +52,7 @@ namespace gtry::scl::rivet::mod
 					std::vector<MatchValue> actions;
 					actions.reserve(Base::instructions().size());
 					for (const InstrDef& def : Base::instructions())
-						if (def.name.starts_with("BRA"))
+						if (!def.jmpTarget.empty() && def.name.starts_with("B"))
 							actions.push_back(MatchValue::Low);
 						else if (def.jmpTarget.empty())
 							actions.push_back(MatchValue::DontCare);

@@ -26,12 +26,131 @@
 
 namespace gtry::scl::rivet::mod
 {
+	struct GateMateBranchCtrl
+	{
+		Bit carryInvert;
+		Bit enSigned;
+		Bit enCarry;
+	};
+
 	template<typename Base>
 	class GateMate : public Base
 	{
 	public:
 
 	protected:
+
+#if 1
+		auto branchDecode()
+		{
+			return [this](const InstrOpcode& instr)
+				{
+					/*
+						BEQ = Carry (our alu outputs carry in equal mode)
+						BNE = !Carry
+						BLT = Sign ^ Carry ^ Carry-1
+						BGE = !(Sign ^ Carry ^ Carry-1)
+						BLTU = !Carry
+						BGEU = Carry
+
+						We split the branch decision into two pieces. One for the signed contribution and one for everything else:
+						((Sign ^ Carry-1) & enSigned) ^ ((Carry ^ carryInvert) & enCarry)
+
+						BEQ = enCarry
+						BNE = enCarry, carryInvert
+						BLT = enCarry, enSigned
+						BGE = enCarry, enSigned, carryInvert
+						BLTU= enCarry, carryInvert
+						BGEU= enCarry
+
+						JAL and JALR both use the alu to add IP + InstrSize, which we assume never produces a carry.
+						We therefore treat them as BNE
+
+						JAL = enCarry, carryInvert
+						JALR= enCarry, carryInvert
+					*/
+					GateMateBranchCtrl ctrl;
+
+					// enSigned
+					std::vector<MatchValue> actions;
+					actions.reserve(Base::instructions().size());
+					for (const InstrDef& def : Base::instructions())
+						if (def.name == "BLT" || def.name == "BGE")
+							actions.push_back(MatchValue::High);
+						else
+							actions.push_back(MatchValue::Low);
+
+					ctrl.enSigned = Base::findInstrCondition(instr, actions).value_or('0');
+
+					// enCarry
+					actions.clear();
+					for (const InstrDef& def : Base::instructions())
+						if (!def.jmpTarget.empty())
+							actions.push_back(MatchValue::High);
+						else
+							actions.push_back(MatchValue::Low);
+
+					ctrl.enCarry = Base::findInstrCondition(instr, actions).value_or('0');
+
+					// carryInvert is dontCare when enCarry is low
+					actions.clear();
+					for (const InstrDef& def : Base::instructions())
+						if (def.jmpTarget.empty())
+							actions.push_back(MatchValue::DontCare);
+						else if (def.name != "BEQ" && def.name != "BLT" && def.name != "BGEU") 
+							// inverse condition to include custom added jump target (carry has to be low for this to work)
+							actions.push_back(MatchValue::High);
+						else
+							actions.push_back(MatchValue::Low);
+
+					ctrl.carryInvert = Base::findInstrCondition(instr, actions).value_or('0');
+
+					return ctrl;
+				};
+		}
+
+		auto branchDecision()
+		{
+			return [this](const JmpCtrl& in, const AluResult& flags, const GateMateBranchCtrl& ctrl)
+				{
+					arch::colognechip::CC_L2T4 upper;
+
+					// Sign ^ Carry-1
+					upper.l00(0b0110);
+					upper.I0() = flags.alu_carry2;
+					upper.I1() = flags.alu_sign;
+
+					// (Sign ^ Carry-1) & enSigned
+					upper.l01(0b1010);
+					upper.I2() = ctrl.enSigned;
+					upper.l10(0b1000);
+
+					upper.updateSim();
+					
+					arch::colognechip::CC_L2T5 lower;
+					lower.I4(upper);
+
+					// Carry ^ carryInvert
+					lower.l00(0b0110);
+					lower.I0() = flags.alu_carry;
+					lower.I1() = ctrl.carryInvert;
+
+					// (Carry ^ carryInvert) & enCarry
+					lower.l01(0b1010);
+					lower.I2() = ctrl.enCarry;
+					lower.l10(0b1000);
+
+					// xor upper and lower
+					lower.l20(0b0110);
+
+					lower.updateSim();
+
+					JmpCtrl out = in;
+					out.jmp = lower.O();
+					return out;
+				};
+		}
+#endif
 
 #if 1
 		auto aluExecute()
@@ -74,6 +193,7 @@ namespace gtry::scl::rivet::mod
 						.alu_overflow = adder[30].CO() ^ adder.back().CO(),
 						.alu_sign = adder.back().S(),
 						.alu_carry = adder.back().CO(),
+						.alu_carry2 = adder[30].CO(),
 					};
 				};
 		}
@@ -112,3 +232,5 @@ namespace gtry::scl::rivet::mod
 		RegCtrl m_writeCtrl;
 	};
 }
+
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::rivet::mod::GateMateBranchCtrl, carryInvert, enSigned, enCarry);
