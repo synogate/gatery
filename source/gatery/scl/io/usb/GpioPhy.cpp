@@ -328,11 +328,19 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 {
 	HCL_NAMED(m_tx);
 	//tap(m_tx);
-	RvStream<UInt> txStream{ m_tx.data };
-	valid(txStream) = m_tx.valid;
-	m_tx.ready = ready(txStream);
 
-	auto txPacketStream = addEopDeferred(txStream, edgeFalling(valid(txStream)));
+	Stream tx = strm::createVStream(m_tx.data, m_tx.valid) |
+		strm::attach(Eop{'0'}) |
+		strm::attach(Error{ m_tx.error }) |
+		strm::attach(Ready{});
+	m_tx.ready = ready(tx);
+
+	auto txPacketStream = addEopDeferred(tx, edgeFalling(valid(tx)));
+	generateTx(en, p, n, move(txPacketStream));
+}
+
+void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n, RvPacketStream<UInt, Error> txPacketStream)
+{
 
 #if 0 // use this to inject random tx errors
 	IF(transfer(txPacketStream))
@@ -340,37 +348,53 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n)
 			*txPacketStream ^= Counter{ 8_b }.value();
 #endif
 
-	HCL_NAMED(txPacketStream);
-	auto txPreambledStream = strm::insertBeat(move(txPacketStream), 0, 0x80u);
-	HCL_NAMED(txPreambledStream);
-	auto txBitVecStream = strm::reduceWidth(move(txPreambledStream), 1_b);
-	HCL_NAMED(txBitVecStream);
-	auto txBitStream = generateTxCrcAppend(transform(move(txBitVecStream), [](const UInt& in) { return in.lsb(); }));
+	RvPacketStream<Bit> txBitStream = move(txPacketStream) |
+		strm::insertBeat(0, UInt{ 0x80 }) |
+		strm::reduceWidth(1_b) |
+		strm::remove<Error>() |
+		strm::transform([](const UInt& in) { return in.lsb(); }) |
+		name("txBitStream");
+
+	RvPacketStream<Bit> txRegStagePreCrc;
+	if (m_clock.absoluteFrequency() / 12_mhz > 2)
+		txRegStagePreCrc <<= strm::regDecouple(move(txBitStream));
+	else
+		txRegStagePreCrc <<= txBitStream;
+
+	auto txCrcStream = generateTxCrcAppend(move(txRegStagePreCrc));
 	HCL_NAMED(txBitStream);
-	auto txStuffedStream = bitStuff(txBitStream, 6);
+	auto txStuffedStream = bitStuff(txCrcStream, 6);
 	nrzi(txStuffedStream);
 	HCL_NAMED(txStuffedStream);
+
+	RvPacketStream<Bit> txRegStagePostCrc;
+	if (m_clock.absoluteFrequency() / 12_mhz > 2)
+		txRegStagePostCrc <<= strm::regDecouple(move(txStuffedStream));
+	else
+		txRegStagePostCrc <<= txStuffedStream;
+
+	// from here on is a lot going on in the critical path. we should be able to clean that up and remove the post crc register stage.
 
 	Bit wait = pulseExtend(
 		m_se0,
 		hlim::floor(m_clock.absoluteFrequency() * 3 / 12_mhz));
 
-	txStuffedStream = scl::strm::stall(move(txStuffedStream), wait);
+	txRegStagePostCrc = scl::strm::stall(move(txRegStagePostCrc), wait);
 
 	Counter txTimer{ hlim::floor(m_clock.absoluteFrequency() / 12_mhz) };
-	IF(valid(txStuffedStream))
+	IF(valid(txRegStagePostCrc))
 		txTimer.inc();
 	ELSE
 		txTimer.reset();
-	ready(txStuffedStream) = txTimer.isLast();
+	ready(txRegStagePostCrc) = txTimer.isLast();
 
-	en = valid(txStuffedStream);
-	p = *txStuffedStream;
+	en = valid(txRegStagePostCrc);
+	p = *txRegStagePostCrc;
 	n = !p;
 
 	size_t se0Cycles = hlim::floor(m_clock.absoluteFrequency() * 2 / 12_mhz);
 	Bit se0 = reg(pulseExtend(
-		transfer(txStuffedStream) & eop(txStuffedStream),
+		transfer(txRegStagePostCrc) & eop(txRegStagePostCrc),
 		se0Cycles - 1
 		), '0');
 	setName(se0, "tx_se0");

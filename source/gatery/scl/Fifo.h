@@ -319,14 +319,14 @@ namespace gtry::scl
 			HCL_DESIGNCHECK_HINT(meta->fifoChoice.latency_readToFull == meta->fifoChoice.latency_readToAlmostFull, 
 				"Technology mapping yielded invalid choice, only supporting equal latencies for latency_read_full and latency_read_almostFull.");
 			pushGet = popGet;
-			for ([[maybe_unused]] auto i : utils::Range(meta->fifoChoice.latency_readToFull-1))
-				pushGet = reg(pushGet, 0);
+			for ([[maybe_unused]] auto i : utils::Range(meta->fifoChoice.latency_readToFull - 1))
+				pushGet = reg(pushGet, 0, { .clock = *m_pushClock });
 
 			HCL_DESIGNCHECK_HINT(meta->fifoChoice.latency_writeToEmpty == meta->fifoChoice.latency_writeToAlmostEmpty, 
 				"Technology mapping yielded invalid choice, only supporting equal latencies for latency_write_empty and latency_write_almostEmpty.");
 			popPut = pushPut;
-			for ([[maybe_unused]] auto i : utils::Range(meta->fifoChoice.latency_writeToEmpty-1))
-				popPut = reg(popPut, 0);
+			for ([[maybe_unused]] auto i : utils::Range(meta->fifoChoice.latency_writeToEmpty - 1))
+				popPut = reg(popPut, 0, { .clock = *m_pushClock });
 		} else {
 			generateCdc(pushPut, pushGet, popPut, popGet);
 		}

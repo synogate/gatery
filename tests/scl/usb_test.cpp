@@ -28,7 +28,7 @@
 #include <gatery/scl/crc.h>
 #include <gatery/scl/io/usb/SimuPhy.h>
 #include <gatery/scl/io/usb/Function.h>
-#include <gatery/scl/io/usb/GpioPhy.h>
+#include <gatery/scl/io/usb/GpioPhyCdc.h>
 #include <gatery/scl/io/uart.h>
 #include <gatery/scl/io/BitBangEngine.h>
 
@@ -516,6 +516,16 @@ public:
 		vhdl(design.getCircuit());
 
 		BOOST_TEST(!runHitsTimeout(1ms));
+	}
+
+	virtual void setupPhy(usb::Function& func)
+	{
+		if (m_useSimuPhy)
+			m_host = &func.setup<usb::SimuPhy>();
+		else if (m_useUlpiPhy)
+			&func.setup<usb::Ulpi>();
+		else
+			m_host = &func.setup<usb::GpioPhyCdc>();
 	}
 };
 

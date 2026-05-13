@@ -56,6 +56,7 @@ namespace gtry::scl::usb
 
 	protected:
 		virtual void generateTx(Bit& en, Bit& p, Bit& n);
+		virtual void generateTx(Bit& en, Bit& p, Bit& n, RvPacketStream<UInt, Error> tx);
 		virtual void generateRx(const VStream<Bit, SingleEnded>& in);
 		virtual void generateCrc();
 		virtual RvPacketStream<Bit> generateTxCrcAppend(RvPacketStream<Bit> in);

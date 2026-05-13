@@ -205,7 +205,10 @@ namespace gtry::scl::arch::colognechip
 			Bit clkSig = nextClk;
 			if (buffer && i == log2div - 1)
 				clkSig = bufg(clkSig) | name(std::string{ clk.name() } + "_sig");
-			clk.overrideClkWith(clkSig);
+
+			Bit clockDummy; // has to be unassigned for simulation magic :/
+			clockDummy.exportOverride(clkSig);
+			clk.overrideClkWith(clockDummy);
 		}
 		return clk;
 	}

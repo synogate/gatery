@@ -57,7 +57,7 @@ namespace gtry::scl
 	template<Signal T>
 	T synchronize(T in, const Clock& inClock, const Clock& outClock, const SynchronizeParams &params = {});
 
-	Bit synchronizeEvent(Bit event, const Clock& inClock, const Clock& outClock, const SynchronizeParams& params = { .outStages = 3, .inStage = false });
+	Bit synchronizeEvent(Bit event, const Clock& inClock, const Clock& outClock, const SynchronizeParams& params = {});
 	Bit synchronizeRelease(Bit reset, const Clock& inClock, const Clock& outClock, ClockConfig::ResetActive resetActive = ClockConfig::ResetActive::HIGH, size_t regStages = 3);
 
 	/// Cross an integer (e.g. counter value) from one clock domain into another but use grey code for the crossing.

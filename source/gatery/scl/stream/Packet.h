@@ -45,7 +45,8 @@ namespace gtry::scl::strm
 	T eraseLastBeat(T& source);
 
 	template<StreamSignal T> 
-	auto addEopDeferred(T& source, Bit insert);
+	auto addEopDeferred(T&& source, Bit insert);
+	inline auto addEopDeferred(Bit insert) { return [=](auto&& s1) { return addEopDeferred(std::forward<decltype(s1)>(s1), insert); }; }
 
 	auto addPacketSignalsFromCount(StreamSignal auto&& source, const UInt& size);
 
@@ -236,7 +237,7 @@ namespace gtry::scl::strm
 	}
 
 	template<StreamSignal T>
-	auto addEopDeferred(T& source, Bit insert)
+	auto addEopDeferred(T&& source, Bit insert)
 	{
 		auto scope = Area{ "scl_addEopDeferred" }.enter();
 

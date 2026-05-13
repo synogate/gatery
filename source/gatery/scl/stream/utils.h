@@ -103,6 +103,11 @@ namespace gtry::scl::strm
 	requires (std::is_base_of_v<BaseBitVector, typename T::Payload> and T::template has<Ready>())
 	T reduceWidth(T&& source, BitWidth width, Bit reset = '0');
 
+	inline auto reduceWidth(BitWidth width, Bit reset = '0')
+	{
+		return [=](auto&& source) { return reduceWidth(std::forward<decltype(source)>(source), width, reset); };
+	}
+
 	/**
 	 * @brief erases beat(s) from a multi-beat packet stream
 	 * @param source source stream
@@ -219,11 +224,11 @@ namespace gtry::scl::strm
 	* @param outClock clock domain of returned stream
 	*/
 	template<StreamSignal StreamT>
-	StreamT synchronizeStreamReqAck(StreamT in, const Clock& inClock, const Clock& outClock);
+	StreamT synchronizeStreamReqAck(StreamT in, const Clock& inClock, const Clock& outClock, const SynchronizeParams& eventSyncCfg = {});
 
-	inline auto synchronizeStreamReqAck(const Clock& inClock, const Clock& outClock)
+	inline auto synchronizeStreamReqAck(const Clock& inClock, const Clock& outClock, const SynchronizeParams& eventSyncCfg = {})
 	{
-		return [=](auto&& in) { return synchronizeStreamReqAck(std::forward<decltype(in)>(in), inClock, outClock); };
+		return [=](auto&& in) { return synchronizeStreamReqAck(std::forward<decltype(in)>(in), inClock, outClock, eventSyncCfg); };
 	}
 
 	/**
@@ -840,7 +845,7 @@ namespace gtry::scl::strm
 	}
 
 	template<StreamSignal StreamT>
-	StreamT synchronizeStreamReqAck(StreamT in, const Clock& inClock, const Clock& outClock)
+	StreamT synchronizeStreamReqAck(StreamT in, const Clock& inClock, const Clock& outClock, const SynchronizeParams& eventSyncCfg)
 	{
 		Area area("synchronizeStreamReqAck", true);
 		ClockScope csIn{ inClock };
@@ -856,7 +861,7 @@ namespace gtry::scl::strm
 
 		ClockScope csOut{ outClock };
 
-		Bit dataStable = synchronizeEvent(valid(in) & !busy, inClock, outClock) | name("dataStable");
+		Bit dataStable = synchronizeEvent(valid(in) & !busy, inClock, outClock, eventSyncCfg) | name("dataStable");
 		ENIF(dataStable) {
 			Clock dontSimplifyEnableRegClk = outClock.deriveClock({ .synchronizationRegister = true });
 			crossingStream = allowClockDomainCrossing(crossingStream, inClock, outClock);
@@ -870,7 +875,7 @@ namespace gtry::scl::strm
 
 		Bit outValid; // TODO: outValid is a work around for attach not preserving the loop
 		valid(out) = outValid = flag(dataStable, outValid & ready(out));
-		ready(in) = synchronizeEvent(transfer(out), outClock, inClock);
+		ready(in) = synchronizeEvent(transfer(out), outClock, inClock, eventSyncCfg);
 		HCL_NAMED(out);
 		HCL_NAMED(in);
 		return out;
