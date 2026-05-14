@@ -26,6 +26,12 @@ namespace gtry::scl::rivet::mod
 	class DataTileLink : public Base
 	{
 	public:
+		DataTileLink()
+		{
+			Base::addInstr(InstrDef{ .name = "LOAD",  .opcode = "00000", .encoding = InstrEncoding::I, .sumSrc = {{OperandSource::Reg, OperandSource::Imm}}, .resultSource = "Mem" });
+			Base::addInstr(InstrDef{ .name = "STORE", .opcode = "01000", .encoding = InstrEncoding::S, .sumSrc = {{OperandSource::Reg, OperandSource::Imm}}, .aluSrc = {{OperandSource::DontCare, OperandSource::Reg}} });
+		}
+
 		void dataMem(TileLinkU&& link)
 		{
 			m_link = constructFrom(link);

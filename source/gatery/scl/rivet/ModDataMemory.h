@@ -26,6 +26,12 @@ namespace gtry::scl::rivet::mod
 	class DataMemory : public Base
 	{
 	public:
+		DataMemory()
+		{
+			Base::addInstr(InstrDef{ .name = "LOAD",  .opcode = "00000", .encoding = InstrEncoding::I, .sumSrc = {{OperandSource::Reg, OperandSource::Imm}}, .resultSource = "Mem" });
+			Base::addInstr(InstrDef{ .name = "STORE", .opcode = "01000", .encoding = InstrEncoding::S, .sumSrc = {{OperandSource::Reg, OperandSource::Imm}}, .aluSrc = {{OperandSource::DontCare, OperandSource::Reg}} });
+		}
+
 		void dataMemSize(size_t size) { m_dataMemSize = size; }
 		void dataMemContent(std::vector<std::byte> data) { m_dataMemContent.swap(data); }
 		void dataMemContent(std::span<const std::byte> data) { m_dataMemContent.clear(); m_dataMemContent.insert(m_dataMemContent.begin(), data.begin(), data.end()); }

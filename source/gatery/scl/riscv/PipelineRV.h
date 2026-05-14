@@ -20,6 +20,7 @@
 #include "../stream/strm.h"
 #include "../rivet/ModRoot.h"
 #include "../rivet/ModControlFlow.h"
+#include "../rivet/ModExternalResult.h"
 #include "../rivet/ModInstrSet.h"
 #include "../rivet/ModInstrBoolSolver.h"
 #include "../rivet/ModInstrDecode.h"
@@ -37,6 +38,7 @@
 #include "../rivet/ModInstrTileLink.h"
 #include "../rivet/ModDataMemory.h"
 #include "../rivet/ModDataTileLink.h"
+#include "../rivet/ModDataTileLinkReschedule.h"
 #include "../rivet/ModBranchMissPredict.h"
 #include "../rivet/ModCsr.h"
 #include "../rivet/ModHazardData.h"
@@ -48,21 +50,22 @@
 namespace gtry::scl::rivet
 {
 	class PipelineRV : public
-		mod::GateMate<
+	//	mod::GateMate<
 	//	mod::InstrRom<
 		mod::InstrTileLink<
 	//	mod::DataMemory<
-		mod::DataTileLink<
+		mod::DataTileLinkReschedule<
+		mod::ExternalResult<
 		mod::Csr<
 		mod::HazardDataResolve<
 		mod::BranchMissPredict<
 		mod::BaseIntInstrSet<
 		mod::Branch<
 		mod::FenceNoop<
-		mod::LoadStoreSubword<
+	//	mod::LoadStoreSubword<
 		mod::LoadStore<
 		mod::EnvCallBreak<
-		mod::ShiftUnitSequential<
+	//	mod::ShiftUnit<
 		mod::ControlFlow<
 		mod::RegisterFile<
 		mod::IntAlu<
@@ -70,7 +73,7 @@ namespace gtry::scl::rivet
 		mod::InstrDecode<
 		mod::InstrBoolSolver<
 		mod::InstrSet<
-		mod::Root>>>>>>>>>>>>>>>>>>>>
+		mod::Root>>>>>>>>>>>>>>>>>>
 	{
 	public:
 		PipelineRV()
@@ -122,8 +125,9 @@ namespace gtry::scl::rivet
 						attach(aluExecute()) |
 						attach(aluSum()) |
 						attach(selectAluResults()) |
-						attach(selectMemCtrl()) |
-						shiftUnit();
+						attach(addExternalResult()) |
+						attach(selectMemCtrl());// |
+					//	shiftUnit();
 				};
 		}
 

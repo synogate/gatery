@@ -62,7 +62,7 @@ namespace gtry::scl::rivet::mod
 
 		auto selectAluResults()
 		{
-			return [this](const ResultCollection& in, const InstrOpcode& instr, const AluResult& alu, const SumResult& sum, const SumOperands& op)
+			return [this](const ResultCollection& in, const InstrOpcode& instr, const AluResult& alu, const SumResult& sum, const SumOperands& op, const InstrPtr& ip)
 				{
 					ResultCollection ret = in;
 					ret.set({ "Alu", alu.alu_result });
@@ -73,7 +73,7 @@ namespace gtry::scl::rivet::mod
 						lt = alu.alu_carry ^ alu.alu_in_sign[0] ^ alu.alu_in_sign[1]; // signed
 					ret.set({ "Cmp", zext(lt) });
 
-
+					ret.set({ "InstrPtr", ip.instrPtr });
 					return ret;
 				};
 		}

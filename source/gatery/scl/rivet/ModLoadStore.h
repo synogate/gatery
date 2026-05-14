@@ -38,13 +38,6 @@ namespace gtry::scl::rivet::mod
 	template<typename Base>
 	class LoadStore : public Base
 	{
-	public:
-		LoadStore()
-		{
-			Base::addInstr(InstrDef{ .name = "LOAD",  .opcode = "00000", .encoding = InstrEncoding::I, .sumSrc = {{OperandSource::Reg, OperandSource::Imm}}, .resultSource = "Mem" });
-			Base::addInstr(InstrDef{ .name = "STORE", .opcode = "01000", .encoding = InstrEncoding::S, .sumSrc = {{OperandSource::Reg, OperandSource::Imm}}, .aluSrc = {{OperandSource::DontCare, OperandSource::Reg}} });
-		}
-
 	protected:
 
 		auto addMemCtrl()
@@ -55,7 +48,7 @@ namespace gtry::scl::rivet::mod
 
 					MemCtrl ctrl;
 					ctrl.memWrite = Base::findInstrCondition(instr, Base::instrAction({ "STORE"sv }, {}, &InstrDef::name)).value_or('0');
-					ctrl.memRead = Base::findInstrCondition(instr, Base::instrAction({ "Mem"sv }, {}, &InstrDef::resultSource)).value_or('0');
+					ctrl.memRead = Base::findInstrCondition(instr, Base::instrAction({ "LOAD"sv }, {}, &InstrDef::name)).value_or('0');
 					ctrl.memAddress = ConstUInt(32_b);
 					ctrl.memLogSize = (UInt)instr.instr(12, 2_b);
 					ctrl.memWriteData = ConstBVec(Base::dataPathW());
@@ -82,7 +75,7 @@ namespace gtry::scl::rivet::mod
 				{
 					BitWidth wordW = ctrl.memWriteData.width();
 					BitWidth subAddrW = BitWidth::count(wordW.bytes());
-					sim_assert(ctrl.memRead & ctrl.memAddress.lower(subAddrW) == 0) << "unaligned memory read access fail";
+					sim_assert(!ctrl.memRead | ctrl.memAddress.lower(subAddrW) == 0) << "unaligned memory read access fail";
 					return ctrl;
 				};
 		}
