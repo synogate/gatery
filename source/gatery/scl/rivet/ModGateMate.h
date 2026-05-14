@@ -41,6 +41,17 @@ namespace gtry::scl::rivet::mod
 	protected:
 
 #if 1
+		auto addJmpCtrl() {
+			return [this](const InstrPtr& instr)
+				{
+					// we handle JAL, JALR as normal branch with carry allways clear
+					return JmpCtrl{
+						.jmp = '0',
+						.jmpTarget = ConstUInt(instr.instrPtr.width()),
+					};
+				};
+		}
+
 		auto branchDecode()
 		{
 			return [this](const InstrOpcode& instr)
@@ -117,8 +128,8 @@ namespace gtry::scl::rivet::mod
 
 					// Sign ^ Carry-1
 					upper.l00(0b0110);
-					upper.I0() = flags.alu_carry2;
-					upper.I1() = flags.alu_sign;
+					upper.I0() = flags.alu_in_sign[0];
+					upper.I1() = flags.alu_in_sign[1];
 
 					// (Sign ^ Carry-1) & enSigned
 					upper.l01(0b1010);
@@ -146,7 +157,7 @@ namespace gtry::scl::rivet::mod
 					lower.updateSim();
 
 					JmpCtrl out = in;
-					out.jmp = lower.O();
+					out.jmp |= lower.O();
 					return out;
 				};
 		}
@@ -190,10 +201,9 @@ namespace gtry::scl::rivet::mod
 					return AluResult{
 						.alu_result = pack(sum),
 						.alu_zero = adder.back().CO(),
-						.alu_overflow = adder[30].CO() ^ adder.back().CO(),
 						.alu_sign = adder.back().S(),
 						.alu_carry = adder.back().CO(),
-						.alu_carry2 = adder[30].CO(),
+						.alu_in_sign = { op1.msb(), op2.msb() },
 					};
 				};
 		}

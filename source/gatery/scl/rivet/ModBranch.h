@@ -43,10 +43,10 @@ namespace gtry::scl::rivet::mod
 					BVec func3 = instr.instr(12, 3_b);
 
 					Bit decision = mux(func3(1, 2_b), {
-						flags.alu_zero,							// equal
-						Bit{'X'},								// unused
-						flags.alu_sign != flags.alu_overflow,	// less than
-						!flags.alu_carry						// less than unsigned
+						flags.alu_zero,													// equal
+						Bit{'X'},														// unused
+						flags.alu_carry ^ flags.alu_in_sign[0] ^ flags.alu_in_sign[1],	// less than
+						!flags.alu_carry												// less than unsigned
 					}) ^ func3.lsb() | name("branch_decision");
 
 					std::vector<MatchValue> actions;

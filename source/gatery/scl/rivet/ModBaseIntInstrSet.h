@@ -70,7 +70,7 @@ namespace gtry::scl::rivet::mod
 
 					Bit lt = !alu.alu_carry; // unsigned
 					IF(instr.instr[12] == '0')
-						lt = alu.alu_sign != alu.alu_overflow; // signed
+						lt = alu.alu_carry ^ alu.alu_in_sign[0] ^ alu.alu_in_sign[1]; // signed
 					ret.set({ "Cmp", zext(lt) });
 
 

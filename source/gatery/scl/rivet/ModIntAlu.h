@@ -43,10 +43,10 @@ namespace gtry::scl::rivet
 
 		// valid in mode equal, less
 		Bit alu_zero;
-		Bit alu_overflow;
 		Bit alu_sign;
 		Bit alu_carry;
-		Bit alu_carry2;
+
+		std::array<Bit,2> alu_in_sign;
 	};
 }
 
@@ -67,15 +67,15 @@ namespace gtry::scl::rivet::mod
 			op2[i] = mux(cat(b[i], a[i]), ctrl.alu_truthTable);
 		op2 = name(op2, "aluAdderOp2");
 
-		auto [sum, carry] = add((UInt)op1, (UInt)op2, ctrl.alu_carryIn);
+		UInt sum = zext(UInt(op1), +1_b) + zext(UInt(op2), +1_b) + ctrl.alu_carryIn;
+		sum = name(sum, "aluSum");
 
 		return AluResult{
-			.alu_result = sum,
-			.alu_zero = carry.msb(),
-			.alu_overflow = carry[carry.size() - 2] ^ carry.msb(),
-			.alu_sign = sum.msb(),
-			.alu_carry = carry.msb(),
-			.alu_carry2 = carry[carry.size() - 2],
+			.alu_result = sum.lower(-1_b),
+			.alu_zero = sum.msb(),
+			.alu_sign = sum[31],
+			.alu_carry = sum.msb(),
+			.alu_in_sign = {op1.msb(), op2.msb()},
 		};
 	}
 
@@ -133,5 +133,5 @@ namespace gtry::scl::rivet::mod
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::rivet::SumOperands, sum_operand);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::rivet::AluOperands, alu_operand);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::rivet::SumResult, sum_result);
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::rivet::AluResult, alu_result, alu_zero, alu_overflow, alu_sign, alu_carry, alu_carry2);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::rivet::AluResult, alu_result, alu_zero, alu_sign, alu_carry, alu_in_sign);
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::rivet::mod::AluCtrl, alu_truthTable, alu_carryIn, alu_enSumInputA);
