@@ -95,6 +95,7 @@ namespace gtry::scl::rivet::mod
 						m_registerFileMem.setup(ctrl.regWriteAddr.width().count(), Base::dataPathW());
 						m_registerFileMem.setName("registerFile");
 						m_registerFileMem.initZero();
+						//m_registerFileMem.setType(MemType::DONT_CARE, 1);
 
 						m_result = constructFrom(ctrl);
 						IF(m_result.regWrite)

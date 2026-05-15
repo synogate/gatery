@@ -40,7 +40,7 @@ namespace gtry::scl::rivet::mod
 
 	protected:
 
-#if 1
+#if 0 // super clever jump decision does not work with reschedule. we need a mechanism to inject the reschedule decision.
 		auto addJmpCtrl() {
 			return [this](const InstrPtr& instr)
 				{
@@ -66,6 +66,9 @@ namespace gtry::scl::rivet::mod
 
 						We split the branch decision into two pieces. One for the signed contribution and one for everything else:
 						((Sign ^ Carry-1) & enSigned) ^ ((Carry ^ carryInvert) & enCarry)
+
+						Sign = A[31] ^ B[31] ^ CarryIn[31] => Sign ^ CarryIn[31] = A[31] ^ B[31]  (CarryIn[31] == Carry-1)
+						=> ((A[31] ^ B[31]) & enSigned) ^ ((Carry ^ carryInvert) & enCarry)
 
 						BEQ = enCarry
 						BNE = enCarry, carryInvert
@@ -157,13 +160,13 @@ namespace gtry::scl::rivet::mod
 					lower.updateSim();
 
 					JmpCtrl out = in;
-					out.jmp |= lower.O();
+					out.jmp = lower.O();
 					return out;
 				};
 		}
 #endif
 
-#if 1
+#if 0 // the new alu will be detected as just this. so no need for manual adder instantiation any more.
 		auto aluExecute()
 		{
 			return [this](const AluOperands& op, const AluCtrl& ctrl)

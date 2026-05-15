@@ -27,6 +27,10 @@ namespace gtry::scl::rivet::mod
 	class ExternalResult : public Base
 	{
 	public:
+		ExternalResult()
+		{
+			m_externalResult.setName("externalResult");
+		}
 
 		void externalResult(const BVec& src)
 		{

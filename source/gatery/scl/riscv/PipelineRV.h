@@ -50,12 +50,11 @@
 namespace gtry::scl::rivet
 {
 	class PipelineRV : public
-	//	mod::GateMate<
+		mod::GateMate<
 	//	mod::InstrRom<
 		mod::InstrTileLink<
 	//	mod::DataMemory<
 		mod::DataTileLinkReschedule<
-		mod::ExternalResult<
 		mod::Csr<
 		mod::HazardDataResolve<
 		mod::BranchMissPredict<
@@ -66,6 +65,8 @@ namespace gtry::scl::rivet
 		mod::LoadStore<
 		mod::EnvCallBreak<
 	//	mod::ShiftUnit<
+		mod::ShiftUnitReschedule<
+		mod::ExternalResult<
 		mod::ControlFlow<
 		mod::RegisterFile<
 		mod::IntAlu<
@@ -73,7 +74,7 @@ namespace gtry::scl::rivet
 		mod::InstrDecode<
 		mod::InstrBoolSolver<
 		mod::InstrSet<
-		mod::Root>>>>>>>>>>>>>>>>>>
+		mod::Root>>>>>>>>>>>>>>>>>>>>
 	{
 	public:
 		PipelineRV()
@@ -100,6 +101,7 @@ namespace gtry::scl::rivet
 						attach(addRegCtrl()) |
 						attach(addJmpCtrl()) |
 						attach(addMemCtrl()) |
+						attach(addShiftCtrl()) |
 						attach(ecallDecode()) |
 						attach(branchDecode()) |
 						attach(aluDecode());
@@ -126,8 +128,8 @@ namespace gtry::scl::rivet
 						attach(aluSum()) |
 						attach(selectAluResults()) |
 						attach(addExternalResult()) |
-						attach(selectMemCtrl());// |
-					//	shiftUnit();
+						attach(selectMemCtrl()) |
+						shiftUnit();
 				};
 		}
 
