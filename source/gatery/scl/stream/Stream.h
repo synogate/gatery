@@ -329,7 +329,7 @@ namespace gtry::scl::strm
 				get<Ready>(ret) <<= signal;
 
 				std::apply([&](auto& ...meta) {
-					((get<std::remove_reference_t<decltype(meta)>>(ret) <<= meta), ...);
+					(connect(get<std::remove_reference_t<decltype(meta)>>(ret), meta), ...);
 					}, stream._sig);
 				return ret;
 			}
@@ -340,7 +340,7 @@ namespace gtry::scl::strm
 				connect(get<Tplain>(ret), signal);
 
 				std::apply([&](auto& ...meta) {
-					((get<std::remove_reference_t<decltype(meta)>>(ret) <<= meta), ...);
+					(connect(get<std::remove_reference_t<decltype(meta)>>(ret), meta), ...);
 					}, stream._sig);
 				return ret;
 			}
