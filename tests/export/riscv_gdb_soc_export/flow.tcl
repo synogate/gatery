@@ -1,10 +1,6 @@
 read_verilog top.v
-read_verilog -lib -specify +/gatemate/cells_sim.v +/gatemate/cells_bb.v
-synth -top top -flatten -run :fine
-splitnets
-opt -fast -full
-opt -full -sat
-clean
-#write_verilog test.v
-synth_gatemate -luttree -nomx8
+#synth_gatemate -top top -luttree -nomx8 -noflatten -noiopad
+#flatten -scopename
+synth_gatemate -top top -luttree -nomx8
+#write_verilog synth.v
 write_json synth.json

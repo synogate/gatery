@@ -361,6 +361,9 @@ void gtry::scl::usb::GpioPhy::generateTx(Bit& en, Bit& p, Bit& n, RvPacketStream
 	else
 		txRegStagePreCrc <<= txBitStream;
 
+	// this can be used as oscilloscope trigger to analyze outgoing singnal quality
+//	pinOut(reg(transfer(txRegStagePreCrc) & sop(txRegStagePreCrc)), "UART0_TX");
+
 	auto txCrcStream = generateTxCrcAppend(move(txRegStagePreCrc));
 	HCL_NAMED(txBitStream);
 	auto txStuffedStream = bitStuff(txCrcStream, 6);

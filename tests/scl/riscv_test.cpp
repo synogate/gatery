@@ -23,6 +23,7 @@
 
 #include <gatery/simulation/waveformFormats/VCDSink.h>
 #include <gatery/export/vhdl/VHDLExport.h>
+#include <gatery/export/DotExport.h>
 
 #include <gatery/scl/algorithm/GCD.h>
 #include <gatery/scl/arch/colognechip/SpecialFunction.h>
@@ -32,6 +33,8 @@
 #include <gatery/scl/io/ethernet/EthernetPhy.h>
 #include <gatery/scl/io/RotaryEncoder.h>
 #include <gatery/scl/io/uart.h>
+#include <gatery/scl/io/usb/CommunicationsDeviceClass.h>
+#include <gatery/scl/io/usb/GpioPhyCdc.h>
 #include <gatery/scl/memory/HyperBusController.h>
 #include <gatery/scl/riscv/DualCycleRV.h>
 #include <gatery/scl/riscv/ElfLoader.h>
@@ -2189,6 +2192,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_gdb_soc_export, BoostUnitTestSimulationFixture, *b
 	bool hasSdCard = false;
 	bool hasNic = false;
 	bool hasRotaryInput = false;
+	bool hasUsb = false;
 
 	Clock clk12{ ClockConfig{
 		.absoluteFrequency = 12_mhz,
@@ -2209,7 +2213,16 @@ BOOST_FIXTURE_TEST_CASE(riscv_gdb_soc_export, BoostUnitTestSimulationFixture, *b
 	{
 		Area ent{ "devices", true };
 
-		uartDevice(soc.mmap(), "uart", "UART0_", { .baudGeneratorLogStepSize = 10 });
+		if (hasUsb)
+		{
+			usb::GpioPhyCdc phy;
+			usb::Function usbFunction;
+			usb::uartDevice(soc.mmap(), "uart", usbFunction, { .phy = &phy });
+		}
+		else
+		{
+			uartDevice(soc.mmap(), "uart", "UART0_", { .baudGeneratorLogStepSize = 10 });
+		}
 		
 		if(hasSdCard)
 		{
@@ -2386,6 +2399,9 @@ BOOST_FIXTURE_TEST_CASE(riscv_pipelinerv_sandbox, BoostUnitTestSimulationFixture
 	rv.generate();
 
 	design.postprocess();
+
+	//visualize(design.getCircuit(), "riscv_pipelinerv_sandbox");
+
 
 	const std::string& testName = boost::unit_test::framework::current_test_case().p_name.get();
 	std::filesystem::path cwd = std::filesystem::path{ "export" } / testName;

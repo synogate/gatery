@@ -19,6 +19,7 @@
 #include "CommunicationsDeviceClass.h"
 #include "GpioPhy.h"
 #include "../../stream/strm.h"
+#include "../../memoryMap/MemoryMapConnectors.h"
 
 namespace gtry::scl::usb
 {
@@ -83,19 +84,19 @@ namespace gtry::scl::usb
 			});
 	}
 
-	Reverse<TxRxStream> streamToSerialAdapter(usb::Function& function, usb::SimuBusBase** simhost, std::optional<Clock> usbClk, std::string_view enablePinName)
+	Reverse<TxRxStream> streamToSerialAdapter(usb::Function& function, const StreamAdapterCfg& cfg)
 	{
 		Area ent{ "scl_streamToSerialAdapter", true };
 
 		std::optional<ClockScope> cs;
-		if (usbClk) cs.emplace(*usbClk);
+		if (cfg.usbClk) cs.emplace(*cfg.usbClk);
 
-		if(!enablePinName.empty())
+		if(!cfg.enablePinName.empty())
 		{
 			Counter usbEnDelay{ 500ms };
 			IF(!usbEnDelay.isLast())
 				usbEnDelay.inc();
-			pinOut(usbEnDelay.isLast(), std::string{ enablePinName });
+			pinOut(usbEnDelay.isLast(), std::string{ cfg.enablePinName });
 		}
 
 		// setup cdc descriptor for single serial interface
@@ -104,17 +105,24 @@ namespace gtry::scl::usb
 		desc.add(scl::usb::ConfigurationDescriptor{});
 		scl::usb::virtualCOMsetup(function, 0, 1, 2);
 
-		desc.changeMaxPacketSize(8);
+		desc.changeMaxPacketSize(cfg.maxPacketSize);
 		desc.finalize();
 
-		// create phy and return host for simulation processes
-		usb::SimuBusBase* host = &function.setup<usb::GpioPhy>();
-		if (simhost)
-			*simhost = host;
+		if(!cfg.phy)
+		{
+			usb::SimuBusBase* host = &function.setup<usb::GpioPhy>();
+			if (cfg.simhost)
+				*cfg.simhost = host;
+		}
+		else
+		{
+			HCL_ASSERT(cfg.simhost == nullptr);
+			function.setup(*cfg.phy);
+		}
 
-		scl::TransactionalFifo<scl::usb::Function::StreamData> rxFifo{ 128 };
+		scl::TransactionalFifo<scl::usb::Function::StreamData> rxFifo{ cfg.fifoDepth };
 		function.attachRxFifo(rxFifo, 1 << 1);
-		scl::TransactionalFifo<scl::usb::Function::StreamData> txFifo{ 128 };
+		scl::TransactionalFifo<scl::usb::Function::StreamData> txFifo{ cfg.fifoDepth };
 		function.attachTxFifo(txFifo, 1 << 1);
 
 		cs.reset(); // return to user clock domain
@@ -132,5 +140,18 @@ namespace gtry::scl::usb
 
 		HCL_NAMED(ret);
 		return ret;
+	}
+
+	void uartDevice(MemoryMap& mmap, std::string mmapName, usb::Function& function, const StreamAdapterCfg& cfg)
+	{
+		TxRxStream usb = *usb::streamToSerialAdapter(function, cfg) | name("usb");
+
+		mmap.enterScope(mmapName);
+		mapIn(mmap, usb, "io");
+
+		UInt baud = 24_b;
+		mapIn(mmap, baud, "baud");
+
+		mmap.leaveScope();
 	}
 }

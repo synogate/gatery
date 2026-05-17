@@ -22,7 +22,7 @@ jtag: bitfile.bit
 	$(OFL) $(OFLFLAGS) -c gatemate_pgm $<
 
 # nextpnr flow
-synth.json: $(TOP).v
+synth.json: $(TOP).v flow.tcl
 	yosys -ql net_$(TOP)_synth.log -s flow.tcl $<
 
 bitfile.txt: synth.json top.sdc top.ccf Makefile

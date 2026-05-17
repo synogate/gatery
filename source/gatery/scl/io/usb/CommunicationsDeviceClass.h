@@ -19,12 +19,27 @@
 #include "Function.h"
 #include "../TxRxStream.h"
 
+namespace gtry::scl
+{
+	class MemoryMap;
+}
+
 namespace gtry::scl::usb
 {
 	class SimuBusBase;
 
 	// The notification endpoint is optional but Linux does not accept the device without it. It works under windows.
 	void virtualCOMsetup(Function& func, uint8_t interfaceNumber, uint8_t endPoint, std::optional<uint8_t> notificationEndPoint = {}, boost::optional<Bit&> dtr = {}, boost::optional<Bit&> rts = {});
+
+	struct StreamAdapterCfg
+	{
+		Phy* phy = nullptr;
+		SimuBusBase** simhost = nullptr;
+		std::optional<Clock> usbClk;
+		std::string_view enablePinName = "USB_EN";
+		size_t maxPacketSize = 8;
+		size_t fifoDepth = 512;
+	};
 
 	/**
 	 * @brief One stop shop for GPIO based USB Function to TxRxStream using CDC device class. Use if you need the most simple usb communication.
@@ -35,5 +50,7 @@ namespace gtry::scl::usb
 	 * @param usbClk Specify a clock for usb if different from TxRxStream clock. Clock domain crossing is included using the buffer fifo's.
 	 * @param enablePinName (optional) Pin name for a simple low after reset enable pin.
 	 */
-	Reverse<TxRxStream> streamToSerialAdapter(usb::Function& function, SimuBusBase** simhost = nullptr, std::optional<Clock> usbClk = {}, std::string_view enablePinName = "USB_EN");
+	Reverse<TxRxStream> streamToSerialAdapter(usb::Function& function, const StreamAdapterCfg& cfg = {});
+
+	void uartDevice(MemoryMap& mmap, std::string mmapName, usb::Function& function, const StreamAdapterCfg& cfg = {});
 }
