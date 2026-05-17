@@ -32,6 +32,7 @@
 #include "../rivet/ModFenceNoop.h"
 #include "../rivet/ModShiftUnit.h"
 #include "../rivet/ModShiftUnitSequential.h"
+#include "../rivet/ModShiftUnitReschedule.h"
 #include "../rivet/ModEnvCallBreak.h"
 #include "../rivet/ModBranch.h"
 #include "../rivet/ModInstrRom.h"
@@ -144,6 +145,8 @@ namespace gtry::scl::rivet
 
 		void generate()
 		{
+			Area ent{ "scl_RV32", true };
+
 			Stream ret =
 				strm::createVStream(Nothing{}, '1') |
 				strm::attach(Ready{}) |
@@ -164,7 +167,7 @@ namespace gtry::scl::rivet
 
 				strm::removeReady('1') |
 				name("result");
-			//tap(ret);
+		//	tap(ret);
 			resultLoopBack(move(ret));
 		}
 	};
