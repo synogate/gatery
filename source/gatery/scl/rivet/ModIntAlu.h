@@ -100,7 +100,7 @@ namespace gtry::scl::rivet::mod
 						/*11*/ solve({ AluMode::And, AluMode::Or,	AluMode::A, AluMode::B,	AluMode::Add, AluMode::Arith,	AluMode::Equal }),
 						/*10*/ solve({ AluMode::Xor, AluMode::Or,	AluMode::B,				AluMode::Add, AluMode::Arith,	}),
 						/*01*/ solve({ AluMode::Xor, AluMode::Or,	AluMode::A,				AluMode::Sub,					AluMode::Less }),
-						/*00*/ solve({ AluMode::And,										AluMode::Sub,					AluMode::Equal, AluMode::Less })
+						/*00*/ solve({														AluMode::Sub,					AluMode::Equal, AluMode::Less })
 					) | name("aluTablePreArith");
 					ctrl.alu_truthTable ^= arithSubInv;
 
