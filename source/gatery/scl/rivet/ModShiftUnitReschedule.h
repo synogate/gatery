@@ -21,51 +21,21 @@
 #include "ModLoadStore.h"
 #include "ModControlFlow.h"
 #include "ModRegisterFile.h"
+#include "ModShiftUnit.h"
 
 namespace gtry::scl::rivet::mod
 {
-	struct ShiftCtrl
-	{
-		Bit shiftInstr;
-		Bit shiftRight;
-		Bit shiftArithmetic;
-
-		UInt shiftAmount;
-		BVec shiftValue;
-	};
-
 	template<typename Base>
-	class ShiftUnitReschedule : public Base
+	class ShiftUnitReschedule : public ShiftUnit<Base>
 	{
 	public:
-		ShiftUnitReschedule()
+		ShiftUnitReschedule() : ShiftUnit<Base>(false)
 		{
 			Base::addInstr(InstrDef{ .name = "SH",	.opcode = "01100", .func3 = "-01", .encoding = InstrEncoding::R, .sumSrc = {{OperandSource::IP, OperandSource::Zero}}, .aluSrc = {{OperandSource::Reg, OperandSource::Reg}},	.resultSource = "Extern", .jmpTarget = "Sum" });
 			Base::addInstr(InstrDef{ .name = "SHI",	.opcode = "00100", .func3 = "-01", .encoding = InstrEncoding::I, .sumSrc = {{OperandSource::IP, OperandSource::Zero}}, .aluSrc = {{OperandSource::Reg, OperandSource::Imm}},	.resultSource = "Extern", .jmpTarget = "Sum" });
 		}
 
 	protected:
-
-		ShiftCtrl addShiftCtrlDecode(const InstrOpcode& instr)
-		{
-			std::vector<MatchValue> actions;
-			actions.reserve(Base::instructions().size());
-			for (const InstrDef& def : Base::instructions())
-				actions.push_back(def.name.starts_with("SH") ? MatchValue::High : MatchValue::Low);
-
-			return {
-				.shiftInstr = Base::findInstrCondition(instr, actions).value_or('0'),
-				.shiftRight = instr.instr[14],
-				.shiftArithmetic = instr.instr[30],
-				.shiftAmount = ConstUInt(BitWidth::count(Base::dataPathW().bits())),
-				.shiftValue = ConstBVec(Base::dataPathW()),
-			};
-		}
-
-		auto addShiftCtrl()
-		{
-			return std::bind_front(&ShiftUnitReschedule::addShiftCtrlDecode, this);
-		}
 
 		auto shiftUnit()
 		{
@@ -126,4 +96,3 @@ namespace gtry::scl::rivet::mod
 	};
 }
 
-BOOST_HANA_ADAPT_STRUCT(gtry::scl::rivet::mod::ShiftCtrl, shiftInstr, shiftRight, shiftArithmetic, shiftAmount, shiftValue);

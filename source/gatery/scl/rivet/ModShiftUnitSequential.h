@@ -21,16 +21,17 @@
 #include "ModResultSelect.h"
 #include "ModIntAlu.h"
 #include "ModInstrFetch.h"
+#include "ModShiftUnit.h"
 
 namespace gtry::scl::rivet::mod
 {
 	using namespace std::literals;
 
 	template<typename Base>
-	class ShiftUnitSequential : public Base
+	class ShiftUnitSequential : public ShiftUnit<Base>
 	{
 	public:
-		ShiftUnitSequential()
+		ShiftUnitSequential() : ShiftUnit<Base>(false)
 		{
 			Base::addInstr(InstrDef{ .name = "SH",	.opcode = "01100", .func3 = "-01", .encoding = InstrEncoding::R, .aluSrc = {{OperandSource::Reg, OperandSource::Reg}},	.resultSource = "Shift" });
 			Base::addInstr(InstrDef{ .name = "SHI",	.opcode = "00100", .func3 = "-01", .encoding = InstrEncoding::I, .aluSrc = {{OperandSource::Reg, OperandSource::Imm}},	.resultSource = "Shift" });
@@ -45,29 +46,27 @@ namespace gtry::scl::rivet::mod
 					Area ent{ "rivet_bitshift", true };
 
 					const AluOperands& operand = get<AluOperands>(in);
-					UInt valueInitial = (UInt)operand.alu_operand[0] | name("valueInitial");
-					UInt amount = (UInt)operand.alu_operand[1](0, 5_b) | name("amount");
+					ShiftCtrl ctrl = get<ShiftCtrl>(in);
+					ctrl.shiftValue = operand.alu_operand[0];
+					ctrl.shiftAmount = (UInt)operand.alu_operand[1](0, 5_b);
 
-					const InstrOpcode& instr = get<InstrOpcode>(in);
-					Bit right = instr.instr[14] | name("right");
-					Bit arithmetic = instr.instr[30] | name("arithmetic");
-					Bit shift = Base::findInstrCondition(instr, Base::instrAction({ "Shift"sv }, {}, &InstrDef::resultSource)).value_or('0') | name("shift");
+					Bit readyForInput = flag(transfer(in), valid(in), '1') | name("readyForInput");
 
-					UInt counter = amount.width();
-					counter = counter + 1;
-					IF(!valid(in) | ready(in))
-						counter = 0;
+					UInt counter = ctrl.shiftAmount.width();
+					counter = counter - 1;
 					counter = reg(counter) | name("counter");
+					IF(readyForInput)
+						counter = ctrl.shiftAmount;
 
-					UInt value = valueInitial.width();
-					value = mux(right, {
+					BVec value = ctrl.shiftValue.width();
+					value = mux(ctrl.shiftRight, {
 						value << 1,
-						cat(arithmetic & value.msb(), value.upper(-1_b))
+						(BVec)cat(ctrl.shiftArithmetic & value.msb(), value.upper(-1_b))
 					});
 					value = reg(value) | name("value");
 
-					IF(counter == 0)
-						value = valueInitial;
+					IF(readyForInput)
+						value = ctrl.shiftValue;
 
 					return move(in) |
 						Base::attach([&](const ResultCollection& res) {
@@ -75,7 +74,7 @@ namespace gtry::scl::rivet::mod
 							ret.set({ "Shift", value });
 							return ret;
 						}) |
-						strm::stall(valid(in) & shift & counter != amount);
+						strm::stall(valid(in) & ctrl.shiftInstr & counter != 0);
 				};
 		}
 

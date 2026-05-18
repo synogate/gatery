@@ -338,15 +338,12 @@ namespace gtry::scl
 		{
 			IF(transfer(link.a) & link.a->isPut())
 			{
-#if 0
-				BVec newData = (BVec)pack(port.read());
+#if 1
+				BVec newData = port.read();
 				for (size_t i = 0; i < link.a->mask.size(); ++i)
 					IF(link.a->mask[i])
 					newData.part(link.a->mask.size(), i) = link.a->data.part(link.a->mask.size(), i);
-
-				T writeData = constructFrom(mem.defaultValue());
-				unpack(newData, writeData);
-				port = writeData;
+				port = newData;
 #else
 				sim_assert(link.a->mask == link.a->mask.width().mask()) << "no write mask support work around";
 				port = link.a->data;

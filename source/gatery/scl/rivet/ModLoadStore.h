@@ -69,17 +69,6 @@ namespace gtry::scl::rivet::mod
 				};
 		}
 
-		auto shiftMemReadData()
-		{
-			return [this](const MemCtrl& ctrl)
-				{
-					BitWidth wordW = ctrl.memWriteData.width();
-					BitWidth subAddrW = BitWidth::count(wordW.bytes());
-					sim_assert(!ctrl.memRead | ctrl.memAddress.lower(subAddrW) == 0) << "unaligned memory read access fail";
-					return ctrl;
-				};
-		}
-
 	};
 }
 

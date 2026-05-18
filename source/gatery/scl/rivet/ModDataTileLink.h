@@ -22,6 +22,24 @@
 
 namespace gtry::scl::rivet::mod
 {
+	inline BVec selectReadDataFromWordAccess(const BVec& word, const UInt& address, const UInt& logSize, const Bit& extendZero)
+	{
+		Bit signBit = mux(logSize.lsb(), { 
+			mux(address.lower(2_b), {word[7], word[15], word[23], word[31]}) | name("loadSignByte"),
+			mux(address[1], {word[15], word[31]}) | name("loadSignShort"),
+		}) | name("loadSign");
+
+		BVec extendedByte = sext(signBit & !extendZero, 8_b) | name("loadSignExtended");
+		BVec shiftedReadData = cat(
+			mux(logSize[1], { extendedByte, word(24, 8_b) }) | name("loadByte3"),
+			mux(logSize[1], { extendedByte, word(16, 8_b) }) | name("loadByte2"),
+			mux(logSize != 0, { extendedByte, mux(address[1], { word(8, 8_b), word(24, 8_b) }) }) | name("loadByte1"),
+			word.part(4, address.lower(2_b)) | name("loadByte0")
+		) | name("loadShiftedReadData");
+
+		return shiftedReadData;
+	}
+
 	template<typename Base>
 	class DataTileLink : public Base
 	{
@@ -67,9 +85,20 @@ namespace gtry::scl::rivet::mod
 						!(m_link.a->address[1] & m_link.a->size > 1)
 					) << "invalid tile link access alignment";
 
+					sim_assert(!valid(m_link.a) | ready(m_link.a)) <<
+						"this implementation has known issues where data hazard forwarding breaks after first stall cycle. which corrupts the address or data register.";
+
+					Bit captureCommand = flag(transfer(in), ctrl.memRead, '1') | name("captureCommand");
+					Bit zeroExtend = capture(get<InstrOpcode>(in).instr[14], captureCommand) | name("zeroExtend");
+					UInt wordOfs = capture(ctrl.memAddress.lower(2_b), captureCommand) | name("wordOfs");
+					UInt logSize = capture(ctrl.memLogSize, captureCommand) | name("logSize");
+
+					BVec readData = (*m_link.d)->data | name("readData");
+					BVec shiftedReadData = selectReadDataFromWordAccess(readData, wordOfs, logSize, zeroExtend);
+
 					Bit waitCondition = m_waitForStore ? memAccess : ctrl.memRead;
 					Stream ret = move(in) |
-						Base::attach([this](const ResultCollection& in) { return in + ExecResult{ "Mem", (*m_link.d)->data }; }) |
+						Base::attach([&, this](const ResultCollection& in) { return in + ExecResult{ "Mem", shiftedReadData }; }) |
 						strm::stall(valid(in) & waitCondition & !responseValid | valid(m_link.a) & !ready(m_link.a));
 
 					ready(*m_link.d) = ready(ret);

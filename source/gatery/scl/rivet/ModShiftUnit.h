@@ -24,19 +24,54 @@
 
 namespace gtry::scl::rivet::mod
 {
+	struct ShiftCtrl
+	{
+		Bit shiftInstr;
+		Bit shiftRight;
+		Bit shiftArithmetic;
+
+		UInt shiftAmount;
+		BVec shiftValue;
+	};
+
+
 	template<typename Base>
 	class ShiftUnit : public Base
 	{
 	public:
-		ShiftUnit()
+		ShiftUnit(bool registerInstructions = true)
 		{
-			Base::addInstr(InstrDef{ .name = "SLL",		.opcode = "01100", .func3 = "001", .encoding = InstrEncoding::R, .aluSrc = {{OperandSource::Reg, OperandSource::Reg}}, .resultSource = "ShiftLeft" });
-			Base::addInstr(InstrDef{ .name = "SLLI",	.opcode = "00100", .func3 = "001", .encoding = InstrEncoding::I, .aluSrc = {{OperandSource::Reg, OperandSource::Imm}}, .resultSource = "ShiftLeft" });
-			Base::addInstr(InstrDef{ .name = "SR",		.opcode = "01100", .func3 = "101", .encoding = InstrEncoding::R, .aluSrc = {{OperandSource::Reg, OperandSource::Reg}}, .resultSource = "ShiftRight" });
-			Base::addInstr(InstrDef{ .name = "SRI",		.opcode = "00100", .func3 = "101", .encoding = InstrEncoding::I, .aluSrc = {{OperandSource::Reg, OperandSource::Imm}}, .resultSource = "ShiftRight" });
+			if(registerInstructions)
+			{
+				Base::addInstr(InstrDef{ .name = "SLL",		.opcode = "01100", .func3 = "001", .encoding = InstrEncoding::R, .aluSrc = {{OperandSource::Reg, OperandSource::Reg}}, .resultSource = "ShiftLeft" });
+				Base::addInstr(InstrDef{ .name = "SLLI",	.opcode = "00100", .func3 = "001", .encoding = InstrEncoding::I, .aluSrc = {{OperandSource::Reg, OperandSource::Imm}}, .resultSource = "ShiftLeft" });
+				Base::addInstr(InstrDef{ .name = "SR",		.opcode = "01100", .func3 = "101", .encoding = InstrEncoding::R, .aluSrc = {{OperandSource::Reg, OperandSource::Reg}}, .resultSource = "ShiftRight" });
+				Base::addInstr(InstrDef{ .name = "SRI",		.opcode = "00100", .func3 = "101", .encoding = InstrEncoding::I, .aluSrc = {{OperandSource::Reg, OperandSource::Imm}}, .resultSource = "ShiftRight" });
+			}
 		}
 
 	protected:
+
+		ShiftCtrl addShiftCtrlDecode(const InstrOpcode& instr)
+		{
+			std::vector<MatchValue> actions;
+			actions.reserve(Base::instructions().size());
+			for (const InstrDef& def : Base::instructions())
+				actions.push_back(def.name.starts_with("SH") ? MatchValue::High : MatchValue::Low);
+
+			return {
+				.shiftInstr = Base::findInstrCondition(instr, actions).value_or('0'),
+				.shiftRight = instr.instr[14],
+				.shiftArithmetic = instr.instr[30],
+				.shiftAmount = ConstUInt(BitWidth::count(Base::dataPathW().bits())),
+				.shiftValue = ConstBVec(Base::dataPathW()),
+			};
+		}
+
+		auto addShiftCtrl()
+		{
+			return std::bind_front(&ShiftUnit::addShiftCtrlDecode, this);
+		}
 
 		auto shiftUnit()
 		{
@@ -67,3 +102,5 @@ namespace gtry::scl::rivet::mod
 
 	};
 }
+
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::rivet::mod::ShiftCtrl, shiftInstr, shiftRight, shiftArithmetic, shiftAmount, shiftValue);

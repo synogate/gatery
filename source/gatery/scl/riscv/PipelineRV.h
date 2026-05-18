@@ -37,7 +37,6 @@
 #include "../rivet/ModBranch.h"
 #include "../rivet/ModInstrRom.h"
 #include "../rivet/ModInstrTileLink.h"
-#include "../rivet/ModDataMemory.h"
 #include "../rivet/ModDataTileLink.h"
 #include "../rivet/ModDataTileLinkReschedule.h"
 #include "../rivet/ModBranchMissPredict.h"
@@ -50,35 +49,11 @@
 
 namespace gtry::scl::rivet
 {
-	class PipelineRV : public
-		mod::GateMate<
-	//	mod::InstrRom<
-		mod::InstrTileLink<
-	//	mod::DataMemory<
-		mod::DataTileLinkReschedule<
-		mod::Csr<
-		mod::HazardDataResolve<
-		mod::BranchMissPredict<
-		mod::BaseIntInstrSet<
-		mod::Branch<
-		mod::FenceNoop<
-	//	mod::LoadStoreSubword<
-		mod::LoadStore<
-		mod::EnvCallBreak<
-	//	mod::ShiftUnit<
-		mod::ShiftUnitReschedule<
-		mod::ExternalResult<
-		mod::ControlFlow<
-		mod::RegisterFile<
-		mod::IntAlu<
-		mod::ResultSelect<
-		mod::InstrDecode<
-		mod::InstrBoolSolver<
-		mod::InstrSet<
-		mod::Root>>>>>>>>>>>>>>>>>>>>
+	template<typename Base>
+	class PipelineFiveStage : public Base
 	{
 	public:
-		PipelineRV()
+		PipelineFiveStage()
 		{
 		}
 
@@ -86,8 +61,8 @@ namespace gtry::scl::rivet
 			return [this](StreamSignal auto&& in)
 				{
 					return move(in) |
-						attach(addInstrPtr()) |
-						attach(addInstrSize());
+						Base::attach(Base::addInstrPtr()) |
+						Base::attach(Base::addInstrSize());
 				};
 		}
 
@@ -95,17 +70,17 @@ namespace gtry::scl::rivet
 			return [this](StreamSignal auto&& in)
 				{
 					return move(in) |
-						attach(addInstrName()) | // move to instr name class
-						strm::then(checkForIllegalInstructionCode()) | // move to separate class
-						attach(decodeImmediate()) |
-						attach(addCsrCtrl()) |
-						attach(addRegCtrl()) |
-						attach(addJmpCtrl()) |
-						attach(addMemCtrl()) |
-						attach(addShiftCtrl()) |
-						attach(ecallDecode()) |
-						attach(branchDecode()) |
-						attach(aluDecode());
+						Base::attach(Base::addInstrName()) | // move to instr name class
+						strm::then(Base::checkForIllegalInstructionCode()) | // move to separate class
+						Base::attach(Base::decodeImmediate()) |
+						Base::attach(Base::addCsrCtrl()) |
+						Base::attach(Base::addRegCtrl()) |
+						Base::attach(Base::addJmpCtrl()) |
+						Base::attach(Base::addMemCtrl()) |
+						Base::attach(Base::addShiftCtrl()) |
+						Base::attach(Base::ecallDecode()) |
+						Base::attach(Base::branchDecode()) |
+						Base::attach(Base::aluDecode());
 				};
 		}
 
@@ -113,10 +88,10 @@ namespace gtry::scl::rivet
 			return [this](StreamSignal auto&& in)
 				{
 					return move(in) |
-						attach(readRegisterFile()) |
-						attach(selectCsrReadData()) |
-						attach(selectOperands<SumOperands>("sum", &InstrDef::sumSrc)) |
-						attach(selectOperands<AluOperands>("diff", &InstrDef::aluSrc));
+						Base::attach(Base::readRegisterFile()) |
+						Base::attach(Base::selectCsrReadData()) |
+						Base::attach(Base::template selectOperands<SumOperands>("sum", &InstrDef::sumSrc)) |
+						Base::attach(Base::template selectOperands<AluOperands>("diff", &InstrDef::aluSrc));
 				};
 		}
 
@@ -125,12 +100,12 @@ namespace gtry::scl::rivet
 				{
 					return move(in) |
 						strm::attach(ResultCollection{}) |
-						attach(aluExecute()) |
-						attach(aluSum()) |
-						attach(selectAluResults()) |
-						attach(addExternalResult()) |
-						attach(selectMemCtrl()) |
-						shiftUnit();
+						Base::attach(Base::aluExecute()) |
+						Base::attach(Base::aluSum()) |
+						Base::attach(Base::selectAluResults()) |
+						Base::attach(Base::addExternalResult()) |
+						Base::attach(Base::selectMemCtrl()) |
+						Base::shiftUnit();
 				};
 		}
 
@@ -138,8 +113,8 @@ namespace gtry::scl::rivet
 			return [this](StreamSignal auto&& in)
 				{
 					return move(in) |
-						attach(selectRegWriteValue()) |
-						attach(selectJmpTarget());
+						Base::attach(Base::selectRegWriteValue()) |
+						Base::attach(Base::selectJmpTarget());
 				};
 		}
 
@@ -152,23 +127,49 @@ namespace gtry::scl::rivet
 				strm::attach(Ready{}) |
 
 				stageInstrPtr() |
-				instrFetch() |
+				Base::instrFetch() |
 				stageDecode() |
 				stageOperands() |
-				pipelineStage("decode") |
-				attach(hazardDataForwardingSum()) |
-				attach(hazardDataForwardingDiff()) |
+				Base::pipelineStage("decode") |
+				Base::attach(Base::hazardDataForwardingSum()) |
+				Base::attach(Base::hazardDataForwardingDiff()) |
 				stageExecute() |
-				dataMem() |
-				attach(shiftMemReadData()) |
+				Base::dataMem() |
 				stageResults() |
-				attach(branchDecision()) |
-				pipelineStage("execute") |
+				Base::attach(Base::branchDecision()) |
+				Base::pipelineStage("execute") |
 
 				strm::removeReady('1') |
 				name("result");
-		//	tap(ret);
-			resultLoopBack(move(ret));
+			tap(ret);
+			Base::resultLoopBack(move(ret));
 		}
 	};
+
+
+	using PipelineRV = PipelineFiveStage<
+		mod::GateMate<
+	//	mod::InstrRom<
+		mod::InstrTileLink<
+		mod::DataTileLinkReschedule<
+		mod::Csr<
+		mod::HazardDataResolve<
+		mod::BranchMissPredict<
+		mod::BaseIntInstrSet<
+		mod::Branch<
+		mod::FenceNoop<
+		mod::LoadStoreSubword<
+		mod::LoadStore<
+		mod::EnvCallBreak<
+	//	mod::ShiftUnit<
+		mod::ShiftUnitReschedule<
+		mod::ExternalResult<
+		mod::ControlFlow<
+		mod::RegisterFile<
+		mod::IntAlu<
+		mod::ResultSelect<
+		mod::InstrDecode<
+		mod::InstrBoolSolver<
+		mod::InstrSet<
+		mod::Root>>>>>>>>>>>>>>>>>>>>>>;
 }

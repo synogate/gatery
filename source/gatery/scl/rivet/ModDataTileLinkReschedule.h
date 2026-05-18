@@ -20,6 +20,7 @@
 #include "ModResultSelect.h"
 #include "ModLoadStore.h"
 #include "ModControlFlow.h"
+#include "ModDataTileLink.h"
 
 namespace gtry::scl::rivet::mod
 {
@@ -63,8 +64,16 @@ namespace gtry::scl::rivet::mod
 					m_link.a->mask = ctrl.memWriteMask;
 					m_link.a->data = ctrl.memWriteData;
 
+					// capture data required for read data shifting.
+					Bit zeroExtend = capture(get<InstrOpcode>(in).instr[14], valid(in)) | name("zeroExtend");
+					UInt wordOfs = capture(ctrl.memAddress.lower(2_b), valid(in)) | name("wordOfs");
+					UInt logSize = capture(ctrl.memLogSize, valid(in)) | name("logSize");
+
+					BVec readData = (*m_link.d)->data | name("readData");
+					BVec shiftedReadData = selectReadDataFromWordAccess(readData, wordOfs, logSize, zeroExtend);
+
 					IF(transfer(*m_link.d) & (*m_link.d)->hasData())
-						Base::externalResult((*m_link.d)->data);
+						Base::externalResult(shiftedReadData);
 
 					Bit instrReady = (
 						ctrl.memWrite & ready(m_link.a) |
