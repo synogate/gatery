@@ -43,7 +43,7 @@ namespace gtry::scl
 	 * @param selectBurst Optional function to select the burst size and conditions. The function is called with the memory request channel and can modify the channel.
 	 */
 	TileLinkU tileLinkCacheDirectMappedReadOnlyBurst(TileLinkU&& slave, gtry::BitWidth addrW, std::function<void(TileLinkChannelA&)> selectBurst = {}, const sim::DefaultBitVectorState& initialContent = {});
-	inline auto tileLinkCacheDirectMappedReadOnlyBurst(BitWidth addrW, std::function<void(TileLinkChannelA&)> selectBurst = {}) { return [=](auto&& in) { return tileLinkAddBurst(std::forward<decltype(in)>(in), addrW, move(selectBurst)); }; }
+	inline auto tileLinkCacheDirectMappedReadOnlyBurst(BitWidth addrW, std::function<void(TileLinkChannelA&)> selectBurst = {}) { return [=](auto&& in) { return tileLinkCacheDirectMappedReadOnlyBurst(std::forward<decltype(in)>(in), addrW, move(selectBurst)); }; }
 
 	TileLinkU tileLinkCacheDirectMappedVictim(TileLinkU&& ram, BitWidth addrW);
 }

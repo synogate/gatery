@@ -114,7 +114,7 @@ namespace gtry::scl
 			.addrW = address.width(),
 			.dataW = data.width(),
 			.sourceW = source.width(),
-			.burstLimitLog = size.width().last(),
+			.burstLimitLog = utils::Log2(data.width().bytes()),
 		};
 		cfg.opValid[TileLinkA::Get] = true;
 		cfg.opValid[TileLinkA::PutFullData] = true;
