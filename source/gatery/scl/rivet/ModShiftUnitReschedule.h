@@ -74,7 +74,7 @@ namespace gtry::scl::rivet::mod
 						Base::externalResult(*result);
 
 					// TODO: refactor all of this into externalResult utility
-					Bit externalReady = reg(valid(result), '0') | name("externalReady");
+					Bit externalReady = reg(valid(result)) & valid(result) | name("externalReady");
 					return move(in) |
 						Base::attach([&](const JmpCtrl& jmp, const InstrPtr& ip, const MemCtrl& ctrl) {
 							JmpCtrl out = jmp;
