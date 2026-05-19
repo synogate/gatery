@@ -2215,9 +2215,12 @@ BOOST_FIXTURE_TEST_CASE(riscv_gdb_soc_export, BoostUnitTestSimulationFixture, *b
 
 		if (hasUsb)
 		{
-			usb::GpioPhyCdc phy;
-			usb::Function usbFunction;
-			usb::uartDevice(soc.mmap(), "uart", usbFunction, { .phy = &phy });
+			std::shared_ptr phy = std::make_shared<usb::GpioPhyCdc>();
+			usb::Function function;
+			usb::uartDevice(soc.mmap(), "uart", function, { .phy = phy.get(), .maxPacketSize = 64 });
+
+			// NOTE: remove "uart_puts("+$S05#b8");" from main.cpp for this to work
+			//addSimulationProcess([this, phy, desc = function.descriptor()]() ->SimProcess { co_await usb::simuHostTcp(phy, desc); stopTest(); });
 		}
 		else
 		{

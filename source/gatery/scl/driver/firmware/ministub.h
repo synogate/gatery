@@ -58,6 +58,36 @@ static void stub_msg_end(unsigned char sum)
     }
 }
 
+static void stub_send_char(unsigned char c)
+{
+    unsigned char h = num2hex(c >> 4);
+    unsigned char l = num2hex(c & 0xF);
+    stub_msg_put('$');
+    stub_msg_put('O');
+    stub_msg_put(h);
+    stub_msg_put(l);
+    unsigned char sum = ('O' + h + l);
+    stub_msg_end(sum);
+}
+
+static void stub_send_string(const char* msg)
+{
+    stub_msg_put('$');
+    stub_msg_put('O');
+
+    unsigned char sum = 'O';
+    while(*msg)
+    {
+        unsigned char h = num2hex(*msg >> 4);
+        unsigned char l = num2hex(*msg & 0xF);
+        stub_msg_put(h);
+        stub_msg_put(l);
+        sum += h + l;
+        msg++;
+    }
+    stub_msg_end(sum);
+}
+
 static unsigned stub_get_hexnumber()
 {
     unsigned ret = 0;

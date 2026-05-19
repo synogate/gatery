@@ -190,6 +190,11 @@ gtry::SimFunction<std::vector<std::byte>> gtry::scl::usb::GpioPhy::receive(size_
 {
 	hlim::ClockRational baudRate{ 1, 12'000'000 };
 
+	auto log = [](bool required, std::string_view msg) {
+		if (!required)
+			sim::SimulationContext::current()->onWarning(nullptr, std::string{ msg });
+		};
+
 	// wait for preamble
 	size_t timeout = 0;
 	while(lineState() != K)
@@ -234,9 +239,9 @@ gtry::SimFunction<std::vector<std::byte>> gtry::scl::usb::GpioPhy::receive(size_
 		co_await WaitFor(baudRate);
 
 	} while (lineState() != SE0);
-	HCL_ASSERT_HINT(stuffBitCounter < 5, "missing trailing stuff bit error");
-	HCL_ASSERT_HINT(bitCounter == 0, "incomplete byte");
-	HCL_ASSERT_HINT(!data.empty() && data[0] == std::byte(0x80), "preamble missing");
+	log(stuffBitCounter < 5, "missing trailing stuff bit error");
+	log(bitCounter == 0, "incomplete byte");
+	log(!data.empty() && data[0] == std::byte(0x80), "preamble missing");
 
 	while (lineState() != J)
 		co_await WaitFor(baudRate);

@@ -75,7 +75,7 @@ namespace gtry::scl::usb
 	public:
 		virtual SimProcess deviceReset() = 0;
 		virtual SimProcess send(std::span<const std::byte> data) = 0;
-		virtual SimFunction<std::vector<std::byte>> receive(size_t timeoutCycles = 5) = 0;
+		virtual SimFunction<std::vector<std::byte>> receive(size_t timeoutCycles = 7) = 0;
 	};
 
 	class SimuPhy : public Phy, public SimuBusBase
@@ -85,7 +85,7 @@ namespace gtry::scl::usb
 
 		SimProcess deviceReset();
 		SimProcess send(std::span<const std::byte> data);
-		SimFunction<std::vector<std::byte>> receive(size_t timeoutCycles = 16);
+		SimFunction<std::vector<std::byte>> receive(size_t timeoutCycles);
 
 		virtual Bit setup(OpMode mode = OpMode::FullSpeedFunction) { return '1'; }
 
@@ -117,7 +117,7 @@ namespace gtry::scl::usb
 		SimProcess sendHandshake(Pid pid);
 		SimFunction<std::optional<Pid>> receivePid(size_t timeoutCycles = 16);
 
-		SimFunction<std::vector<std::byte>> transferIn(size_t endPoint);
+		SimFunction<std::vector<std::byte>> transferIn(size_t endPoint, bool blocking = true);
 		SimFunction<std::vector<std::byte>> transferInBatch(size_t endPoint, size_t length);
 		SimFunction<std::optional<Pid>> transferOut(size_t endPoint, std::span<const std::byte> data, Pid dataPid = Pid::data0, Pid tokenPid = Pid::out);
 		SimFunction<size_t> transferOutBatch(size_t endPoint, std::span<const std::byte> data);
@@ -143,4 +143,14 @@ namespace gtry::scl::usb
 		uint8_t m_maxPacketLength = 64;
 		Pid m_nextDataPidOut[16];
 	};
+
+	// connects an endpoint to a tcp socket in both directions. can be used to connect gdb to out ministub. usage:
+	//	addSimulationProcess([this, phy, desc = function.descriptor()]() ->SimProcess { co_await usb::simuHostTcp(phy, desc); stopTest(); });
+	// 
+	// The tcp port is currently hardcoded to 2159 (gdb remote protocol)
+	//
+	//  gdb usage:
+	//	riscv64-unknown-elf-gdb .\demo.elf -ex "set remotetimeout 300" -ex "target remote :2159" -ex "load" -ex "c" -ex "q"
+	//  NOTE: the stub should not print any data before gdb does. otherwise gdb gets out of sync with the ack's and needs to timeout (takes long)
+	SimProcess simuHostTcp(std::shared_ptr<SimuBusBase> phy, Descriptor descriptor);
 }

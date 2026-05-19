@@ -21,6 +21,7 @@
 #include "../../crc.h"
 
 #include <boost/crc.hpp>
+#include <boost/asio.hpp>
 
 namespace gtry::scl::usb
 {
@@ -175,13 +176,16 @@ namespace gtry::scl::usb
 		co_return std::nullopt;
 	}
 	
-	SimFunction<std::vector<std::byte>> SimuHostController::transferIn(size_t endPoint)
+	SimFunction<std::vector<std::byte>> SimuHostController::transferIn(size_t endPoint, bool blocking)
 	{
 		while (true)
 		{
 			co_await sendToken(Pid::in, m_functionAddress, endPoint);
 
 			std::vector<std::byte> data = co_await bus().receive();
+			if (!blocking && data.size() <= 1)
+				co_return std::vector<std::byte>{};
+
 			checkPacketBitErrors(data);
 
 			if (data.size() >= 3)
@@ -451,5 +455,59 @@ namespace gtry::scl::usb
 				return d;
 		}
 		throw std::runtime_error("descriptor not found");
+	}
+
+	SimProcess simuHostTcp(std::shared_ptr<SimuBusBase> phy, Descriptor descriptor)
+	{
+		usb::SimuHostController host(*phy, descriptor);
+
+		co_await WaitFor(1us);
+		co_await host.controlSetConfiguration(1);
+
+		using namespace boost::asio::ip;
+		boost::asio::io_context ctx;
+		tcp::acceptor acceptor(ctx, tcp::endpoint{ tcp::v4(), 2159 });
+		std::cerr << "wait for tcp connection on port 2159... ";
+		tcp::socket gdb = acceptor.accept();
+		std::cerr << "connected\n";
+
+		gdb.non_blocking(true);
+		while (true)
+		{
+			{
+				std::array<char, 64> buffer;
+				boost::system::error_code ec;
+				size_t len = gdb.receive(boost::asio::buffer(buffer), 0, ec);
+				if (!ec && len)
+				{
+					if (std::all_of(buffer.begin(), buffer.end(), [](char c) { return isprint(c) != 0; }))
+						sim::SimulationContext::current()->onDebugMessage(nullptr, "tcp: " + std::string(buffer.data(), len));
+					else
+						sim::SimulationContext::current()->onDebugMessage(nullptr, "tcp: <data>");
+
+					co_await host.transferOutBatch(1, std::as_bytes(std::span(buffer.data(), len)));
+				}
+			}
+
+			while (true)
+			{
+				std::vector response = co_await host.transferIn(1, false);
+				if (response.empty())
+					break;
+
+				if (std::all_of(response.begin(), response.end(), [](std::byte c) { return isprint((int)c) != 0; }))
+					sim::SimulationContext::current()->onDebugMessage(nullptr, "usb: " + std::string((const char*)response.data(), response.size()));
+				else
+					sim::SimulationContext::current()->onDebugMessage(nullptr, "usb: <data>");
+
+				boost::system::error_code ec;
+				gdb.send(boost::asio::buffer(response), 0, ec);
+				if (ec)
+				{
+					std::cerr << "connection lost\n";
+					co_return;
+				}
+			}
+		}
 	}
 }
