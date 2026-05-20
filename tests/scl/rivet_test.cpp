@@ -27,6 +27,7 @@
 
 #include <gatery/scl/riscv/PipelineRV.h>
 #include <gatery/scl/riscv/ElfLoader.h>
+#include <gatery/scl/tilelink/TileLinkCache.h>
 
 using namespace boost::unit_test;
 using namespace gtry;
@@ -36,7 +37,7 @@ class RiscvInstructionSelfTest : public BoostUnitTestSimulationFixture
 {
 public:
 
-	void runTest(std::string name)
+	void runTest(std::string testName)
 	{
 		Clock clk{ ClockConfig{
 			.absoluteFrequency = 100_mhz,
@@ -45,15 +46,15 @@ public:
 
 		ClockScope clkScp(clk);
 
-		riscv::ElfLoader elf{ "external/riscv-tests/" + name };
+		riscv::ElfLoader elf{ "external/riscv-tests/" + testName };
 		BOOST_TEST(elf.segments().size() == 2);
 
 		using namespace rivet;
 		using TestRV = PipelineFiveStage <
 		//	mod::GateMate<
-			mod::InstrRom<
-		//	mod::InstrTileLink<
-			mod::DataTileLink<
+			mod::InstrTileLink<
+		//	mod::DataTileLink<
+			mod::DataTileLinkReschedule<
 			mod::Csr<
 			mod::HazardDataResolve<
 			mod::BranchMissPredict<
@@ -63,9 +64,9 @@ public:
 			mod::LoadStoreSubword<
 			mod::LoadStore<
 			mod::EnvCallBreak<
-			mod::ShiftUnit<
+		//	mod::ShiftUnit<
 		//	mod::ShiftUnitSequential<
-		//	mod::ShiftUnitReschedule<
+			mod::ShiftUnitReschedule<
 			mod::ExternalResult<
 			mod::ControlFlow<
 			mod::RegisterFile<
@@ -82,7 +83,29 @@ public:
 		rv.addCsrReadOnly(0x342, ConstBVec(8, 32_b));
 
 		riscv::ElfLoader::Segment text = elf.segments()[0];
-		rv.instrRom(std::as_bytes(std::span(text.data)));
+		{ // code link
+			Memory<BVec> imem(text.size.bytes() / 4, 32_b);
+			imem.fillPowerOnState(sim::createDefaultBitVectorState(std::as_bytes(std::span{ text.data })));
+
+			std::function<void(TileLinkChannelA&)> burstSelect = [&](TileLinkChannelA& a) {
+				a->size = 2;
+				IF(a->address.lower(3_b) == 0)
+					a->size = 3;
+				IF(a->address.lower(4_b) == 0)
+					a->size = 4;
+			};
+
+			TileLinkU imemLink = 
+				tileLinkMemory(imem, TileLinkMemoryConfig{ .sourceW = 6_b, .writePort = false, .latency = 1 }) | 
+#if 0
+				tileLinkAddBurst(4) |
+				name("imemLinkPreCache") |
+				tileLinkCacheDirectMappedReadOnlyBurst(4_b, burstSelect) | 
+#endif
+				name("imemLink");
+
+			rv.instrFetch(move(imemLink));
+		}
 
 		riscv::ElfLoader::Segment data = elf.segments()[1];
 		size_t dmemOffset = data.offset - text.offset;
