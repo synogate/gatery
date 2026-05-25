@@ -85,6 +85,15 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 		return false;
 	}
 
+	for (auto &wp : memGrp->getWritePorts())
+		if (wp.node->getWriteMaskWidth() != 0) {
+			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory()
+					<< " because one of the write ports has a write mask.");
+			return false;
+		}
+
+
 	size_t width = rp.node->getBitWidth();
 	size_t depth = memGrp->getMemory()->getSize()/width;
 	BitWidth addrBits = BitWidth::count(depth);

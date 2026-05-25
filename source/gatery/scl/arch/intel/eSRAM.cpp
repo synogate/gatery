@@ -68,6 +68,15 @@ bool eSRAM::apply(hlim::NodeGroup *nodeGroup) const
 	const auto &wp = memGrp->getWritePorts().front();
 	if (memGrp->getMemory()->getRequiredReadLatency() < 1+m_desc.outputRegs) return false;
 
+	for (auto &wp : memGrp->getWritePorts())
+		if (wp.node->getWriteMaskWidth() != 0) {
+			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory()
+					<< " because one of the write ports has a write mask.");
+			return false;
+		}
+
+
 	// eSRAM can not be initialized
 	if (sim::anyDefined(memGrp->getMemory()->getPowerOnState()) && wp.node->getClocks()[0]->getRegAttribs().initializeMemory) return false;
 

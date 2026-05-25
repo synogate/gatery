@@ -69,6 +69,13 @@ bool XilinxLutram::apply(hlim::NodeGroup *nodeGroup) const
 	if (memGrp->getMemory()->getRequiredReadLatency() == 0) return false;
 	if (memGrp->getMemory()->getMinPortWidth() != memGrp->getMemory()->getMaxPortWidth()) return false;
 	if (!memtools::memoryIsSingleClock(nodeGroup)) return false;
+	for (auto &wp : memGrp->getWritePorts())
+		if (wp.node->getWriteMaskWidth() != 0) {
+			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
+					"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory()
+					<< " because one of the write ports has a write mask.");
+			return false;
+		}
 
 	// At this point we are sure we can handle it (as long as register retiming doesn't fail of course).
 
