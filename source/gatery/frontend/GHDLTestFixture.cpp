@@ -105,9 +105,9 @@ GHDLTestFixture::~GHDLTestFixture()
 {
 }
 
-void GHDLTestFixture::addCustomVHDL(std::string name, std::string content)
+void GHDLTestFixture::addCustomSourceCode(std::string name, vhdl::SourceType type, std::string content)
 {
-	m_customVhdlFiles[std::move(name)] = std::move(content);
+	m_customSourceCode[std::move(name)] = {.type = type, .code = std::move(content)};
 }
 
 void GHDLTestFixture::testCompilation(Flavor flavor)
@@ -139,8 +139,8 @@ void GHDLTestFixture::prepRun()
 void GHDLTestFixture::performVhdlExport(Flavor flavor)
 {
 	m_vhdlExport.emplace(m_cwd / "design.vhd");
-	for (const auto &file_content : m_customVhdlFiles)
-		m_vhdlExport->addCustomVhdlFile(file_content.first, file_content.second);
+	for (const auto &file_content : m_customSourceCode)
+		m_vhdlExport->addCustomSourceCode(file_content.first, file_content.second.type, file_content.second.code);
 
 	m_vhdlExport->outputMode(vhdlOutputMode);
 	m_vhdlExport->addTestbenchRecorder(getSimulator(), "testbench", false);

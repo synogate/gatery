@@ -88,7 +88,7 @@ void findMemoryGroups(Circuit &circuit)
 }
 
 
-bool MemoryGroup::ReadPort::findOutputRegisters(size_t readLatency, NodeGroup *memoryNodeGroup)
+bool MemoryGroup::MemPort::findOutputRegisters(size_t readLatency, NodeGroup *memoryNodeGroup)
 {
 	// keep a list of encoutnered signal nodes to move into memory group.
 	std::vector<BaseNode*> signalNodes;
@@ -161,53 +161,67 @@ bool MemoryGroup::ReadPort::findOutputRegisters(size_t readLatency, NodeGroup *m
 	return dedicatedReadLatencyRegisters.back() != nullptr; // return true if all were found
 }
 
+bool MemoryGroup::MemPort::isReadPort() const
+{
+	return node->isReadPort();
+}
+
+bool MemoryGroup::MemPort::isWritePort() const
+{
+	return node->isWritePort();
+}
+
+memory::ReadDuringWrite MemoryGroup::MemPort::samePortRDWBehavior() const
+{
+	return node->samePortRDWBehavior();
+}
+
+BitWidth MemoryGroup::MemPort::addressWidth() const
+{
+	return BitWidth{node->getExpectedAddressBits()};
+}
+
+
+
 MemoryGroup::MemoryGroup(NodeGroup *group) : m_nodeGroup(group)
 {
 	m_nodeGroup->setGroupType(NodeGroupType::SFU);
 }
 
-bool MemoryGroup::canReadBeforeAllOthersWrite(const ReadPort &rdPort) const
+bool MemoryGroup::canReadBeforeAllOthersWrite(const MemPort &rdPort) const
 {
-	for (const auto &wp : m_writePorts)
+	for (const auto &wp : getWritePorts())
 		if (rdPort.node->isOrderedAfter(wp.node))
 			return false;
 	return true;
 }
 
-bool MemoryGroup::canReadAfterAllOthersWrite(const ReadPort &rdPort) const
+bool MemoryGroup::canReadAfterAllOthersWrite(const MemPort &rdPort) const
 {
-	for (const auto &wp : m_writePorts)
+	for (const auto &wp : getWritePorts())
 		if (rdPort.node->isOrderedBefore(wp.node))
 			return false;
 	return true;
 }
 
-bool MemoryGroup::readUnorderedToAllOthersWrite(const ReadPort &rdPort) const
+bool MemoryGroup::readUnorderedToAllOthersWrite(const MemPort &rdPort) const
 {
-	for (const auto &wp : m_writePorts)
+	for (const auto &wp : getWritePorts())
 		if (rdPort.node->isOrderedAfter(wp.node) || rdPort.node->isOrderedBefore(wp.node))
 			return false;
 	return true;
 }
 
 
-const MemoryGroup::ReadPort &MemoryGroup::findReadPort(Node_MemPort *memPort)
+const MemoryGroup::MemPort &MemoryGroup::findPort(Node_MemPort *memPort)
 {
-	for (auto &rp : m_readPorts)
-		if (rp.node == memPort)
-			return rp;
+	for (auto &p : m_ports)
+		if (p.node == memPort)
+			return p;
 		
 	HCL_ASSERT(false);
 }
 
-const MemoryGroup::WritePort &MemoryGroup::findWritePort(Node_MemPort *memPort)
-{
-	for (auto &wp : m_writePorts)
-		if (wp.node == memPort)
-			return wp;
-		
-	HCL_ASSERT(false);
-}
 
 void MemoryGroup::pullInPorts(Node_Memory *memory)
 {
@@ -216,19 +230,10 @@ void MemoryGroup::pullInPorts(Node_Memory *memory)
 	// Initial naive grabbing of everything that might be usefull
 	for (auto &np : m_memory->getPorts()) {
 		auto *port = dynamic_cast<Node_MemPort*>(np.node);
-		HCL_ASSERT(port->isWritePort() || port->isReadPort());
-		// Check all write ports
-		if (port->isWritePort()) {
-			HCL_ASSERT_HINT(!port->isReadPort(), "For now I don't want to mix read and write ports");
-			m_writePorts.push_back({.node=NodePtr<Node_MemPort>{port}});
-			port->moveToGroup(m_nodeGroup);
-		}
-		// Check all read ports
+		m_ports.push_back({.node=NodePtr<Node_MemPort>{port}});
+		port->moveToGroup(m_nodeGroup);
 		if (port->isReadPort()) {
-			m_readPorts.push_back({.node = NodePtr<Node_MemPort>{port}});
-			ReadPort &rp = m_readPorts.back();
-			port->moveToGroup(m_nodeGroup);
-			rp.dataOutput = {.node = port, .port = (size_t)Node_MemPort::Outputs::rdData};
+			m_ports.back().dataOutput = {.node = port, .port = (size_t)Node_MemPort::Outputs::rdData};
 
 			//NodePort readPortEnable = port->getNonSignalDriver((size_t)Node_MemPort::Inputs::enable);
 
@@ -274,26 +279,35 @@ NodeGroup *MemoryGroup::lazyCreateFixupNodeGroup()
 	return m_fixupNodeGroup;
 }
 
-void MemoryGroup::convertReadFirstToDelayedWriteFirst(Circuit &circuit)
+MemoryGroup::ReadWriteOrdering MemoryGroup::getReadWriteOrdering() const
 {
-	if (m_writePorts.empty()) return;
+	ReadWriteOrdering ordering{
+		.anyMustReadFirst = false,
+		.allCanReadFirst = true,
+	};
 
-	bool anyMustReadFirst = false;
-	bool allCanReadFirst = true;
-	for (auto &rp : m_readPorts) {
+	for (auto &rp : getReadPorts()) {
 		bool canReadFirst = canReadBeforeAllOthersWrite(rp);
 		bool mustReadFirst = canReadFirst && !readUnorderedToAllOthersWrite(rp);
 
-		allCanReadFirst &= canReadFirst;
-		anyMustReadFirst |= mustReadFirst;
+		ordering.allCanReadFirst &= canReadFirst;
+		ordering.anyMustReadFirst |= mustReadFirst;
 	}
-	if (!anyMustReadFirst)
+	return ordering;
+}
+
+void MemoryGroup::convertReadFirstToDelayedWriteFirst(Circuit &circuit)
+{
+	if (isROM()) return;
+
+	auto ordering = getReadWriteOrdering();
+	if (!ordering.anyMustReadFirst)
 		return;
-	HCL_ASSERT_HINT(allCanReadFirst, "This implementation can only convert read-first to don't care if all read ports are read first!");
+	HCL_ASSERT_HINT(ordering.allCanReadFirst, "This implementation can only convert read-first to don't care if all read ports are read first!");
 
 	// Find last write port
 	NodePort lastWritePort;
-	for (auto &wp : m_writePorts) {
+	for (auto &wp : getWritePorts()) {
 		HCL_ASSERT_HINT(!wp.node->isReadPort(), "Not implemented for already fused memory ports");
 		if (lastWritePort.node == nullptr)
 			lastWritePort = {.node = wp.node, .port = (size_t)Node_MemPort::Outputs::orderBefore};
@@ -306,7 +320,7 @@ void MemoryGroup::convertReadFirstToDelayedWriteFirst(Circuit &circuit)
 	}
 
 	// Make all read ports write-first, i.e. independent and after the last write port
-	for (auto &rp : m_readPorts) {
+	for (auto &rp : getReadPorts()) {
 		auto orderedAfter = rp.node->getDirectlyDriven((size_t)Node_MemPort::Outputs::orderBefore);
 		for (auto np : orderedAfter)
 			np.node->rewireInput(np.port, rp.node->getDriver((size_t)Node_MemPort::Inputs::orderAfter));
@@ -318,7 +332,7 @@ void MemoryGroup::convertReadFirstToDelayedWriteFirst(Circuit &circuit)
 	lazyCreateFixupNodeGroup();
 	ConstructionHelper c(circuit);
 	c.constructInGroup(*m_fixupNodeGroup);
-	for (auto &wp : m_writePorts) {
+	for (auto &wp : getWritePorts()) {
 		for (auto in : { hlim::Node_MemPort::Inputs::address, hlim::Node_MemPort::Inputs::wrData, hlim::Node_MemPort::Inputs::wrWordEnable }) {
 			if (wp.node->getDriver((size_t)in).node != nullptr) {
 				auto r = c.reg(*wp.node->getClocks()[0], wp.node->getDriver((size_t)in));
@@ -339,7 +353,7 @@ void MemoryGroup::resolveReadAfterWrite(Circuit &circuit)
 {
 	// If an async read happens after a write, it must
 	// check if an address collision ocurred and if so directly forward the new value.
-	for (auto &rp : m_readPorts) {
+	for (auto &rp : getReadPorts()) {
 
 		// Iteratively push the read port up the dependency chain until the top is reached.
 		// If dependent on a write port, build explicit hazard logic.
@@ -355,38 +369,29 @@ void MemoryGroup::resolveReadAfterWrite(Circuit &circuit)
 				ConstructionHelper c(circuit);
 				c.constructInGroup(*m_fixupNodeGroup);
 
-				auto *addrCompNode = circuit.createNode<Node_Compare>(Node_Compare::EQ);
-				addrCompNode->recordStackTrace();
-				addrCompNode->moveToGroup(m_fixupNodeGroup);
+				auto *addrCompNode = c.ceq(rp.node->getDriver((size_t)Node_MemPort::Inputs::address), wp->getDriver((size_t)Node_MemPort::Inputs::address));
 				addrCompNode->setComment("Compare read and write addr for conflicts");
-				addrCompNode->connectInput(0, rp.node->getDriver((size_t)Node_MemPort::Inputs::address));
-				addrCompNode->connectInput(1, wp->getDriver((size_t)Node_MemPort::Inputs::address));
 
 				NodePort conflict = {.node = addrCompNode, .port = 0ull};
 				c.appendSignal(conflict)->setName("conflict");
 
 				if (rp.node->getDriver((size_t)Node_MemPort::Inputs::enable).node != nullptr) {
-					auto *logicAnd = circuit.createNode<Node_Logic>(Node_Logic::AND);
-					logicAnd->moveToGroup(m_fixupNodeGroup);
-					logicAnd->recordStackTrace();
-					logicAnd->connectInput(0, conflict);
-					logicAnd->connectInput(1, rp.node->getDriver((size_t)Node_MemPort::Inputs::enable));
+					auto *logicAnd = c.land(conflict, rp.node->getDriver((size_t)Node_MemPort::Inputs::enable));
 					conflict = {.node = logicAnd, .port = 0ull};
 					c.appendSignal(conflict)->setName("conflict_and_rdEn");
 				}
 
 				HCL_ASSERT(wp->getDriver((size_t)Node_MemPort::Inputs::enable).node == nullptr || wp->getNonSignalDriver((size_t)Node_MemPort::Inputs::enable) == wp->getNonSignalDriver((size_t)Node_MemPort::Inputs::wrEnable));
 				if (wp->getDriver((size_t)Node_MemPort::Inputs::wrEnable).node != nullptr) {
-					auto *logicAnd = circuit.createNode<Node_Logic>(Node_Logic::AND);
-					logicAnd->moveToGroup(m_fixupNodeGroup);
-					logicAnd->recordStackTrace();
-					logicAnd->connectInput(0, conflict);
-					logicAnd->connectInput(1, wp->getDriver((size_t)Node_MemPort::Inputs::wrEnable));
+					auto *logicAnd = c.land(conflict, wp->getDriver((size_t)Node_MemPort::Inputs::wrEnable));
 					conflict = {.node = logicAnd, .port = 0ull};
 					c.appendSignal(conflict)->setName("conflict_and_wrEn");
 				}
 
 				NodePort wrData = wp->getDriver((size_t)Node_MemPort::Inputs::wrData);
+
+				HCL_ASSERT_HINT(wp->getDriver((size_t)Node_MemPort::Inputs::wrWordEnable).node == nullptr, 
+						"Can not build read-after-write logic for write ports with word enables.");
 
 				// If the read data gets delayed, we will have to delay the write data and conflict decision as well
 				// Actually: Don't fetch them beforehand, makes things easier
@@ -395,16 +400,8 @@ void MemoryGroup::resolveReadAfterWrite(Circuit &circuit)
 				std::vector<NodePort> consumers = rp.dataOutput.node->getDirectlyDriven(rp.dataOutput.port);
 
 				// Finally the actual mux to arbitrate between the actual read and the forwarded write data.
-				auto *muxNode = circuit.createNode<Node_Multiplexer>(2);
-
-				// Then bind the mux
-				muxNode->recordStackTrace();
-				muxNode->moveToGroup(m_fixupNodeGroup);
+				auto *muxNode = c.mux(conflict, rp.dataOutput, wrData);
 				muxNode->setComment("If read and write addr match and read and write are enabled, forward write data to read output.");
-				muxNode->connectSelector(conflict);
-				muxNode->connectInput(0, rp.dataOutput);
-				muxNode->connectInput(1, wrData);
-
 				NodePort muxOut = {.node = muxNode, .port=0ull};
 
 				c.appendSignal(muxOut)->setName("conflict_bypass_mux");
@@ -435,7 +432,7 @@ void MemoryGroup::resolveWriteOrder(Circuit &circuit)
 	// NOT: THIS ASSUMES THAT THERE IS NO MORE ANY WRITE BEFORE READ!!!
 
 	// For each write port:
-	for (auto &wp1 : m_writePorts)
+	for (auto &wp1 : getWritePorts())
 		// Scan dependency chain for other write ports
 		while (wp1.node->getDriver((size_t)Node_MemPort::Inputs::orderAfter).node != nullptr) {
 			auto *prevPort = dynamic_cast<Node_MemPort*>(wp1.node->getDriver((size_t)Node_MemPort::Inputs::orderAfter).node);
@@ -654,8 +651,10 @@ void MemoryGroup::ensureNotEnabledFirstCycles(Circuit &circuit, NodeGroup *ng, N
 
 void MemoryGroup::findRegisters()
 {
-	for (auto &rp : m_readPorts)
-		HCL_ASSERT(rp.findOutputRegisters(m_memory->getRequiredReadLatency(), m_nodeGroup));
+	for (auto &rp : getReadPorts()) {
+		bool allFound = rp.findOutputRegisters(m_memory->getRequiredReadLatency(), m_nodeGroup);
+		HCL_ASSERT(allFound);
+	}
 }
 
 void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
@@ -670,11 +669,10 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 	for (auto np : m_memory->getPorts()) {
 		auto *memPort = dynamic_cast<Node_MemPort*>(np.node);
 		if (memPort->isWritePort()) {
-			HCL_ASSERT_HINT(!memPort->isReadPort(), "Retiming for combined read and write ports not yet implemented!");
+			//HCL_ASSERT_HINT(!memPort->isReadPort(), "Retiming for combined read and write ports not yet implemented!");
 			retimeableWritePorts.insert(memPort);
 		}
 	}
-
 
 
 	utils::StableMap<Node_MemPort*, size_t> actuallyRetimedWritePorts;
@@ -684,7 +682,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 	// If they do, scan the read data output bus for any registers buried in the combinatorics that could be pulled back and fused.
 	// Keep note of which write ports are "delayed" through this retiming to then, in a second step, build rw hazard bypass logic.
 
-	for (auto &rp : m_readPorts) {
+	for (auto &rp : getReadPorts()) {
 		// Start open minded about the enable condition
 		std::optional<Conjunction> enableCondition;
 		auto extractEnableCondition = [&]{
@@ -752,7 +750,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 	
 	size_t maxLatency = 0;
 	
-	for (auto &rp : m_readPorts)
+	for (auto &rp : getReadPorts())
 		rmwBuilder.addReadPort(ReadModifyWriteHazardLogicBuilder::ReadPort{
 			.addrInputDriver = rp.node->getDriver((size_t)Node_MemPort::Inputs::address),
 			.enableInputDriver = rp.node->getDriver((size_t)Node_MemPort::Inputs::enable),
@@ -778,7 +776,7 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 
 
 	// The rmw builder also builds logic for read during write collision, so we can set read ports to be independent of write ports
-	for (auto &rp : m_readPorts) {
+	for (auto &rp : getReadPorts()) {
 		rp.node->rewireInput((size_t)Node_MemPort::Inputs::orderAfter, {});
 		while (!rp.node->getDirectlyDriven((size_t)Node_MemPort::Outputs::orderBefore).empty()) {
 			auto driven = rp.node->getDirectlyDriven((size_t)Node_MemPort::Outputs::orderBefore).back();
@@ -800,14 +798,14 @@ void MemoryGroup::attemptRegisterRetiming(Circuit &circuit)
 void MemoryGroup::updateNoConflictsAttrib()
 {
 	bool conflicts = false;
-	for (auto &rp : m_readPorts)	
+	for (auto &rp : getReadPorts())	
 		if (rp.node->getDriver((size_t)Node_MemPort::Inputs::orderAfter).node != nullptr) {
 			conflicts = true;
 			break;
 		}
 
 	if (!conflicts) {
-		for (auto &wp : m_writePorts)
+		for (auto &wp : getWritePorts())
 			if (wp.node->getDriver((size_t)Node_MemPort::Inputs::orderAfter).node != nullptr) {
 				conflicts = true;
 				break;
@@ -819,7 +817,7 @@ void MemoryGroup::updateNoConflictsAttrib()
 
 void MemoryGroup::buildReset(Circuit &circuit)
 {
-	if (m_readPorts.empty()) return;
+	if (getReadPorts().empty()) return;
 	if (m_memory->getNonSignalDriver((size_t)Node_Memory::Inputs::INITIALIZATION_DATA).node != nullptr) {
 		buildResetLogic(circuit);
 		// Disconnect initialization network's output from memory node
@@ -1021,8 +1019,8 @@ Clock *MemoryGroup::buildResetClock(Circuit &circuit, Clock *clockDomain)
 
 Node_MemPort *MemoryGroup::findSuitableResetWritePort()
 {
-	if (m_writePorts.empty()) return nullptr;
-	for (auto &wp : m_writePorts)
+	if (isROM()) return nullptr;
+	for (auto &wp : getWritePorts())
 		if (wp.node->getBitWidth() == m_memory->getInitializationDataWidth() || m_memory->getInitializationDataWidth() == 0)
 			return wp.node.get();
 
@@ -1059,7 +1057,7 @@ void MemoryGroup::verify()
 {
 	switch (m_memory->type()) {
 		case Node_Memory::MemType::MEDIUM:
-			for (auto &rp : m_readPorts) {
+			for (auto &rp : getReadPorts()) {
 				if (rp.dedicatedReadLatencyRegisters.size() < 1) {
 					std::stringstream issue;
 					issue << "Memory can not become BRAM because a read port is missing it's data register.\nMemory from:\n"
@@ -1077,18 +1075,20 @@ void MemoryGroup::verify()
 			*/
 		break;
 		case Node_Memory::MemType::SMALL:
-			if (m_readPorts.size() > 1) {
+		/*
+			if (getNumReadPorts() > 1) {
 				std::stringstream issue;
 				issue << "Memory can not become LUTRAM because it has too many read ports.\nMemory from:\n"
 					  << m_memory->getStackTrace();
 				HCL_DESIGNCHECK_HINT(false, issue.str());
 			}
-			if (m_writePorts.size() > 1) {
+			if (getNumWritePorts() > 1) {
 				std::stringstream issue;
 				issue << "Memory can not become LUTRAM because it has too many write ports.\nMemory from:\n"
 					  << m_memory->getStackTrace();
 				HCL_DESIGNCHECK_HINT(false, issue.str());
 			}
+		*/
 		break;
 		default:
 		break;
@@ -1108,14 +1108,14 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 
 	MemorySimConfig memSimConfig; 
 	memSimConfig.size = m_memory->getSize();
-	memSimConfig.readPorts.reserve(m_readPorts.size());
-	memSimConfig.writePorts.reserve(m_writePorts.size());
+	memSimConfig.readPorts.reserve(getNumReadPorts());
+	memSimConfig.writePorts.reserve(getNumWritePorts());
 
 	size_t portIdx = 0;
 
-	memGroupProps["numPorts"] = m_readPorts.size() + m_writePorts.size();
+	memGroupProps["numPorts"] = getNumReadPorts() + getNumWritePorts();
 
-	for (auto &rp : m_readPorts) {
+	for (auto &rp : getReadPorts()) {
 		Clock *clock = nullptr;
 		for (auto &r : rp.dedicatedReadLatencyRegisters) {
 			HCL_ASSERT(r->getNonSignalDriver(Node_Register::ENABLE).node == nullptr);
@@ -1188,7 +1188,7 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 		portIdx++;
 	}
 
-	for (auto &wp : m_writePorts) {
+	for (auto &wp : getWritePorts()) {
 		auto clock = wp.node->getClocks()[0];
 
 		auto *pinWrAddr = circuit.createNode<Node_Pin>(false, true, false);
@@ -1237,13 +1237,14 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 		portIdx++;
 	}
 
-	for (auto rdPortIdx : utils::Range(m_readPorts.size())) {
+	size_t rdPortIdx = 0;
+	for (const auto &rp : getReadPorts()) {
 		bool anyReadFirst = false;
 		bool anyWriteFirst = false;
-		for (auto wrPortIdx : utils::Range(m_writePorts.size())) {
-			if (m_readPorts[rdPortIdx].node->isOrderedBefore(m_writePorts[wrPortIdx].node))
+		for (const auto &wp : getWritePorts()) {
+			if (rp.node->isOrderedBefore(wp.node))
 				anyReadFirst = true;
-			else if (m_writePorts[wrPortIdx].node->isOrderedBefore(m_readPorts[rdPortIdx].node))
+			else if (wp.node->isOrderedBefore(rp.node))
 				anyWriteFirst = true;
 		}
 
@@ -1260,12 +1261,12 @@ void MemoryGroup::replaceWithIOPins(Circuit &circuit)
 			memSimConfig.readPorts[rdPortIdx].rdw = MemorySimConfig::RdPrtNodePorts::READ_UNDEFINED;
 			memGroupProps[rdwName] = "DONT_CARE";
 		}
+		rdPortIdx++;
 	}
 
 	addExternalMemorySimulator(circuit, std::move(memSimConfig));
 
-	m_readPorts.clear();
-	m_writePorts.clear();
+	m_ports.clear();
 	m_memory = nullptr;
 }
 
@@ -1288,12 +1289,12 @@ void MemoryGroup::giveName(Circuit &circuit, NodePort &nodePort, std::string nam
 
 void MemoryGroup::emulateResetOfOutputRegisters(Circuit &circuit)
 {
-	for (auto &rp : m_readPorts)
+	for (auto &rp : getReadPorts())
 		if (rp.dedicatedReadLatencyRegisters.size() == 1)
 			emulateResetOfFirstReadPortOutputRegister(circuit, rp);
 }
 
-void MemoryGroup::emulateResetOfFirstReadPortOutputRegister(Circuit &circuit, MemoryGroup::ReadPort &rp)
+void MemoryGroup::emulateResetOfFirstReadPortOutputRegister(Circuit &circuit, MemPort &rp)
 {
 	auto *reg = rp.dedicatedReadLatencyRegisters.front().get();
 	if (reg->getNonSignalDriver(Node_Register::RESET_VALUE).node == nullptr) 
@@ -1327,7 +1328,6 @@ void MemoryGroup::emulateResetOfFirstReadPortOutputRegister(Circuit &circuit, Me
 }
 
 
-
 Memory2VHDLPattern::Memory2VHDLPattern()
 {
 	m_priority = EXPORT_LANGUAGE_MAPPING + 100;
@@ -1342,10 +1342,26 @@ bool Memory2VHDLPattern::attemptApply(Circuit &circuit, hlim::NodeGroup *nodeGro
 
 	dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_INFO << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << "Preparing memory in " << nodeGroup << " for vhdl export");
 
+
+	if (auto rdw = memoryGroup->getMemory()->forceFinalMemoryCrossPortRDW()) {
+		switch (*rdw) {
+			case Node_Memory::ReadDuringWrite::READ_FIRST:
+				HCL_ASSERT_HINT(memoryGroup->getReadWriteOrdering().allCanReadFirst, "Conversion to read first not implemented yet!");
+			break;
+			case Node_Memory::ReadDuringWrite::WRITE_FIRST:
+				memoryGroup->convertReadFirstToDelayedWriteFirst(circuit); 
+			break;
+			case Node_Memory::ReadDuringWrite::DONT_CARE:
+				memoryGroup->convertReadFirstToDelayedWriteFirst(circuit);
+				memoryGroup->resolveReadAfterWrite(circuit);
+			break;
+		}
+	}
+
 	//todo: retiming so far expects non-write-first so I have to always convert.
 	// if (memoryGroup->getMemory()->getRequiredReadLatency() == 0)
-		memoryGroup->convertReadFirstToDelayedWriteFirst(circuit);
 		memoryGroup->resolveReadAfterWrite(circuit);
+
 	memoryGroup->attemptRegisterRetiming(circuit);
 	memoryGroup->resolveWriteOrder(circuit);
 	memoryGroup->updateNoConflictsAttrib();

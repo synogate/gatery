@@ -80,4 +80,59 @@ struct Test_CrossPortOrdering : public gtry::GHDLTestFixture
 	void execute();
 };
 
+struct Test_MaskedWrite : public gtry::GHDLTestFixture
+{
+	size_t numElements = 32;
+	gtry::BitWidth elementWidth = gtry::BitWidth(32);
+	size_t maskGranularity = 8;
+	size_t latency = 1;
+	gtry::MemType memType = gtry::MemType::DONT_CARE;
+
+	bool readFirst = false;
+	bool declareNoConflict = true;
+
+	void execute();
+};
+
+
+struct Test_TrueDualPort : public gtry::GHDLTestFixture
+{
+	size_t numElements = 32;
+	gtry::BitWidth elementWidth = gtry::BitWidth(8);
+	size_t latency = 1;
+	gtry::MemType memType = gtry::MemType::DONT_CARE;
+
+	bool declareNoConflict = true;
+
+	void execute();
+};
+
+
+struct Test_TrueDualPortMaskedWrite : public gtry::GHDLTestFixture
+{
+	size_t numElements = 32;
+	gtry::BitWidth elementWidth = gtry::BitWidth(32);
+	size_t maskGranularity = 8;
+	size_t latency = 1;
+	gtry::MemType memType = gtry::MemType::DONT_CARE;
+
+	bool declareNoConflict = true;
+
+	void execute();
+};
+
+
+struct Test_TrueDualPortRMWMaskedWrite : public gtry::GHDLTestFixture
+{
+	size_t numElements = 32;
+	gtry::BitWidth elementWidth = gtry::BitWidth(32);
+	size_t maskGranularity = 8;
+	size_t latency = 1;
+	gtry::MemType memType = gtry::MemType::DONT_CARE;
+
+	bool declareNoConflict = true;
+
+	void execute();
+};
+
 

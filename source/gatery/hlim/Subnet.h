@@ -133,6 +133,23 @@ namespace gtry::hlim {
 
 		/// Join two subnets
 		FinalType& add(const FinalType& other) { insert(other.begin(), other.end()); return (FinalType&)*this; }
+		template<typename FilterNodeType>
+		auto iterateNodesOfType() const { return std::ranges::filter_view(m_nodes, [](const BaseNode* node) { return dynamic_cast<const FilterNodeType*>(node) != nullptr; }); }
+
+		template<typename FilterNodeType>
+		auto getNodesOfType() const { 
+			auto iterableList = iterateNodesOfType<FilterNodeType>();
+			return std::vector<FilterNodeType*>(iterableList.begin(), iterableList.end());
+		}
+
+		/*
+
+		template<typename FilterNodeType>
+		auto getNodesOfType() const { 
+			auto iterableList = iterateNodesOfType<FilterNodeType>();
+			return std::vector<ConstAdaptor<makeConst, FilterNodeType>::type*>(iterableList.begin(), iterableList.end());
+		}
+*/
 	protected:
 		utils::StableSet<NodeType*> m_nodes;
 	};

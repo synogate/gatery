@@ -103,9 +103,9 @@ IntelQuartusTestFixture::~IntelQuartusTestFixture()
 {
 }
 
-void IntelQuartusTestFixture::addCustomVHDL(std::string name, std::string content)
+void IntelQuartusTestFixture::addCustomSourceCode(std::string name, vhdl::SourceType type, std::string content)
 {
-	m_customVhdlFiles[std::move(name)] = std::move(content);
+	m_customSourceCode[std::move(name)] = {.type = type, .code = std::move(content)};
 }
 
 void IntelQuartusTestFixture::testCompilation()
@@ -113,8 +113,8 @@ void IntelQuartusTestFixture::testCompilation()
 	design.postprocess();
 
 	m_vhdlExport.emplace(m_cwd / "design.vhd");
-	for (const auto &file_content : m_customVhdlFiles)
-		m_vhdlExport->addCustomVhdlFile(file_content.first, file_content.second);
+	for (const auto &fileContent : m_customSourceCode)
+		m_vhdlExport->addCustomSourceCode(fileContent.first, fileContent.second.type, fileContent.second.code);
 
 	m_vhdlExport->outputMode(vhdlOutputMode);
 

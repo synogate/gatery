@@ -27,7 +27,7 @@ INCLUDE(cmake/GtryCompileResourceFile.cmake)
 
 ############################################################## 
 
-find_package(Boost COMPONENTS system filesystem thread iostreams json REQUIRED)
+find_package(Boost CONFIG COMPONENTS system filesystem thread iostreams json process REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
 file(GLOB_RECURSE srcs_gatery 

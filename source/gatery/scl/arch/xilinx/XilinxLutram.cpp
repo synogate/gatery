@@ -64,8 +64,8 @@ bool XilinxLutram::apply(hlim::NodeGroup *nodeGroup) const
 	if (memGrp->getMemory()->type() == hlim::Node_Memory::MemType::EXTERNAL)
 		return false;
 
-	if (memGrp->getReadPorts().size() != 1) return false;
-	if (memGrp->getWritePorts().size() > 1) return false;
+	if (memGrp->getNumReadPorts() != 1) return false;
+	if (memGrp->getNumWritePorts() > 1) return false;
 	if (memGrp->getMemory()->getRequiredReadLatency() == 0) return false;
 	if (memGrp->getMemory()->getMinPortWidth() != memGrp->getMemory()->getMaxPortWidth()) return false;
 	if (!memtools::memoryIsSingleClock(nodeGroup)) return false;

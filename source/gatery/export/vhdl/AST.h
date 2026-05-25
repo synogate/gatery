@@ -67,12 +67,22 @@ enum class OutputMode {
 	FILE_PER_ENTITY
 };
 
+enum class SourceType {
+	VHDL,
+	VERILOG
+};
 
 struct SourceFile {
+	SourceType type = SourceType::VHDL;
 	std::filesystem::path filename;
 	std::vector<Entity*> entities;
 	std::vector<Package*> packages;
-	std::vector<std::string> customVhdlFiles;
+	std::vector<std::string> customSourceCode;
+};
+
+struct CustomSourceCode {
+	SourceType type = SourceType::VHDL;
+	std::string code;
 };
 
 
@@ -100,9 +110,9 @@ class AST
 		inline const NamespaceScope &getNamespaceScope() const { return m_namespaceScope; }
 		inline Hlim2AstMapping &getMapping() { return m_mapping; }
 
-		void distributeToFiles(OutputMode outputMode, std::filesystem::path singleFileName, const std::map<std::string, std::string> &customVhdlFiles);
+		void distributeToFiles(OutputMode outputMode, std::filesystem::path singleFileName, const std::map<std::string, CustomSourceCode> &customSourceCode);
 
-		void writeVHDL(utils::FileSystem &fileSystem, OutputMode outputMode, std::filesystem::path singleFileName, const std::map<std::string, std::string> &customVhdlFiles);
+		void writeVHDL(utils::FileSystem &fileSystem, OutputMode outputMode, std::filesystem::path singleFileName, const std::map<std::string, CustomSourceCode> &customSourceCode);
 
 		std::filesystem::path getFilename(const std::string &name);
 

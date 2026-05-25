@@ -18,6 +18,7 @@
 #pragma once
 
 #include "../Node.h"
+#include "MemoryTypes.h"
 
 namespace gtry::hlim {
 
@@ -46,6 +47,7 @@ class Node_MemPort : public Node<Node_MemPort>
 
 		enum class Internal {
 			wrData,
+			wrWordEnable,
 			address,
 			wrEnable,
 			count
@@ -92,6 +94,7 @@ class Node_MemPort : public Node<Node_MemPort>
 		virtual std::string getOutputName(size_t idx) const override;
 
 		inline size_t getBitWidth() const { return m_bitWidth; }
+		size_t getWriteMaskWidth() const;
 
 		virtual std::unique_ptr<BaseNode> cloneUnconnected() const override;
 
@@ -102,9 +105,13 @@ class Node_MemPort : public Node<Node_MemPort>
 		virtual void estimateSignalDelayCriticalInput(SignalDelay &sigDelay, size_t outputPort, size_t outputBit, size_t &inputPort, size_t &inputBit) override;
 
 		virtual OutputClockRelation getOutputClockRelation(size_t output) const override;
+
+		inline memory::ReadDuringWrite samePortRDWBehavior() const { return m_samePortRDWBehavior; }
+		inline void samePortRDWBehavior(memory::ReadDuringWrite behavior) { m_samePortRDWBehavior = behavior; }
 	protected:
 		friend class Node_Memory;
 		std::size_t m_bitWidth;
+		memory::ReadDuringWrite m_samePortRDWBehavior = memory::ReadDuringWrite::DONT_CARE;
 
 		std::vector<Node_MemPort*> getPrevWritePorts() const;
 };

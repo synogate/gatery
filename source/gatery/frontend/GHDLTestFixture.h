@@ -72,7 +72,7 @@ namespace gtry {
 				TARGET_QUARTUS,
 			};
 
-			void addCustomVHDL(std::string name, std::string content);
+			void addCustomSourceCode(std::string name, vhdl::SourceType type, std::string content);
 
 			void testCompilation(Flavor flavor = TARGET_GHDL);
 			void runTest(const hlim::ClockRational &timeoutSeconds);
@@ -82,7 +82,7 @@ namespace gtry {
 		protected:
 			std::filesystem::path m_cwd;
 			std::vector<std::string> m_ghdlArgs;
-			std::map<std::string, std::string> m_customVhdlFiles;
+			std::map<std::string, vhdl::CustomSourceCode> m_customSourceCode;
 			std::vector<std::filesystem::path> m_generatedSourceFiles;
 
 			void prepRun() override;

@@ -237,8 +237,8 @@ namespace gtry {
 		FinalType& operator = (BitWidth width) { BaseBitVector::operator=(width); return (FinalType&)*this; }
 		FinalType& operator = (const DefaultValueType &defaultValue) { BaseBitVector::operator=(defaultValue); return (FinalType&)*this; }
 
-		void exportOverride(const FinalType& exportOverride) { BaseBitVector::exportOverride(exportOverride); }
-		void simulationOverride(const FinalType& simulationOverride) { BaseBitVector::simulationOverride(simulationOverride); }
+		void exportOverride(const FinalType& exportOverride);
+		void simulationOverride(const FinalType& simulationOverride);
 
 		FinalType& operator() (size_t offset, BitWidth size) { return (*this)(Selection::Slice(int(offset), int(size.value))); }
 		const FinalType& operator() (size_t offset, BitWidth size) const { return (*this)(Selection::Slice(int(offset), int(size.value))); }
@@ -293,6 +293,22 @@ namespace gtry {
 
 	template<BitVectorSignal T>
 	T resizeTo(const T& vec, BitWidth width) { if(width > vec.width()) return ext(vec, width); else return vec(0, width); }
+
+
+
+	template<typename FinalType, typename DefaultValueType>
+	void SliceableBitVector<FinalType, DefaultValueType>::exportOverride(const FinalType& exportOverride) { 
+		FinalType resizedOverride = width();
+		resizedOverride = exportOverride;
+		BaseBitVector::exportOverride(resizedOverride);
+	}
+	
+	template<typename FinalType, typename DefaultValueType>
+	void SliceableBitVector<FinalType, DefaultValueType>::simulationOverride(const FinalType& simulationOverride) { 
+		FinalType resizedOverride = width();
+		resizedOverride = simulationOverride;
+		BaseBitVector::simulationOverride(resizedOverride);
+	}
 
 	template<typename FinalType, typename DefaultValueType>
 	inline SignalParts<FinalType> SliceableBitVector<FinalType, DefaultValueType>::parts(size_t parts)

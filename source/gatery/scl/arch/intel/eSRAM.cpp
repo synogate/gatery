@@ -61,10 +61,10 @@ bool eSRAM::apply(hlim::NodeGroup *nodeGroup) const
 	// eSRAM can not be initialized, so ROM doesn't make sense
 	if (memGrp->getMemory()->isROM()) return false;
 
-	if (memGrp->getReadPorts().size() != 1) return false;
+	if (memGrp->getNumReadPorts() != 1) return false;
 	const auto &rp = memGrp->getReadPorts().front();
 
-	if (memGrp->getWritePorts().size() != 1) return false;
+	if (memGrp->getNumWritePorts() != 1) return false;
 	const auto &wp = memGrp->getWritePorts().front();
 	if (memGrp->getMemory()->getRequiredReadLatency() < 1+m_desc.outputRegs) return false;
 
@@ -84,7 +84,7 @@ bool eSRAM::apply(hlim::NodeGroup *nodeGroup) const
 		if (reg->hasEnable()) return false;
 
 		// For now, no true dual port, so only single clock
-		if (memGrp->getWritePorts().size() > 0 && memGrp->getWritePorts().front().node->getClocks()[0] != reg->getClocks()[0]) return false;
+		if (memGrp->getNumWritePorts() > 0 && memGrp->getWritePorts().front().node->getClocks()[0] != reg->getClocks()[0]) return false;
 		if (readClock != reg->getClocks()[0]) return false;		
 	}
 
@@ -97,7 +97,7 @@ bool eSRAM::apply(hlim::NodeGroup *nodeGroup) const
 
 	auto *altsyncram = DesignScope::createNode<ALTSYNCRAM>(memGrp->getMemory()->getSize());
 
-	if (memGrp->getWritePorts().size() == 0)
+	if (memGrp->getNumWritePorts() == 0)
 		altsyncram->setupROM();
 	else
 		altsyncram->setupSimpleDualPort();
@@ -107,7 +107,7 @@ bool eSRAM::apply(hlim::NodeGroup *nodeGroup) const
    
 	bool readFirst = false;
 	bool writeFirst = false;
-	if (memGrp->getWritePorts().size() > 1) {
+	if (memGrp->getNumWritePorts() > 1) {
 		auto &wp = memGrp->getWritePorts().front();
 		if (wp.node->isOrderedBefore(rp.node.get()))
 			writeFirst = true;
@@ -127,7 +127,7 @@ bool eSRAM::apply(hlim::NodeGroup *nodeGroup) const
 	if (useInternalOutputRegister) 
 		numExternalOutputRegisters--;
 
-	if (memGrp->getWritePorts().size() > 0) {
+	if (memGrp->getNumWritePorts() > 0) {
 		auto &wp = memGrp->getWritePorts().front();
 		ALTSYNCRAM::PortSetup portSetup;
 		portSetup.inputRegs = true;

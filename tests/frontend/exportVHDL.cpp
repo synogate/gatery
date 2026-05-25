@@ -1254,7 +1254,7 @@ BOOST_FIXTURE_TEST_CASE(IgnoreSimulationOnlyPins, gtry::GHDLTestFixture)
 	pinOut(out).setName("out");
 
 
-	addCustomVHDL("TestEntity", R"Delim(
+	addCustomSourceCode("TestEntity", vhdl::SourceType::VHDL, R"Delim(
 
 		LIBRARY ieee;
 		USE ieee.std_logic_1164.ALL;
@@ -1275,7 +1275,7 @@ BOOST_FIXTURE_TEST_CASE(IgnoreSimulationOnlyPins, gtry::GHDLTestFixture)
 			end PROCESS;
 		END impl;
 
-	)Delim");	
+	)Delim");
 
 	addSimulationProcess([=, this]()->SimProcess {
 		std::mt19937 rng = std::mt19937{ 1337 };

@@ -19,6 +19,8 @@
 
 #include "../Scope.h"
 
+#include <gatery/hlim/supportNodes/Node_Memory.h>
+
 #include <gatery/utils/BitFlags.h>
 
 namespace gtry {
@@ -124,11 +126,7 @@ class MemoryCapabilities : public Capabilities {
 			TRUE_DUAL_PORT
 		};
 
-		enum class ReadDuringWrite {
-			READ_FIRST,
-			WRITE_FIRST,
-			DONT_CARE
-		};
+		using ReadDuringWrite = hlim::Node_Memory::ReadDuringWrite;
 
 		struct Request {
 			uint64_t size = 0;

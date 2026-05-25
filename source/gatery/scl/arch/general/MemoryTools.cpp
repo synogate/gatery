@@ -186,7 +186,7 @@ void splitMemoryAlongDepthMux(hlim::NodeGroup *group, size_t log2SplitDepth, boo
 		std::array<UInt, 2> newReadData;
 		for (size_t i : {0ull, 1ull}) {
 
-			const auto &new_rp = subMems[i].subGroup->findReadPort((hlim::Node_MemPort*)subMems[i].original2subGroup[rp.node.get()]);
+			const auto &new_rp = subMems[i].subGroup->findPort((hlim::Node_MemPort*)subMems[i].original2subGroup[rp.node.get()]);
 			HCL_ASSERT(new_rp.dedicatedReadLatencyRegisters.size() == memGrp->getMemory()->getRequiredReadLatency()); // Ensure the regs have been found
 
 			for (auto j : utils::Range(rp.dedicatedReadLatencyRegisters.size()))
@@ -227,7 +227,7 @@ void splitMemoryAlongDepthMux(hlim::NodeGroup *group, size_t log2SplitDepth, boo
 
 		for (size_t i : {0ull, 1ull}) {
 
-			const auto &new_wp = subMems[i].subGroup->findWritePort((hlim::Node_MemPort*)subMems[i].original2subGroup[wp.node.get()]);
+			const auto &new_wp = subMems[i].subGroup->findPort((hlim::Node_MemPort*)subMems[i].original2subGroup[wp.node.get()]);
 
 			Bit newWrEn = wrEn & (addrHighBit == bool(i));
 			newWrEn.setName((boost::format("cascade_%d_wrEn") % i).str());
@@ -403,7 +403,7 @@ void splitMemoryAlongWidth(hlim::NodeGroup *group, size_t maxWidth)
 	for (const auto &rp : memGrp->getReadPorts()) {
 		std::vector<UInt> partialReads(subMems.size());
 		for (size_t i : utils::Range(subMems.size())) {
-			const auto &new_rp = subMems[i].subGroup->findReadPort((hlim::Node_MemPort*)subMems[i].original2subGroup[rp.node.get()]);
+			const auto &new_rp = subMems[i].subGroup->findPort((hlim::Node_MemPort*)subMems[i].original2subGroup[rp.node.get()]);
 			HCL_ASSERT(new_rp.dedicatedReadLatencyRegisters.size() == memGrp->getMemory()->getRequiredReadLatency()); // Ensure the regs have been found
 
 			for (auto j : utils::Range(rp.dedicatedReadLatencyRegisters.size()))
@@ -421,7 +421,7 @@ void splitMemoryAlongWidth(hlim::NodeGroup *group, size_t maxWidth)
 	for (const auto &wp : memGrp->getWritePorts()) {
 		UInt wrData = (UInt) getBVecBefore({.node = wp.node.get(), .port = (size_t)hlim::Node_MemPort::Inputs::wrData});
 		for (size_t i : utils::Range(subMems.size())) {
-			const auto &new_wp = subMems[i].subGroup->findWritePort((hlim::Node_MemPort*)subMems[i].original2subGroup[wp.node.get()]);
+			const auto &new_wp = subMems[i].subGroup->findPort((hlim::Node_MemPort*)subMems[i].original2subGroup[wp.node.get()]);
 
 			new_wp.node->connectEnable(wp.node->getDriver((size_t)hlim::Node_MemPort::Inputs::enable));
 			new_wp.node->connectWrEnable(wp.node->getDriver((size_t)hlim::Node_MemPort::Inputs::wrEnable));

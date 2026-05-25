@@ -17,6 +17,7 @@
 */
 #pragma once
 
+#include "MemoryTypes.h"
 #include "../Node.h"
 #include "../Attributes.h"
 #include "../../utils/ConfigTree.h"
@@ -55,30 +56,16 @@ class Node_Memory : public Node<Node_Memory>
 			COUNT
 		};
 
-
-		enum class MemType {
-			DONT_CARE,
-			SMALL,  // LUTRAMS, MLABS, ...
-			MEDIUM, // BlockRAMs, BRAM, MxK, ...
-			LARGE,   // UltraRAMS, eSRAM, ...
-			EXTERNAL,
-		};
-
-		enum class ReadDuringWrite {
-			READ_FIRST,
-			WRITE_FIRST,
-			DONT_CARE
-		};		
-
-		enum class UndefinedReadAddrBehavior {
-			UNDEFINED,  ///< Always read undefined. Faster, but pessimistic.
-			EXACT	 	///< Correctly compute the output based on memory content. Potentially much slower.
-		};
-
 		enum class Internal {
 			data,
 			count
 		};
+
+
+		using MemType = memory::MemType;
+		using ReadDuringWrite = memory::ReadDuringWrite;
+		using UndefinedReadAddrBehavior = memory::UndefinedReadAddrBehavior;
+
 
 		Node_Memory();
 
@@ -136,6 +123,7 @@ class Node_Memory : public Node<Node_Memory>
 		inline MemoryAttributes &getAttribs() { return m_attributes; }
 		inline const MemoryAttributes &getAttribs() const { return m_attributes; }		
 		inline size_t getInitializationDataWidth() const { return m_initializationDataWidth; }
+
 
 		UndefinedReadAddrBehavior undefinedReadAddrBehavior() const { return m_undefinedReadAddrBehavior; }
 		void undefinedReadAddrBehavior(UndefinedReadAddrBehavior behavior) { m_undefinedReadAddrBehavior = behavior; }

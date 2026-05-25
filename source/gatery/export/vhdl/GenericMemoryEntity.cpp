@@ -32,22 +32,24 @@
 #include <map>
 #include <vector>
 
+using namespace std::string_view_literals;
+
 namespace gtry::vhdl {
 
 struct ClockedInstructions
 {
-	using PortRegisters = std::vector<std::pair<hlim::MemoryGroup::ReadPort, size_t>>;
+	using PortRegisters = std::vector<std::pair<hlim::MemoryGroup::MemPort, size_t>>;
 	PortRegisters readOutputRegisters;
-	std::vector<hlim::MemoryGroup::ReadPort> reads;
-	std::vector<hlim::MemoryGroup::ReadPort> readInputRegs;
-	std::vector<hlim::MemoryGroup::ReadPort> readConflictOverrides;
+	std::vector<hlim::MemoryGroup::MemPort> reads;
+	std::vector<hlim::MemoryGroup::MemPort> readInputRegs;
+	std::vector<hlim::MemoryGroup::MemPort> readConflictOverrides;
 
-	std::vector<hlim::MemoryGroup::WritePort> writes;
+	std::vector<hlim::MemoryGroup::MemPort> writes;
 };
 
 struct AsyncReadInstruction
 {
-	hlim::MemoryGroup::ReadPort readPort;
+	hlim::MemoryGroup::MemPort readPort;
 	bool registeredInputs;
 };
 
@@ -66,49 +68,50 @@ GenericMemoryEntity::GenericMemoryEntity(AST &ast, const std::string &desiredNam
 void GenericMemoryEntity::allocateInputAndOutputNames()
 {
 	std::set<hlim::NodePort> alreadyAllocated;
-	size_t writePortIdx = 0;
-	for (auto &wp : m_memGrp->getWritePorts()) {
-		auto addrInput = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
-		auto enInput = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
-		auto wrEnInput = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrEnable);
-		auto dataInput = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrData);
+	size_t portIdx = 0;
+	for (auto &port : m_memGrp->getPorts()) {
+		auto addrInput = port.node->getDriver((size_t)hlim::Node_MemPort::Inputs::address);
+		auto enInput = port.node->getDriver((size_t)hlim::Node_MemPort::Inputs::enable);
+		auto wrEnInput = port.node->getDriver((size_t)hlim::Node_MemPort::Inputs::wrEnable);
+		auto dataInput = port.node->getDriver((size_t)hlim::Node_MemPort::Inputs::wrData);
 
-		HCL_ASSERT_HINT(enInput.node == nullptr || enInput == wrEnInput, "For now I don't want to mix read and write ports, so wrEn == en always.");
-
-		if (addrInput.node != nullptr && hlim::getOutputConnectionType(addrInput).width > 0) {
-			m_namespaceScope.allocateName(addrInput, (boost::format("writePort_%d_address") % writePortIdx).str(), chooseDataTypeFromOutput(addrInput), CodeFormatting::SIG_ENTITY_INPUT);
-			alreadyAllocated.insert(addrInput);
-		}
-		if (wrEnInput.node != nullptr){ 
-			m_namespaceScope.allocateName(wrEnInput, (boost::format("writePort_%d_wrEn") % writePortIdx).str(), chooseDataTypeFromOutput(wrEnInput), CodeFormatting::SIG_ENTITY_INPUT);
-			alreadyAllocated.insert(wrEnInput);
-		}
-		if (dataInput.node != nullptr && hlim::getOutputConnectionType(dataInput).width > 0) {
-			m_namespaceScope.allocateName(dataInput, (boost::format("writePort_%d_data") % writePortIdx).str(), chooseDataTypeFromOutput(dataInput), CodeFormatting::SIG_ENTITY_INPUT);
-			alreadyAllocated.insert(dataInput);
-		}
-
-		writePortIdx++;
-	}
-
-	size_t readPortIdx = 0;
-	for (auto &rp : m_memGrp->getReadPorts()) {
-		auto addrInput = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
-		auto enInput = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
-		auto dataOutput = rp.dataOutput;
+		const char *suffix;
+		if (port.isReadPort() && !port.isWritePort())
+			suffix = "readPort";
+		else if (!port.isReadPort() && port.isWritePort())
+			suffix = "writePort";
+		else
+			suffix = "readWritePort";
 
 		if (addrInput.node != nullptr && hlim::getOutputConnectionType(addrInput).width > 0) {
-			m_namespaceScope.allocateName(addrInput, (boost::format("readPort_%d_addr") % readPortIdx).str(), chooseDataTypeFromOutput(addrInput), CodeFormatting::SIG_ENTITY_INPUT);
+			m_namespaceScope.allocateName(addrInput, (boost::format("%s_%d_address") % suffix % portIdx).str(), chooseDataTypeFromOutput(addrInput), CodeFormatting::SIG_ENTITY_INPUT);
 			alreadyAllocated.insert(addrInput);
 		}
 		if (enInput.node != nullptr) {
-			m_namespaceScope.allocateName(enInput, (boost::format("readPort_%d_en") % readPortIdx).str(), chooseDataTypeFromOutput(enInput), CodeFormatting::SIG_ENTITY_INPUT);
+			m_namespaceScope.allocateName(enInput, (boost::format("%s_%d_rdEn") % suffix % portIdx).str(), chooseDataTypeFromOutput(enInput), CodeFormatting::SIG_ENTITY_INPUT);
 			alreadyAllocated.insert(enInput);
 		}
+		if (wrEnInput.node != nullptr){
+			m_namespaceScope.allocateName(wrEnInput, (boost::format("%s_%d_wrEn") % suffix % portIdx).str(), chooseDataTypeFromOutput(wrEnInput), CodeFormatting::SIG_ENTITY_INPUT);
+			alreadyAllocated.insert(wrEnInput);
+		}
+		auto wrWordEnInput = port.node->getDriver((size_t)hlim::Node_MemPort::Inputs::wrWordEnable);
+		if (wrWordEnInput.node != nullptr && hlim::getOutputConnectionType(wrWordEnInput).width > 0) {
+			m_namespaceScope.allocateName(wrWordEnInput, (boost::format("%s_%d_wrWordEn") % suffix % portIdx).str(), chooseDataTypeFromOutput(wrWordEnInput), CodeFormatting::SIG_ENTITY_INPUT);
+			alreadyAllocated.insert(wrWordEnInput);
+		}
+		if (dataInput.node != nullptr && hlim::getOutputConnectionType(dataInput).width > 0) {
+			m_namespaceScope.allocateName(dataInput, (boost::format("%s_%d_dataIn") % suffix % portIdx).str(), chooseDataTypeFromOutput(dataInput), CodeFormatting::SIG_ENTITY_INPUT);
+			alreadyAllocated.insert(dataInput);
+		}
 
-		m_namespaceScope.allocateName(dataOutput, (boost::format("readPort_%d_data") % readPortIdx).str(), chooseDataTypeFromOutput(dataOutput), CodeFormatting::SIG_ENTITY_OUTPUT);
-		alreadyAllocated.insert(dataOutput);
-		readPortIdx++;
+		if (port.isReadPort()) {
+			auto dataOutput = port.dataOutput;
+			m_namespaceScope.allocateName(dataOutput, (boost::format("%s_%d_dataOut") % suffix % portIdx).str(), chooseDataTypeFromOutput(dataOutput), CodeFormatting::SIG_ENTITY_OUTPUT);
+			alreadyAllocated.insert(dataOutput);
+		}
+
+		portIdx++;
 	}
 
 	for (auto &input : m_inputs)
@@ -131,55 +134,65 @@ void GenericMemoryEntity::buildFrom(hlim::NodeGroup *memNodeGrp)
 	for (auto node : m_nodeGroup->getNodes())
 		m_ast.getMapping().assignNodeToScope(node, this);
 
-	for (auto &wp : m_memGrp->getWritePorts()) {
-		auto addrInput = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
-		auto enInput = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
-		auto wrEnInput = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrEnable);
-		auto dataInput = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrData);
-
-		HCL_ASSERT_HINT(enInput.node == nullptr || enInput == wrEnInput, "For now I don't want to mix read and write ports, so wrEn == en always.");
+	for (auto &port : m_memGrp->getPorts()) {
+		auto addrInput = port.node->getDriver((size_t)hlim::Node_MemPort::Inputs::address);
+		auto enInput = port.node->getDriver((size_t)hlim::Node_MemPort::Inputs::enable);
+		auto wrEnInput = port.node->getDriver((size_t)hlim::Node_MemPort::Inputs::wrEnable);
+		auto dataInput = port.node->getDriver((size_t)hlim::Node_MemPort::Inputs::wrData);
+		auto dataOutput = port.dataOutput;
 
 		if (addrInput.node != nullptr && hlim::getOutputConnectionType(addrInput).width > 0)
 			m_inputs.insert(addrInput);
+		auto wrWordEnInput = port.node->getDriver((size_t)hlim::Node_MemPort::Inputs::wrWordEnable);
 		if (wrEnInput.node != nullptr)
 			m_inputs.insert(wrEnInput);
-		if (dataInput.node != nullptr && hlim::getOutputConnectionType(dataInput).width > 0)
-			m_inputs.insert(dataInput);
-
-		m_inputClocks.insert(wp.node->getClocks()[0]->getClockPinSource());
-	}
-	for (auto &rp : m_memGrp->getReadPorts()) {
-		auto addrInput = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
-		auto enInput = rp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::enable);
-		auto dataOutput = rp.dataOutput;
-
-		if (addrInput.node != nullptr && hlim::getOutputConnectionType(addrInput).width > 0)
-			m_inputs.insert(addrInput);
 		if (enInput.node != nullptr)
 			m_inputs.insert(enInput);
+		if (dataInput.node != nullptr && hlim::getOutputConnectionType(dataInput).width > 0)
+			m_inputs.insert(dataInput);
+		if (wrWordEnInput.node != nullptr && hlim::getOutputConnectionType(wrWordEnInput).width > 0)
+			m_inputs.insert(wrWordEnInput);
 
-		m_outputs.insert(dataOutput);
 
-		for (auto reg : rp.dedicatedReadLatencyRegisters) {
-			m_inputClocks.insert(reg->getClocks()[0]->getClockPinSource());
+		if (port.isReadPort()) {
+			m_outputs.insert(dataOutput);
 
-			auto enInput = reg->getDriver((unsigned)hlim::Node_Register::Input::ENABLE);
-			if (enInput.node != nullptr) 
-				m_inputs.insert(enInput);
+			for (auto reg : port.dedicatedReadLatencyRegisters) {
+				m_inputClocks.insert(reg->getClocks()[0]->getClockPinSource());
 
-			auto resetValue = reg->getNonSignalDriver((unsigned)hlim::Node_Register::Input::RESET_VALUE);
-			if (resetValue.node != nullptr) {
-				//m_inputs.insert(resetValue);
+				auto enInput = reg->getDriver((size_t)hlim::Node_Register::Input::ENABLE);
+				if (enInput.node != nullptr) 
+					m_inputs.insert(enInput);
 
-				if (reg->getClocks()[0]->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE)
-					m_inputResets.insert(reg->getClocks()[0]->getResetPinSource());
+				auto resetValue = reg->getNonSignalDriver((size_t)hlim::Node_Register::Input::RESET_VALUE);
+				if (resetValue.node != nullptr) {
+					//m_inputs.insert(resetValue);
+
+					if (reg->getClocks()[0]->getRegAttribs().resetType != hlim::RegisterAttributes::ResetType::NONE)
+						m_inputResets.insert(reg->getClocks()[0]->getResetPinSource());
+				}
 			}
 		}
+
+		if (port.isWritePort())
+			m_inputClocks.insert(port.node->getClocks()[0]->getClockPinSource());
 	}
+#if 1
+	// Determine if we need a shared variable for the memory.
+	// Multiple processes writing to the same signal is illegal in VHDL,
+	// so we use a shared variable when write ports have different clocks.
+	std::set<hlim::Clock*> writeClocks;
+	for (auto &port : m_memGrp->getPorts())
+		if (port.isWritePort())
+			writeClocks.insert(port.node->getClocks()[0]);
+	m_needsSharedVariable = writeClocks.size() > 1;
+#else
+	m_needsSharedVariable = m_memGrp->getPorts().size() > 1;
+#endif
 }
 
 
-void GenericMemoryEntity::formatReadPortOutputSignalName(std::ostream &stream, const hlim::MemoryGroup::ReadPort &readPort, size_t regIndex) const
+void GenericMemoryEntity::formatReadPortOutputSignalName(std::ostream &stream, const hlim::MemoryGroup::MemPort &readPort, size_t regIndex) const
 {
 	const auto &outputDecl = m_namespaceScope.get(readPort.dataOutput);
 	if (regIndex+1 >= readPort.dedicatedReadLatencyRegisters.size())
@@ -227,7 +240,10 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
 	stream << "TYPE mem_type IS array(NUM_WORDS-1 downto 0) of mem_word_type;\n";
 
 	cf.indent(stream, 1);
-	stream << "SIGNAL memory : mem_type";
+	if (m_needsSharedVariable)
+		stream << "SHARED VARIABLE memory : mem_type";
+	else
+		stream << "SIGNAL memory : mem_type";
 
 
 	if (m_memGrp->getMemory()->requiresPowerOnInitialization())
@@ -240,11 +256,8 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
 
 		std::set<size_t> portSizes;
 
-		for (auto &wp : m_memGrp->getWritePorts())
-			portSizes.insert(wp.node->getBitWidth());
-
-		for (auto &rp : m_memGrp->getReadPorts())
-			portSizes.insert(rp.node->getBitWidth());
+		for (auto &p : m_memGrp->getPorts())
+			portSizes.insert(p.node->getBitWidth());
 
 		HCL_ASSERT_HINT(portSizes.size() == 1, "Memory with mixed port sizes not yet supported!");
 
@@ -370,13 +383,9 @@ void GenericMemoryEntity::writeLocalSignalsVHDL(std::ostream &stream)
 }
 
 
-void GenericMemoryEntity::generateReadPortConflictDetectionExpression(std::ostream &stream, const hlim::MemoryGroup::ReadPort &readPort)
+void GenericMemoryEntity::generateReadPortConflictDetectionExpression(std::ostream &stream, const hlim::MemoryGroup::MemPort &readPort)
 {
 	CodeFormatting &cf = m_ast.getCodeFormatting();
-
-	auto addrPort = readPort.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
-	auto addrWidth = hlim::getOutputConnectionType(addrPort).width;
-	auto addr = m_namespaceScope.get(addrPort).name;
 
 	hlim::NodePort enablePort = {};
 	if (!readPort.dedicatedReadLatencyRegisters.empty())
@@ -387,27 +396,50 @@ void GenericMemoryEntity::generateReadPortConflictDetectionExpression(std::ostre
 		stream << enable << " = '1' AND (";
 	}
 
-	bool firstCondition = true;
-	for (const auto &wp : m_memGrp->getWritePorts()) {
-		auto wrEnablePort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrEnable);
-		auto wrAddrPort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
 
-		auto wrAddrWidth = hlim::getOutputConnectionType(wrAddrPort).width;
-		auto wrAddr = m_namespaceScope.get(wrAddrPort).name;
+	if (readPort.addressWidth() == 0_b) {
+		// Special handling for depth-1 memories, which don't have an address port. Any write enables active at the same time as the read enable are a conflict.
 
-		if (!firstCondition)
-			stream << " OR ";
-		firstCondition = false;
+		bool firstCondition = true;
+		for (const auto &wp : m_memGrp->getWritePorts()) {
+			auto wrEnablePort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrEnable);
 
-		stream << '(';
-		if (wrEnablePort.node != nullptr)
-			stream << m_namespaceScope.get(wrEnablePort).name << " = '1' AND ";
+			if (wrEnablePort.node != nullptr) {
+				if (!firstCondition)
+					stream << " OR ";
+				firstCondition = false;
 
-		stream << addr << " = " << wrAddr << ')';
+				stream << m_namespaceScope.get(wrEnablePort).name << " = '1'";
+			}
+		}
+	} else {
+		auto addrPort = readPort.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
+		auto addrWidth = hlim::getOutputConnectionType(addrPort).width;
+		auto addr = m_namespaceScope.get(addrPort).name;
+
+		bool firstCondition = true;
+		for (const auto &wp : m_memGrp->getWritePorts()) {
+			auto wrEnablePort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrEnable);
+			auto wrAddrPort = wp.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
+
+			auto wrAddrWidth = hlim::getOutputConnectionType(wrAddrPort).width;
+			auto wrAddr = m_namespaceScope.get(wrAddrPort).name;
+
+			if (!firstCondition)
+				stream << " OR ";
+			firstCondition = false;
+
+			stream << '(';
+			if (wrEnablePort.node != nullptr)
+				stream << m_namespaceScope.get(wrEnablePort).name << " = '1' AND ";
+
+			stream << addr << " = " << wrAddr << ')';
+		}
 	}
 
 	if (enablePort.node)
 		stream << ')';
+
 }
 
 void GenericMemoryEntity::openResetCondition(std::ostream &stream, unsigned indent, const std::string_view resetName, const RegisterConfig &reset)
@@ -420,7 +452,7 @@ void GenericMemoryEntity::openResetCondition(std::ostream &stream, unsigned inde
 }
 
 
-void GenericMemoryEntity::exportResetOutputReg(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::ReadPort &readPort, size_t regIndex)
+void GenericMemoryEntity::exportResetOutputReg(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::MemPort &readPort, size_t regIndex)
 {
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 
@@ -442,7 +474,7 @@ void GenericMemoryEntity::exportResetOutputReg(std::ostream &stream, unsigned in
 }
 
 
-void GenericMemoryEntity::exportWrite(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::WritePort &writePort)
+void GenericMemoryEntity::exportWrite(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::MemPort &writePort)
 {
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 
@@ -457,17 +489,55 @@ void GenericMemoryEntity::exportWrite(std::ostream &stream, unsigned indent, con
 	auto dataPort = writePort.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrData);
 
 	const auto &dataDecl = m_namespaceScope.get(dataPort);
+	auto memAssign = m_needsSharedVariable ? " := "sv : " <= "sv;
 
-	cf.indent(stream, indent);
-	if (hlim::getOutputConnectionType(addrPort).width > 0)
-		stream << "memory(to_integer(" << m_namespaceScope.get(addrPort).name << ")) <= ";
-	else
-		stream << "memory(0) <= ";
-	if (dataDecl.dataType != VHDLDataType::UNSIGNED) {
-		cf.formatDataType(stream, VHDLDataType::UNSIGNED);
-		stream << '(' << dataDecl.name << ";\n";
-	} else
-		stream << dataDecl.name << ";\n";
+	size_t wrMaskWidth = writePort.node->getWriteMaskWidth();
+
+	if (wrMaskWidth == 0) {
+		cf.indent(stream, indent);
+		if (hlim::getOutputConnectionType(addrPort).width > 0)
+			stream << "memory(to_integer(" << m_namespaceScope.get(addrPort).name << "))" << memAssign;
+		else
+			stream << "memory(0)" << memAssign;
+		if (dataDecl.dataType != VHDLDataType::UNSIGNED) {
+			cf.formatDataType(stream, VHDLDataType::UNSIGNED);
+			stream << '(' << dataDecl.name << ");\n";
+		} else
+			stream << dataDecl.name << ";\n";
+	} else {
+		auto wrWordEnPort = writePort.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::wrWordEnable);
+		const auto &maskDecl = m_namespaceScope.get(wrWordEnPort);
+		size_t granularity = writePort.node->getBitWidth() / wrMaskWidth;
+
+		cf.indent(stream, indent);
+		stream << "FOR i IN 0 TO " << wrMaskWidth - 1 << " LOOP\n";
+		indent++;
+
+		cf.indent(stream, indent);
+		stream << "IF (" << maskDecl.name << "(i) = '1') THEN\n";
+		indent++;
+
+		cf.indent(stream, indent);
+		if (hlim::getOutputConnectionType(addrPort).width > 0)
+			stream << "memory(to_integer(" << m_namespaceScope.get(addrPort).name << "))";
+		else
+			stream << "memory(0)";
+		stream << "((i+1)*" << granularity << "-1 downto i*" << granularity << ")" << memAssign;
+		if (dataDecl.dataType != VHDLDataType::UNSIGNED) {
+			cf.formatDataType(stream, VHDLDataType::UNSIGNED);
+			stream << '(' << dataDecl.name << ")";
+		} else
+			stream << dataDecl.name;
+		stream << "((i+1)*" << granularity << "-1 downto i*" << granularity << ");\n";
+
+		indent--;
+		cf.indent(stream, indent);
+		stream << "END IF;\n";
+
+		indent--;
+		cf.indent(stream, indent);
+		stream << "END LOOP;\n";
+	}
 
 	if (wrEnablePort.node != nullptr) {
 		indent--;
@@ -476,7 +546,7 @@ void GenericMemoryEntity::exportWrite(std::ostream &stream, unsigned indent, con
 	}
 }
 
-void GenericMemoryEntity::exportRead(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::ReadPort &readPort, bool registeredInputs, bool useEnablePort)
+void GenericMemoryEntity::exportRead(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::MemPort &readPort, bool registeredInputs, bool useEnablePort)
 {
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 	auto addrPort = readPort.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
@@ -526,7 +596,7 @@ void GenericMemoryEntity::exportRead(std::ostream &stream, unsigned indent, cons
 	}
 }
 
-void GenericMemoryEntity::exportReadInputReg(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::ReadPort &readPort)
+void GenericMemoryEntity::exportReadInputReg(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::MemPort &readPort)
 {
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 
@@ -538,7 +608,7 @@ void GenericMemoryEntity::exportReadInputReg(std::ostream &stream, unsigned inde
 	stream << " <= " << outputDecl.name << ";\n";
 }
 
-void GenericMemoryEntity::exportReadOutputReg(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::ReadPort &readPort, size_t regIndex)
+void GenericMemoryEntity::exportReadOutputReg(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::MemPort &readPort, size_t regIndex)
 {
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 	auto addrPort = readPort.node->getDriver((unsigned)hlim::Node_MemPort::Inputs::address);
@@ -571,7 +641,7 @@ void GenericMemoryEntity::exportReadOutputReg(std::ostream &stream, unsigned ind
 	}
 }
 
-void GenericMemoryEntity::exportReadConflictOverride(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::ReadPort &readPort)
+void GenericMemoryEntity::exportReadConflictOverride(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::MemPort &readPort)
 {
 	CodeFormatting &cf = m_ast.getCodeFormatting();
 

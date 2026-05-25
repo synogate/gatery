@@ -1768,3 +1768,227 @@ BOOST_FIXTURE_TEST_CASE(memory_storage_comparison_background_large, MemoryStorag
 
 	execute();
 }
+
+
+class MemoryMaskedWriteFixture : public BoostUnitTestSimulationFixture
+{
+	public:
+		bool declareNoConflict = true;
+		bool readFirst = false;
+
+		void execute() {
+			using namespace gtry;
+			using namespace gtry::sim;
+			using namespace gtry::utils;
+
+			std::vector<size_t> contents;
+			contents.resize(16);
+			std::mt19937 rng{ 18055 };
+			for (auto &e : contents)
+				e = rng() % 16;
+
+			Clock clock({ .absoluteFrequency = 100'000'000 });
+			ClockScope clkScp(clock);
+
+
+			Memory<UInt> memory(contents.size(), 4_b);
+			if (declareNoConflict)
+				memory.noConflicts();
+			memory.setType(MemType::MEDIUM);
+			memory.fillPowerOnState(createDefaultBitVectorState(16, 4, [&contents](std::size_t i, std::uint64_t *words){
+				words[DefaultConfig::VALUE] = contents[i];
+				words[DefaultConfig::DEFINED] = 0;
+			}));
+
+
+			UInt dataOut;
+
+			UInt wrAddr = pinIn(4_b).setName("wrAddr");
+			UInt rdAddr = pinIn(4_b).setName("rdAddr");
+
+			Bit wrEn = pinIn().setName("wrEn");
+			UInt wrData = pinIn(4_b).setName("wrData");
+			UInt wrMask = pinIn(2_b).setName("wrMask");
+
+			if (readFirst)
+				dataOut = memory[rdAddr];
+
+			IF (wrEn)
+				memory[wrAddr] = {wrData, wrMask};
+
+			if (!readFirst)
+				dataOut = memory[rdAddr];
+			
+			auto output = pinOut(reg(dataOut, {.allowRetimingBackward=true})).setName("output");
+			
+
+			addSimulationProcess([=,this,&contents]()->SimProcess {
+				simu(wrEn) = '0';
+
+				co_await AfterClk(clock);
+				
+				simu(rdAddr) = 0;
+				co_await AfterClk(clock);
+				BOOST_TEST(!simu(output).allDefined());
+
+
+				
+				simu(wrEn) = '1';
+				simu(wrAddr) = 1;
+				simu(wrMask) = 0b11;
+				simu(wrData) = 0b1010;
+				co_await AfterClk(clock);
+				simu(wrEn) = '0';
+
+				simu(rdAddr) = 0;
+				co_await AfterClk(clock);
+				BOOST_TEST(!simu(output).allDefined());
+
+				simu(rdAddr) = 1;
+				co_await AfterClk(clock);
+				BOOST_TEST(simu(output) == "4b1010");
+
+
+				simu(wrEn) = '1';
+				simu(wrAddr) = 2;
+				simu(wrMask) = 0b10;
+				simu(wrData) = 0b1010;
+				co_await AfterClk(clock);
+				simu(wrEn) = '0';
+
+				simu(rdAddr) = 2;
+				co_await AfterClk(clock);
+				BOOST_TEST(simu(output) == "4b10XX");
+
+
+				simu(wrEn) = '1';
+				simu(wrAddr) = 3;
+				simu(wrMask) = 0b01;
+				simu(wrData) = 0b1010;
+				co_await AfterClk(clock);
+				simu(wrEn) = '0';
+
+
+				simu(rdAddr) = 3;
+				co_await AfterClk(clock);
+				BOOST_TEST(simu(output) == "4bXX10");
+
+				simu(wrEn) = '1';
+				simu(wrAddr) = 3;
+				simu(wrMask) = 0b10;
+				simu(wrData) = 0b1101;
+				co_await AfterClk(clock);
+				simu(wrEn) = '0';
+
+
+				simu(rdAddr) = 3;
+				co_await AfterClk(clock);
+				BOOST_TEST(simu(output) == "4b1110");
+
+				co_await AfterClk(clock);
+				co_await AfterClk(clock);
+
+
+				stopTest();
+			});
+
+			design.postprocess();
+			//design.getCircuit().postprocess(hlim::MinimalPostprocessing{});
+			runTest({1, 1});
+		};
+};
+
+BOOST_FIXTURE_TEST_CASE(memory_masked_write_noconflict, MemoryMaskedWriteFixture)
+{
+	declareNoConflict = true;
+	execute();
+}
+
+BOOST_FIXTURE_TEST_CASE(memory_masked_write_readFirst, MemoryMaskedWriteFixture)
+{
+	declareNoConflict = false;
+	readFirst = true;
+	execute();
+}
+/*
+BOOST_FIXTURE_TEST_CASE(memory_masked_write_readLast, MemoryMaskedWriteFixture)
+{
+	declareNoConflict = false;
+	readFirst = false;
+	execute();
+}
+*/
+
+BOOST_FIXTURE_TEST_CASE(memory_fuse_TDP_ports, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+	using namespace gtry::sim;
+	using namespace gtry::utils;
+
+	std::vector<size_t> contents;
+	contents.resize(16);
+	std::mt19937 rng{ 18055 };
+	for (auto &e : contents)
+		e = rng() % 16;
+
+	Clock clock({ .absoluteFrequency = 100'000'000, .memoryResetType = Clock::ResetType::NONE });
+	ClockScope clkScp(clock);
+
+
+	Memory<UInt> memory(contents.size(), 4_b);
+	memory.noConflicts();
+	memory.setName("TDP_memory");
+	memory.setType(MemType::MEDIUM);
+	memory.fillPowerOnState(createDefaultBitVectorState(16, 4, [&contents](std::size_t i, std::uint64_t *words){
+		words[DefaultConfig::VALUE] = contents[i];
+		words[DefaultConfig::DEFINED] = ~0ull;
+	}));
+
+
+	UInt addr1 = pinIn(4_b).setName("addr1");
+	UInt addr2 = pinIn(4_b).setName("addr2");
+
+	Bit wrEn1 = pinIn().setName("wrEn1");
+	UInt dataOut1 = "4bXXXX";
+	IF (wrEn1)
+		memory[addr1] = pinIn(4_b).setName("dataIn1");
+	ELSE
+		dataOut1 = memory[addr1];
+
+	Bit wrEn2 = pinIn().setName("wrEn2");
+	IF (wrEn2)
+		memory[addr2] = pinIn(4_b).setName("dataIn2");
+
+	UInt dataOut2 = memory[addr2];
+	
+	auto output1 = pinOut(reg(dataOut1, {.allowRetimingBackward=true})).setName("output1");
+	auto output2 = pinOut(reg(dataOut2, {.allowRetimingBackward=true})).setName("output2");
+
+
+	addSimulationProcess([=,this,&contents]()->SimProcess {
+		/*
+		simu(wrEn1) = '0';
+		simu(wrEn2) = '0';
+
+		co_await OnClk(clock);
+		simu(addr2) = 1;
+		
+		co_await OnClk(clock);
+		simu(wrEn1) = '1';
+		simu(wrAddr1) = 1;
+		simu(wrData1) = 0xA;
+
+		co_await OnClk(clock);
+		simu(wrEn1) = '0';
+
+		*/
+		for (auto i : Range(16))
+			co_await OnClk(clock);
+
+		stopTest();
+	});
+
+	design.postprocess();
+	//design.getCircuit().postprocess(hlim::MinimalPostprocessing{});
+	runTest({1, 1});
+}

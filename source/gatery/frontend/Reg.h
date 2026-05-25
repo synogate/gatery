@@ -19,6 +19,7 @@
 #include "Signal.h"
 #include "BVec.h"
 #include "SInt.h"
+#include "UInt.h"
 #include "Compound.h"
 #include "ConstructFrom.h"
 

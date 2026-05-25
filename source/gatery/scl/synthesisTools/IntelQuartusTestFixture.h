@@ -68,7 +68,7 @@ namespace gtry {
 			IntelQuartusTestFixture();
 			~IntelQuartusTestFixture();
 
-			void addCustomVHDL(std::string name, std::string content);
+			void addCustomSourceCode(std::string name, vhdl::SourceType type, std::string content);
 
 			void testCompilation();
 			bool exportContains(const std::regex &regex);
@@ -140,7 +140,7 @@ namespace gtry {
 			inline bool timingMet(const gtry::Clock &clock) const { return timingMet(clock.getClk()); }
 		protected:
 			std::filesystem::path m_cwd;
-			std::map<std::string, std::string> m_customVhdlFiles;
+			std::map<std::string, vhdl::CustomSourceCode> m_customSourceCode;
 			std::vector<std::filesystem::path> m_generatedSourceFiles;
 
 			void writeTimingToCsvTclScript();

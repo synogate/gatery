@@ -60,21 +60,21 @@ bool BlockramUltrascale::apply(hlim::NodeGroup *nodeGroup) const
 		return false;
 	}
 
-	if (memGrp->getReadPorts().size() == 0) {
+	if (memGrp->getNumReadPorts() == 0) {
 		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because it has no read ports.");
 		return false;
 	}
 
-	if (memGrp->getReadPorts().size() > 1) {
+	if (memGrp->getNumReadPorts() > 1) {
 		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because it has more than one read port and so far only one read port is supported.");
 		return false;
 	}
 	const auto &rp = memGrp->getReadPorts().front();
-	if (memGrp->getWritePorts().size() > 1) {
+	if (memGrp->getNumWritePorts() > 1) {
 		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because it has more than one write port and so far only one write port is supported.");
@@ -104,7 +104,7 @@ bool BlockramUltrascale::apply(hlim::NodeGroup *nodeGroup) const
 
 
 	hlim::Clock* writeClock = nullptr;
-	if (memGrp->getWritePorts().size() > 0) {
+	if (memGrp->getNumWritePorts() > 0) {
 		writeClock = memGrp->getWritePorts().front().node->getClocks()[0];
 		if (writeClock->getTriggerEvent() != hlim::Clock::TriggerEvent::RISING) {
 			dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 

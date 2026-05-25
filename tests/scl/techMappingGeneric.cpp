@@ -229,7 +229,7 @@ BOOST_FIXTURE_TEST_CASE(crossport_dontcare_bram_1, TestWithDefaultDevice<Test_Cr
 
 	execute();
 	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
-	BOOST_TEST(exportContains(std::regex{"out_readPort_0_data <= \\(others => 'X'\\);"}));
+	BOOST_TEST(exportContains(std::regex{"out_readPort_0_dataOut <= \\(others => 'X'\\);"}));
 }
 
 BOOST_FIXTURE_TEST_CASE(crossport_dontcare_bram_2, TestWithDefaultDevice<Test_CrossPortOrdering>)
@@ -244,7 +244,7 @@ BOOST_FIXTURE_TEST_CASE(crossport_dontcare_bram_2, TestWithDefaultDevice<Test_Cr
 
 	execute();
 	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
-	BOOST_TEST(exportContains(std::regex{"out_readPort_0_data <= \\(others => 'X'\\);"}));
+	BOOST_TEST(exportContains(std::regex{"out_readPort_1_dataOut <= \\(others => 'X'\\);"}));
 }
 
 
@@ -254,20 +254,6 @@ BOOST_FIXTURE_TEST_CASE(crossport_readfirst_lutram, TestWithDefaultDevice<Test_C
 	using namespace gtry;
 
 	readFirst = true;
-	declareNoConflict = false;
-	latency = 0;
-	memType = MemType::SMALL;
-
-
-	execute();
-	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
-}
-
-BOOST_FIXTURE_TEST_CASE(crossport_writefirst_lutram, TestWithDefaultDevice<Test_CrossPortOrdering>)
-{
-	using namespace gtry;
-
-	readFirst = false;
 	declareNoConflict = false;
 	latency = 0;
 	memType = MemType::SMALL;
@@ -426,6 +412,139 @@ BOOST_FIXTURE_TEST_CASE(crossport_dontcare_lutram_2_3cycle, TestWithDefaultDevic
 }
 
 
+BOOST_FIXTURE_TEST_CASE(maskedWrite_byteEnable_noConflict, TestWithDefaultDevice<Test_MaskedWrite>)
+{
+	using namespace gtry;
+	numElements = 32;
+	elementWidth = 32_b;
+	maskGranularity = 8;
+	latency = 1;
+	memType = MemType::DONT_CARE;
+	declareNoConflict = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"FOR i IN"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(maskedWrite_byteEnable_readFirst, TestWithDefaultDevice<Test_MaskedWrite>)
+{
+	using namespace gtry;
+	numElements = 32;
+	elementWidth = 32_b;
+	maskGranularity = 8;
+	latency = 1;
+	memType = MemType::DONT_CARE;
+	declareNoConflict = false;
+	readFirst = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"FOR i IN"}));
+}
+/*
+BOOST_FIXTURE_TEST_CASE(maskedWrite_byteEnable_writeFirst, TestWithDefaultDevice<Test_MaskedWrite>)
+{
+	using namespace gtry;
+	numElements = 32;
+	elementWidth = 32_b;
+	maskGranularity = 8;
+	latency = 1;
+	memType = MemType::DONT_CARE;
+	declareNoConflict = false;
+	readFirst = false;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"FOR i IN"}));
+}
+*/
+
+BOOST_FIXTURE_TEST_CASE(maskedWrite_wide, TestWithDefaultDevice<Test_MaskedWrite>)
+{
+	using namespace gtry;
+	numElements = 64;
+	elementWidth = 64_b;
+	maskGranularity = 16;
+	latency = 1;
+	memType = MemType::DONT_CARE;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"FOR i IN"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(maskedWrite_lutram_noConflict, TestWithDefaultDevice<Test_MaskedWrite>)
+{
+	using namespace gtry;
+	numElements = 8;
+	elementWidth = 16_b;
+	maskGranularity = 8;
+	latency = 0;
+	memType = MemType::SMALL;
+	declareNoConflict = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"FOR i IN"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(maskedWrite_lutram_readFirst, TestWithDefaultDevice<Test_MaskedWrite>)
+{
+	using namespace gtry;
+	numElements = 8;
+	elementWidth = 16_b;
+	maskGranularity = 8;
+	latency = 0;
+	memType = MemType::SMALL;
+	declareNoConflict = false;
+	readFirst = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"FOR i IN"}));
+}
+
+
+BOOST_FIXTURE_TEST_CASE(maskedWrite_blockram_noConflict, TestWithDefaultDevice<Test_MaskedWrite>)
+{
+	using namespace gtry;
+	numElements = 512;
+	elementWidth = 32_b;
+	maskGranularity = 8;
+	latency = 1;
+	memType = MemType::MEDIUM;
+	declareNoConflict = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"FOR i IN"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(maskedWrite_blockram_readFirst, TestWithDefaultDevice<Test_MaskedWrite>)
+{
+	using namespace gtry;
+	numElements = 512;
+	elementWidth = 32_b;
+	maskGranularity = 8;
+	latency = 1;
+	memType = MemType::MEDIUM;
+	declareNoConflict = false;
+	readFirst = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"FOR i IN"}));
+}
+/*
+BOOST_FIXTURE_TEST_CASE(maskedWrite_blockram_writeFirst, TestWithDefaultDevice<Test_MaskedWrite>)
+{
+	using namespace gtry;
+	numElements = 512;
+	elementWidth = 32_b;
+	maskGranularity = 8;
+	latency = 1;
+	memType = MemType::MEDIUM;
+	declareNoConflict = false;
+	readFirst = false;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"FOR i IN"}));
+}
+*/
+
 BOOST_FIXTURE_TEST_CASE(crossport_fifo, gtry::GHDLTestFixture)
 {
 	using namespace gtry;
@@ -472,5 +591,173 @@ BOOST_FIXTURE_TEST_CASE(crossport_fifo, gtry::GHDLTestFixture)
 	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
 }
 
+
+#if 0
+
+BOOST_FIXTURE_TEST_CASE(trueDualPort_lutram_noConflict, TestWithDefaultDevice<Test_TrueDualPort>)
+{
+	using namespace gtry;
+	numElements = 16;
+	elementWidth = 8_b;
+	latency = 0;
+	memType = MemType::SMALL;
+	declareNoConflict = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(trueDualPort_blockram_noConflict, TestWithDefaultDevice<Test_TrueDualPort>)
+{
+	using namespace gtry;
+	numElements = 512;
+	elementWidth = 16_b;
+	latency = 1;
+	memType = MemType::MEDIUM;
+	declareNoConflict = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(trueDualPort_blockram_noConflict_2cycle, TestWithDefaultDevice<Test_TrueDualPort>)
+{
+	using namespace gtry;
+	numElements = 512;
+	elementWidth = 16_b;
+	latency = 2;
+	memType = MemType::MEDIUM;
+	declareNoConflict = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(trueDualPort_dontcare, TestWithDefaultDevice<Test_TrueDualPort>)
+{
+	using namespace gtry;
+	numElements = 32;
+	elementWidth = 8_b;
+	latency = 1;
+	memType = MemType::DONT_CARE;
+	declareNoConflict = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(trueDualPort_maskedWrite_byteEnable_noConflict, TestWithDefaultDevice<Test_TrueDualPortMaskedWrite>)
+{
+	using namespace gtry;
+	numElements = 32;
+	elementWidth = 32_b;
+	maskGranularity = 8;
+	latency = 1;
+	memType = MemType::DONT_CARE;
+	declareNoConflict = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"FOR i IN"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(trueDualPort_maskedWrite_wide, TestWithDefaultDevice<Test_TrueDualPortMaskedWrite>)
+{
+	using namespace gtry;
+	numElements = 64;
+	elementWidth = 64_b;
+	maskGranularity = 16;
+	latency = 1;
+	memType = MemType::DONT_CARE;
+	declareNoConflict = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"FOR i IN"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(trueDualPort_maskedWrite_lutram_noConflict, TestWithDefaultDevice<Test_TrueDualPortMaskedWrite>)
+{
+	using namespace gtry;
+	numElements = 8;
+	elementWidth = 16_b;
+	maskGranularity = 8;
+	latency = 0;
+	memType = MemType::SMALL;
+	declareNoConflict = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"FOR i IN"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(trueDualPort_maskedWrite_blockram_noConflict, TestWithDefaultDevice<Test_TrueDualPortMaskedWrite>)
+{
+	using namespace gtry;
+	numElements = 512;
+	elementWidth = 32_b;
+	maskGranularity = 8;
+	latency = 1;
+	memType = MemType::MEDIUM;
+	declareNoConflict = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"FOR i IN"}));
+}
+
+
+
+BOOST_FIXTURE_TEST_CASE(trueDualPort_rmw_maskedWrite_byteEnable, TestWithDefaultDevice<Test_TrueDualPortRMWMaskedWrite>)
+{
+	using namespace gtry;
+	numElements = 32;
+	elementWidth = 32_b;
+	maskGranularity = 8;
+	latency = 1;
+	memType = MemType::DONT_CARE;
+	declareNoConflict = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"FOR i IN"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(trueDualPort_rmw_maskedWrite_lutram, TestWithDefaultDevice<Test_TrueDualPortRMWMaskedWrite>)
+{
+	using namespace gtry;
+	numElements = 16;
+	elementWidth = 16_b;
+	maskGranularity = 8;
+	latency = 0;
+	memType = MemType::SMALL;
+	declareNoConflict = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"FOR i IN"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(trueDualPort_rmw_maskedWrite_blockram, TestWithDefaultDevice<Test_TrueDualPortRMWMaskedWrite>)
+{
+	using namespace gtry;
+	numElements = 512;
+	elementWidth = 32_b;
+	maskGranularity = 8;
+	latency = 1;
+	memType = MemType::MEDIUM;
+	declareNoConflict = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"FOR i IN"}));
+}
+
+BOOST_FIXTURE_TEST_CASE(trueDualPort_rmw_maskedWrite_blockram_2cycle, TestWithDefaultDevice<Test_TrueDualPortRMWMaskedWrite>)
+{
+	using namespace gtry;
+	numElements = 512;
+	elementWidth = 32_b;
+	maskGranularity = 8;
+	latency = 2;
+	memType = MemType::MEDIUM;
+	declareNoConflict = true;
+	execute();
+	BOOST_TEST(exportContains(std::regex{"TYPE mem_type IS array"}));
+	BOOST_TEST(exportContains(std::regex{"FOR i IN"}));
+}
+
+#endif
 
 BOOST_AUTO_TEST_SUITE_END()

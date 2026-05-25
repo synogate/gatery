@@ -1031,8 +1031,8 @@ void ReferenceSimulator::checkSignalDrivenResetsChanged()
 			}
 
 			if (rs.resetHigh != newValue) {
+/*
 				rs.resetHigh = newValue;
-
 				for (auto &dom : rstSource.domains)
 					for (auto &cn : dom->clockedNodes)
 						cn.changeReset(m_callbackDispatcher, m_dataState, rs.resetHigh, m_performanceCounters);
@@ -1041,6 +1041,17 @@ void ReferenceSimulator::checkSignalDrivenResetsChanged()
 					auto perfHandle = m_performanceCounters.processOther(SimulatorPerformanceCounters::Other::EVENT_CALLBACKS);
 					m_callbackDispatcher.onReset(reset, rs.resetHigh);
 				}
+*/
+
+				Event e;
+				e.type = Event::Type::resetValueChange;
+				e.data = Event::ResetValueChangeEvt{
+					.resetPinIdx = i,
+					.newResetHigh = newValue,
+				};
+				e.timeOfEvent = m_simulationTime;
+				e.microTick = m_microTick+1;
+				m_nextEvents.push(e);
 			}
 		}
 	}	

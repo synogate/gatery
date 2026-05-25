@@ -174,6 +174,8 @@ namespace gtry::hlim {
 		void ensureChildNotReadingTristatePin();
 		void removeDisabledWritePorts(Subnet& subnet);
 
+		void fuseMemoryPorts(Subnet &subnet);
+
 		void removeFalseLoops();
 
 		void shuffleNodes();

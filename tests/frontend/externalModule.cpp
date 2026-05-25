@@ -88,7 +88,7 @@ struct BigDut : public gtry::GHDLTestFixture
 					pinOut(dut.out("out_stdulogic_vector", 10_b, {.type = PinType::STD_ULOGIC})).setName("out_6");
 				}
 
-				addCustomVHDL("TestEntity", R"Delim(
+				addCustomSourceCode("TestEntity", vhdl::SourceType::VHDL, R"Delim(
 					LIBRARY ieee;
 					USE ieee.std_logic_1164.ALL;
 					USE ieee.numeric_std.all;
@@ -187,7 +187,7 @@ struct BiDirDut : public gtry::GHDLTestFixture
 				dut.inoutPin("inout_bvec", "pin_inout_bvec", 10_b, {.type = PinType::STD_LOGIC});
 			}
 
-			addCustomVHDL("TestEntity", R"Delim(
+			addCustomSourceCode("TestEntity", vhdl::SourceType::VHDL, R"Delim(
 
 				LIBRARY ieee;
 				USE ieee.std_logic_1164.ALL;

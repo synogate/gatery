@@ -92,8 +92,8 @@ class VHDLExport
 
 		InterfacePackageContent &getInterfacePackage() { return m_interfacePackageContent; }
 
-		void addCustomVhdlFile(std::string name, std::string content) { m_customVhdlFiles[std::move(name)] = std::move(content); }
-		inline const std::map<std::string, std::string> &getCustomVHDLFiles() const { return m_customVhdlFiles; }
+		void addCustomSourceCode(std::string name, SourceType type, std::string content) { m_customSourceCode[std::move(name)] = {.type = type, .code = std::move(content)}; }
+		inline const std::map<std::string, CustomSourceCode> &getCustomSourceCode() const { return m_customSourceCode; }
 	protected:
 		OutputMode m_outputMode = OutputMode::AUTO;
 		std::filesystem::path m_singleFileName;
@@ -120,7 +120,7 @@ class VHDLExport
 		};
 		std::vector<TestbenchRecorderSettings> m_testbenchRecorderSettings;
 
-		std::map<std::string, std::string> m_customVhdlFiles;
+		std::map<std::string, CustomSourceCode> m_customSourceCode;
 
 		void doWriteInstantiationTemplateVHDL(std::filesystem::path destination);
 };

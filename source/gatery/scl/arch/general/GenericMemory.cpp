@@ -148,7 +148,7 @@ bool EmbeddedMemoryPattern::scopedAttemptApply(hlim::NodeGroup *nodeGroup) const
 	GenericMemoryCapabilities::Request request;
 	request.size = memGrp->getMemory()->getSize();
 	request.maxDepth = memGrp->getMemory()->getMaxDepth();
-	if (memGrp->getWritePorts().size() == 0)
+	if (memGrp->getNumWritePorts() == 0)
 		request.mode = GenericMemoryCapabilities::Mode::ROM;
 	else
 		request.mode = GenericMemoryCapabilities::Mode::SIMPLE_DUAL_PORT;

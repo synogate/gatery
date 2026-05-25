@@ -39,23 +39,24 @@ class GenericMemoryEntity : public Entity
 		void buildFrom(hlim::NodeGroup *memNodeGrp);
 	protected:		
 		hlim::MemoryGroup *m_memGrp;
+		bool m_needsSharedVariable = false;
 
 
-		void formatReadPortOutputSignalName(std::ostream &stream, const hlim::MemoryGroup::ReadPort &readPort, size_t regIndex) const;
+		void formatReadPortOutputSignalName(std::ostream &stream, const hlim::MemoryGroup::MemPort &readPort, size_t regIndex) const;
 		void formatReadPortInputRegisterSignalName(std::ostream &stream, const hlim::NodePort &driver) const;
 
 		virtual void writeLocalSignalsVHDL(std::ostream &stream) override;
 		virtual void writeStatementsVHDL(std::ostream &stream, unsigned indent) override;
 
-		void generateReadPortConflictDetectionExpression(std::ostream &stream, const hlim::MemoryGroup::ReadPort &readPort);
+		void generateReadPortConflictDetectionExpression(std::ostream &stream, const hlim::MemoryGroup::MemPort &readPort);
 
 		void openResetCondition(std::ostream &stream, unsigned indent, const std::string_view resetName, const RegisterConfig &reset);
-		void exportResetOutputReg(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::ReadPort &readPort, size_t regIndex);
-		void exportWrite(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::WritePort &writePort);
-		void exportRead(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::ReadPort &readPort, bool registeredInputs, bool useEnablePort);
-		void exportReadInputReg(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::ReadPort &readPort);
-		void exportReadOutputReg(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::ReadPort &readPort, size_t regIndex);
-		void exportReadConflictOverride(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::ReadPort &readPort);
+		void exportResetOutputReg(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::MemPort &readPort, size_t regIndex);
+		void exportWrite(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::MemPort &writePort);
+		void exportRead(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::MemPort &readPort, bool registeredInputs, bool useEnablePort);
+		void exportReadInputReg(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::MemPort &readPort);
+		void exportReadOutputReg(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::MemPort &readPort, size_t regIndex);
+		void exportReadConflictOverride(std::ostream &stream, unsigned indent, const hlim::MemoryGroup::MemPort &readPort);
 
 		GenericMemoryPorts groupPorts() const;
 };

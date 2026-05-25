@@ -47,11 +47,11 @@ void Node_ExportOverride::connectInput(const NodePort &nodePort)
 			setConnectionType(paramType);
 	}
 
-	if (getDriver(0).node != nullptr && getDriver(1).node != nullptr)
-		HCL_ASSERT_HINT(hlim::getOutputConnectionType(getDriver(0)) == hlim::getOutputConnectionType(getDriver(1)), 
-					"The signal and override value connection types must be the same.");
-
 	NodeIO::connectInput(SIM_INPUT, nodePort);
+
+	if (getDriver(SIM_INPUT).node != nullptr && getDriver(EXP_INPUT).node != nullptr)
+		HCL_ASSERT_HINT(hlim::getOutputConnectionType(getDriver(SIM_INPUT)) == hlim::getOutputConnectionType(getDriver(EXP_INPUT)), 
+					"The signal and override value connection types must be the same.");
 }
 
 void Node_ExportOverride::connectOverride(const NodePort &nodePort)
@@ -65,11 +65,11 @@ void Node_ExportOverride::connectOverride(const NodePort &nodePort)
 			setConnectionType(paramType);
 	}
 
-	if (getDriver(0).node != nullptr && getDriver(1).node != nullptr)
-		HCL_ASSERT_HINT(hlim::getOutputConnectionType(getDriver(0)) == hlim::getOutputConnectionType(getDriver(1)), 
-					"The signal and override value connection types must be the same.");
-
 	NodeIO::connectInput(EXP_INPUT, nodePort);
+
+	if (getDriver(SIM_INPUT).node != nullptr && getDriver(EXP_INPUT).node != nullptr)
+		HCL_ASSERT_HINT(hlim::getOutputConnectionType(getDriver(SIM_INPUT)) == hlim::getOutputConnectionType(getDriver(EXP_INPUT)), 
+					"The signal and override value connection types must be the same.");
 }
 
 void Node_ExportOverride::simulateEvaluate(sim::SimulatorCallbacks& simCallbacks, sim::DefaultBitVectorState& state, const size_t* internalOffsets, const size_t* inputOffsets, const size_t* outputOffsets) const
@@ -84,7 +84,7 @@ void Node_ExportOverride::simulateEvaluate(sim::SimulatorCallbacks& simCallbacks
 
 void Node_ExportOverride::disconnectInput()
 {
-	NodeIO::disconnectInput(0);
+	NodeIO::disconnectInput(SIM_INPUT);
 }
 
 
@@ -100,8 +100,8 @@ void Node_ExportOverride::assertValidity() const
 std::string Node_ExportOverride::getInputName(size_t idx) const
 {
 	switch (idx) {
-		case 0: return "sim_in";
-		case 1: return "export_in";
+		case SIM_INPUT: return "sim_in";
+		case EXP_INPUT: return "export_in";
 		default: return "invalid";
 	}
 }

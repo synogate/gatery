@@ -99,7 +99,7 @@ namespace gtry
 
 		MemoryPortFactory<Data>& operator = (const Data& value) { write(value); return *this; }
 
-		void write(const Data& value, const UInt &wrWordEnable) {
+		virtual void write(const Data& value, const UInt &wrWordEnable) {
 			auto* writePort = write(value);
 			writePort->connectWrWordEnable(wrWordEnable.readPort());
 		}
@@ -120,6 +120,7 @@ namespace gtry
 			return enable;
 		}
 	};
+
 
 	template<typename Data>
 	Data reg(MemoryPortFactory<Data> readPort, const RegisterSettings& settings = {}) { return reg((Data)readPort, settings); }

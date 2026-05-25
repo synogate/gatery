@@ -20,8 +20,11 @@
 #include "../NodePtr.h"
 #include "../NodePort.h"
 #include "../NodeGroup.h"
+#include "../supportNodes/MemoryTypes.h"
 
 #include "TechnologyMapping.h"
+
+#include <ranges>
 
 namespace gtry::hlim {
 
@@ -34,16 +37,17 @@ class Node_Register;
 class MemoryGroup : public NodeGroupMetaInfo
 {
 	public:
-		struct WritePort {
-			NodePtr<Node_MemPort> node;
-		};
-
-		struct ReadPort {
+		struct MemPort {
 			NodePtr<Node_MemPort> node;
 			std::vector<NodePtr<Node_Register>> dedicatedReadLatencyRegisters;
 			RefCtdNodePort dataOutput;
 
 			bool findOutputRegisters(size_t readLatency, NodeGroup *memoryNodeGroup);
+
+			bool isReadPort() const;
+			bool isWritePort() const;
+			memory::ReadDuringWrite samePortRDWBehavior() const;
+			BitWidth addressWidth() const;
 		};
 
 		MemoryGroup(NodeGroup *group);
@@ -63,25 +67,39 @@ class MemoryGroup : public NodeGroupMetaInfo
 		NodeGroup *lazyCreateFixupNodeGroup();
 
 		Node_Memory *getMemory() { return m_memory; }
-		const std::vector<WritePort> &getWritePorts() { return m_writePorts; }
-		const std::vector<ReadPort> &getReadPorts() { return m_readPorts; }
+		auto getWritePorts() const { return m_ports | std::views::filter([](const MemPort &port) { return port.isWritePort(); }); }
+		auto getWritePorts() { return m_ports | std::views::filter([](const MemPort &port) { return port.isWritePort(); }); }
+		auto getReadPorts() const { return m_ports | std::views::filter([](const MemPort &port) { return port.isReadPort(); }); }
+		auto getReadPorts() { return m_ports | std::views::filter([](const MemPort &port) { return port.isReadPort(); }); }
+		auto getPorts() const { return m_ports; }
+		auto getPorts() { return m_ports; }
 
-		bool canReadBeforeAllOthersWrite(const ReadPort &rdPort) const;
-		bool canReadAfterAllOthersWrite(const ReadPort &rdPort) const;
-		bool readUnorderedToAllOthersWrite(const ReadPort &rdPort) const;
+		inline size_t getNumReadPorts() const { return std::ranges::count_if(m_ports, [](const MemPort &port) { return port.isReadPort(); }); }
+		inline size_t getNumWritePorts() const { return std::ranges::count_if(m_ports, [](const MemPort &port) { return port.isWritePort(); }); }
+		inline bool isROM() const { return getWritePorts().empty(); }
 
-		const ReadPort &findReadPort(Node_MemPort *memPort);
-		const WritePort &findWritePort(Node_MemPort *memPort);
+		bool canReadBeforeAllOthersWrite(const MemPort &rdPort) const;
+		bool canReadAfterAllOthersWrite(const MemPort &rdPort) const;
+		bool readUnorderedToAllOthersWrite(const MemPort &rdPort) const;
+
+		struct ReadWriteOrdering {
+			bool anyMustReadFirst;
+			bool allCanReadFirst;
+		};
+		ReadWriteOrdering getReadWriteOrdering() const;
+
+		const MemPort &findPort(Node_MemPort *memPort);
 
 		inline NodeGroup *getNodeGroup() const { return m_nodeGroup; }
 		inline NodeGroup *getFixupNodeGroup() const { return m_fixupNodeGroup; }
 
 		void emulateResetOfOutputRegisters(Circuit &circuit);
-		void emulateResetOfFirstReadPortOutputRegister(Circuit &circuit, ReadPort &rp);
+		void emulateResetOfFirstReadPortOutputRegister(Circuit &circuit, MemPort &rp);
+
+		//void fuseReadAndWritePorts(Circuit &circuit);
 	protected:
 		NodePtr<Node_Memory> m_memory;
-		std::vector<WritePort> m_writePorts;
-		std::vector<ReadPort> m_readPorts;
+		std::vector<MemPort> m_ports;
 
 		NodeGroup *m_nodeGroup;
 		NodeGroup *m_fixupNodeGroup = nullptr;

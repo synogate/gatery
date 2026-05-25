@@ -89,7 +89,7 @@ std::filesystem::path AST::getFilename(const std::string &name)
 	return name + m_codeFormatting->getFilenameExtension();
 }
 
-void AST::distributeToFiles(OutputMode outputMode, std::filesystem::path singleFileName, const std::map<std::string, std::string> &customVhdlFiles)
+void AST::distributeToFiles(OutputMode outputMode, std::filesystem::path singleFileName, const std::map<std::string, CustomSourceCode> &customSourceCode)
 {
 	m_sourceFiles.clear();
 
@@ -106,8 +106,19 @@ void AST::distributeToFiles(OutputMode outputMode, std::filesystem::path singleF
 		for (auto &e : m_packages)
 			m_sourceFiles.back().packages.push_back(e.get());
 
-		for (const auto &pair : customVhdlFiles)
-			m_sourceFiles.back().customVhdlFiles.push_back(pair.second);
+		for (const auto &pair : customSourceCode)
+			if (pair.second.type == SourceType::VHDL)
+				m_sourceFiles.back().customSourceCode.push_back(pair.second.code);
+
+		// Todo: Can Verilog be merged?
+
+		for (const auto &pair : customSourceCode)
+			if (pair.second.type != SourceType::VHDL)
+				m_sourceFiles.push_back({
+					.type = pair.second.type,
+					.filename = pair.first,
+					.customSourceCode = {pair.second.code}
+				});
 
 	} else if (outputMode == OutputMode::FILE_PER_PARTITION) {
 
@@ -140,22 +151,28 @@ void AST::distributeToFiles(OutputMode outputMode, std::filesystem::path singleF
 			m_sourceFiles.back().entities = pair.second;
 		}
 
-		for (const auto &pair : customVhdlFiles) {
-			m_sourceFiles.push_back({.filename = getFilename(pair.first)});
-			m_sourceFiles.back().customVhdlFiles.push_back(pair.second);
+		for (const auto &pair : customSourceCode) {
+			m_sourceFiles.push_back({
+				.type = pair.second.type,
+				.filename = pair.second.type != SourceType::VHDL ? std::filesystem::path(pair.first) : getFilename(pair.first),
+				.customSourceCode = {pair.second.code}
+			});
 		}
 
 	} else {
-		m_sourceFiles.reserve(m_entities.size() + m_packages.size() + customVhdlFiles.size());
+		m_sourceFiles.reserve(m_entities.size() + m_packages.size() + customSourceCode.size());
 
 		for (auto &p : m_packages) {
 			m_sourceFiles.push_back({.filename = getFilename(p->getName())});
 			m_sourceFiles.back().packages.push_back(p.get());
 		}
 
-		for (const auto &pair : customVhdlFiles) {
-			m_sourceFiles.push_back({.filename = getFilename(pair.first)});
-			m_sourceFiles.back().customVhdlFiles.push_back(pair.second);
+		for (const auto &pair : customSourceCode) {
+			m_sourceFiles.push_back({
+				.type = pair.second.type,
+				.filename = pair.second.type != SourceType::VHDL ? std::filesystem::path(pair.first) : getFilename(pair.first),
+				.customSourceCode = {pair.second.code}
+			});
 		}
 
 		for (auto &e : m_entities) {
@@ -165,9 +182,9 @@ void AST::distributeToFiles(OutputMode outputMode, std::filesystem::path singleF
 	}
 }
 
-void AST::writeVHDL(utils::FileSystem &fileSystem, OutputMode outputMode, std::filesystem::path singleFileName, const std::map<std::string, std::string> &customVhdlFiles)
+void AST::writeVHDL(utils::FileSystem &fileSystem, OutputMode outputMode, std::filesystem::path singleFileName, const std::map<std::string, CustomSourceCode> &customSourceCode)
 {
-	distributeToFiles(outputMode, singleFileName, customVhdlFiles);
+	distributeToFiles(outputMode, singleFileName, customSourceCode);
 
 	for (auto& entity : m_entities)
 		entity->writeSupportFiles(fileSystem);
@@ -179,7 +196,7 @@ void AST::writeVHDL(utils::FileSystem &fileSystem, OutputMode outputMode, std::f
 		for (auto& package : f.packages)
 			package->writeVHDL(file->stream());
 
-		for (const auto &elem : f.customVhdlFiles)
+		for (const auto &elem : f.customSourceCode)
 			file->stream() << elem << std::endl;
 
 		for (auto* entity : f.entities)

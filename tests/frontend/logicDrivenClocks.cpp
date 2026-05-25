@@ -112,6 +112,53 @@ BOOST_FIXTURE_TEST_CASE(reset, BoostUnitTestSimulationFixture)
 
 
 
+BOOST_FIXTURE_TEST_CASE(reset_Async, BoostUnitTestSimulationFixture)
+{
+	using namespace gtry;
+
+	Clock clock({ .absoluteFrequency = 10'000, .resetType = Clock::ResetType::ASYNCHRONOUS, .initializeRegs = false });
+	Bit rstSignal = pinIn().setName("rstSignal");
+	clock.overrideRstWith(rstSignal);
+
+	ClockScope clockScope(clock);
+
+	UInt counter(4_b);
+	counter = reg(counter+1, 0);
+
+	pinOut(counter, "counter");
+
+
+	addSimulationProcess([=, this, &clock]()->SimProcess {
+		simu(rstSignal) = '0';
+
+		// This is currently not working because of a retiming workaround
+		// BOOST_TEST(!simu(counter).defined());
+
+		for (auto i : Range(500)) {
+			co_await WaitFor(Seconds{1, 5} / clock.getClk()->absoluteFrequency());
+			// This is currently not working because of a retiming workaround
+			// BOOST_TEST(!simu(counter).defined());
+		}
+
+		co_await WaitFor(Seconds{1, 5} / clock.getClk()->absoluteFrequency());
+
+		simu(rstSignal) = '1';
+		// co_await OnClk(clock); // These are not releasing in reset!
+		co_await WaitFor(Seconds{1, 1} / clock.getClk()->absoluteFrequency());
+		simu(rstSignal) = '0';
+		
+		for (auto i : Range(500)) {
+			co_await OnClk(clock);
+			BOOST_TEST(simu(counter).defined());
+		}
+
+
+		stopTest();
+	});
+
+
+	runTest(1000u / clock.getClk()->absoluteFrequency());
+}
 
 BOOST_FIXTURE_TEST_CASE(counter, BoostUnitTestSimulationFixture)
 {

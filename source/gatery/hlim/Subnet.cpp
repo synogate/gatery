@@ -266,17 +266,17 @@ void addAllForSimulationImpl(SubnetType &subnet, CircuitType &circuit, const Con
 			if (n->hasSideEffects() || (includeRefed && n->hasRef()))
 				openList.push_back(n.get());
 	} else {
-		for (auto& clock : circuit.getClocks()) {
+		for (auto &clock : circuit.getClocks()) {
 			auto clkDriver = clock->getLogicDriver(true, true);
 			if (clkDriver.node != nullptr)
-				 openList.push_back(clkDriver.node);
-			
-				auto rstDriver = clock->getLogicDriver(true, false);
+				openList.push_back(clkDriver.node);
+
+			auto rstDriver = clock->getLogicDriver(true, false);
 			if (rstDriver.node != nullptr)
-				 openList.push_back(rstDriver.node);
-			
+				openList.push_back(rstDriver.node);
 		}
-		 for (auto np : outputs)
+
+		for (auto np : outputs)
 			openList.push_back(np.node);
 	}
 

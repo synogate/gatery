@@ -44,6 +44,7 @@
 #include "supportNodes/Node_External.h"
 #include "supportNodes/Node_MemPort.h"
 #include "supportNodes/Node_ExportOverride.h"
+#include "supportNodes/Node_Memory.h"
 
 #include "postprocessing/MemoryDetector.h"
 #include "postprocessing/DefaultValueResolution.h"
@@ -1613,6 +1614,62 @@ void Circuit::removeDisabledWritePorts(Subnet &subnet)
 	}
 }
 
+void Circuit::fuseMemoryPorts(Subnet &subnet)
+{
+	return; // skip for now
+
+	//auto mems = subnet.getNodesOfType<Node_Memory>();
+	std::vector<Node_Memory*> mems;
+	for (auto n : subnet)
+		if (auto *mem = dynamic_cast<Node_Memory*>(n))
+			mems.push_back(mem);
+
+	for (auto mem : mems) {
+		std::map<NodePort, std::vector<Node_MemPort*>> writePortsByAddress;
+		std::map<NodePort, std::vector<Node_MemPort*>> readPortsByAddress;
+
+		for (auto &p : mem->getPorts()) {
+			auto *memPort = dynamic_cast<Node_MemPort*>(p.node);
+			if (memPort->isReadPort() && !memPort->isWritePort())
+				readPortsByAddress[memPort->getNonSignalDriver((size_t)Node_MemPort::Inputs::address)].push_back(memPort);
+			if (!memPort->isReadPort() && memPort->isWritePort())
+				writePortsByAddress[memPort->getNonSignalDriver((size_t)Node_MemPort::Inputs::address)].push_back(memPort);
+		}
+
+		for (auto &wps : writePortsByAddress) {
+			auto it = readPortsByAddress.find(wps.first);
+			if (it == readPortsByAddress.end()) continue;
+			
+			auto &rps = it->second;
+			if (wps.second.empty()) continue;
+			if (rps.empty()) continue;
+
+			// for now, just fuse with first one.
+
+			auto *writePort = wps.second[0];
+			auto *readPort = rps[0];
+
+			bool readFirst = writePort->isOrderedAfter(readPort);
+			bool writeFirst = readPort->isOrderedAfter(writePort);
+
+			if (readFirst && !writeFirst) 
+				writePort->samePortRDWBehavior(memory::ReadDuringWrite::READ_FIRST);
+			else if (!readFirst && writeFirst)
+				writePort->samePortRDWBehavior(memory::ReadDuringWrite::WRITE_FIRST);
+			else 
+				writePort->samePortRDWBehavior(memory::ReadDuringWrite::DONT_CARE);
+
+			while (!readPort->getDirectlyDriven((size_t)Node_MemPort::Outputs::rdData).empty()) {
+				auto driven = readPort->getDirectlyDriven((size_t)Node_MemPort::Outputs::rdData).back();
+				driven.node->rewireInput(driven.port, {.node = writePort, .port = (size_t) Node_MemPort::Outputs::rdData});
+			}
+
+			rps.erase(std::remove(rps.begin(), rps.end(), readPort), rps.end());
+		}
+
+	}
+}
+
 void Circuit::moveClockDriversToTop()
 {
 	for (auto &n : m_nodes) {
@@ -1763,10 +1820,14 @@ void DefaultPostprocessing::generalOptimization(Circuit &circuit) const
 
 void DefaultPostprocessing::memoryDetection(Circuit &circuit) const
 {
+	Subnet subnet = Subnet::all(circuit);
+	//visualize(circuit, "before_fusing_memory_ports");
+	//circuit.fuseMemoryPorts(subnet);
+	//visualize(circuit, "after_fusing_memory_ports");
 	findMemoryGroups(circuit);
 	circuit.cullUnnamedSignalNodes();
 
-	Subnet subnet = Subnet::all(circuit);
+	subnet = Subnet::all(circuit);
 	circuit.cullUnusedNodes(subnet); // do again after memory group extraction with potential register retiming
 }
 
@@ -1828,10 +1889,12 @@ void MinimalPostprocessing::generalOptimization(Circuit& circuit) const
 
 void MinimalPostprocessing::memoryDetection(Circuit& circuit) const
 {
+	Subnet subnet = Subnet::all(circuit);
+	circuit.fuseMemoryPorts(subnet);
 	findMemoryGroups(circuit);
 	circuit.cullUnnamedSignalNodes();
 
-	Subnet subnet = Subnet::all(circuit);
+	subnet = Subnet::all(circuit);
 	circuit.cullUnusedNodes(subnet); // do again after memory group extraction with potential register retiming
 }
 

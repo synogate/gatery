@@ -156,6 +156,7 @@ void Node_MemPort::simulatePowerOn(sim::SimulatorCallbacks &simCallbacks, sim::D
 	if (isWritePort()) {
 		state.clearRange(sim::DefaultConfig::DEFINED, internalOffsets[(size_t)Internal::address], getDriverConnType((size_t)Inputs::address).width);
 		state.clearRange(sim::DefaultConfig::DEFINED,internalOffsets[(size_t)Internal::wrData], getBitWidth());
+		state.clearRange(sim::DefaultConfig::DEFINED,internalOffsets[(size_t)Internal::wrWordEnable], getWriteMaskWidth());
 		state.clear(sim::DefaultConfig::VALUE, internalOffsets[(size_t)Internal::wrEnable]);
 	}
 }
@@ -240,9 +241,10 @@ void Node_MemPort::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
 			// Potentially overwrite what we just read.
 			for (size_t i = prevWPs.size()-1; i < prevWPs.size(); i--) {
 				// Same order as in  Node_MemPort::getReferencedInternalStateSizes()
-				size_t addrOffset = (size_t)RefInternal::prevWritePorts+i*3+0;
-				size_t wrDataOffset = (size_t)RefInternal::prevWritePorts+i*3+1;
-				size_t wrEnableOffset = (size_t)RefInternal::prevWritePorts+i*3+2;
+				size_t addrOffset = (size_t)RefInternal::prevWritePorts+i*4+0;
+				size_t wrDataOffset = (size_t)RefInternal::prevWritePorts+i*4+1;
+				size_t wrEnableOffset = (size_t)RefInternal::prevWritePorts+i*4+2;
+				size_t wrWordEnableOffset = (size_t)RefInternal::prevWritePorts+i*4+3;
 
 				const auto &wrAddrType = prevWPs[i]->getDriverConnType((size_t)Inputs::address);
 				HCL_ASSERT_HINT(prevWPs[i]->getBitWidth() == getBitWidth(), "Mixed width memory ports not yet supported in simulation!");
@@ -257,18 +259,36 @@ void Node_MemPort::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
 				bool addressesWillCollide = addressesCanCollide && writeAddressFullyDefined && readAddressFullyDefined;
 
 				bool isWriting = state.get(sim::DefaultConfig::VALUE, internalOffsets[wrEnableOffset]);
+				bool isWritingDefined = state.get(sim::DefaultConfig::DEFINED, internalOffsets[wrEnableOffset]);
 
-				if (isWriting) {
-					// It's writing something (though write enable might be undefined in which case the stored write data is undefined).
-					if (!writeAddressFullyDefined) {
-						// It's nuking the memory, but since we are dependent, we get a preview.
-						state.clearRange(sim::DefaultConfig::DEFINED, outOffset, outSize);
-					} else if (addressesCanCollide) {
-						// actual collision, forward to-be-written data
-						if (addressesWillCollide)
-							state.copyRange(outOffset, state, internalOffsets[wrDataOffset], outSize);
-						else
-							mergeUndefinedSelection(state, outOffset, state, internalOffsets[wrDataOffset], outSize);
+				if (isWriting || !isWritingDefined) {
+					auto handleWord = [&](size_t startBitIdx, size_t numBits, bool wrMaskDefined) {
+						// It's writing something (though write enable might be undefined in which case the stored write data is undefined).
+						if (!writeAddressFullyDefined) {
+							// It's nuking the memory, but since we are dependent, we get a preview.
+							state.clearRange(sim::DefaultConfig::DEFINED, outOffset + startBitIdx, numBits);
+						} else if (addressesCanCollide) {
+							// actual collision, forward to-be-written data
+							if (addressesWillCollide && wrMaskDefined)
+								state.copyRange(outOffset + startBitIdx, state, internalOffsets[wrDataOffset] + startBitIdx, numBits);
+							else
+								mergeUndefinedSelection(state, outOffset + startBitIdx, state, internalOffsets[wrDataOffset] + startBitIdx, numBits);
+						}
+					};
+
+					size_t wrMaskWidth = prevWPs[i]->getWriteMaskWidth();
+					if (wrMaskWidth == 0) {
+						handleWord(0, outSize, isWritingDefined);
+					} else {
+						size_t wordSize = getBitWidth() / wrMaskWidth;
+						for (size_t wordIdx = 0; wordIdx < wrMaskWidth; wordIdx++) {
+							size_t wordStart = wordIdx * getBitWidth() / wrMaskWidth;
+							bool wordEnabled = state.get(sim::DefaultConfig::VALUE, internalOffsets[wrWordEnableOffset] + wordIdx);
+							bool wordEnabledDefined = state.get(sim::DefaultConfig::DEFINED, internalOffsets[wrWordEnableOffset] + wordIdx);
+	
+							if (wordEnabled || !wordEnabledDefined)
+								handleWord(wordStart, wordSize, wordEnabledDefined && isWritingDefined);
+						}
 					}
 				}
 			}
@@ -289,18 +309,19 @@ void Node_MemPort::simulateEvaluate(sim::SimulatorCallbacks &simCallbacks, sim::
 		else
 			state.clearRange(sim::DefaultConfig::DEFINED, internalOffsets[(size_t)Internal::wrData], wrDataType.width);
 
-		bool doWrite = enableValue || !enableDefined;
+		if (inputOffsets[(size_t)Inputs::wrWordEnable] != ~0ull) {
+			state.copyRange(internalOffsets[(size_t)Internal::wrWordEnable], state, inputOffsets[(size_t)Inputs::wrWordEnable], getWriteMaskWidth());
+		}
+
+		bool writeEnabled = enableValue;
 		bool writingDefined = enableDefined;
 		// optional enables, defaults to true
 		if (inputOffsets[(size_t)Inputs::wrEnable] != ~0ull) {
-			doWrite &= state.get(sim::DefaultConfig::VALUE, inputOffsets[(size_t)Inputs::wrEnable]) ||
-						!state.get(sim::DefaultConfig::DEFINED, inputOffsets[(size_t)Inputs::wrEnable]);
+			writeEnabled &= state.get(sim::DefaultConfig::VALUE, inputOffsets[(size_t)Inputs::wrEnable]);
 			writingDefined &= state.get(sim::DefaultConfig::DEFINED, inputOffsets[(size_t)Inputs::wrEnable]);
 		}
-		state.set(sim::DefaultConfig::VALUE, internalOffsets[(size_t)Internal::wrEnable], doWrite);
-
-		if (!writingDefined) // If it's unclear whether the write is enabled, do the write but write undefined
-			state.clearRange(sim::DefaultConfig::DEFINED, internalOffsets[(size_t)Internal::wrData], wrDataType.width);
+		state.set(sim::DefaultConfig::VALUE, internalOffsets[(size_t)Internal::wrEnable], writeEnabled);
+		state.set(sim::DefaultConfig::DEFINED, internalOffsets[(size_t)Internal::wrEnable], writingDefined);
 	}
 }
 
@@ -310,22 +331,53 @@ void Node_MemPort::simulateAdvance(sim::SimulatorCallbacks &simCallbacks, sim::D
 		return;
 
 	if (isWritePort()) {
-		bool doWrite = state.get(sim::DefaultConfig::VALUE, internalOffsets[(size_t)Internal::wrEnable]);
+		bool writeEnabled = state.get(sim::DefaultConfig::VALUE, internalOffsets[(size_t)Internal::wrEnable]);
+		bool writeDefined = state.get(sim::DefaultConfig::DEFINED, internalOffsets[(size_t)Internal::wrEnable]);
 
 		const auto &addrType = getDriverConnType((size_t)Inputs::address);
 		std::uint64_t addressValue   = state.extractNonStraddling(sim::DefaultConfig::VALUE, internalOffsets[(size_t)Internal::address], addrType.width);
 		std::uint64_t addressDefined = state.extractNonStraddling(sim::DefaultConfig::DEFINED, internalOffsets[(size_t)Internal::address], addrType.width);
 
-		if (doWrite) {
+		if (writeEnabled || !writeDefined) {
 			if (!utils::isMaskSet(addressDefined, 0, addrType.width)) {
 				// If the address is undefined, make the entire RAM undefined
+				// TODO: Technically, this should respect the write mask.
 				state.clearRange(sim::DefaultConfig::DEFINED, internalOffsets[(size_t)RefInternal::memory], getMemory()->getSize());
 			} else {
 				// Perform write, same index computation/behavior as for reads
 				auto memSize = getMemory()->getSize();
 				HCL_ASSERT(memSize % getBitWidth() == 0);
 				auto index = (addressValue * getBitWidth()) % memSize;
-				state.copyRange(internalOffsets[(size_t)RefInternal::memory] + index, state, internalOffsets[(size_t)Internal::wrData], getBitWidth());
+
+				size_t wrMaskWidth = getWriteMaskWidth();
+				if (wrMaskWidth == 0) {
+					if (writeDefined)
+						state.copyRange(internalOffsets[(size_t)RefInternal::memory] + index, state, internalOffsets[(size_t)Internal::wrData], getBitWidth());
+					else
+						sim::mergeUndefinedSelection(state, internalOffsets[(size_t)RefInternal::memory] + index, state, internalOffsets[(size_t)Internal::wrData], getBitWidth());
+				} else {
+					// Apply word write enable mask if it exists. Don't optimize this for now, as a rewrite of signal state is in the works anyways.
+					size_t wordSize = getBitWidth() / wrMaskWidth;
+					for (size_t wordIdx = 0; wordIdx < wrMaskWidth; wordIdx++) {
+						size_t wordStart = wordIdx * getBitWidth() / wrMaskWidth;
+						bool wordEnabled = state.get(sim::DefaultConfig::VALUE, internalOffsets[(size_t)Internal::wrWordEnable] + wordIdx);
+						bool wordEnabledDefined = writeDefined && state.get(sim::DefaultConfig::DEFINED, internalOffsets[(size_t)Internal::wrWordEnable] + wordIdx);
+
+						if (wordEnabledDefined) {
+							if (wordEnabled)
+								state.copyRange(
+									internalOffsets[(size_t)RefInternal::memory] + index + wordStart, 
+									state, 
+									internalOffsets[(size_t)Internal::wrData] + wordStart, wordSize);
+						} else {
+							// If the word enable is undefined, we have to merge the new value with the old value since we don't know whether the write happens or not.
+							sim::mergeUndefinedSelection(
+								state, 
+								internalOffsets[(size_t)RefInternal::memory] + index + wordStart, 
+								state, internalOffsets[(size_t)Internal::wrData] + wordStart, wordSize);
+						}
+					}
+				}
 			}
 		}
 	}
@@ -379,6 +431,13 @@ std::string Node_MemPort::getOutputName(size_t idx) const
 	}
 }
 
+size_t Node_MemPort::getWriteMaskWidth() const
+{
+	if (auto driver = getDriver((size_t)Inputs::wrWordEnable); driver.node != nullptr)
+		return driver.node->getOutputConnectionType(driver.port).width;
+	return 0;
+}
+
 
 std::vector<size_t> Node_MemPort::getInternalStateSizes() const
 {
@@ -392,6 +451,8 @@ std::vector<size_t> Node_MemPort::getInternalStateSizes() const
 
 		if (auto driver = getDriver((size_t)Inputs::address); driver.node != nullptr)
 			sizes[(size_t)Internal::address] = driver.node->getOutputConnectionType(driver.port).width;
+
+		sizes[(size_t)Internal::wrWordEnable] = getWriteMaskWidth();
 	}
 
 	return sizes;
@@ -417,13 +478,14 @@ std::vector<std::pair<BaseNode*, size_t>> Node_MemPort::getReferencedInternalSta
 	auto prevWPs = getPrevWritePorts();
 
 	std::vector<std::pair<BaseNode*, size_t>> res;
-	res.reserve(prevWPs.size()+1);
+	res.reserve(prevWPs.size()*4+1);
 
 	res.push_back({getMemory(), (size_t)Node_Memory::Internal::data});
 	for (auto wp : prevWPs) {
 		res.push_back({wp, (size_t)Internal::address});
 		res.push_back({wp, (size_t)Internal::wrData});
 		res.push_back({wp, (size_t)Internal::wrEnable});
+		res.push_back({wp, (size_t)Internal::wrWordEnable});
 	}
 
 	return res;

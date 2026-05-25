@@ -64,20 +64,20 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 				<< " because it is external memory.");
 		return false;
 	}
-	if (memGrp->getReadPorts().size() == 0) {
+	if (memGrp->getNumReadPorts() == 0) {
 		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because it has no read ports.");
 		return false;
 	}
-	if (memGrp->getReadPorts().size() > 1) {
+	if (memGrp->getNumReadPorts() > 1) {
 		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because it has more than one read port and so far only one read port is supported.");
 		return false;
 	}
 	const auto &rp = memGrp->getReadPorts().front();
-	if (memGrp->getWritePorts().size() > 1) {
+	if (memGrp->getNumWritePorts() > 1) {
 		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because it has more than one write port and so far only one write port is supported.");
@@ -106,7 +106,7 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
 
 	bool supportsWriteFirst = memGrp->getMemory()->getRequiredReadLatency() >= 1;
 
-	if (memGrp->getWritePorts().size() != 0 && !supportsWriteFirst)  {
+	if (memGrp->getNumWritePorts() != 0 && !supportsWriteFirst)  {
 		dbg::log(dbg::LogMessage(nodeGroup) << dbg::LogMessage::LOG_WARNING << dbg::LogMessage::LOG_TECHNOLOGY_MAPPING << 
 				"Will not apply memory primitive " << getDesc().memoryName << " to " << memGrp->getMemory() 
 				<< " because automatic building of read during write bypasses for MLABs is not yet implemented.");
@@ -193,7 +193,7 @@ bool MLAB::apply(hlim::NodeGroup *nodeGroup) const
    
 	bool readFirst = false;
 	bool writeFirst = false;
-	if (memGrp->getWritePorts().size() > 0) {
+	if (memGrp->getNumWritePorts() > 0) {
 		auto &wp = memGrp->getWritePorts().front();
 		if (wp.node->isOrderedBefore(rp.node.get()))
 			writeFirst = true;

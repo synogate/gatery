@@ -1,6 +1,6 @@
-cmake_minimum_required (VERSION 3.5)
+cmake_minimum_required (VERSION 3.10)
 project (ReadTemperatureSensor)
-find_package(Boost 1.76.0 REQUIRED COMPONENTS system)
+find_package(Boost 1.76.0 REQUIRED CONFIG COMPONENTS system)
 include_directories(${Boost_INCLUDE_DIRS}) 
 
 add_executable(hdc1000 "hdc1000.cpp" BitBangEngineDriver.h)
