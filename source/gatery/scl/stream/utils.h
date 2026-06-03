@@ -211,10 +211,22 @@ namespace gtry::scl::strm
 	template<StreamSignal T>
 	T regDecouple(const T& stream, const RegisterSettings& settings = {});
 
-	//untested
 	inline auto regDecouple(const RegisterSettings& settings = {})
 	{
 		return [=](auto&& in) { return regDecouple(std::forward<decltype(in)>(in), settings); };
+	}
+
+	/**
+	 * @brief Latest in decoupling technologies! It decouples the ready and downstream signals. The throughput is reduced to one every secound beat.
+	 *			However, in constrast to regDecouple it requires only a single register per up- and downstream bit and no additional multiplexer.
+	 *			Note that any number of DecoupleGap registers can be chained without further degrading the throughput.
+	 */
+	template<typename Tpay, typename... Tattr>
+	RvStream<Tpay, Tattr...> regDecoupleGap(RvStream<Tpay, Tattr...>&& in, const RegisterSettings& settings = {});
+
+	inline auto regDecoupleGap(const RegisterSettings& settings = {})
+	{
+		return [=](auto&& in) { return regDecoupleGap(std::forward<decltype(in)>(in), settings); };
 	}
 
 	/**
@@ -842,6 +854,22 @@ namespace gtry::scl::strm
 	{
 		static_assert(!T::template has<Ready>(), "cannot create upstream register from const stream");
 		return strm::regDownstream(stream, settings);
+	}
+
+	template<typename Tpay, typename... Tattr>
+	RvStream<Tpay, Tattr...> regDecoupleGap(RvStream<Tpay, Tattr...>&& in, const RegisterSettings& settings)
+	{
+		RvStream<Tpay, Tattr...> out;
+
+		ready(in) = !valid(out);
+
+		Bit transferOut = transfer(out); // valid is temporarily assigned to wrong value
+		ENIF(ready(in))
+			downstream(out) = reg(copy(downstream(in)), settings);
+		ENIF(ready(in) | transferOut)
+			valid(out) = reg(transfer(in), '0', settings);
+
+		return out;
 	}
 
 	template<StreamSignal StreamT>

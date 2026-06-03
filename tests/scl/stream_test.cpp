@@ -304,6 +304,27 @@ BOOST_FIXTURE_TEST_CASE(stream_downstreamReg, StreamTransferFixture)
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout({ 1,1'000'000 }));
 }
+
+BOOST_FIXTURE_TEST_CASE(stream_decoupleGapReg, StreamTransferFixture)
+{
+	ClockScope clkScp(m_clock);
+
+	scl::RvStream<UInt> in{ .data = 5_b };
+	In(in);
+
+	scl::RvStream<UInt> out = move(in) |
+		scl::strm::regDecoupleGap() | name("stage0") |
+		scl::strm::regDecoupleGap() | name("stage1") |
+		scl::strm::regDecoupleGap() | name("stage2") |
+		scl::strm::regDecoupleGap() | name("stage3");
+	Out(out);
+
+	simulateTransferTest(in, out);
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout(1us));
+}
+
 BOOST_FIXTURE_TEST_CASE(stream_uptreamReg, StreamTransferFixture)
 {
 	ClockScope clkScp(m_clock);
