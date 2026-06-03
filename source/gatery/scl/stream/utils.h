@@ -1014,7 +1014,7 @@ namespace gtry::scl::strm
 		Area area("addMetaSignalFromPacket", true);
 		HCL_NAMED(inputStream);
 
-		StreamBroadcaster bcast(move(inputStream));
+		StreamBroadcaster bcast(move(inputStream), BroadcastStrategy::allReady);
 		auto metaStream = functor(bcast.bcastTo());
 		HCL_NAMED(metaStream);
 

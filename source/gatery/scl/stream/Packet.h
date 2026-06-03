@@ -952,7 +952,7 @@ namespace gtry::scl::strm
 		auto scope = Area{ "scl_streamShiftRight" }.enter();
 
 		UInt steadyShift = capture(shift, valid(source) & sop(source));
-		StreamBroadcaster sourceCaster(move(source) | attach(ShiftRightSteadyShift{ steadyShift }));
+		StreamBroadcaster sourceCaster(move(source) | attach(ShiftRightSteadyShift{ steadyShift }), BroadcastStrategy::allReady);
 
 		scl::Stream currentSource = sourceCaster.bcastTo() | strm::eraseBeat(0, 1) | name("currentSource");
 		scl::Stream previousSource = sourceCaster.bcastTo() | strm::regReady() | strm::delay(1) | name("previousSource");
@@ -1243,7 +1243,7 @@ namespace gtry::scl::strm
 	{
 		Area ent{ "scl_prependPacketLengthHeader", true };
 
-		StreamBroadcaster inCast(move(in));
+		StreamBroadcaster inCast(move(in), BroadcastStrategy::allReady);
 
 		RvStream<UInt> packetSize = inCast.bcastTo() |
 			strm::transform([=](const Eop& e) {

@@ -1366,7 +1366,7 @@ BOOST_FIXTURE_TEST_CASE(store_forward_fifo_fuzz, BoostUnitTestSimulationFixture)
 }
  
 
-BOOST_FIXTURE_TEST_CASE(streamBroadcaster, BoostUnitTestSimulationFixture)
+BOOST_FIXTURE_TEST_CASE(streamBroadcasterAllReady, BoostUnitTestSimulationFixture)
 {
 	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
 	ClockScope clkScope(clk);
@@ -1377,7 +1377,7 @@ BOOST_FIXTURE_TEST_CASE(streamBroadcaster, BoostUnitTestSimulationFixture)
 	std::array<scl::RvStream<BVec>, 3> outStream;
 	std::array<Bit, 3> enable;
 	{
-		scl::StreamBroadcaster inBCaster(move(inStream));
+		scl::StreamBroadcaster inBCaster(move(inStream), BroadcastStrategy::allReady);
 		for(size_t i = 0; i < outStream.size(); ++i)
 			outStream[i] <<= inBCaster(enable[i]);
 	}
@@ -1430,6 +1430,68 @@ BOOST_FIXTURE_TEST_CASE(streamBroadcaster, BoostUnitTestSimulationFixture)
 	BOOST_TEST(!runHitsTimeout(100us));
 }
 
+BOOST_FIXTURE_TEST_CASE(streamBroadcasterIndependent, BoostUnitTestSimulationFixture)
+{
+	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
+	ClockScope clkScope(clk);
+
+	std::mt19937_64 rng{ 12524 };
+
+	scl::RvStream<BVec> inStream{ 8_b };
+	std::array<scl::RvStream<BVec>, 3> outStream;
+	std::array<Bit, 3> enable;
+	{
+		scl::StreamBroadcaster inBCaster(move(inStream), BroadcastStrategy::independent);
+		for (size_t i = 0; i < outStream.size(); ++i)
+			outStream[i] <<= inBCaster(enable[i]);
+	}
+
+	pinIn(inStream, "inStream");
+	pinIn(enable, "outEnable");
+	pinOut(outStream, "outStream");
+
+	addSimulationProcess([&, this]()->SimProcess {
+		std::vector<std::uint8_t> allData(1024);
+		for (auto& b : allData)
+			b = (uint8_t)rng();
+
+		strm::SimPacket pkt{ allData };
+		pkt.invalidBeats(rng());
+		fork(strm::sendPacket(inStream, pkt, clk));
+
+		size_t done = 0;
+		for (unsigned i = 0; i < outStream.size(); ++i)
+		{
+			fork(strm::readyDriverRNG(outStream[i], clk, 50, i));
+			fork([&, i]() -> SimProcess {
+				for(uint8_t d : allData)
+				{
+					bool isEnable = (rng() & 1) != 0;
+					simu(enable[i]) = isEnable;
+					if (isEnable)
+					{
+						fork([&]() -> SimProcess {
+							co_await performTransferWait(outStream[i], clk);
+							BOOST_TEST(simu(*outStream[i]) == d);
+							isEnable = false;
+						});
+					}
+					co_await performTransferWait(inStream, clk);
+					BOOST_TEST(!isEnable);
+				}
+				done++;
+			});
+		}
+
+		while (done != outStream.size())
+			co_await OnClk(clk);
+
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout(100us));
+}
 BOOST_FIXTURE_TEST_CASE(streamShiftLeft_test, BoostUnitTestSimulationFixture)
 {
 	Clock clk = Clock({ .absoluteFrequency = 100'000'000 });
@@ -2203,7 +2265,7 @@ BOOST_FIXTURE_TEST_CASE(delay_test_0, BoostUnitTestSimulationFixture)
 	scl::RvStream<UInt> in(16_b);
 	pinIn(in, "in");
 
-	scl::StreamBroadcaster InHandle(move(in));
+	scl::StreamBroadcaster InHandle(move(in), BroadcastStrategy::allReady);
 
 	scl::RvStream<UInt> out = InHandle.bcastTo() | scl::strm::delay(delay);
 	pinOut(out, "out");
@@ -2269,7 +2331,7 @@ BOOST_FIXTURE_TEST_CASE(delay_test_1, BoostUnitTestSimulationFixture)
 	scl::RvStream<UInt> in(16_b);
 	pinIn(in, "in");
 
-	scl::StreamBroadcaster InHandle(move(in));
+	scl::StreamBroadcaster InHandle(move(in), BroadcastStrategy::allReady);
 
 	scl::RvStream<UInt> out = InHandle.bcastTo() | scl::strm::delay(delay);
 	pinOut(out, "out");
@@ -2335,7 +2397,7 @@ BOOST_FIXTURE_TEST_CASE(delay_test_2, BoostUnitTestSimulationFixture)
 	scl::RvStream<UInt> in(16_b);
 	pinIn(in, "in");
 
-	scl::StreamBroadcaster InHandle(move(in));
+	scl::StreamBroadcaster InHandle(move(in), BroadcastStrategy::allReady);
 
 	scl::RvStream<UInt> out = InHandle.bcastTo() | scl::strm::delay(delay);
 	pinOut(out, "out");
@@ -2401,7 +2463,7 @@ BOOST_FIXTURE_TEST_CASE(delay_test_10, BoostUnitTestSimulationFixture)
 	scl::RvStream<UInt> in(16_b);
 	pinIn(in, "in");
 
-	scl::StreamBroadcaster InHandle(move(in));
+	scl::StreamBroadcaster InHandle(move(in), BroadcastStrategy::allReady);
 
 	scl::RvStream<UInt> out = InHandle.bcastTo() | scl::strm::delay(delay);
 	pinOut(out, "out");
@@ -2545,7 +2607,7 @@ BOOST_FIXTURE_TEST_CASE(credit_broadcaster_test, BoostUnitTestSimulationFixture)
 	pinIn(in0WithCredits, "in0WithCredits");
 	Bit& in0_credits = *get<scl::strm::Credit>(in0WithCredits).increment;
 
-	scl::StreamBroadcaster caster(move(in0WithCredits));
+	scl::StreamBroadcaster caster(move(in0WithCredits), BroadcastStrategy::allReady);
 
 	auto out0WithCredits = caster.bcastTo();
 	pinOut(out0WithCredits, "out0WithCredits");

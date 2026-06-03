@@ -29,21 +29,24 @@
 
 namespace gtry::scl
 {
+	enum class BroadcastStrategy
+	{
+		independent,	// each output submits as soon as possible and keeps track of its state
+		allReady,		// wait for all outputs to be ready. Note that this violates ready/valid semantics. Valid of sinks may get withdrawn as ready of other sinks go low.
+	};
 
 	/**
 	 * @brief Broadcasts a stream to multiple sinks, making sure that all sinks receive all data.
 	 * @details If the sinks have backpressure, the source is correctly back pressured so that no sink
 	 * misses a transmission.
-	 * Note that the broadcast operation has to violate ready/valid semantics. 
-	 * The current implementation asserts valid only after ready has been asserted. Alternatively the broadcaster 
-	 * could violate the stable valid semantic and pull valid low once ready is high when not ready. 
-	 * We should give the user an option to choose between violations.
 	 */
 	template<StreamSignal StreamT>
 	class StreamBroadcaster
 	{
 	public:
-		StreamBroadcaster(StreamT &&stream) { 
+
+		StreamBroadcaster(StreamT &&stream, BroadcastStrategy strategy = BroadcastStrategy::independent) {
+			m_strategy = strategy;
 			m_helper = std::make_shared<Helper>();
 			m_helper->source = constructFrom(stream);
 			m_helper->source <<= stream;
@@ -53,13 +56,49 @@ namespace gtry::scl
 				auto& sourceCredit = get<scl::strm::Credit>(m_helper->source);
 				*sourceCredit.increment = '1';
 			}
+			m_helper->ent.leave();
 		}
+
+		StreamBroadcaster& strategy(BroadcastStrategy strategy) { HCL_DESIGNCHECK(m_helper->sinks.empty()); m_strategy = strategy; return *this; }
 
 		operator StreamT() { return bcastTo(); }
 		
 		StreamT operator ()(const Bit& enable = '1') { return bcastTo(enable); }
 
-		StreamT bcastTo(const Bit& enable = '1') {
+		StreamT bcastTo(const Bit& enable = '1') 
+		{
+			auto ent = m_helper->ent.enter();
+			if (m_strategy == BroadcastStrategy::allReady)
+				return bcastAllReday(enable);
+			if (m_strategy == BroadcastStrategy::independent)
+				return bcastIndependent(enable);
+			throw;
+		}
+
+	protected:
+
+		StreamT bcastIndependent(const Bit& enable)
+		{
+			StreamT sink;
+			downstream(sink) = downstream(m_helper->source);
+
+			size_t idx = m_helper->sinks.size();
+			m_helper->sinks.push_back({});
+
+			if constexpr (StreamT::template has<Ready>())
+			{
+				Bit done = flag(valid(m_helper->source) & ready(sink), final(ready(m_helper->source))) | name("done" + std::to_string(idx));
+				valid(sink) &= enable & !done;
+				ready(m_helper->source) &= !enable | done | valid(m_helper->source) & ready(sink);
+			}
+			else
+				HCL_ASSERT(!"no impl");
+
+			return move(sink) | name("sink" + std::to_string(idx));
+		}
+
+		StreamT bcastAllReday(const Bit& enable) 
+		{
 			StreamT sink;
 			downstream(sink) = downstream(m_helper->source);
 
@@ -106,8 +145,10 @@ namespace gtry::scl
 			return sink;
 		}
 
-	protected:
+
+
 		struct Helper {
+			Area ent = Area{ "scl_StreamBroadcaster", true };
 			StreamT source;
 
 			struct SinkControl {
@@ -118,6 +159,8 @@ namespace gtry::scl
 		};
 		/// Decouple everything important into a shared heap object so that the broadcaster can be copied
 		std::shared_ptr<Helper> m_helper;
+
+		BroadcastStrategy m_strategy;
 	};
 
 	/// Overload of connect(...) for StreamBroadcaster to allow using the <<= operator with broadcasters.

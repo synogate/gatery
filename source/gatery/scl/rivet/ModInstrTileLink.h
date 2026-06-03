@@ -50,7 +50,7 @@ namespace gtry::scl::rivet::mod
 		{
 			return [this](StreamSignal auto&& in)
 				{
-					StreamBroadcaster splitReq(move(in) | strm::attach(GenerationTag{ m_currentGeneration }));
+					StreamBroadcaster splitReq(move(in) | strm::attach(GenerationTag{ m_currentGeneration }), BroadcastStrategy::allReady);
 
 					m_link.a <<= splitReq.bcastTo() |
 						strm::transform([this](const InstrPtr& ip) 
