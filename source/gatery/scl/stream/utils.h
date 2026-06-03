@@ -217,7 +217,7 @@ namespace gtry::scl::strm
 	}
 
 	/**
-	 * @brief Latest in decoupling technologies! It decouples the ready and downstream signals. The throughput is reduced to one every secound beat.
+	 * @brief Latest in decoupling technologies! It decouples the ready and downstream signals. The throughput is reduced to one every second beat.
 	 *			However, in constrast to regDecouple it requires only a single register per up- and downstream bit and no additional multiplexer.
 	 *			Note that any number of DecoupleGap registers can be chained without further degrading the throughput.
 	 */
