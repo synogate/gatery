@@ -83,6 +83,7 @@ namespace gtry::scl
 		Bit isBurst() const;
 
 		UInt& wordAddress();
+		const UInt& wordAddress() const;
 
 		void setupGet(UInt address, UInt source = 0, std::optional<UInt> size = {});
 		void setupPut(UInt address, BVec data, UInt source = 0, std::optional<UInt> size = {});
@@ -152,7 +153,7 @@ namespace gtry::scl
 
 	// Marks last beat of burst based on channel type, opcode, size and data width.
 	Bit eop(const TileLinkChannel auto& source);
-	Bit eop(const UInt& logByteSize, BitWidth bitPerBeat, Bit forceEop);
+	std::tuple<Bit, UInt> eop(const UInt& logByteSize, BitWidth bitPerBeat, Bit forceEop);
 
 	BVec fullByteEnableMask(const UInt& address, const UInt& size, BitWidth maskW);
 	inline BVec fullByteEnableMask(const TileLinkA& a) { return fullByteEnableMask(a.address, a.size, a.mask.width()); }
@@ -186,7 +187,6 @@ namespace gtry::scl
 	TileLinkU tileLinkMemory(BitWidth addrW, BitWidth dataW, BitWidth sourceW = 0_b);
 	
 	TileLinkU tileLinkSimOverride(TileLinkU&& slave, TileLinkU&& simulationSlave);
-	TileLinkU tileLinkMemorySimulation(TileLinkU&& slave);
 
 	struct TileLinkMemoryConfig
 	{
@@ -194,12 +194,20 @@ namespace gtry::scl
 		bool readPort = true;
 		bool writePort = true;
 		std::optional<size_t> latency;
+		std::optional<sim::DefaultBitVectorState> initialData;
 	};
 
 	/**
 	 * @brief Attach a new port to the memory and connect it to a tile link bus.
 	 */
 	TileLinkU tileLinkMemory(Memory<BVec>& mem, TileLinkMemoryConfig cfg = {});
+
+	TileLinkU tileLinkMemorySimulation(TileLinkU&& slave, TileLinkMemoryConfig cfg = {});
+
+	inline auto tileLinkMemorySimulation(TileLinkMemoryConfig cfg = {})
+	{
+		return [=](auto&& source) { return tileLinkMemorySimulation(std::forward<decltype(source)>(source), cfg); };
+	}
 
 	template<TileLinkSignal TLink> TLink regDecouple(TLink&& link);
 	/**

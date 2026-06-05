@@ -46,6 +46,58 @@ namespace gtry::scl
 	inline auto tileLinkCacheDirectMappedReadOnlyBurst(BitWidth addrW, std::function<void(TileLinkChannelA&)> selectBurst = {}) { return [=](auto&& in) { return tileLinkCacheDirectMappedReadOnlyBurst(std::forward<decltype(in)>(in), addrW, move(selectBurst)); }; }
 
 	TileLinkU tileLinkCacheDirectMappedVictim(TileLinkU&& ram, BitWidth addrW);
+
+
+	class TileLinkDataCache
+	{
+	public:
+		struct Way
+		{
+			Bit valid;
+			UInt tagAddr;
+		};
+
+		struct SetData
+		{
+			Vector<Way> way;
+		};
+
+		struct CacheInfo
+		{
+			Bit hit;
+			Bit cacheable;
+			UInt way;
+		};
+
+		struct Config
+		{
+			BitWidth setAddrW = 8_b;
+			BitWidth lineWordAddrW = 4_b;
+			BitWidth wayAddrW = 2_b;
+
+			BitWidth tagAddrW(BitWidth memWordAddrW) const { return memWordAddrW - setAddrW - lineWordAddrW; }
+		};
+
+	public:
+		TileLinkDataCache(const Config& cfg = {}) : m_cfg(cfg) {}
+
+		TileLinkU generate(TileLinkU&& memory);
+		TileLinkU operator () (TileLinkU&& memory) { return generate(move(memory)); }
+
+	protected:
+		UInt setAddr(const UInt& wordAddr) const;
+		UInt tagAddr(const UInt& wordAddr) const;
+		UInt dataAddr(const UInt& wordAddr, const UInt& way) const;
+
+		CacheInfo cacheInfo(const TileLinkA& a, const SetData& set);
+
+	private:
+		Config m_cfg;
+	};
+
 }
 
 BOOST_HANA_ADAPT_STRUCT(gtry::scl::internal::RoCacheData, tag, value, valid);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkDataCache::Way, valid, tagAddr);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkDataCache::SetData, way);
+BOOST_HANA_ADAPT_STRUCT(gtry::scl::TileLinkDataCache::CacheInfo, hit, cacheable, way);

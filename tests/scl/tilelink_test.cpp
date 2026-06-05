@@ -2031,3 +2031,312 @@ BOOST_FIXTURE_TEST_CASE(tilelink_serialize_d_test, BoostUnitTestSimulationFixtur
 	design.postprocess();
 	BOOST_TEST(!runHitsTimeout(1us));
 }
+
+BOOST_FIXTURE_TEST_CASE(tilelink_dcache_test, BoostUnitTestSimulationFixture)
+{
+	Clock clock({ 
+		.absoluteFrequency = 100_mhz,
+		.memoryResetType = ClockConfig::ResetType::NONE,
+	});
+	ClockScope clkScp(clock);
+
+	TileLinkU mem = tileLinkInit<TileLinkU>(24_b, 32_b, 2_b, 3_b);
+	pinOut(mem, "mem");
+
+	scl::TileLinkDataCache cache;
+	
+	scl::TileLinkMasterModel cpu;
+	cpu(cache.generate(move(mem)) | name("cpu"));
+
+	addSimulationProcess([&]()->SimProcess {
+		simu(ready(mem.a)) = '0';
+		simu(valid(*mem.d)) = '0';
+		co_await OnClk(clock);
+
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "uncached put");
+		fork([&]() -> SimProcess {
+			bool err = co_await cpu.put(1 << 23, 1, 0xAABB, clock);
+			BOOST_TEST(!err);
+		});
+
+		// check memory request
+		while(simu(valid(mem.a)) == '0')
+			co_await OnClk(clock);
+		BOOST_TEST(simu(mem.a->address) == 1 << 23);
+		
+		// test back pressure a channel
+		co_await OnClk(clock);
+
+		simu(ready(mem.a)) = '1';
+		simu((*mem.d)->opcode) = (size_t)TileLinkD::OpCode::AccessAck;
+		simu((*mem.d)->param) = 0;
+		simu((*mem.d)->error) = '0';
+		simu((*mem.d)->source) = simu(mem.a->source);
+		simu((*mem.d)->size) = simu(mem.a->size);
+		simu((*mem.d)->sink) = 0;
+		simu((*mem.d)->data).invalidate();
+		co_await OnClk(clock);
+
+		co_await performTransfer(*mem.d, clock);
+
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "uncached get");
+		fork([&]() -> SimProcess {
+			auto [value, valid, err] = co_await cpu.get(1 << 23, 1, clock);
+			BOOST_TEST(!err);
+			BOOST_TEST(value == 1);
+		});
+
+			// check memory request
+		while (simu(valid(mem.a)) == '0')
+			co_await OnClk(clock);
+		BOOST_TEST(simu(mem.a->address) == 1 << 23);
+
+		simu(ready(mem.a)) = '1';
+		simu((*mem.d)->opcode) = (size_t)TileLinkD::OpCode::AccessAckData;
+		simu((*mem.d)->param) = 0;
+		simu((*mem.d)->error) = '0';
+		simu((*mem.d)->source) = simu(mem.a->source);
+		simu((*mem.d)->size) = simu(mem.a->size);
+		simu((*mem.d)->sink) = 0;
+		simu((*mem.d)->data) = 1;
+		co_await OnClk(clock);
+
+		co_await performTransfer(*mem.d, clock);
+
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "cache miss put");
+		fork([&]() -> SimProcess {
+			bool err = co_await cpu.put(4, 1, 0xAABB, clock);
+			BOOST_TEST(!err);
+		});
+
+		// check memory request
+		while (simu(valid(mem.a)) == '0')
+			co_await OnClk(clock);
+		BOOST_TEST(simu(mem.a->address) == 4);
+
+		// test back pressure a channel
+		co_await OnClk(clock);
+
+		simu(ready(mem.a)) = '1';
+		simu((*mem.d)->opcode) = (size_t)TileLinkD::OpCode::AccessAck;
+		simu((*mem.d)->param) = 0;
+		simu((*mem.d)->error) = '0';
+		simu((*mem.d)->source) = simu(mem.a->source);
+		simu((*mem.d)->size) = simu(mem.a->size);
+		simu((*mem.d)->sink) = 0;
+		simu((*mem.d)->data).invalidate();
+		co_await OnClk(clock);
+
+		co_await performTransfer(*mem.d, clock);
+
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "cache miss get middle word");
+		fork([&]() -> SimProcess {
+			auto [value1, valid1, err1] = co_await cpu.get(4, 1, clock);
+			BOOST_TEST(!err1);
+			BOOST_TEST(value1 == 1);
+			auto [value0, valid0, err0] = co_await cpu.get(0, 1, clock);
+			BOOST_TEST(!err0);
+			BOOST_TEST(value0 == 0);
+		});
+
+		// check memory request
+		while (simu(valid(mem.a)) == '0')
+			co_await OnClk(clock);
+		BOOST_TEST(simu(mem.a->address) == 0);
+		BOOST_TEST(simu(mem.a->size) == 6);
+
+		simu(ready(mem.a)) = '1';
+		simu((*mem.d)->opcode) = (size_t)TileLinkD::OpCode::AccessAckData;
+		simu((*mem.d)->param) = 0;
+		simu((*mem.d)->error) = '0';
+		simu((*mem.d)->source) = simu(mem.a->source);
+		simu((*mem.d)->size) = simu(mem.a->size);
+		simu((*mem.d)->sink) = 0;
+		co_await OnClk(clock);
+
+		for(int i = 0; i < 1 << (simu((*mem.d)->size) - 2); ++i)
+		{
+			simu((*mem.d)->data) = i;
+			co_await performTransfer(*mem.d, clock);
+		}
+
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "cache miss get first word");
+		fork([&]() -> SimProcess {
+			auto [value, valid, err] = co_await cpu.get((1 << 20) + 0, 1, clock);
+			BOOST_TEST(!err);
+			BOOST_TEST(value == 0xAA00);
+		});
+
+		// check memory request
+		while (simu(valid(mem.a)) == '0')
+			co_await OnClk(clock);
+		BOOST_TEST(simu(mem.a->address) == 1 << 20);
+		BOOST_TEST(simu(mem.a->size) == 6);
+
+		simu(ready(mem.a)) = '1';
+		simu((*mem.d)->opcode) = (size_t)TileLinkD::OpCode::AccessAckData;
+		simu((*mem.d)->param) = 0;
+		simu((*mem.d)->error) = '0';
+		simu((*mem.d)->source) = simu(mem.a->source);
+		simu((*mem.d)->size) = simu(mem.a->size);
+		simu((*mem.d)->sink) = 0;
+		co_await OnClk(clock);
+
+		for (int i = 0; i < 1 << (simu((*mem.d)->size) - 2); ++i)
+		{
+			simu((*mem.d)->data) = 0xAA00 + i;
+			co_await performTransfer(*mem.d, clock);
+		}
+
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "cache miss get last word");
+		fork([&]() -> SimProcess {
+			auto [value, valid, err] = co_await cpu.get((2 << 20) + 60, 1, clock);
+			BOOST_TEST(!err);
+			BOOST_TEST(value == 0xBB0F);
+		});
+
+			// check memory request
+		while (simu(valid(mem.a)) == '0')
+			co_await OnClk(clock);
+		BOOST_TEST(simu(mem.a->address) == 2 << 20);
+		BOOST_TEST(simu(mem.a->size) == 6);
+
+		simu(ready(mem.a)) = '1';
+		simu((*mem.d)->opcode) = (size_t)TileLinkD::OpCode::AccessAckData;
+		simu((*mem.d)->param) = 0;
+		simu((*mem.d)->error) = '0';
+		simu((*mem.d)->source) = simu(mem.a->source);
+		simu((*mem.d)->size) = simu(mem.a->size);
+		simu((*mem.d)->sink) = 0;
+		co_await OnClk(clock);
+
+		for (int i = 0; i < 1 << (simu((*mem.d)->size) - 2); ++i)
+		{
+			simu((*mem.d)->data) = 0xBB00 + i;
+			co_await performTransfer(*mem.d, clock);
+		}
+
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "cache hit put masked, cache hit get, memory response conflict");
+		fork([&]() -> SimProcess {
+			bool err = co_await cpu.put(6, 1, 0x5544, clock);
+			BOOST_TEST(!err);
+		});
+
+		fork([&]() -> SimProcess {
+			auto [value, valid, err2] = co_await cpu.get(4, 2, clock);
+			BOOST_TEST(!err2);
+			BOOST_TEST(value == 0x55440001);
+		});
+
+		// check memory request
+		while (simu(valid(mem.a)) == '0')
+			co_await OnClk(clock);
+		BOOST_TEST(simu(mem.a->address) == 6);
+		BOOST_TEST(simu(mem.a->size) == 1);
+		BOOST_TEST(simu(mem.a->mask) == 0b1100);
+
+		simu((*mem.d)->opcode) = (size_t)TileLinkD::OpCode::AccessAck;
+		simu((*mem.d)->param) = 0;
+		simu((*mem.d)->error) = '0';
+		simu((*mem.d)->source) = simu(mem.a->source);
+		simu((*mem.d)->size) = simu(mem.a->size);
+		simu((*mem.d)->sink) = 0;
+		simu((*mem.d)->data).invalidate();
+		co_await OnClk(clock);
+
+		co_await performTransfer(*mem.d, clock);
+
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "cache line eviction");
+		fork([&]() -> SimProcess {
+			auto [value, valid, err] = co_await cpu.get((3 << 20) + 0, 1, clock);
+			BOOST_TEST(!err);
+			BOOST_TEST(value == 0x0000);
+		});
+		fork([&]() -> SimProcess {
+			auto [value, valid, err] = co_await cpu.get((4 << 20) + 0, 1, clock);
+			BOOST_TEST(!err);
+			BOOST_TEST(value == 0x0100);
+		});
+
+		for(size_t j = 0; j < 2; ++j)
+		{
+			while (simu(valid(mem.a)) == '0')
+				co_await OnClk(clock);
+			BOOST_TEST(simu(mem.a->address) == (3+j) << 20);
+			BOOST_TEST(simu(mem.a->size) == 6);
+
+			simu((*mem.d)->opcode) = (size_t)TileLinkD::OpCode::AccessAckData;
+			simu((*mem.d)->param) = 0;
+			simu((*mem.d)->error) = '0';
+			simu((*mem.d)->source) = simu(mem.a->source);
+			simu((*mem.d)->size) = simu(mem.a->size);
+			simu((*mem.d)->sink) = 0;
+			co_await OnClk(clock);
+
+			for (int i = 0; i < 1 << (simu((*mem.d)->size) - 2); ++i)
+			{
+				simu((*mem.d)->data) = (j << 8) + i;
+				co_await performTransfer(*mem.d, clock);
+			}
+		}
+
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "put response during cache get miss");
+		fork([&]() -> SimProcess {
+			bool err = co_await cpu.put(6, 1, 0x5544, clock);
+			BOOST_TEST(!err);
+		});
+		fork([&]() -> SimProcess {
+			auto [value, valid, err] = co_await cpu.get((7 << 20) + 0, 1, clock);
+			BOOST_TEST(!err);
+			BOOST_TEST(value == 0);
+			BOOST_TEST(valid == 0xFFFFFFFFul);
+		});
+
+		// wait put
+		co_await performTransferWait(mem.a, clock);
+		BOOST_TEST(simu(mem.a->address) == 6);
+
+		size_t putSource = simu(mem.a->source);
+		size_t putSize = simu(mem.a->size);
+
+		// wait get
+		co_await performTransferWait(mem.a, clock);
+		BOOST_TEST(simu(mem.a->address) == 7 << 20);
+		BOOST_TEST(simu(mem.a->size) == 6);
+
+		size_t getSource = simu(mem.a->source);
+		size_t getSize = simu(mem.a->size);
+
+		co_await OnClk(clock);
+
+		simu((*mem.d)->opcode) = (size_t)TileLinkD::OpCode::AccessAck;
+		simu((*mem.d)->param) = 0;
+		simu((*mem.d)->error) = '0';
+		simu((*mem.d)->source) = putSource;
+		simu((*mem.d)->size) = putSize;
+		simu((*mem.d)->sink) = 0;
+		simu((*mem.d)->data).invalidate();
+		co_await performTransfer(*mem.d, clock);
+
+		simu((*mem.d)->opcode) = (size_t)TileLinkD::OpCode::AccessAckData;
+		simu((*mem.d)->param) = 0;
+		simu((*mem.d)->error) = '0';
+		simu((*mem.d)->source) = getSource;
+		simu((*mem.d)->size) = getSize;
+		simu((*mem.d)->sink) = 0;
+
+		for (int i = 0; i < 1 << (getSize - 2); ++i)
+		{
+			simu((*mem.d)->data) = i;
+			co_await performTransfer(*mem.d, clock);
+		}
+
+		co_await OnClk(clock);
+		co_await OnClk(clock);
+		stopTest();
+
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout(2us));
+}

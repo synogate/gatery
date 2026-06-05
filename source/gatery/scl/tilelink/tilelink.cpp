@@ -50,6 +50,11 @@ namespace gtry::scl
 		return address.upper(-BitWidth::count(data.width().bytes()));
 	}
 
+	const UInt& TileLinkA::wordAddress() const
+	{
+		return address.upper(-BitWidth::count(data.width().bytes()));
+	}
+
 	void TileLinkA::setupGet(UInt address, UInt source, std::optional<UInt> size)
 	{
 		this->opcode = (size_t)Get;
@@ -161,7 +166,7 @@ namespace gtry::scl
 		return size > bytePerBeat & hasData();
 	}
 
-	Bit eop(const UInt& logByteSize, BitWidth bitPerBeat, Bit forceEop)
+	std::tuple<Bit, UInt> eop(const UInt& logByteSize, BitWidth bitPerBeat, Bit forceEop)
 	{
 		Area ent{ "scl_eop_logsize", true };
 
@@ -186,7 +191,7 @@ namespace gtry::scl
 		IF(end)
 			beatCounter = 0;
 		beatCounter = reg(beatCounter, 0) | name("beatCounter");
-		return end;
+		return { end | name("eop"), beatCounter | name("offset") };
 	}
 
 	Bit eop(const TileLinkChannel auto& source)
@@ -195,7 +200,7 @@ namespace gtry::scl
 			return '1';
 
 		gtry::EnableScope en{ transfer(source) };
-		return eop(source->size, source->data.width(), !source->hasData());
+		return get<Bit>(eop(source->size, source->data.width(), !source->hasData()));
 	}
 	template Bit eop(const TileLinkChannelA&);
 	template Bit eop(const TileLinkChannelD&);
@@ -329,6 +334,9 @@ namespace gtry::scl
 
 	TileLinkU tileLinkMemory(Memory<BVec>& mem, TileLinkMemoryConfig cfg)
 	{
+		if (cfg.initialData)
+			mem.fillPowerOnState(*cfg.initialData);
+
 		BitWidth wordAddrW = BitWidth::count(mem.wordSize().bytes());
 		TileLinkU link = tileLinkSlaveInit(mem.addressWidth() + wordAddrW, mem.wordSize(), cfg.sourceW);
 
@@ -374,14 +382,17 @@ namespace gtry::scl
 		return master;
 	}
 
-	TileLinkU tileLinkMemorySimulation(TileLinkU&& slave)
+	TileLinkU tileLinkMemorySimulation(TileLinkU&& slave, TileLinkMemoryConfig cfg)
 	{
 		Area ent{ "scl_TLMemorySimulation", true };
 
 		if (slave.cfg.burstSupport())
 		{
-			TileLinkU mem = tileLinkMemory(slave.cfg.addrW, slave.cfg.dataW, slave.cfg.sourceW + 7_b);
-			TileLinkU burst = tileLinkAddBurst(move(mem), slave.cfg.burstLimitLog);
+			Memory<BVec> mem(slave.cfg.addrW, slave.cfg.dataW);
+			cfg.sourceW += slave.cfg.sourceW + 7_b;
+			TileLinkU link = tileLinkMemory(mem, cfg);
+
+			TileLinkU burst = tileLinkAddBurst(move(link), slave.cfg.burstLimitLog);
 			return tileLinkSimOverride(move(slave), move(burst));
 		}
 		else
