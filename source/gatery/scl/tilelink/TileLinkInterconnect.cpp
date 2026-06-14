@@ -166,6 +166,7 @@ namespace gtry::scl
 		m_handlerD(move(*slave.d))
 	{
 		HCL_DESIGNCHECK(m_cfg.sourceW >= arbiterSourceW);
+		HCL_NAMED(slave);
 
 		m_handlerA.out(slave.a);
 		slave.a <<= m_handlerA.out();
@@ -174,7 +175,7 @@ namespace gtry::scl
 		m_ent.leave();
 	}
 
-	TileLinkArbiter::operator TileLinkU()
+	TileLinkU TileLinkArbiter::out(uint32_t sortKey)
 	{
 		auto scope = m_ent.enter();
 		HCL_DESIGNCHECK_HINT(m_portIndex < m_arbiterSourceW.count(), "too many master ports for arbiter source width");
@@ -193,7 +194,7 @@ namespace gtry::scl
 				.data = a.data,
 			};
 		});
-		m_handlerA.attach(move(expandedA));
+		m_handlerA.attach(move(expandedA), sortKey);
 
 		Bit enabled;
 		TileLinkChannelD expandedD = m_handlerD(enabled);

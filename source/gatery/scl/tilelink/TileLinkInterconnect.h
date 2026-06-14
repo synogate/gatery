@@ -47,8 +47,8 @@ namespace gtry::scl
 	public:
 		TileLinkArbiter(TileLinkU&& slave, BitWidth arbiterSourceW);
 
-		operator TileLinkU ();
-		TileLinkU out() { return (TileLinkU)*this; }
+		operator TileLinkU () { return out(); }
+		TileLinkU out(uint32_t sortKey = 1u << 31);
 
 		void generate();
 
