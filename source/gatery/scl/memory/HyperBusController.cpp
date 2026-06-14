@@ -153,7 +153,7 @@ namespace gtry::scl
 
 			arch::colognechip::CC_IDDR in(buf);
 			*phy->rwds.r = (BVec)pack(in.Q0(), reg(in.Q1()));
-			*phy->rwds.r = simOverride(*phy->rwds.r, BVec{ "2b00" });
+			*phy->rwds.r = simOverride(*phy->rwds.r, BVec{ "2b11" });
 		}
 
 		// DQ
