@@ -276,3 +276,16 @@ ElfLoader gtry::scl::riscv::makeElf(std::filesystem::path elfName, std::optional
 
 	return{ elfName.string() };
 }
+
+std::vector<std::uint8_t> gtry::scl::riscv::ElfLoader::buildMemoryImage(size_t offset) const
+{
+	std::vector<std::uint8_t> ret;
+
+	for (const Segment& seg : segments())
+	{
+		HCL_ASSERT(offset <= seg.offset);
+		ret.resize(seg.offset - offset + seg.size.bytes());
+		std::ranges::copy(seg.data, ret.begin() + seg.offset - offset);
+	}
+	return ret;
+}

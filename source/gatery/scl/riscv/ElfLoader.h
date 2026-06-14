@@ -83,6 +83,7 @@ namespace gtry::scl::riscv
 		const Section* section(std::string_view name) const;
 		const std::map<std::string_view, Section>& sections() const { return m_Sections; }
 
+		std::vector<std::uint8_t> buildMemoryImage(size_t offset = 0) const;
 
 	protected:
 		template<typename T>
