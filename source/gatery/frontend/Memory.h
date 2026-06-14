@@ -99,7 +99,7 @@ namespace gtry
 
 		MemoryPortFactory<Data>& operator = (const Data& value) { write(value); return *this; }
 
-		virtual void write(const Data& value, const UInt &wrWordEnable) {
+		virtual void write(const Data& value, const BVec &wrWordEnable) {
 			auto* writePort = write(value);
 			writePort->connectWrWordEnable(wrWordEnable.readPort());
 		}
