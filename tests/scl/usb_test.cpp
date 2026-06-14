@@ -213,6 +213,69 @@ BOOST_FIXTURE_TEST_CASE(usb_resend_on_error, UsbFixture)
 	BOOST_TEST(!runHitsTimeout({ 1, 1'000 }));
 }
 
+BOOST_FIXTURE_TEST_CASE(usb_resend_on_stall, UsbFixture)
+{
+	// uncomment to enable full gpiophy simulation
+	//m_useSimuPhy = false;
+	m_pinApplicationInterface = false;
+
+	Clock clock({ .absoluteFrequency = 12'000'000 * (m_useSimuPhy ? 1 : 4) });
+	ClockScope clkScp(clock);
+
+	setupFunction();
+
+	RvStream<BVec> rx = m_func->rxEndPointFifo(1, 128);
+	pinOut(rx, "rx");
+
+	addSimulationProcess([&]() -> SimProcess {
+		simu(ready(rx)) = '0';
+		co_await OnClk(clock);
+
+		co_await m_controller->controlSetConfiguration(1);
+
+		sim::SimulationContext::current()->onDebugMessage(nullptr, "start transfer");
+
+		std::mt19937 rng{ 12821 };
+		std::vector<std::uint8_t> testData(3000);
+		for (uint8_t& it : testData)
+			it = uint8_t(rng());
+
+		std::span<const std::byte> toSendData = std::as_bytes(std::span{ testData });
+
+		std::optional<Pid> pid;
+
+		pid = co_await m_controller->transferOut(1, toSendData.subspan(0, 64), Pid::data0);
+		toSendData = toSendData.subspan(64);
+		BOOST_TEST((pid && *pid == Pid::ack));
+
+		// minus two byte for checksum
+		pid = co_await m_controller->transferOut(1, toSendData.subspan(0, 62), Pid::data1);
+		toSendData = toSendData.subspan(62);
+		BOOST_TEST((pid && *pid == Pid::ack));
+
+		// fifo full
+		pid = co_await m_controller->transferOut(1, toSendData.subspan(0, 1), Pid::data0);
+		BOOST_TEST((pid && *pid == Pid::nak));
+
+		fork([&]() -> SimProcess {
+			size_t sent = co_await m_controller->transferOutBatch(1, toSendData);
+			BOOST_TEST(sent == toSendData.size());
+		});
+		
+		fork(readyDriverRNG(rx, clock, 30));
+		for (size_t byteCount = 0; byteCount != testData.size(); ++byteCount)
+		{
+			co_await performTransferWait(rx, clock);
+			BOOST_TEST(simu(*rx) == testData[byteCount]);
+		}
+
+		co_await OnClk(clock);
+		stopTest();
+	});
+
+	design.postprocess();
+	BOOST_TEST(!runHitsTimeout(1ms));
+}
 
 class SingleEndpointUsbFixture : public UsbFixture
 {
