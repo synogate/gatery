@@ -16,7 +16,10 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#include "gatery/scl_pch.h"
 #include "GateMate.h"
+#include <gatery/hlim/supportNodes/Node_Memory.h>
+#include "BRAM.h"
 
 namespace gtry::scl::arch::colognechip {
 

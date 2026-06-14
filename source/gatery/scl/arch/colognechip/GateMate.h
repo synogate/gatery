@@ -38,5 +38,5 @@ namespace gtry::scl::arch::colognechip {
 }
 
 namespace gtry::scl {
-	using GateMate = gtry::scl::arch::intel::GateMate;
+	using GateMate = gtry::scl::arch::colognechip::GateMate;
 }
