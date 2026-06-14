@@ -239,7 +239,7 @@ gtry::SimFunction<std::vector<std::byte>> gtry::scl::usb::GpioPhy::receive(size_
 		co_await WaitFor(baudRate);
 
 	} while (lineState() != SE0);
-	log(stuffBitCounter < 5, "missing trailing stuff bit error");
+	log(stuffBitCounter < 6, "missing trailing stuff bit error");
 	log(bitCounter == 0, "incomplete byte");
 	log(!data.empty() && data[0] == std::byte(0x80), "preamble missing");
 
