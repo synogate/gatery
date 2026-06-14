@@ -145,12 +145,18 @@ namespace gtry::scl::strm {
 	template<StreamSignal StreamT>
 	inline StreamT fifo(StreamT&& in, size_t minDepth, FifoLatency fifoLatency)
 	{
-		// This is a workaround until we properly move the fifoLatency == 0 case into the fifo implementation.
-		Fifo<StreamData<StreamT>> inst{ minDepth, removeFlowControl(move(in)), fifoLatency == 0 ? FifoLatency(1) : fifoLatency };
-		StreamT ret = fifo(move(in), inst, fifoLatency);
-		inst.generate();
-
-		return ret;
+		if (minDepth)
+		{
+			// This is a workaround until we properly move the fifoLatency == 0 case into the fifo implementation.
+			Fifo<StreamData<StreamT>> inst{ minDepth, removeFlowControl(move(in)), fifoLatency == 0 ? FifoLatency(1) : fifoLatency };
+			StreamT ret = fifo(move(in), inst, fifoLatency);
+			inst.generate();
+			return ret;
+		}
+		else
+		{
+			return move(in);
+		}
 	}
 
 	template<StreamSignal StreamT>
