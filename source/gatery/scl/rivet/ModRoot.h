@@ -54,6 +54,10 @@ namespace gtry::scl::rivet::mod
 					strm::regDownstreamBlocking({ .allowRetimingBackward = true });
 				};
 		}
+
+		auto stageExecute() {
+			return [this](StreamSignal auto&& in) { return move(in); };
+		}
 		
 		template<StreamSignal T>
 		void resultLoopBack(T&& in)

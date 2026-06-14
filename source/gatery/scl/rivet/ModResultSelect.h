@@ -18,6 +18,7 @@
 #pragma once
 #include <gatery/frontend.h>
 #include "../stream/strm.h"
+#include "ModInstrFetch.h"
 
 namespace gtry::scl::rivet
 {

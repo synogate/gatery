@@ -59,9 +59,38 @@ namespace gtry::scl::rivet::mod
 
 		void addCsrInstructionsRetired(BitWidth regW)
 		{
+			m_instructionRetired.emplace();
+
 			UInt instructions = regW;
-			instructions = reg(instructions + m_instructionRetired, 0) | name("csrRetired");
+			instructions = reg(instructions + *m_instructionRetired, 0) | name("csrRetired");
 			addCsrReadOnly(0xC02, instructions);
+		}
+
+		void addCsrJumpMissPredict(BitWidth regW)
+		{
+			m_jumpMissPredict.emplace();
+
+			UInt ctr = regW;
+			ctr = reg(ctr + *m_jumpMissPredict, 0) | name("csrJumpMissPredict");
+			addCsrReadOnly(0xCC0, ctr);
+		}
+
+		void addCsrJumpToSelf(BitWidth regW)
+		{
+			m_jumpToSelf.emplace();
+
+			UInt ctr = regW;
+			ctr = reg(ctr + *m_jumpToSelf, 0) | name("csrJumpToSelf");
+			addCsrReadOnly(0xCC1, ctr);
+		}
+
+		void addCsrDecodeValid(BitWidth regW)
+		{
+			m_decodeValid.emplace();
+
+			UInt ctr = regW;
+			ctr = reg(ctr + *m_decodeValid, 0) | name("csrDecodeValid");
+			addCsrReadOnly(0xCC2, ctr);
 		}
 
 		void addCsrTime(BitWidth regW, std::chrono::nanoseconds duration)
@@ -93,6 +122,9 @@ namespace gtry::scl::rivet::mod
 		{
 			return [this](const InstrOpcode& instr)
 				{
+					if (m_decodeValid)
+						*m_decodeValid = EnableScope::getFullEnable();
+
 					return CsrCtrl{
 						.csrAddr = (UInt)instr.instr(20, 12_b),
 						.csrReadData = ConstBVec(0, Base::dataPathW()),
@@ -104,10 +136,6 @@ namespace gtry::scl::rivet::mod
 		{
 			return [this](const CsrCtrl& in)
 				{
-					// this is not fully acurate since we might kill the instruction later
-					// but counting later would also miss count
-					m_instructionRetired = EnableScope::getFullEnable() | name("instructionRetired");
-
 					CsrCtrl out = in;
 					for (const CsrReg& r : m_register)
 					{
@@ -121,8 +149,36 @@ namespace gtry::scl::rivet::mod
 				};
 		}
 
+		template<StreamSignal T>
+		void resultLoopBack(T&& result)
+		{
+			const JmpCtrl& ctrl = get<JmpCtrl>(result);
+			const InstrPtr& ip = get<InstrPtr>(result);
+
+			if(m_instructionRetired)
+			{
+				Bit isJts = (ctrl.jmp & ctrl.jmpTarget == ip.instrPtr) | name("isJts");
+				*m_instructionRetired = transfer(result) & !isJts | name("instructionRetired");
+			}
+			if (m_jumpMissPredict)
+			{
+				*m_jumpMissPredict = transfer(result) & ctrl.jmp | name("jumpMissPredict");
+			}
+			if (m_jumpToSelf)
+			{
+				*m_jumpToSelf = transfer(result) & (ctrl.jmp & ctrl.jmpTarget == ip.instrPtr) | name("jumpToSelf");
+			}
+
+			return Base::resultLoopBack(move(result));
+		}
+
+
 	private:
 		std::vector<CsrReg> m_register;
-		Bit m_instructionRetired;
+
+		std::optional<Bit> m_instructionRetired;
+		std::optional<Bit> m_decodeValid;
+		std::optional<Bit> m_jumpMissPredict;
+		std::optional<Bit> m_jumpToSelf;
 	};
 }

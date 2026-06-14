@@ -105,7 +105,8 @@ namespace gtry::scl::rivet
 						Base::attach(Base::selectAluResults()) |
 						Base::attach(Base::addExternalResult()) |
 						Base::attach(Base::selectMemCtrl()) |
-						Base::shiftUnit();
+						Base::shiftUnit() |
+						Base::stageExecute();
 				};
 		}
 
@@ -131,13 +132,13 @@ namespace gtry::scl::rivet
 				stageDecode() |
 				stageOperands() |
 				Base::pipelineStage("decode") |
-				Base::attach(Base::hazardDataForwardingSum()) |
-				Base::attach(Base::hazardDataForwardingDiff()) |
+			//	Base::attach(Base::hazardDataForwardingSum()) |
+			//	Base::attach(Base::hazardDataForwardingDiff()) |
 				stageExecute() |
 				Base::dataMem() |
 				stageResults() |
 				Base::attach(Base::branchDecision()) |
-				Base::pipelineStage("execute") |
+			//	Base::pipelineStage("execute") |
 
 				strm::removeReady('1') |
 				name("result");
@@ -161,8 +162,8 @@ namespace gtry::scl::rivet
 		mod::LoadStoreSubword<
 		mod::LoadStore<
 		mod::EnvCallBreak<
-	//	mod::ShiftUnit<
-		mod::ShiftUnitReschedule<
+		mod::ShiftUnit<
+	//	mod::ShiftUnitReschedule<
 		mod::ExternalResult<
 		mod::ControlFlow<
 		mod::RegisterFile<
