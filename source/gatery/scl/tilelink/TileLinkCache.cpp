@@ -213,7 +213,8 @@ namespace gtry::scl
 		StreamBroadcaster cpuReq = move(cpu.a) |
 			strm::transform<strm::InsertPos::attach>([&](const TileLinkA& a) { return tagMem[setAddr(a.wordAddress())].read(); }) |
 			strm::transform<strm::InsertPos::attach>(std::bind_front(&TileLinkDataCache::cacheInfo, this)) |
-			strm::regDecoupleGap({ .allowRetimingBackward = true }) |
+		//	strm::regDecoupleGap({ .allowRetimingBackward = true }) |
+			strm::regDownstream({ .allowRetimingBackward = true }) |
 			name("cpuReq");
 
 		Bit handledByPolicy;
