@@ -87,9 +87,9 @@ namespace gtry::scl
 
 			if constexpr (StreamT::template has<Ready>())
 			{
-				Bit done = flag(valid(m_helper->source) & ready(sink), final(ready(m_helper->source))) | name("done" + std::to_string(idx));
+				Bit done = flag(transfer(sink), final(ready(m_helper->source))) | name("done" + std::to_string(idx));
 				valid(sink) &= enable & !done;
-				ready(m_helper->source) &= !enable | done | valid(m_helper->source) & ready(sink);
+				ready(m_helper->source) &= !enable | done | transfer(sink);
 			}
 			else
 				HCL_ASSERT(!"no impl");
