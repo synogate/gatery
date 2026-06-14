@@ -84,7 +84,7 @@ namespace gtry::scl
 
 			m_in.sort([](InStream& a, InStream& b) { return a.sortKey < b.sortKey; });
 
-			Bit locked = flag(transfer(*m_out), eop(*m_out) & valid(*m_out));
+			Bit locked = flag(transfer(*m_out), eop(*m_out) & transfer(*m_out));
 			HCL_NAMED(locked);
 
 			UInt selected = BitWidth::count(m_in.size());
