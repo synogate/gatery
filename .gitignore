@@ -30,7 +30,7 @@ Makefile
 test_export
 
 source/gen/
-gen_mmap.h
+gen_*.h
 
 # Quartus Pro
 /tests/**/db
