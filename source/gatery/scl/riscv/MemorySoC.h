@@ -57,6 +57,8 @@ namespace gtry::scl
 
 		virtual void generateCpu(TileLinkArbiter& arbiter);
 
+		uint64_t entryPoint() const { return m_entryPoint; }
+
 	private:
 		BitWidth m_addrW = 28_b;
 		std::filesystem::path m_firmwareBuildRoot = "firmware";
