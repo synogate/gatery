@@ -796,8 +796,10 @@ GenericMemoryPorts GenericMemoryEntity::groupPorts() const
 
 			if (m_memGrp->readUnorderedToAllOthersWrite(rp)) {
 				clockedInstructions.reads.push_back(rp);
-				clockedInstructions.readConflictOverrides.push_back(rp);
-			} else if (m_memGrp->canReadBeforeAllOthersWrite(rp)) {
+				if (m_memGrp->getNumWritePorts() > 0)
+					clockedInstructions.readConflictOverrides.push_back(rp);
+			}
+			else if (m_memGrp->canReadBeforeAllOthersWrite(rp)) {
 				clockedInstructions.reads.push_back(rp);
 			} else if (m_memGrp->canReadAfterAllOthersWrite(rp)) {
 				clockedInstructions.readInputRegs.push_back(rp);
