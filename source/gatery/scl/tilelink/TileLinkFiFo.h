@@ -44,10 +44,9 @@ namespace gtry::scl
 	};
 
 	template<TileLinkSignal TLink>
-	TLink tileLinkFifo(TLink&& link, size_t depthMin = 0);
+	TLink tileLinkFifo(TLink&& link, size_t depthMinA, size_t depthMinD, FifoLatency fifoLatency = {});
 
-	template<TileLinkSignal TLink = TileLinkU>
-	auto tileLinkFifo(size_t depthMin = 0);
+	inline auto tileLinkFifo(size_t depthMinA, size_t depthMinD, FifoLatency fifoLatency = {});
 }
 
 namespace gtry::scl
@@ -110,14 +109,16 @@ namespace gtry::scl
 	}
 
 	template<TileLinkSignal TLink>
-	TLink tileLinkFifo(TLink&& link, size_t depthMin)
+	TLink tileLinkFifo(TLink&& link, size_t depthMinA, size_t depthMinD, FifoLatency fifoLatency)
 	{
-		return TileLinkFifo{}.connectSlave(link, depthMin).template connectMaster<TLink>();
+		TLink ret = constructFrom(link);
+		link.a <<= move(ret.a) | strm::fifo(depthMinA, fifoLatency);
+		*ret.d <<= move(*link.d) | strm::fifo(depthMinD, fifoLatency);
+		return ret;
 	}
 
-	template<TileLinkSignal TLink>
-	auto tileLinkFifo(size_t depthMin)
+	inline auto tileLinkFifo(size_t depthMinA, size_t depthMinD, FifoLatency fifoLatency)
 	{
-		return [=](auto&& source) { return tileLinkFifo(std::forward<decltype(source)>(source), depthMin); };
+		return [=](auto&& source) { return tileLinkFifo(std::forward<decltype(source)>(source), depthMinA, depthMinD, fifoLatency); };
 	}
 }
