@@ -290,21 +290,14 @@ namespace gtry::scl
 		valid(d) = valid(link.a);
 
 		auto port = mem[link.a->address.upper(-byteOffsetW)];
-		d->data = port.read();
 
 		IF(link.a->opcode == (size_t)TileLinkA::PutFullData |
 			link.a->opcode == (size_t)TileLinkA::PutPartialData)
 		{
-			BVec writeData = d->data;
-			for (size_t i = 0; i < link.a->mask.size(); ++i)
-				IF(link.a->mask[i])
-					writeData(i * 8, 8_b) = link.a->data(i * 8, 8_b);
-
 			IF(transfer(link.a))
-				port = writeData;
-
-			d->data = ConstBVec(mem.wordSize());
+				port.write(link.a->data, link.a->mask);
 		}
+		d->data = port.read();
 
 		// create downstream registers
 		valid(d).resetValue('0');
@@ -326,6 +319,8 @@ namespace gtry::scl
 
 		BitWidth memAddrW = addrW - BitWidth::count((dataW / 8).bits());
 		Memory<BVec> mem(memAddrW.count(), dataW);
+		mem.noConflicts();
+
 		auto link = tileLinkInit<TileLinkU>(addrW, dataW, sourceW);
 		connect(mem, link);
 		HCL_NAMED(link);
