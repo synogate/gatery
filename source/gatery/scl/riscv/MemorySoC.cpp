@@ -67,6 +67,7 @@ void gtry::scl::MemorySoC::generate()
 
 void gtry::scl::MemorySoC::generateFirmwareMemory()
 {
+	formatCppHeader(m_firmwareBuildRoot / "gen_mmap_c.h", *m_mmap.getTree().physicalDescription, 32_b, ioBaseAddress());
 	formatCppHeaderStructs(m_firmwareBuildRoot / "gen_mmap.h", *m_mmap.getTree().physicalDescription, 32_b, ioBaseAddress());
 	riscv::ElfLoader elf = riscv::makeElf("firmware.elf", m_firmwareBuildRoot);
 
