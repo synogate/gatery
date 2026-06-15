@@ -2272,7 +2272,7 @@ BOOST_FIXTURE_TEST_CASE(riscv_gdb_soc_export, BoostUnitTestSimulationFixture, *b
 		mapIn(soc.mmap(), hyperRamRegisterAccess, "hyperram_register_access");
 		
 		TileLinkU hyperRam = hyperBusTileLink(move(hyperRamController), { .addrW = 25_b, .sourceW = 3_b, .latency = 3, .registerAccess = reg(hyperRamRegisterAccess) });
-		soc.attachDevice(0x000'0000, move(hyperRam) | tileLinkMemorySimulation | tileLinkDoubleWidth() | tileLinkFifo());
+		soc.attachDevice(0x000'0000, move(hyperRam) | tileLinkMemorySimulation() | tileLinkDoubleWidth() | tileLinkFifo(128, 128));
 	}
 
 	addSimulationProcess([&]()->SimProcess {
