@@ -452,7 +452,7 @@ namespace gtry::scl::strm
 	/**
 	 * @brief Generates values from start in steps of inc. For example numbers counting upwards from 0.
 	 */
-	template<Signal T, class IncT>
+	template<Signal T, class IncT = unsigned>
 	RvStream<T> iota(T start, IncT inc = 1u);
 
 	/**

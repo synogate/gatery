@@ -1,0 +1,4 @@
+# gm evb
+Net "refclk"            Loc = "IO_SB_A8" | SCHMITT_TRIGGER=true;
+Net "CLK0"              Loc = "IO_WA_B8";
+Net "CLK1"              Loc = "IO_EB_B1";

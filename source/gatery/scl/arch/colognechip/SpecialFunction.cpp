@@ -213,6 +213,60 @@ namespace gtry::scl::arch::colognechip
 		return clk;
 	}
 
+	void configure(RvPacketStream<BVec>&& bitstream, CC_CFG_CTRL& ctrl)
+	{
+		Area ent{ "scl_gatemate_configure", true };
+
+		enum class State
+		{
+			idle, 
+			wait_enable,
+			send,
+			wait_gap,
+			wait_end,
+		};
+		Reg<Enum<State>> state{ State::idle };
+		state.setName("state");
+
+		scl::Counter stateCtr(8);
+		IF(state.current() != state.next())
+			stateCtr.reset();
+
+		ready(bitstream) = '0';
+
+		IF(state.current() == State::idle)
+			IF(valid(bitstream))
+				state = State::wait_enable;
+
+		IF(state.current() == State::wait_enable)
+			IF(stateCtr.value() == 2)
+				state = State::send;
+
+		ctrl.valid() = '0';
+		IF(state.current() == State::send)
+		{
+			ctrl.valid() = valid(bitstream);
+			ready(bitstream) = '1';
+			IF(transfer(bitstream))
+			{
+				state = State::wait_gap;
+				IF(eop(bitstream))
+					state = State::wait_end;
+			}
+		}
+
+		IF(state.current() == State::wait_gap)
+			state = State::send;
+
+		IF(state.current() == State::wait_end)
+			IF(stateCtr.value() == 7)
+				state = State::idle;
+
+		ctrl.valid() = name(ctrl.valid(), "cfg_ctrl_valid");
+		ctrl.en() = (state.current() != State::idle) | name("cfg_ctrl_en");
+		ctrl.data() = *bitstream | name("cfg_ctrl_data");
+	}
+
 	Bit serdes(BVec data, const Clock& slowClk, const Clock& fastClk)
 	{
 		Area ent{ "scl_serdes_single", true };
@@ -252,4 +306,15 @@ namespace gtry::scl::arch::colognechip
 		}
 	}
 
+	CC_CFG_CTRL::CC_CFG_CTRL() : ExternalModule("CC_CFG_CTRL") {
+		requiresComponentDeclaration(true);
+		isEntity(false);
+		hasSideEffects(true);
+
+		clockIn("CLK");
+		recfg() = '0';
+		en() = '0';
+		valid() = '0';
+		data() = ConstBVec(8_b);
+	}
 }

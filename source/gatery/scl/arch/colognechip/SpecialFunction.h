@@ -18,6 +18,7 @@
 #pragma once
 #include <gatery/frontend/Bit.h>
 #include <gatery/frontend/ExternalModule.h>
+#include <gatery/scl/stream/Stream.h>
 
 namespace gtry::scl::arch::colognechip
 {
@@ -65,6 +66,21 @@ namespace gtry::scl::arch::colognechip
 	Clock pll(const Clock& src, const ClockConfig& cfg, bool userClk = false);
 	Clock clkdiv(const Clock& src, ClockConfig cfg);
 	Clock clkdivRegChain(const Clock& src, size_t log2div, bool buffer = true);
+
+	class CC_CFG_CTRL : public ExternalModule
+	{
+	public:
+		CC_CFG_CTRL();
+
+		Bit& recfg() { return in("RECFG"); }
+
+		Bit& en() { return in("EN"); }
+		Bit& valid() { return in("VALID"); }
+		BVec& data() { return in("DATA", 8_b); }
+	};
+
+	void configure(RvPacketStream<BVec>&& bitstream, CC_CFG_CTRL& ctrl);
+	inline auto configure(CC_CFG_CTRL& ctrl) { return [&](RvPacketStream<BVec>&& stream) { configure(move(stream), ctrl); }; }
 
 	Bit serdes(BVec data, const Clock& slowClk, const Clock& fastClk);
 	Bit serdes(BVec data, const Clock& slowClk, const Clock& fastClk, Bit syncPulse);
