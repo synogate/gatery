@@ -1,0 +1,15 @@
+# gm evb
+Net "CLK12M"            Loc = "IO_SB_A5";
+Net "UART0_TX"          Loc = "IO_WB_A8" | SLEW = slow;
+Net "UART0_RX"          Loc = "IO_WB_B8" | SCHMITT_TRIGGER = true;
+
+# Flash
+Net "FLASH_CLK"         Loc = "IO_WA_B8" | SLEW = slow;
+Net "FLASH_CSn"         Loc = "IO_WA_A8" | SLEW = slow;
+Net "FLASH_MISO"        Loc = "IO_WA_A7" | PULLUP=true;
+Net "FLASH_MOSI"        Loc = "IO_WA_B7" | SLEW = slow;
+
+# USB
+Net "USB_EN"            Loc = "IO_SB_A7" | DRIVE=12;
+Net "USB_DP"            Loc = "IO_SB_A1" | DRIVE=3 | SLEW=fast;
+Net "USB_DN"            Loc = "IO_SB_B1" | DRIVE=3 | SLEW=fast;

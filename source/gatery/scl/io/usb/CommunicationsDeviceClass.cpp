@@ -101,7 +101,11 @@ namespace gtry::scl::usb
 
 		// setup cdc descriptor for single serial interface
 		usb::Descriptor& desc = function.descriptor();
-		desc.add(scl::usb::DeviceDescriptor{ .Class = scl::usb::ClassCode::Communications_and_CDC_Control });
+		desc.add(scl::usb::DeviceDescriptor{ 
+			.Class = scl::usb::ClassCode::Communications_and_CDC_Control,
+			.Vendor = cfg.vid.value_or(scl::usb::DeviceDescriptor{}.Vendor),
+			.Product = cfg.pid.value_or(scl::usb::DeviceDescriptor{}.Product),
+		});
 		desc.add(scl::usb::ConfigurationDescriptor{});
 		scl::usb::virtualCOMsetup(function, 0, 1, 2);
 

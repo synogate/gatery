@@ -27,6 +27,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <gatery/scl/arch/colognechip/Bitstream.h>
 
 #include <gatery/scl/stream/strm.h>
+#include <gatery/scl/io/TxRxPacketStreamRouter.h>
+#include <gatery/scl/io/usb/GpioPhyCdc.h>
 
 using namespace gtry;
 using namespace gtry::scl::strm;
@@ -82,6 +84,95 @@ BOOST_FIXTURE_TEST_CASE(arch_colognechip_switch_spi_user_mode, BoostUnitTestSimu
 	vhdl(design.getCircuit());
 
 	std::system("make -C export/arch_colognechip_switch_spi_user_mode jtag");
+
+	//BOOST_TEST(!runHitsTimeout(3ms));
+}
+
+BOOST_FIXTURE_TEST_CASE(arch_colognechip_first_stage_export, BoostUnitTestSimulationFixture)
+{
+	Clock clk12{ ClockConfig{
+		.absoluteFrequency = 12_mhz,
+		.name = "CLK12M",
+		.resetType = hlim::RegisterAttributes::ResetType::NONE,
+		.memoryResetType = ClockConfig::ResetType::NONE,
+	} };
+
+	Clock usbclk = pll(clk12, {
+		.absoluteFrequency = 36_mhz,
+		.resetType = hlim::RegisterAttributes::ResetType::NONE,
+		.memoryResetType = ClockConfig::ResetType::NONE,
+	});
+
+	Clock sysclk = clkdivRegChain(usbclk, 1);
+
+	ClockScope clkScp(sysclk);
+
+	scl::usb::Function usbFunction;
+	std::shared_ptr phy = std::make_shared<scl::usb::GpioPhyCdc>();
+	{
+		scl::TxRxPacketStreamRouter hostRouter;
+
+		{
+			Area ent{ "selftest", true };
+
+			scl::TxRxPacketStream loopbackWithId{ {8_b}, {8_b} };
+			loopbackWithId.tx <<= *loopbackWithId.rx;
+			IF(valid(loopbackWithId.tx) & sop(loopbackWithId.tx))
+				*loopbackWithId.tx = size_t('A');
+			hostRouter.attach(0, move(loopbackWithId));
+		}
+
+		{
+			Area ent{ "flash", true };
+
+			scl::TxRxStream flash{ {8_b}, {8_b} };
+			flash.tx <<=
+				scl::SpiMaster{}
+				.pin("FLASH_CLK", "FLASH_MISO", "FLASH_MOSI")
+				.clockDiv(1)
+				.generate(move(*flash.rx)) |
+				scl::strm::fifo(1024);
+			HCL_NAMED(flash);
+			hostRouter.attach(2, move(flash));
+
+			scl::TxRxStream flashCtrl{ {8_b}, {8_b} };
+			Bit chipSelect = scl::capture((**flashCtrl.rx)[0], Bit{'1'}, transfer(*flashCtrl.rx));
+			pinOut(chipSelect, "FLASH_CSn");
+
+			ready(*flashCtrl.rx) = '1';
+			valid(flashCtrl.tx) = '0';
+			hostRouter.attach(3, move(flashCtrl));
+		}
+
+		{
+			Area ent{ "reconfig", true };
+			CC_CFG_CTRL cfgCtrl;
+
+			scl::TxRxPacketStream reconfig{ {8_b}, {8_b} };
+			configure(move(*reconfig.rx), cfgCtrl);
+			valid(reconfig.tx) = '0';
+			hostRouter.attach(4, move(reconfig));
+
+			Bit timeout = scl::Counter(2s).isLast() & usbFunction.configuration() == 0 | name("timeout");
+			cfgCtrl.recfg() = timeout;
+
+			scl::TxRxStream reconfigCtrl{ {8_b}, {8_b} };
+			cfgCtrl.recfg() |= valid(*reconfigCtrl.rx) & **reconfigCtrl.rx == 0;
+			ready(*reconfigCtrl.rx) = '1';
+			valid(reconfigCtrl.tx) = '0';
+			hostRouter.attach(5, move(reconfigCtrl));
+		}
+
+		phy->functionClock(sysclk);
+
+		scl::TxRxStream usb = *scl::usb::streamToSerialAdapter(usbFunction, {.phy = phy.get(), .usbClk = usbclk, .pid = 1}) | name("usb");
+		usb <<= hostRouter.generate() | scl::replaceEopByLengthHeader(256);
+	}
+
+	design.postprocess();
+
+	vhdl::VHDLExport vhdl("export/arch_colognechip_first_stage_export/top.vhd");
+	vhdl(design.getCircuit());
 
 	//BOOST_TEST(!runHitsTimeout(3ms));
 }

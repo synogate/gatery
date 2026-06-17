@@ -39,6 +39,9 @@ namespace gtry::scl::usb
 		std::string_view enablePinName = "USB_EN";
 		size_t maxPacketSize = 8;
 		size_t fifoDepth = 512;
+
+		std::optional<uint16_t> vid;
+		std::optional<uint16_t> pid;
 	};
 
 	/**

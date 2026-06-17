@@ -22,7 +22,7 @@
 #include <gatery/scl/memoryMap/PackedMemoryMap.h>
 #include <gatery/scl/memoryMap/MemoryMapConnectors.h>
 
-gtry::scl::RvStream<gtry::BVec> gtry::scl::SpiMaster::generate(RvStream<BVec>& in)
+gtry::scl::RvStream<gtry::BVec> gtry::scl::SpiMaster::generate(RvStream<BVec>&& in)
 {
 	Area area{ "scl_SpiMaster", true };
 	HCL_NAMED(m_in);
@@ -189,7 +189,7 @@ void gtry::scl::spiMasterDevice(MemoryMap& mmap, std::string mmapName, SpiMaster
 		.pin(cfg.pinPrefix + cfg.pinClk, cfg.pinPrefix + cfg.pinMiSo, cfg.pinPrefix + cfg.pinMoSi)
 		.clockDiv(speedDivider)
 		.simulateDevice(cfg.simulationModel, csn)
-		.generate(spiPut),
+		.generate(move(spiPut)),
 		cfg.rxFifoDepth);
 	HCL_NAMED(spiGet);
 

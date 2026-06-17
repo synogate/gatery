@@ -917,7 +917,7 @@ BOOST_FIXTURE_TEST_CASE(spi_stream_test, StreamTransferFixture)
 	In(in);
 
 	scl::RvStream<BVec> inBVec = move(in)  | scl::strm::transform([](const UInt& v) { return (BVec)v; });
-	scl::RvStream<BVec> outBVec = scl::SpiMaster{}.pinTestLoop().clockDiv(3).generate(inBVec);
+	scl::RvStream<BVec> outBVec = scl::SpiMaster{}.pinTestLoop().clockDiv(3).generate(move(inBVec));
 
 	scl::RvStream<UInt> out = transform(move(outBVec), [](const BVec& v) { return (UInt)v; });
 	Out(out);

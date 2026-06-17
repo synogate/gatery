@@ -52,7 +52,7 @@ namespace gtry::scl
 		const Bit& mosi() const { return m_out; }
 		Bit& miso() { return m_in; }
 
-		virtual RvStream<BVec> generate(RvStream<BVec>& in);
+		virtual RvStream<BVec> generate(RvStream<BVec>&& in);
 
 
 	private:
