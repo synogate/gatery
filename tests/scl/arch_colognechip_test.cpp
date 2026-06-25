@@ -25,6 +25,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include <gatery/scl/arch/colognechip/SpecialFunction.h>
 #include <gatery/scl/arch/colognechip/Bitstream.h>
+#include <gatery/scl/arch/colognechip/io.h>
 
 #include <gatery/scl/stream/strm.h>
 #include <gatery/scl/io/TxRxPacketStreamRouter.h>
@@ -175,4 +176,126 @@ BOOST_FIXTURE_TEST_CASE(arch_colognechip_first_stage_export, BoostUnitTestSimula
 	vhdl(design.getCircuit());
 
 	//BOOST_TEST(!runHitsTimeout(3ms));
+}
+
+BOOST_FIXTURE_TEST_CASE(arch_colognechip_io_register_crash_repro, BoostUnitTestSimulationFixture)
+{
+	Clock clk12{ ClockConfig{
+		.absoluteFrequency = 12_mhz,
+		.name = "CLK12M",
+		.resetType = hlim::RegisterAttributes::ResetType::NONE
+	} };
+
+	ClockScope clkScp(clk12);
+
+#if 0
+	RvStream<BVec> mosi{ 1_b };
+	RvStream<BVec> miso = scl::SpiMaster()
+		.pin("SPI_")
+		.clockDiv(1)
+		.generate(move(mosi) | name("mosi")) | name("miso");
+	
+	ready(miso) = '1';
+	valid(mosi) = '1';
+	*mosi = 0;
+#else
+	Bit in;
+	pinIn(in, "SPI_miso");
+
+	Bit inv;
+	Bit out = reg(in ^ inv);
+	pinOut(out, "SPI_mosi");
+
+	inv = out | name("feedback");
+#endif
+
+	design.postprocess();
+
+	vhdl::VHDLExport vhdl("export/arch_colognechip_io_register_crash_repro/top.vhd");
+	vhdl(design.getCircuit());
+}
+
+BOOST_FIXTURE_TEST_CASE(arch_colognechip_ff_obf_duplicate, BoostUnitTestSimulationFixture)
+{
+	Clock clk12{ ClockConfig{
+		.absoluteFrequency = 12_mhz,
+		.name = "CLK12M",
+		.resetType = hlim::RegisterAttributes::ResetType::NONE
+	} };
+
+	ClockScope clkScp(clk12);
+
+	Bit in;
+	pinIn(in, "SPI_miso");
+
+	Bit inv;
+	Bit out = reg(in ^ inv);
+	pinOut(out, "SPI_mosi");
+
+	inv = out | name("feedback");
+
+	design.postprocess();
+
+	vhdl::VHDLExport vhdl("export/arch_colognechip_ff_obf_duplicate/top.vhd");
+	vhdl(design.getCircuit());
+}
+
+BOOST_FIXTURE_TEST_CASE(arch_colognechip_ff_obf_enable, BoostUnitTestSimulationFixture)
+{
+	Clock clk12{ ClockConfig{
+		.absoluteFrequency = 12_mhz,
+		.name = "CLK12M",
+		.resetType = hlim::RegisterAttributes::ResetType::NONE
+	} };
+
+	ClockScope clkScp(clk12);
+
+	Bit in, en;
+	pinIn(in, "SPI_miso");
+	pinIn(en, "SPI_scl");
+
+	Bit out = reg(in, { .en = en });
+	pinOut(out, "SPI_mosi");
+
+	design.postprocess();
+
+	vhdl::VHDLExport vhdl("export/arch_colognechip_ff_obf_enable/top.vhd");
+	vhdl(design.getCircuit());
+}
+
+BOOST_FIXTURE_TEST_CASE(arch_colognechip_ff_obf_sta_test, BoostUnitTestSimulationFixture)
+{
+	Clock clk12{ ClockConfig{
+		.absoluteFrequency = 12_mhz,
+		.name = "CLK12M",
+		.resetType = hlim::RegisterAttributes::ResetType::NONE
+	} };
+
+	ClockScope clkScp(clk12);
+
+	Bit in;
+	pinIn(in, "in0");
+
+#if 0 // IDDR
+	CC_IDDR iddr;
+	iddr.D() = in;
+	in = iddr.Q0() & iddr.Q1();
+#else
+	in = reg(in); // input register
+#endif
+	
+#if 0 // ODDR
+	CC_ODDR oddr;
+	oddr.D0() = in;
+	oddr.D1() = '0';
+	Bit out = oddr.Q();
+#else
+	Bit out = reg(in); // output register
+#endif
+	pinOut(out, "out0");
+
+	design.postprocess();
+
+	vhdl::VHDLExport vhdl("export/arch_colognechip_ff_obf_sta_test/top.vhd");
+	vhdl(design.getCircuit());
 }

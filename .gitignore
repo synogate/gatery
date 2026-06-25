@@ -59,6 +59,7 @@ work-obj08.cf
 /tests/**/lut*.txt
 /tests/**/*synth.v
 /tests/**/*synth.log
+/tests/**/pnr.v
 # GateMate nextpnr
 /tests/**/pnr.json
 /tests/**/synth.json
