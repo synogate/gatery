@@ -30,8 +30,9 @@ gtry::scl::RvStream<gtry::BVec> gtry::scl::SpiMaster::generate(RvStream<BVec>&& 
 
 	// generate msb first bit stream
 	*in = swapEndian(*in, 1_b);
-	RvStream<Bit> inBit = strm::reduceWidth(move(in), 1_b, !valid(in)) 
-		| strm::transform((const Bit & (BVec::*)() const)&BVec::lsb);
+	RvStream<Bit> inBit = strm::reduceWidth(move(in), 1_b, !valid(in))
+		| strm::transform((const Bit & (BVec::*)() const) & BVec::lsb)
+		| strm::regDownstream(RegisterSettings{ .allowRetimingForward = true });
 	HCL_NAMED(inBit);
 
 	Counter stepCounter{ m_clockDiv };
@@ -47,6 +48,7 @@ gtry::scl::RvStream<gtry::BVec> gtry::scl::SpiMaster::generate(RvStream<BVec>&& 
 	m_out = m_outIdle;
 	IF(valid(inBit))
 		m_out = *inBit;
+	m_out = pipestage(m_out);
 
 	valid(outBit) = '0';
 
@@ -65,7 +67,6 @@ gtry::scl::RvStream<gtry::BVec> gtry::scl::SpiMaster::generate(RvStream<BVec>&& 
 	}
 	IF(state.current() == State::latch)
 	{
-		m_clk = '1';
 		IF(stepCounter.isFirst())
 			valid(outBit) = '1';
 		IF(stepCounter.isLast())
@@ -76,17 +77,18 @@ gtry::scl::RvStream<gtry::BVec> gtry::scl::SpiMaster::generate(RvStream<BVec>&& 
 		}
 	}
 
-	RvStream<BVec> outBitVec = transform(move(outBit), [](const Bit& b) {
-		BVec r = ConstBVec(1_b); 
-		r.lsb() = b; 
-		return r; 
-	});
+	RvStream<BVec> outBitVec = move(outBit) |
+		strm::transform([](const Bit& b) {
+			BVec r = ConstBVec(1_b); 
+			r.lsb() = b; 
+			return r; 
+		});
 
 	RvStream<BVec> out = strm::extendWidth(move(outBitVec), in->width());
 	*out = swapEndian(*out, 1_b);
 	HCL_NAMED(out);
 
-	HCL_NAMED(m_clk);
+	m_clk = reg(state.next() == State::latch, '0') | name("m_clk");
 	HCL_NAMED(m_out);
 	return out;
 }
