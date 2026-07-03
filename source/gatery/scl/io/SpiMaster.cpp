@@ -77,16 +77,12 @@ gtry::scl::RvStream<gtry::BVec> gtry::scl::SpiMaster::generate(RvStream<BVec>&& 
 		}
 	}
 
-	RvStream<BVec> outBitVec = move(outBit) |
-		strm::transform([](const Bit& b) {
-			BVec r = ConstBVec(1_b); 
-			r.lsb() = b; 
-			return r; 
-		});
-
-	RvStream<BVec> out = strm::extendWidth(move(outBitVec), in->width());
-	*out = swapEndian(*out, 1_b);
-	HCL_NAMED(out);
+	RvStream<BVec> out = move(outBit) |
+		strm::regDownstream() |
+		strm::transform([](const Bit& b) { return (BVec)ext(b); }) |
+		strm::extendWidth(in->width()) |
+		strm::transform([](const BVec& b) { return swapEndian(b, 1_b); }) |
+		name("out");
 
 	m_clk = reg(state.next() == State::latch, '0') | name("m_clk");
 	HCL_NAMED(m_out);
@@ -184,7 +180,7 @@ void gtry::scl::spiMasterDevice(MemoryMap& mmap, std::string mmapName, SpiMaster
 	RvStream<BVec> spiPut{ 8_b };
 	HCL_NAMED(spiPut);
 
-	Bit csn = !chipSelect.lsb();
+	Bit csn = reg(!chipSelect.lsb(), '1');
 	pinOut(csn, cfg.pinPrefix + cfg.pinCsn);
 
 	RvStream<BVec> spiGet = strm::fifo(SpiMaster{}

@@ -92,6 +92,11 @@ namespace gtry::scl::strm
 	requires (std::is_base_of_v<BaseBitVector, typename T::Payload>)
 	auto extendWidth(T&& source, const BitWidth& width, Bit reset = '0');
 	
+	inline auto extendWidth(BitWidth width, Bit reset = '0')
+	{
+		return [=](auto&& source) { return extendWidth(std::forward<decltype(source)>(source), width, reset); };
+	}
+
 	/**
 	 * @brief reduces the width of a simple payload stream. An 8-bit stream reduced to 4 bits will be sent in double the amount of time.
 	 * @param source source stream
