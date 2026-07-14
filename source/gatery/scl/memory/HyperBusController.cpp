@@ -94,6 +94,14 @@ namespace gtry::scl
 	{
 		Area ent{ "scl_gateMateHyperBusPhy", true };
 
+		Clock clk180 = ClockScope::getClk().deriveClock(ClockConfig{ .triggerEvent = ClockConfig::TriggerEvent::FALLING });
+		auto clk180reg = [&](const Bit& signal) {
+			return signal | 
+				allowClockDomainCrossing(clk180) | 
+				reg({ .clock = clk180 }) |
+				allowClockDomainCrossing(ClockScope::getClk());
+		};
+
 		Reverse<HyperBusPhy> phy;
 		phy->csn = BitWidth{ cfg.pinCsn.size() };
 
@@ -134,9 +142,10 @@ namespace gtry::scl
 			Bit csn;
 			csn |= phy->csn[i]; // delayed reset
 			csn = reg(csn, '1');
-			csn &= phy->csn[i];	// instant set
+			csn &= phy->csn[i] | name("csn_next");	// instant set
+			Bit csnOut = clk180reg(csn) | name("csnOut");
 			
-			pinOut(csn, pinPrefix + std::string{ cfg.pinCsn[i] });
+			pinOut(csnOut, pinPrefix + std::string{ cfg.pinCsn[i] });
 		}
 
 #if 1
@@ -145,7 +154,7 @@ namespace gtry::scl
 			arch::colognechip::CC_IOBUF buf;
 			buf.pin(pinPrefix + std::string{ cfg.pinRwds });
 			buf.delayOut(15);
-			buf.disable() = !flagInstantSet(phy->rwds.fen, !phy->rwds.fen);
+			buf.disable() = !flagInstantSet(phy->rwds.fen, !phy->rwds.fen) | clk180reg;
 
 			arch::colognechip::CC_ODDR out(buf);
 			out.D0() = phy->rwds.f.lsb();
@@ -158,7 +167,7 @@ namespace gtry::scl
 
 		// DQ
 		*phy->dq.r = ConstBVec(16_b);
-		Bit dqDisable = flagInstantReset(!phy->dq.fen, phy->dq.fen) | name("dqDisable");
+		Bit dqDisable = flagInstantReset(!phy->dq.fen, phy->dq.fen) | clk180reg | name("dqDisable");
 		for (size_t i = 0; i < 8; ++i)
 		{
 			arch::colognechip::CC_IOBUF buf;
@@ -402,18 +411,19 @@ namespace gtry::scl
 
 		// setup command
 		{
-			valid(controller->command) = '0';
+			RvStream<HyperBusCommand> cmd = constructFrom(controller->command);
+			valid(cmd) = '0';
 
-			controller->command->type = HyperBusCommand::write;
+			cmd->type = HyperBusCommand::write;
 			IF(link.a->isGet())
-				controller->command->type = HyperBusCommand::read;
+				cmd->type = HyperBusCommand::read;
 
-			controller->command->space = HyperBusCommand::mem;
+			cmd->space = HyperBusCommand::mem;
 			IF(cfg.registerAccess)
-				controller->command->space = HyperBusCommand::reg;
+				cmd->space = HyperBusCommand::reg;
 
-			controller->command->burst = HyperBusCommand::linear;
-			controller->command->wordAddress = zext(link.a->wordAddress());
+			cmd->burst = HyperBusCommand::linear;
+			cmd->wordAddress = zext(link.a->wordAddress());
 			controller->latency = cfg.latency;
 
 			IF(state.current() == State::idle)
@@ -421,8 +431,8 @@ namespace gtry::scl
 				response = tileLinkDefaultResponse(*link.a);
 				readBurstLen = resizeTo(transferLengthFromLogSize(link.a->size, link.a->mask.width().bits()), readBurstLen.width());
 
-				valid(controller->command) = valid(link.a);
-				IF(transfer(controller->command))
+				valid(cmd) = valid(link.a);
+				IF(transfer(cmd))
 				{
 					IF(link.a->isPut())
 					{
@@ -435,6 +445,8 @@ namespace gtry::scl
 					}
 				}
 			}
+
+			controller->command <<= regDecoupleGap(move(cmd));
 		}
 		response = reg(response) | name("response");
 		readBurstLen = reg(readBurstLen) | name("readBurstLen");
