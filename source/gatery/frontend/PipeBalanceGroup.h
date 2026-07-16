@@ -56,9 +56,17 @@ namespace gtry {
 
 			PipeBalanceGroup();
 
+			/**
+			 * @brief	set allow multi group retime to allow registers to spawn from this group and other groups together without warning.
+			 *			Note that this may result in a different number of registers placed per group.
+			 */
+			PipeBalanceGroup& allowMultiGroupRetime(std::optional<bool> val) { if (val) m_regSpawner->setAllowMultiGroupRetime(*val); return *this; }
+
 			size_t getNumPipeBalanceGroupStages() const;
 			inline hlim::Node_RegSpawner *getRegSpawner() { return m_regSpawner.get(); }
 			void verifyConsistentEnableScope();
+
+
 		protected:
 			hlim::NodePtr<hlim::Node_RegSpawner> m_regSpawner;
 	};

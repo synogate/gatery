@@ -45,6 +45,8 @@ class Node_RegSpawner : public Node<Node_RegSpawner>
 		NodePort getEnableCondition();
 		size_t addInput(const NodePort &value, const NodePort &reset = {});
 		void setClock(Clock* clk);
+		bool getAllowMultiGroupRetime() const { return m_allowMultiGroupRetime; }
+		void setAllowMultiGroupRetime(bool val) { m_allowMultiGroupRetime = val; }
 
 		bool wasResolved() const { return m_wasResolved; }
 		void markResolved();
@@ -74,6 +76,7 @@ class Node_RegSpawner : public Node<Node_RegSpawner>
 	protected:
 		size_t m_numStagesSpawned = 0ull;
 		bool m_wasResolved = false;
+		bool m_allowMultiGroupRetime = false;
 };
 
 }

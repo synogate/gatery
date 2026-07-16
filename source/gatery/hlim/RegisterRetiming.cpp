@@ -773,7 +773,8 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 					}
 				}
 
-	if (retimingPlan->regSpawnersToSpawn.size() > 1) {
+	size_t numExclusiveSpawners = std::ranges::count(retimingPlan->regSpawnersToSpawn, false, &Node_RegSpawner::getAllowMultiGroupRetime);
+	if (numExclusiveSpawners > 1) {
 
 		Subnet joinedTraces;
 		for (auto spawner : retimingPlan->regSpawnersToSpawn)
@@ -785,8 +786,8 @@ bool retimeForwardToOutput(Circuit &circuit, Subnet &area, NodePort output, cons
 		logMsg << dbg::LogMessage::LOG_WARNING
 					<< dbg::LogMessage::LOG_POSTPROCESSING
 					<< dbg::LogMessage::Anchor{ output.node->getGroup() }
-					<< "Registers for retiming to a single location are sourced from " << retimingPlan->regSpawnersToSpawn.size()
-					<< "different register spawners. This is usually a mistake. Register Spawners: ";
+					<< "Registers for retiming to a single location are sourced from " << numExclusiveSpawners
+					<< "different exclusive register spawners. This is usually a mistake, use allowMultiGroupRetime if not. Register Spawners: ";
 
 		for (auto spawner : retimingPlan->regSpawnersToSpawn)
 			logMsg << spawner;
