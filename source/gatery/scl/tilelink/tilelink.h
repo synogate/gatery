@@ -194,7 +194,7 @@ namespace gtry::scl
 		bool readPort = true;
 		bool writePort = true;
 		std::optional<size_t> latency;
-		std::optional<sim::DefaultBitVectorState> initialData;
+		std::optional<gtry::sim::DefaultBitVectorState> initialData;
 	};
 
 	/**

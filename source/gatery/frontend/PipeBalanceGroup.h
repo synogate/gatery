@@ -34,6 +34,7 @@ namespace gtry {
 
 	template<BaseSignal T>				T pipestage(const T& signal);
 	template<Signal T>					T pipestage(const T& signal);
+	inline auto							  pipestage() { return [](auto&& signal) { return pipestage(std::forward<decltype(signal)>(signal)); }; }
 
 	template<BaseSignal T>				T pipeinput(const T& signal, PipeBalanceGroup& group);
 	template<Signal T>					T pipeinput(const T& signal, PipeBalanceGroup& group);
